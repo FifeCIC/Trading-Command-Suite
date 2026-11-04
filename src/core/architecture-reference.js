@@ -767,7 +767,7 @@ export const CURRENT_SLICE = [
                                             /* ── batch #38 — 2026-10-27 (step 4 of the Protocols page edits the store the
                                                SCORER reads; the handoff's "no delete endpoint" claim is corrected against
                                                the tree rather than copied) ── */
-                                                'THE PROTOCOLS PAGE NOW EDITS THE STORE THE SCORER READS (2026-10-27, #1133) — step 4 of `/lab/backtest` (protocols branch) is the protocol\'s directive list with one editable `maxScore` per directive, read from `GET /api/scoring/protocols/:slug/directive-config` (`classMaxScore` / `globalMaxScore` / `effectiveMaxScore` / `source`, plus `totalWeight`) and written by `PATCH` to the `protocol:<slug>:<directiveId>:maxScore` settings family — the store `ProtocolGatingService.resolveEffectiveMaxScores()` reads as `overrideMax ?? globalMax ?? classMax ?? 100`. It deliberately does NOT bind to `protocol_directive_entry.maxScore`, which `PATCH :slug/directives/:directiveId` writes and no scoring path reads (`GET :slug/directives` returns `impl?.maxScore ?? de.maxScore`, preferring the CLASS value over the stored entry), so a field bound to it would look like it worked and change nothing. The banner states the scope is the PROTOCOL — every future backtest AND every live bot — the opposite of the run-scoped SL/TP fields on the Strategies page. ⚠️ STILL OPEN #1133: only `maxScore` is applied per protocol, the other four fields are stored and inert, and a directive\'s thresholds are constants inside its `*.directive.ts`, so the table has one editable column and says why. ⚠️ THE HANDOFF\'S THIRD FINDING IS CONTRADICTED BY THE TREE: `DELETE /api/scoring/protocols/:slug/directive-config/:directiveId` → `deleteProtocolConfig()` → `settings.clearFamily(\'protocol\', \'<slug>:<directiveId>\')` EXISTS and is already exercised by qa-scr-026, so "a delete endpoint that does not exist" is wrong — the missing piece is that the panel does not call it, and `PATCH {maxScore: null}` does not clear the row (measured 2026-10-27: `source` stays `override`).',
+                                                'THE PROTOCOLS PAGE NOW EDITS THE STORE THE SCORER READS (2026-10-27, #1133) — step 4 of `/lab/backtest` (protocols branch) is the protocol\'s directive list with one editable `maxScore` per directive, read from `GET /api/scoring/protocols/:slug/directive-config` (`classMaxScore` / `globalMaxScore` / `effectiveMaxScore` / `source`, plus `totalWeight`) and written by `PATCH` to the `protocol:<slug>:<directiveId>:maxScore` settings family — the store `ProtocolGatingService.resolveEffectiveMaxScores()` reads as `overrideMax ?? globalMax ?? classMax ?? 100`. It deliberately does NOT bind to `protocol_directive_entry.maxScore`, which `PATCH :slug/directives/:directiveId` writes and no scoring path reads (`GET :slug/directives` returns `impl?.maxScore ?? de.maxScore`, preferring the CLASS value over the stored entry), so a field bound to it would look like it worked and change nothing. The banner states the scope is the PROTOCOL — every future backtest AND every live bot — the opposite of the run-scoped SL/TP fields on the Strategies page. ⚠️ STILL OPEN #1133: only `maxScore` is applied per protocol, the other four fields are stored and inert, and a directive\'s thresholds are constants inside its `*.directive.ts`, so the table has one editable column and says why. ⚠️ SUPERSEDED IN PART 2026-11-01 (#1165, batch #45): thresholds are now DECLARED parameters stored per entry and edited from the "Parameters & instances" section, so the step-4 table is no longer the only place a directive can be changed; whether the other four override fields are applied is still #1133\'s question and that issue is OPEN (measured 2026-11-04). ⚠️ THE HANDOFF\'S THIRD FINDING IS CONTRADICTED BY THE TREE: `DELETE /api/scoring/protocols/:slug/directive-config/:directiveId` → `deleteProtocolConfig()` → `settings.clearFamily(\'protocol\', \'<slug>:<directiveId>\')` EXISTS and is already exercised by qa-scr-026, so "a delete endpoint that does not exist" is wrong — the missing piece is that the panel does not call it, and `PATCH {maxScore: null}` does not clear the row (measured 2026-10-27: `source` stays `override`).',
                     /* ── batch #39 — 2026-10-27 to 2026-10-27 (both scores kept per bar: the dual score
                        becomes readable, and the opportunity path is measured earning capacity where the
                        signal has no reading) ── */
@@ -806,8 +806,37 @@ export const CURRENT_SLICE = [
                                                 'THE DIRECTIVE LIBRARY IS REGISTRATION-COMPLETE, AND A PROTOCOL ENTRY CAN CARRY ITS OWN PARAMETERS (2026-11-01, #1169 CLOSED — two landings, 16:30 then 19:35) — registration has THREE parts (provider entry, constructor parameter, `register(this.x)` in `DirectivesModule.onModuleInit`); a class with only the first is imported but not registered, so `/api/directives/:id/test` answers "not found". `scripts/lib/directive-registry.cjs` is now the ONE definition of "is this class registered" (the register() act, then the constructor parameter, then the declared name through the import table, which resolves ALIASED imports) and four tools consume it; `nest/scripts/validate-directive-registration.cjs` fails `prebuild` for any `IDirective` class in `implementations/` without a `register()` call, and `validate-directive-id-references.cjs` fails when a seeded protocol or strategy names an id that cannot resolve. Final state measured 2026-11-01: 144 declared classes, 144 registered, 0 unreachable; 34 wired, 10 retired seasonal classes deleted, 6 duplicate implementations removed. `protocol_directive_entry.params json NULL` (ALTER TABLE, never `db push`) carries per-entry overrides, mapped to `DirectiveGroup.directiveParams`, passed as the third argument of `DirectivesService.runAll` and included in the tick-cache key; PATCH refuses an unknown key or an out-of-range value and clears the protocol cache. ⚠️ TWO GUARDS HAD BEEN REPORTING OK ON A BROKEN TREE: the earlier registration test matched the IMPORT line (25 unregistered, then 51 under the exact test) and the RETIRED verdict scanned the whole file — both now assert on SYNTHETIC rows. Register rows 107 and 111.',
                                                 'A PRESENT-DAY SOURCE CANNOT SCORE A HISTORICAL BAR, AND LONG AND SHORT ARE WRITTEN DOWN AS TWO STRATEGIES (2026-11-01, #1139 measured OPEN) — `lookahead.ts` `checkFidelity()` decides whether the data a directive reads existed at the evaluated bar (observed-after-evaluated, ONE bar duration as the arrival allowance, `unknown` abstains), and `crypto-fear-greed` / `dilution-impact` return `unmeasured` on a historical bar instead of scoring the present-day value; live scoring still uses them normally. `dilution-impact` also treats a zero share count as MISSING, which had made it a constant 60/60 off all 194 zero rows in `companyMetric`. `POST /api/directives/:id/test` now passes `asOf` and `timeframe`, without which the diagnostic answered "cannot judge" when the real answer was "you are testing a past bar with present-day data". Separately the long-and-short rule was WRITTEN DOWN FOR THE FIRST TIME — it existed nowhere in the repo, which is why `both` got rebuilt: row 113 records that `long` and `short` are two active strategies, `refuseUnrunnableDirection()` refuses `both` on the run path, `decideEntry()` still supports and tests it, and the Backtest Lab no longer offers it (a disabled option renders only for a stored run that used it). Register row 112.',
                                                 'A BACKTEST POSITION IS AFFORDABLE OR IT IS REFUSED (2026-11-01, #1142 measured OPEN) — `applyAffordability()` caps a position at `accountSize x maxLeverage` (default 1, unleveraged) and REFUSES a trade whose one unit costs more than the account, replacing `if (positionSize < 1) positionSize = 1` — the floor that fabricated a $77,600 position on a $10,000 account and let a stored run report +$138,058.50. Each trade records `notional` / `notionalPct`; the run carries `notionalCap`, `maxLeverage`, `tradesRefusedUnaffordable`, `avgNotionalPct` and `firstSizingRefusals`, and the Lab warns above the trade table when trades were refused, so a lower count is never mistaken for "no signals". Register row 114. Stored runs keep their historical numbers. ⚠️ Whole-unit sizing makes BTC / US30 / USTEC / GER40 untestable at the default account (#1170), equity still does not compound (#1176), and `maxLeverage` is reported but not persisted (#1141).',
-                                                                  ]
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-11-01 (batch #44: 7 handoffs — THE DIRECTIVE LIBRARY BECOMES MEASURABLE, CONFIGURABLE AND REGISTRATION-COMPLETE. #1166: two re-runnable audit tools and the decision thresholds-before-periods (rows 107/109). #1165: `parameters.ts` declares a typed spec proven by BASELINE + LIVENESS + SCORE BOUNDS guards; six registered classes expose knobs and every spec carries a `chart` role (row 110), served by NEW `GET /api/directives/:id/params`. #1169: 144 of 144 classes registered under one shared rule, a `prebuild` gate fails an unregistered class, and `protocol_directive_entry.params` carries per-entry overrides (row 111). #1139: `lookahead.ts` makes `crypto-fear-greed` and `dilution-impact` ABSTAIN on a historical bar (row 112) and `refuseUnrunnableDirection()` keeps `both` off the run path (row 113). #1142: `applyAffordability()` caps notional at `equity x maxLeverage` and refuses an unaffordable trade (row 114). ⚠️ OPEN measured 2026-11-01: #1139 (companyMetric is 194 zero rows; the classification and three producers are unbuilt), #1142 (fixes 1-2 in, fix 3 is #1176), #1165 (multi-instance blocked by UNIQUE(groupId, directiveId)), #1166 (external references for 18 HIGH / 55 MID rows), #1167 (all UI controls), #1170, #1176 and #1141.)'
+                                                                                            /* ── batch #45 — 2026-11-01 to 2026-11-01 (the Lab learns which window it measured and
+                                                                                               which settings differed; one directive may hold several configurations and every
+                                                                                               knob is exposed; sizing moves to the broker's step; the protocol library is cut) ── */
+                                                                                                'A BACKTEST WINDOW IS CHOSEN BY A NAMED MECHANISM AND REPORTED PER RUN (2026-11-01, #1132 measured OPEN) — every run carries `stats.windowSource`: `period:<name>` for a stored `backtest_period`, `days-range` for an explicit count measured back from the NEWEST bar, and the seeded frozen development window (`dev-window-v1`, 21 rows) by DEFAULT. `daysRangeStart()` (`backtest.service.ts`, exported, `days-range.spec.ts` 5 tests) replaces the `asc + take` row limit that returned the OLDEST bars — "20 days" had measured four days in August — and `resolveDevWindow()` reads the window by NAME and THROWS naming `seed:dev-window` rather than falling back to a bar count. The same landing had to move the Lab control: it had been labelled "Bars" and sent `days: 500` as a ROW count, and now says "Days" (min 100, default 30) and sends `days` as a date range. ⚠️ Removing the `bars` state left `ReferenceError: bars is not defined` in two summary labels evaluated only AFTER data loads, so `vite build` passed and the crash was found by loading `/lab/backtest-strategies`; a stale `qa-bt-017` procedure that told a tester to set "Last N bars" was unexecutable and is corrected. Register row 115.',
+                                                                                                'THE SETTINGS DIFF NAMES THE CAP AND THE WINDOW, AND A SCHEMA-DRIVEN SPEC FAILS A COLUMN NOBODY DIFFS (2026-11-01, #1141 CLOSED measured 2026-11-04) — `describeRunDifferences()` gained `maxLeverage` (sizing) and `windowSource` (scope) — both are now `backtestrun` COLUMNS — and its payload states `order`, the run order the positional values are aligned to; `RunSettingsDiff` renders the changed rows above `RunDiffPanel` on the A vs B differences tab. NEW `run-differences-coverage.spec.ts` reads `schema.prisma` and FAILS `prebuild` for a scalar `backtestrun` column that is neither diffed nor declared excluded, closing the loop from the schema back to the diff list; the tree now declares 23 diffable fields where the handoff measured 21. ⚠️ The surface itself has no mount guard — unmounting `RunSettingsDiff` fails nothing and the diff simply stops being visible. Register row 117, which also corrects row 103\'s claim that the surface already existed.',
+                                                                                                'ONE DIRECTIVE MAY HOLD SEVERAL NAMED CONFIGURATIONS, AND EVERY TUNING CONSTANT IS NOW A GUARD-PROVEN PARAMETER (2026-11-01, #1165 measured OPEN — four landings, 20:15 → 23:40) — `protocol_directive_entry` gained `instanceLabel` (`\'\'` = primary) and its unique key widened to `(groupId, directiveId, instanceLabel)` by ALTER TABLE (never `db push`), so the old constraint survives as the `\'\'` case. `runAll` takes `DirectiveInstance[]`, evaluates each instance and `aggregateInstances()` collapses them into ONE slot (mean score, mean confidence, unanimous-only `signalClass`, with `metadata.instances` / `agreement`) keyed by DIRECTIVE ID — never by instance — so `capacityMax` is added once per directive and adding an instance cannot inflate the percentage scale. AVERAGED, not summed or weighted: summing makes "add a comparison" a weight multiplier, and a mixed reading is not a weaker direction (register row 122, a scoring decision). ⚠️ An instance identical to the primary is REFUSED, because averaging turns a duplicate into a silent weight halving. FINAL tree state measured 2026-11-04: 145 directives across 96 files and 114 of 114 tuning constants exposed, 0 unturned (the handoff published 112 across 144, and the SECOND slice\'s "11 of 144 classes / 91 constants left" is superseded and must not be quoted). The seed DECLARES per-entry params and named instances (`SeedProtocolGroup.directiveParams` / `directiveInstances`), validates them through `validateSupplied()` and writes them on create plus converge-on-update; `POST /api/scoring/protocols` REFUSES an unknown `directiveIds` entry; a protocol re-save reads stored params before its delete/re-insert; `protocols-seed-integrity.spec.ts` (5 tests) fails `prebuild` for a seeded directive that cannot resolve. The editor (`DirectiveSettingsPanel`: one collapsible block per tunable directive, a field per declared parameter, **+ Add a second configuration**) consumes `paramSpec` on `GET :slug/directives`, so one request renders every control and ONLY changed values are stored — a field left at its default drops out, so the row means "deliberately tuned". Register rows 110 and 122.',
+                                                                                                'A BACKTEST POSITION IS SIZED IN THE BROKER\'S OWN STEP, AND THE BOT\'S OWN SIZE IS A DECLARED MODEL (2026-11-01, #1170 and #1143 CLOSED measured 2026-11-04) — `broker_symbol.volumeStep`/`contractSize` (synced from the bridge; `null` = UNKNOWN and never 1) give `instrumentGranularity()` the smallest tradeable increment, `applyAffordability()` quantises DOWN to it and reports `granularity`, and `positionModel: \'fixedUnits\'` holds a constant `baseSize × contractSize` — the size the live loop actually sends. Runs store `unitStep` / `fixedUnits` and the settings diff compares both. TWO floors were removed and both had to be: the sizing branches floored to a whole unit BEFORE anything knew the broker\'s step, and the affordability guard could only count to 1. US30 now trades 0.1 lots instead of recording zero trades. ⚠️ Partial by SYMBOL, not by code: a symbol with no `symbol_route` row cannot resolve a contract size, so a `fixedUnits` run REFUSES (400, naming both missing inputs) rather than guessing. Register rows 118 and 119.',
+                                                                                                'A DIRECTIVE CAN BE TUNED AGAINST REAL BARS WITHOUT STORING A RUN, AND THE CHART SAYS WHICH CONTROLS THE RUN READS (2026-11-01, #1178 measured OPEN) — NEW read-only `POST /api/backtest/directive-preview` returns bars, the RSI series, every swing pivot, every divergence pair (regular/hidden × bull/bear) and a per-bar score, computed from the SHARED `directives/utils/divergence.ts` — optional `leftLookback` / `rightLookback` / `minGapBars` / `maxGapBars` on the pivot and pair predicates plus `checkHiddenBullish()` / `checkHiddenBearish()`, with defaults that reproduce the previous behaviour exactly (442 directive-parameter tests unchanged) — because a second copy of the detection rule would drift and only one copy would get the next fix. The response carries `scope.honouredInScoring` vs `scope.previewOnly`, since the scorer reads 2 of the source indicator\'s 7 detection inputs, and the panel badges each control accordingly. `divergence-scan.ts` (11 cases) holds warm-up exclusion, the gap window, kind selection, chronological sort and the confirming-bar score series; replacing the warm-up guard with `=> true` failed 2 of them. The panel lives INSIDE step 6 "Directive overrides" of the Protocols route — which now has 10 OWN steps, versus the Strategies route\'s 11, with every step number derived from the subject\'s own list — NOT above the step machine. ⚠️ The directive itself is still unreachable in ANY run: the only protocol containing it resolves no symbols, is inactive and has no bot (#1178). Register row 121.',
+                                                                                                'PROTOCOL RETIREMENT IS A STATE CHANGE, AND THREE DIFFERENT FAULTS PRODUCE THE SAME SILENT SYMPTOM (2026-11-01, #1179 measured OPEN) — the library was cut 50 → 24 rows (23 → 13 active) by `active = 0`, because deletion has no supported path: `protocol-db.service.ts` refuses any slug without `-copy` and the seeder is upsert-only, so a deleted seeded row returns on the next seed. NEW `scripts/audit-protocol-scrub-safety.cjs` mirrors `resolveProtocolForSymbol()` (assignment → `SYMBOL_PROTOCOL_MAP`, read OUT of `speed-scan.service.ts` rather than copied → leverage pattern) and exits 1 naming any symbol that would lose its ONLY resolver; on its FIRST run it removed `btc-scalp-v1` from the candidate list by showing that class is the only resolver for BTC, ETH and SOL — retiring it would have silenced three kept instruments with no error. NEW `scripts/repair-starved-bars.cjs` drives `POST /api/imports/refresh/:symbolId` and then verifies the NEWEST STORED BAR, because `barsImported` counts rows WRITTEN (WTI answered `{barsImported: 300, source: \'real\'}` on all six timeframes with its newest bar still at 2026-09-10), and it is session-aware (a Friday close is "closed", not stale). `active = 0`, "no resolver" and "every bar starved" share ONE observable — an absent score and no error — and the day\'s repair was measured behaviourally: 8 FX crosses went from 445 h stale to fresh and `forex-session-v1` from 0 scored symbols in 14 days to 10 in 15 minutes. ⚠️ The activation toggle takes a SLUG: called with a UUID it falls through to `strategy.findUnique`, writes NOTHING, and still returns HTTP 200 `{active:false}`. Register row 124.',
+
+                                                                                            /* ── batch #46 — 2026-11-02 to 2026-11-02 (the app states what it SHIPS and what a
+                                                                                               measurement COSTS: a three-protocol seed behind a first-boot seeder, a backtest cost
+                                                                                               budget with a baseline inside it, four suitability gates, and a paired bot) ── */
+                                                                                                'THE SHIPPED SEED IS A DELIBERATE SUBSET, AND A FIRST BOOT NOW SEEDS IT (2026-11-02, decisions 126 and 128) — the package ships three protocols (`xau-speed-v1`, `momentum-stock-v1`, `forex-session-v1`) and three bots; the other 45 protocols and 35 bots are parked VERBATIM in `nest/prisma/seed-parked/`, not deleted, and because the seeders only iterate what the seed declares (upsert-only, no orphan sweep) absence is not deletion — verified at 50 protocols / 40 bots / 435 directive entries with a seeder dry-run of `unchanged:3, changes:[]`. ⚠️ THE CUT WAS INERT UNTIL AN EMPTY DATABASE WAS BUILT AND BOOTED: it came up with 0 protocols, 0 bots and 0 directive groups, because the seeders only ever ran from an API call. `FirstRunSeedService` now seeds on first boot and ONLY when a table is empty — that gate is the whole safety argument, because the seeders are convergent (#833) and firing them on a live install would rewrite every declared bot field. Before any of it could be justified, the metric that made exits invisible had to be fixed: `signalProfitFactor()` (from `returns10d`, invariant to exits) and `tradeProfitFactor()` (from closed trades, the only one a stop comparison may use) replaced `grossProfit/1`, and the A/B they enabled found NO stop arm beat the baseline (0.72 signal PF in all six arms; trade PF 1.03 baseline vs 0.49 for `trail 0.5%`). Register rows 126 and 128.',
+                                                                                                'A BACKTEST COSTS WHAT THE BARS COST, AND THE THREE SHIPPED STRATEGIES NOW HAVE A BASELINE (2026-11-02, #1182 measured OPEN) — `computeRarity()` re-read the protocol\'s whole 365-day `score_snapshot` distribution on EVERY bar (118,360 rows, 601 ms, ~165 s of a 192 s run); `rarityHistory()` now memoises it per PROTOCOL for 60 s (`RARITY_HISTORY_TTL_MS`, declared optional and created on first use so a prototype-borrowing test cannot hit `undefined`), taking `forex-session-v1` / USDJPY / 1h from 214 s to 7.5 s (426 → 13.7 ms/bar) with every scored row, trade and stat field byte-identical — a cost fix, not a maths change. `INV-BACKTEST-BUDGET` in `nest/scripts/contract-probe.cjs` times a real run against 30 s and is deliberately a SYMPTOM guard, because machine load, the MT5 bridge and per-bar writes were each measured and refuted first. The baseline: all three shipped protocols generate plentiful signals on `dev-window-v1` (316 / 732 / 120) and every signal became a trade, and exactly ONE is profitable — `forex-session-v1` on USDJPY, 72% of 316 trades winning at tradePF 3.47 with drawdown under 1% — while the other two lose ~0.25% per trade on the win/loss SIZE ratio, not on signal supply. ⚠️ `backtestrun.winRate` is the fraction of SIGNALS and `stats.tradeWinRate` the fraction of TRADES (USDJPY reads 53% vs 72%); conflating them is the trap. ⚠️ #1183 removed the per-bar writes and closed on 2026-11-03 WITHOUT bringing the 5m arm under 60 s (105.8 s at 12.4 ms/bar) — the remainder is 8,559 bars, not I/O.',
+                                                                                                'THE SUITABILITY METHOD IS FOUR GATES IN A FIXED ORDER, AND THE SCORE CEILING IS THE FINDING (2026-11-02, #1184 measured OPEN) — `signalPct` is directional raw ÷ CONFIGURED capacity, so adding a directive grows the denominator unconditionally while the numerator grows only when that directive has evidence: a 1-directive probe ceilings at 100.0 and averages 72.39 with 0% of bars below 20, while `btc-speed-v1` on 14 directives cannot exceed 14.9 with 100% below 20 — so every `minComposite`, band and gate in the app is calibrated against a scale the score does not have. Gate 1 (legal) is answered read-only by `GET /api/suitability/directive-instrument-audit` (`enforced: false`); gate 2 (separable) must come from the BACKTEST, because `EdgeStatisticsService` sees only the `directiveoutcome` retention (3 distinct days when measured on 2026-11-04); gates 3 and 4 were already exercised. The review retired or re-pointed four of five botless protocols (`btc-scalp-v1` ceiling 22.9 with 1,589 signals all refused as unaffordable; `oil-speed-v1` WTI has no `symbol_route` at all; `dxy-sensitivity-v1` names an instrument the registry does not hold) and demoted `spy-day-v1` / `qqq-day-v1`, and `POST /api/backtest/run` gained `fullScoreSeries` because the ceiling statistic had no tool. Register row 135.',
+                                                                                                'A BOT MAY HOLD A LONG LEG AND A SHORT LEG AS ONE STRATEGY, WITH EVERY CLOSED TRADE ATTRIBUTED TO ITS LEG (2026-11-02, #1185 measured OPEN) — a bot may hold N `strategy_protocol` subscriptions; routing is per subscription and `strategy_signal_queue` is unique on `(strategyId, protocolId, symbol)`, so two legs coexist on one symbol only as DIFFERENT protocols (the `-short` legs are separate protocols with bullish substitutions). `trade.legProtocolId` / `trade.legRole` are copied at DISPATCH and never re-joined (the `abTestSide` rule), and `GET /api/trading/strategy-legs` reports per leg, `combined`, and `unattributed` separately — pre-2026-11-02 trades carry a `because` string instead of being folded into a leg. A bot-driven backtest now REQUIRES `legProtocolId` when the bot holds several subscriptions and derives `directionMode` from the leg role, because it used to measure the primary leg silently and a SHORT leg ran `directionMode: long`, discarding every SELL (80 sell signals, 47 bars scoring at least 10, 0 entries; 47 trades after the fix). Measured on `dev-window-v1`: long 38 trades at PF 2.41, short 47 at 0.37 — buildable, not yet profitable. ⚠️ The handoff measured all three shipped bots at `active = 0`; activation stayed an owner decision and later work has since changed that state. Register row 136.',
+
+                                                                                                /* ── batch #47 — 2026-11-03 to 2026-11-03 (a strategy is a theory AND a track
+                                                                                                record; a trend is READ and never scored; every protocol gets a bot; and three
+                                                                                                self-reports stop lying) ── */
+                                                                                                'A COMPLETE STRATEGY IS A THEORY AND A TRACK RECORD, AND THE CHEAP HALF WAS THE ONE THAT COULD VANISH SILENTLY (2026-11-03, #1189 measured OPEN) — `strategy_track_record` holds one row per observation (`kind` contrast | live | data | behaviour, a one-sentence `headline` capped at 300 chars, `numbers` JSON, a NAMED `source`, `status` noticed | testing | settled, optional `theoryRef` and `issue`), `trading_strategy` gained `theory` + `theoryKind` (asymmetry | participation | regime | control, so "no thesis" is SAYABLE rather than a blank), and `protocol.theory` is now SEEDED — it had been DB-only, because the seeder read it and never wrote it. ⚠️ The first seed version wrote `theory: config.theory ?? null` inside the upsert `update` clause, which turns "not declared" into "write NULL" and wiped two live protocol theories on one re-seed with NO error; the rule is now "write only when declared" (Prisma `undefined` leaves the column alone) and `scripts/canary-689-theory-seed.cjs` proves BOTH directions — restore the six nulled rows, and leave a sentinel in `gold-macro-v1` untouched. `findOne` inlines the newest 50 observations; nothing in scoring, gating, sizing or dispatch branches on any of it (declared `display-only` in `bot-rules.ts`). Measured 2026-11-04: 13 of 54 protocols and 3 of 68 bots carry a theory, and the fleet says so rather than leaving a blank. Files: `trading-strategy.service.ts`, `trading-strategy.controller.ts`, `ViewStrategyPage.jsx`.',
+                                                                                                'A TREND IS READ BY TWO INDEPENDENT FAMILIES AND NEVER SCORED, AND ITS INVALIDATION MUST LIE ON THE CORRECT SIDE OF PRICE (2026-11-03, #1190 measured OPEN) — `GET /api/trend/read` returns a verdict (`trending-up` | `trending-down` | `ranging` | `indeterminate`) derived from least-squares R² and ADX separately, a fitted line with a ±2σ residual channel, a non-repainting confirmed pivot pair, a Donchian position, and an invalidation level chosen as the tightest candidate ON THE CORRECT SIDE of price — or `alreadyBroken: true` with no line drawn. ⚠️ The first rule picked the tightest candidate regardless of side: on WTI 1h it read `trending-up` at a 3.59 close and offered 3.87 as "invalid below", i.e. a stop ABOVE the price it was meant to protect. ⚠️ The isolation guard was also vacuously green — it joined `__dirname` with `src/modules/scoring` when `__dirname` was already `nest/src/modules/trend`, so it walked zero files; it now derives its root from its own location AND asserts a minimum file count, so a scan that inspects nothing FAILS. Imported by nothing in scoring / trading / automation / signals / backtest, enforced by `trend-read-observation-only.spec.ts`: a reading that moved a score would be a maths change needing a copied configuration and a monitored A/B.',
+                                                                                                'EVERY PROTOCOL GETS A BOT, AND A DRY RUN STOPS CREATING THEM (2026-11-03, #1186 measured OPEN) — protocol→bot coverage went 25 → 51 of 54: a bot plus its `strategy_protocol` subscription was created for every protocol that has a symbol, twelve symbol-less protocols were given one at the next FREE priority for that symbol (so the speed-scan winner keeps priority 0 and `db:symbol-priority-ties` reports no ties), and every bot was renamed so its title contains "Bot" — bots have NO `slug`, so `name` + `magic` (unique, >= 234100, what attributes a position, #1018) are the identity. ⚠️ The rename exposed a CONTROL-FLOW defect, not a logic error: the seeder matches a bot by NAME, so a renamed seeded bot looks absent and takes the CREATE branch — which was unguarded, so `POST /seed?dryRun=true` created the bot, its scoring strategy and its subscription and still reported `created: 3` (58 bots where 55 were expected, 3 duplicates ACTIVE). Coverage is counted through `strategy_protocol`, never `trading_strategy.protocolId` alone, because three SHORT protocols are covered as the short LEG of a paired bot (#1185). Measured 2026-11-04: 52 of 54 protocols are bot-backed, 68 bots (26 active), `nikkei-speed-v1` now resolves JP225, and `eurusd-macro-v1` is the one ACTIVE protocol still wired to nothing.',
+
+  /* ── batch #48 — 2026-11-04 to 2026-11-04 (an earned level decides how many bots may be ACTIVE,
+     and a scale-in is decided PER BOT on an account that can actually hold two positions) ── */
+  'AN EARNED LEVEL, NOT A CHOSEN ONE, DECIDES HOW MANY BOTS MAY BE ACTIVE — AND THE CEILING FAILS OPEN WHEN THE LEVEL CANNOT BE READ (2026-11-04, #1193 and #1194 measured OPEN) — `progression-levels.ts` is PURE and derives XP from counts the app already writes: closed trades (2 each, cap 400), completed backtest runs (3 each, cap 150) and days active (1 each, cap 120), so there is no stored counter, no new table and no write path to drift. Levels 1-5 cap ACTIVE bots at 1 / 2 / 3 / 5 / uncapped, enforced at the three paths that can INCREASE the count — `update()` reactivation, `create()` with `active: true`, and `setPairActive()` counting only the sides that would newly activate — and refused as 409 `TCS-TRADE-025`; a DEACTIVATION is never refused, an install already above its cap is grandfathered rather than retro-stopped, and the gate FAILS OPEN when the level is unreadable (`status: unavailable` is NOT level 1). The first-run seeder creates shipped bots beyond the ceiling INACTIVE so the limit is true on day one, while `seedDefaults()` convergence on an existing install stays UNGATED, because reverting a live bot\'s active flag would be a silent trading action taken by a seed run. Served by `GET /api/progression` (measured 2026-11-04: `status: ok`, level 5, 1370 XP, `botCap: null`, 26 active bots) and rendered by `ProgressionPanel` above the table on `/trading/trading-bots`. ⚠️ It is a guardrail, not a licence (#809), and it is NOT `src/core/experience-levels.js`, which is a chosen display preference and must never make a safety decision. Off-switch: `progression.botCapEnabled` (runtime boolean, default true). ⚠️ #1193 (epic) and #1194 are still OPEN: the XP model rewards trading, backtesting and time only — QA passes, walkthrough reviews and protocol authoring are candidate sources that are NOT counted.',
+  'SCALE-IN BECAME A PER-BOT MECHANISM ON A HEDGING ACCOUNT, AND THE POSITION MODEL NOW COMES FROM THE BROKER (2026-11-04, no issue number declared; live proof is REVIEW-QUEUE R57) — `pyramid-policy.service.ts` filters open positions by account and then by THIS bot\'s `magic` ONLY when the account reports `hedging`; any unknown model or missing magic falls back to the conservative symbol-wide rule, and `resolvePolicy` looks the bot up by ID FIRST so it cannot read another bot\'s `maxPyramidTiers`. `duplicate-guard.service.ts` takes the same model at the final check, because on a NETTING account a second order MERGES size and entry price instead of opening a ticket — the refusal now NAMES the model instead of assuming it. The model is read from MT5 `margin_mode` by the bridge and surfaced as `positionModel` on `/account` and on every `brokers[]` row of `GET /api/trading/mt5/positions/managed` (measured 2026-11-04: broker 2 `netting`, broker 3 `hedging`). The same day, three readiness windows shorter than a measured ~90-second API bootstrap were widened and made honest: `build-api.ps1` locates the API by PROCESS SIGNATURE (wildcard IPv6 binds report an empty `State`, so `Get-NetTCPConnection -State Listen` missed a live API) and `tcs-launch.ps1` stops early only when a non-bridge process has EXITED, both with a 180 s ceiling. ⚠️ Unexercised in production: `maxPyramidTiers` is 1 on all 68 bots (measured 2026-11-04) and at handoff time every open position sat on the NETTING account — both bridges now report 0 positions — so the hedging path is proven by 5 NEW spec cases, not by a live second ticket.',
+                                                                                            ]
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-11-04 (batch #48: 2 handoffs — an EARNED level decides how many bots may be ACTIVE, and a scale-in is decided PER BOT on a hedging account. `progression-levels.ts` derives XP from closed trades, completed backtest runs and days active, so the level has no stored counter and no new table; levels 1-5 cap active bots at 1 / 2 / 3 / 5 / uncapped, refused as 409 `TCS-TRADE-025` at the three activation paths, never on a deactivation, and FAILING OPEN when the level is unreadable (#1193 and #1194 measured OPEN — measured 2026-11-04: level 5, 1370 XP, no ceiling, 26 active bots). `pyramid-policy.service.ts` and `duplicate-guard.service.ts` now read THIS bot\'s `magic` and the account\'s POSITION MODEL — a netting account MERGES a second order, a hedging account opens a ticket — surfaced as `positionModel` on `/account` and on every managed-position row; and three readiness windows now allow the measured ~90-second API bootstrap instead of racing it. ⚠️ The #1193 progression contract is recorded in THIS batch block: the block the implementer added earlier carried a `batch #45` marker, and batch #45 is 2026-11-01.)';
 export const CURRENT_ROUTE_CONTRACTS = [
 
       {
@@ -963,6 +992,247 @@ export const CURRENT_ROUTE_CONTRACTS = [
         status: 'active',
       },
   
+      /* — batch #48 — new/changed endpoints (2026-11-04, 2 handoffs) — */
+      {
+        route: 'GET /api/progression',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'ProgressionController / ProgressionService',
+        contract:
+          'NEW (#1193). The install\'s EARNED progression level, the XP behind it, and the active-bot ceiling that level decides. ' +
+          'XP is DERIVED from counts the app already writes — closed trades (2 each, cap 400), completed backtest runs ' +
+          '(3 each, cap 150) and days active (1 each, cap 120) — so there is no stored counter and no new table. Returns ' +
+          '`{ status: ok, level, xp, nextLevel, percentToNext, botCap, activeBots, capReached, overCap, counts, breakdown[], ' +
+          'enforcement, levels[] }`. ⚠️ `status: unavailable` plus a `reason` means the counts could not be read — it is NOT ' +
+          'level 1, and the activation gate FAILS OPEN on it. `breakdown[]` carries `raw` AND `counted` per source so a capped ' +
+          'source is visible rather than silently contributing nothing. Level 1 allows 1 active bot; level 5 is uncapped. ' +
+          '⚠️ This is a guardrail, not a licence (#809), and it is NOT `experience-levels.js`, which is a chosen display preference.',
+        status: 'active',
+      },
+
+      {
+        route: 'GET /api/trading/mt5/account',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'Mt5TradingController / Mt5TradingService',
+        contract: 'CHANGED (2026-11-04) — the account now reports `positionModel` (`netting` | `exchange` | `hedging` | `unknown`), read from the bridge\'s MT5 `margin_mode`. It is the fact the pyramid policy and the duplicate guard branch on, and it had no route-level declaration before this batch. `unknown` is a real answer: both callers then fall back to the conservative symbol-wide rule rather than assuming netting would merge.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/trading/mt5/positions/managed',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'Mt5TradingController',
+        contract: 'CHANGED (2026-11-04). Every `brokers[]` row now carries `positionModel` beside its tickets, so a reader can see WHY a second order was allowed or refused without a separate account call. Measured 2026-11-04: broker 2 `netting`, broker 3 `hedging`. Extends the #1037 `claimants[]` / `contested` contract — attribution and position model are now visible on the same row.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/trading/strategies',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'TradingStrategyController / TradingStrategyService',
+        contract: 'CHANGED in MEANING, not in SHAPE (2026-11-04). `maxPyramidTiers` was already accepted (it moved to `trading_strategy` on 2026-08-27, #344); what changed is what the value DOES. It is read for THIS bot — `resolvePolicy()` looks the bot up by id before reading it, so it can no longer read another bot\'s limit — and > 1 enables scale-in ONLY on a `hedging` account. `1` means the mechanism is OFF, and the bot create form can now set it.',
+        status: 'active',
+      },
+      {
+        route: 'PATCH /api/trading/strategies/:id',
+        method: 'PATCH',
+        permission: 'Authenticated operator access',
+        owner: 'TradingStrategyController / TradingStrategyService',
+        contract: 'CHANGED in MEANING, not in SHAPE (2026-11-04) — the same `maxPyramidTiers` semantics as POST: per bot, hedging-only, and `1` means off. The field is also declared in `bot-rules.ts` with its netting-vs-hedging semantics and annotated on both bot rule views, so a value that is inert on a netting account says so instead of reading as armed.',
+        status: 'active',
+      },
+
+      /* — batch #47 — new/changed endpoints (2026-11-03, 4 handoffs) — */
+      {
+        route: 'GET /api/trading/strategies/:id/track-record',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'TradingStrategyController / TradingStrategyService',
+        contract:
+          'NEW (#1189). The observations recorded against ONE strategy, newest `observedAt` first, up to 500 rows, ' +
+          'filterable by `?kind=` and `?status=`. A row carries `kind` (contrast | live | data | behaviour), a ' +
+          'one-sentence `headline`, optional `detail`, `numbers` JSON (so a reader can RE-CHECK the arithmetic), ' +
+          '`source` (the NAMED origin — a script or an agent; the column permits null, so an unsourced observation ' +
+          'is possible and should be treated as a rumour, not evidence), `status` (noticed | testing | settled), ' +
+          '`theoryRef` into `src/data/theories.js` and `issue`. An empty array means nothing has been observed, ' +
+          'never that the read failed. `GET /api/trading/strategies/:id` inlines the newest 50 of the same rows, so ' +
+          'the page needs one call and a reader who wants the full history needs this one.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/trading/strategies/:id/track-record',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'TradingStrategyController / TradingStrategyService',
+        contract:
+          'NEW (#1189). Records one observation. Body `{ kind, headline, detail?, numbers?, source?, status?, ' +
+          'theoryRef?, issue?, observedAt? }`. A `kind` outside the four is REFUSED with 400 naming them, and a ' +
+          'missing or over-300-character `headline` is REFUSED with 400 — the column cap is validated HERE so a ' +
+          'database error cannot surface as a 500, and the rule the cap enforces is one plain sentence. `status` ' +
+          'defaults to `noticed`; `observedAt` defaults to now.',
+        status: 'active',
+      },
+      {
+        route: 'PATCH /api/trading/strategies/:id/track-record/:recordId',
+        method: 'PATCH',
+        permission: 'Authenticated operator access',
+        owner: 'TradingStrategyController / TradingStrategyService',
+        contract:
+          'NEW (#1189). Settles or annotates ONE observation: `status`, `detail` and `theoryRef` only. ⚠️ ' +
+          '`headline` and `numbers` are NOT patchable — the recorded sentence and the numbers behind it are ' +
+          'immutable after the fact, so an observation cannot be quietly rewritten to agree with a later reading. ' +
+          'A missing `recordId` answers 404 and writes nothing.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/trend/read',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'TrendReadController / TrendReadService',
+        contract:
+          'NEW (#1190). An OBSERVATION: `?symbol=&timeframe=&bars=` reads the last N bars through ' +
+          '`MarketDataService.getBars()` — the only loader that takes the LAST N — and returns a verdict ' +
+          '(`trending-up` | `trending-down` | `ranging` | `indeterminate`) from TWO independent families reported ' +
+          'separately (least-squares R² and ADX), a fitted line with a ±2σ residual channel, a non-repainting ' +
+          'confirmed pivot pair, a Donchian position, and `invalidation: { chosen, basis, alreadyBroken }`. ⚠️ The ' +
+          'invalidation is the tightest candidate ON THE CORRECT SIDE of price, or `alreadyBroken: true` with ' +
+          '`chosen: null` and NO line drawn — the first version offered a level ABOVE the close it was meant to ' +
+          'protect. Insufficient data throws, naming the count found and the count needed. ⚠️ Imported by NOTHING ' +
+          'in scoring, trading, automation, signals or backtest, enforced by `trend-read-observation-only.spec.ts`; ' +
+          'a reading that moved a score would be a maths change needing a copied configuration and a monitored A/B.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/trend/readable',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'TrendReadController / TrendReadService',
+        contract:
+          'NEW (#1190). The symbols with enough bars to be readable at all at a cadence (`?timeframe=`, default ' +
+          '`1h`), so the page offers a list rather than a guess. Measured 2026-11-03: 49 symbols at 1h. A symbol ' +
+          'absent from this list is one the reader cannot judge yet, not one that has no trend.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/trading/strategies/seed',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'TradingStrategyController / TradingStrategyService',
+        contract:
+          'CHANGED (#1186 handoff; decision row 145). `?dryRun=true` now performs NO writes on ANY branch. The ' +
+          'UPDATE branch was always guarded; the CREATE branch was NOT, and because the seeder matches a bot by ' +
+          'NAME (bots have no `slug`), a renamed seeded bot looked absent and a dry run created the bot, its ' +
+          'scoring strategy and its `strategy_protocol` subscription — reporting `created: 3` while doing it ' +
+          '(measured: 58 bots where 55 were expected, 3 duplicates ACTIVE). The guard now sits at the HEAD of the ' +
+          'CREATE branch. The contract the response must keep: `{ dryRun, created, updated/changed, unchanged, ' +
+          'changes[] }`, and the same input WITHOUT `dryRun` must still create.',
+        status: 'active',
+      },
+
+      /* — batch #46 — new/changed endpoints (2026-11-02, 6 handoffs) — */
+      {
+        route: 'GET /api/trading/strategy-legs',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'TradeHistoryController',
+        contract:
+          'NEW (#1185). Per-leg results for every bot, with `combined` and `unattributed` counted separately. A leg carries ' +
+          '`protocolId`, `role`, `sortOrder`, `trades`, `wins`, `winRate`, `totalPnl`, `avgPnl`; `paired: true` means the bot holds ' +
+          'more than one `strategy_protocol` row. `trades: 0` on a leg means it never fired, not that the endpoint failed. Trades ' +
+          'closed before 2026-11-02 carry no `legProtocolId` and are reported under `unattributed` with a `because` string — never ' +
+          'folded into a leg, so a pre-attribution P&L cannot be read as a leg result.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/backtest/run',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract:
+          'CHANGED (#1185, decision row 126 and the #1182 pair). (1) LEG: `legProtocolId` measures ONE leg of a paired bot and ' +
+          'derives `directionMode` from that leg role. A bot-driven run on a bot with several subscriptions now REFUSES with 400 ' +
+          'naming every leg instead of silently measuring the primary one, and a SHORT leg no longer runs `directionMode: long` ' +
+          '(it had been discarding every SELL: 80 sell signals, 47 bars scoring at least 10, 0 entries). (2) SERIES: ' +
+          '`fullScoreSeries: true` returns every scored bar; the default response is capped to the last `MAX_SCORE_SERIES_ROWS` ' +
+          '(2,000), so a bar count read from `scoreSeries` is a floor, not a count. (3) COST: the same arm went 214 s → 7.5 s ' +
+          'because the protocol rarity distribution is read at most once per 60 s; the request and response SHAPE did not change.',
+        status: 'active',
+      },
+
+      /* — batch #45 — new/changed endpoints (2026-11-01, 9 handoffs) — */
+      {
+        route: 'POST /api/backtest/run',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (#1132, #1170 and #1143 CLOSED measured 2026-11-04). THREE contract moves in one batch. (1) WINDOW: `days` is a DATE RANGE ending at the newest bar, not a row limit — the old `asc + take` returned the OLDEST bars, so "20 days" measured four days in August — and every run reports `stats.windowSource` (`period:<name>` | `days-range` | `period:dev-window-v1`, the DEFAULT), with `windowFrom`/`windowTo`. (2) WINDOW SOURCE IS STORED: `backtestrun.windowSource` / `windowFrom` / `windowTo` are columns, so a stored run can be re-read against the window that produced it. (3) SIZING: `positionModel: \'fixedUnits\'` holds a constant `baseSize × contractSize` or an explicit `fixedUnits`, positions quantise DOWN to `volumeStep × contractSize` from `broker_symbol`, and stats gain `unitStep` / `unitGranularity` (`broker` | `assumed-whole`) / `fixedUnits`. A `fixedUnits` run with neither `fixedUnits` nor a resolvable bot is REFUSED with 400 naming both missing inputs and stores nothing. Stored runs keep their historical dates and sizes: no migration rewrites the honest record of what ran.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/backtest/runs/compare',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestService',
+        contract: 'CHANGED (#1141 CLOSED measured 2026-11-04). `differences` now compares 23 declared `backtestrun` columns (the handoff measured 21) — `maxLeverage` (sizing) and `windowSource` (scope) joined the set — and the payload states `order`, the run order the positional A/B values are aligned to, because two runs compared as a set can be read backwards. `changed[]` / `same[]` still report `null` as `unrecorded` and never as a value. NEW `run-differences-coverage.spec.ts` reads `schema.prisma` in `prebuild` and fails for a scalar column that is neither diffed nor declared excluded.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/backtest/directive-preview',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'DirectivePreviewController / DirectivePreviewService',
+        contract: 'NEW (#1178 measured OPEN). READ-ONLY: stores nothing and creates no `backtestrun` row. Returns `{ bars, rsi, swings, divergences, scoreSeries, scope }` for a directive against real stored bars, computed from the SHARED `directives/utils/divergence.ts` (never a second copy of the detection rule). `scope.honouredInScoring` vs `scope.previewOnly` names, per control, whether a RUN reads it or only the CHART does — the scorer reads 2 of the source indicator\'s 7 detection inputs, so most of the panel is diagnostic. REFUSES a directive id that is not a supported preview with an `error`, rather than answering an empty chart.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/scoring/protocols/:slug/directives',
+        method: 'GET',
+        permission: 'Authenticated read access',
+        owner: 'ProtocolsController',
+        contract: 'CHANGED (#1165 measured OPEN). Each entry now returns `paramSpec` (the declared spec), the stored `params`, `instanceLabel` (`\'\'` = primary) and `entryId`, so an editor renders one control per knob in a SINGLE request and no N+1 fetch exists. Before this a caller could not tell a named instance from the primary, could not render a control without a second lookup, and a `Set<string>` collapsed two instances of one directive into one row.',
+        status: 'active',
+      },
+      {
+        route: 'PATCH /api/scoring/protocols/:slug/directives/:directiveId',
+        method: 'PATCH',
+        permission: 'Authenticated operator access',
+        owner: 'ProtocolsController',
+        contract: 'CHANGED (#1165 measured OPEN). Addresses ONE INSTANCE by `instanceLabel` (`\'\'` = primary) and, when the label does not exist, LISTS the instances that do instead of "not found". `params` is validated by `validateSupplied()` (unknown key or out-of-range value refused, never clamped) and `params: null` writes a real SQL `NULL` — declared defaults — which is byte-identical to a never-configured entry. The protocol cache is cleared on every accepted write. ⚠️ `maxScore: null` still does NOT clear a protocol override: the override lives in the settings family and is cleared by `DELETE :slug/directive-config/:directiveId`, which exists and which the panel does not call.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/scoring/protocols/:slug/directives/:directiveId/instances',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'ProtocolsController',
+        contract: 'NEW (#1165 measured OPEN). Creates a NAMED second configuration of one directive in one protocol: `{ instanceLabel, params?, maxScore? }`. The label is REQUIRED and non-empty (the empty label is the primary, which already exists), capped at 60 characters, and unique per directive in the protocol — the widening of the unique key to `(groupId, directiveId, instanceLabel)` is the real guard and the endpoint only makes the refusal readable. An instance IDENTICAL to the primary is refused, because averaging two identical readings halves the directive\'s effective weight silently. Scoring then evaluates every instance on the same bars and AVERAGES them into one slot (register row 122).',
+        status: 'active',
+      },
+      {
+        route: 'DELETE /api/scoring/protocols/:slug/directives/:directiveId',
+        method: 'DELETE',
+        permission: 'Authenticated operator access',
+        owner: 'ProtocolsController',
+        contract: 'CHANGED (#1165 measured OPEN). Takes `?instanceLabel=` and deletes EXACTLY that instance; with no `instanceLabel` (or `\'\'`) it removes the primary. An unknown label answers `success:false` naming the label and the protocol, never a silent 200. Deleting a named instance leaves the primary in place, so the directive keeps scoring at its un-tuned reading instead of vanishing from the protocol.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/scoring/protocols',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'ProtocolsController',
+        contract: 'CHANGED (#1165 measured OPEN). A group naming a `directiveIds` entry that resolves to no registered class is REFUSED with `success:false` and the id named — previously a phantom id was stored and simply never scored, which reads exactly like a directive that found nothing. A re-save of an existing protocol reads the stored `params` for each `(directiveId, instanceLabel)` BEFORE its delete/re-insert and re-applies them, and re-creates named instances, so a version bump cannot silently reset every tuning.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/scoring/gated/protocols/seed',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'ProtocolsController / ProtocolDbService',
+        contract: 'CHANGED (#1165 measured OPEN). A seeded protocol can now DECLARE its per-entry parameters and named instances (`SeedProtocolGroup.directiveParams` / `directiveInstances`); the seeder validates each declaration through `validateSupplied()` before writing and CONVERGES declared values on update, so a parameter survives a reinstall instead of living only in a hand-edited row. `protocols-seed-integrity.spec.ts` (5 tests, in `prebuild`) fails for a seeded instance with an empty label, an unregistered directive, or an invalid param — the first version of that spec passed on a broken tree because it asserted on hand-written rows instead of the seed data.',
+        status: 'active',
+      },
       /* — batch #44 — new/changed endpoints (2026-11-01, 7 handoffs) — */
       {
         route: 'GET /api/directives/:id/params',

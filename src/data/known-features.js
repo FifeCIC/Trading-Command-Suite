@@ -842,7 +842,112 @@ export const KNOWN_FEATURES = {
   //    OPEN on 2026-11-01, so their rows are `partial` and each remainder is a gap line.
     'Lookahead Honesty for External-Data Directives': { dataPersistence: 'none', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
     'Affordable Position Sizing in Backtests': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'partial' },
-    'Per-Directive Parameterisation with Chart Roles': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+    'Per-Directive Parameterisation with Chart Roles': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
     'Directive Depth Audit and Period-Sensitivity Measurement': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'partial' },
     'Directive Library Wiring and Per-Entry Parameters': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  // ── #1193 (2026-11-04) — the earned progression level and the active-bot ceiling it decides.
+  //    ⚠️ TWO THINGS IN THIS APP ARE CALLED "LEVEL". `src/core/experience-levels.js` is a CHOSEN
+  //    display preference (beginner/experienced/expert) that filters navigation; this one is EARNED
+  //    from measured activity and gates how many bots may be ACTIVE. They must never be conflated.
+  //    `dataPersistence: 'stored'` because the level is DERIVED from stored rows (trade,
+  //    backtestrun, tradingstrategy) — the level itself is not a stored counter.
+  //    RECONCILED 2026-11-04 (handoff batch #48): this row was seeded `complete`; it is `partial`
+  //    because #1193 (the EPIC) and #1194 are OPEN in the tracker, measured 2026-11-04. That is a
+  //    TRACKER statement, not a functional one: the mechanism is built and measured (`GET
+  //    /api/progression` → status ok, level 5, 1370 XP, botCap null, 26 active bots; 9 canaried
+  //    service tests; panel rendered with 0 page problems). The open remainder is closure plus the
+  //    XP sources that reward LEARNING, which are #1194's own deferred list — not missing code.
+    'Earned progression level with an active-bot ceiling': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
+
+  // ── batch #45 (2026-11-01) — 5 capabilities from 9 handoffs (all 9 full). Theme: the Lab learns
+  //    WHICH window it measured and WHICH settings differed, the directive mechanism becomes fully
+  //    tunable AND multi-instance with a real editor, sizing moves to the broker's own step, and the
+  //    protocol library is cut 50 → 24 behind an orphan guard.
+  //    THE FOUR `1165-*` FILES ARE ONE MECHANISM ACROSS FOUR LANDINGS (second slice 20:15 → third slice
+  //    22:12 → multi-instance 22:49 → instances UI 23:40) and are recorded ONCE, in their FINAL state:
+  //    the second slice's "11 of 144 classes, 91 constants left" is superseded and must not be quoted.
+  //    Two batch-#44 rows are EXTENDED here rather than duplicated — 'Per-Directive Parameterisation
+  //    with Chart Roles' gains uiSurfaces 1 (the editor renders a field per declared parameter, so the
+  //    batch-#44 "uiSurfaces: 0 is a FINDING" line is closed for PARAMETERS; the `chart: none`
+  //    dynamic/temporal visual is still #1167), and 'Directive Library Wiring and Per-Entry Parameters'
+  //    gained the seed contract (a seeded protocol can DECLARE params and the seed validates them).
+  //    The #1141 settings-diff handoff extends batch #43's 'Backtest run comparison — settings diff'
+  //    row and adds no row of its own.
+  //    RENAMED/MEASURED 2026-11-04: 145 directives across 96 files, 114 tuning constants — 114 exposed,
+  //    0 unturned (the handoff published 112 of 112 across 144 on 2026-11-01; both counts moved after
+  //    it). #1141, #1143 and #1170 are CLOSED; #1132, #1165, #1167, #1178 and #1179 are measured OPEN,
+  //    so their rows are `partial`. ⚠️ 'Comparable Backtest Windows' is recorded uiSurfaces: 1, NOT the
+  //    handoff's 0 — the same-day follow-up put a `windowSource` chip on BacktestPage, so the tree does
+  //    display it (the control now says "Days" and sends `days`; its state is named `windowDays`).
+    'Comparable Backtest Windows': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Multiple configured instances of one directive, editable per protocol': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+    'Broker-unit position sizing in the backtester': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Directive preview chart (RSI divergence)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Protocol library curation and starved-bar repair': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+
+  // ── batch #46 (2026-11-02) — 4 capabilities from 6 handoffs (all 6 full). Theme: the app states
+  //    WHAT IT SHIPS and WHAT A MEASUREMENT COSTS — three protocols and three bots in the public seed
+  //    behind a first-boot seeder, a backtest whose per-bar read became a 60-second memo (214 s → 7.5 s)
+  //    with a re-runnable three-strategy baseline inside that budget, a four-gate suitability method
+  //    that found the score ceiling collapsing with directive count (#1184), and a bot that can hold a
+  //    LONG and a SHORT protocol at once with each closed trade attributed to its leg (#1185).
+  //    TWO PAIRS ARE ONE MECHANISM AND LAND ONCE, IN THE FINAL STATE. (1) The `1182-*` files are one
+  //    subject hours apart (baseline 18:12 → per-bar rarity 21:03): the baseline FILED the 214 s run as
+  //    #1182 and the later file ISOLATED and fixed it, so this row records the fix AND the measurement —
+  //    never "the cause is not isolated", which was true only between the two files. (2) The
+  //    `126-…` and `128-…` files are the same subject five hours apart (13:55 → 17:13): #126 measured
+  //    the candidates, split the profit factor and BUILT the splitter; #128 APPLIED the cut and added
+  //    `FirstRunSeedService`, so "the seed cut is not applied" is CLOSED and must not be re-opened.
+  //    ⚠️ The `126-` and `128-` prefixes are `docs/SETTLED-DECISIONS.md` ROW numbers, not issues.
+  //    uiSurfaces: 0 is a FINDING, not a blank (2 of these: packaging is a seed concern, and the paired
+  //    leg API has no page). `devCompletion: 'partial'` only where a measured-OPEN issue names the
+  //    remainder: #1182 (the 5m arm is still over its 60 s budget), #1184 (the ceiling has no tool and
+  //    nothing rescales `signalPct`), #1185 (no UI, no declared account strategy, bot-level decision
+  //    chain). #1183 closed on 2026-11-03 WITHOUT bringing 5m under 60 s — the remainder is bar count.
+    'Strategy packaging — three shipped, the rest local': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+    'Backtest cost budget and the three-strategy baseline': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+    'Protocol-symbol suitability review (four gates, ordered)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+    'Paired bot — a long leg and a short leg under one strategy': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'partial' },
+
+  // ── batch #47 (2026-11-03) — 3 capabilities from 4 handoffs (1 was a Note — bridge watchdog and
+  //    launcher truthfulness, `type: bugfix`, QA entries only, so it carries no capability). Theme:
+  //    a strategy becomes TWO HALVES (a theory saying what it is FOR, a track record saying what it
+  //    has DONE), a trend is READ and never scored, and every protocol gets a bot behind it — while
+  //    three self-reports that were lying (a dry run that CREATED, a retry bound that LATCHED, a
+  //    launcher that blamed a running system) were made honest.
+  //    EXTENDED, NOT DUPLICATED. (1) `qa-trade-025` already proves the seeder's UPDATE branch
+  //    reports without writing, and batch #38 settled row 145 ("a dry run that mutates is worse
+  //    than no dry run") — the defect here is the CREATE branch, which that test never reached
+  //    because the UPDATE branch was always guarded; the new `qa-bot-016` is its SIBLING, not a
+  //    replacement. (2) 'Trend Reading (experiment)' is NOT 'MicroTrendDetector (ADX+Wilder)': that
+  //    row is a SCORING directive on the decision path, this one is an off-path READING that
+  //    nothing consumes. (3) Batch #46's 'Strategy packaging' row owns the shipped seed; this
+  //    batch owns the bot-per-protocol coverage that sits on top of it.
+  //    VERIFIED AGAINST THE TREE 2026-11-04, and the tree has moved PAST the handoffs: protocol→bot
+  //    coverage is **52 of 54** (the file says 51), `nikkei-speed-v1` NOW resolves JP225 (that
+  //    deferred item is CLOSED and is deliberately NOT recorded as a gap), and there are 68 bots
+  //    (26 active / 42 inactive), 0 without "Bot" in the name.
+  //    uiSurfaces: 0 is a FINDING, not a blank — none here (3, 1 and 1).
+  //    `devCompletion: 'partial'` on ALL THREE because the tracker names each remainder: #1189
+  //    (OPEN — 41 of 54 protocols and 65 of 68 bots still carry no theory, and no UI records an
+  //    observation), #1190 (OPEN — the reading is built and canaried, but whether it is USEFUL is
+  //    the owner's judgement, theory status `testing`), #1186 (OPEN — the 14 coverage bots are
+  //    DB-only, so a reinstall drops coverage back to 25/54).
+    'Strategy Theory and Track Record': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Trend Reading (experiment)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Protocol → Bot coverage (every protocol bot-backed)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
+
+  // ── batch #48 (2026-11-04) — 2 capabilities from 2 handoffs (both full). Theme: an EARNED level
+  //    decides how many bots may be ACTIVE, and a scale-in decision is made PER BOT on an account
+  //    that can actually hold two positions. The #1193 row above and its `qa-bot-014` / `qa-bot-015`
+  //    were recorded by the implementer earlier the same day — RECONCILED and EXTENDED here, never
+  //    duplicated. Only one capability row is new in this batch.
+  //    `uiSurfaces: 0` is a FINDING, not a blank (0 of these: 1 and 3).
+  //    `devCompletion: 'partial'` on BOTH, each naming its remainder in KNOWN_GAPS: #1193 / #1194
+  //    are OPEN (the epic still wants a Project board, and XP rewards nothing for learning), and
+  //    per-bot pyramid is UNEXERCISED in production — `maxPyramidTiers` is 1 on all 68 bots and
+  //    every bot holding a position routes to the NETTING account, where a second order MERGES.
+  //    Verified against the tree 2026-11-04, not taken from the handoffs: `positionModel` is on
+  //    `Mt5Account`, stamped on every managed-position row and mapped by the adapter.
+    'Per-bot pyramid (scale-in) with account-aware position model': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'trading', devCompletion: 'partial' },
 };
