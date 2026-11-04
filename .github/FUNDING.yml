@@ -1,5 +1,25 @@
+# Funding options shown by GitHub's "Sponsor" button on this repository.
+#
+# ⚠️ THE CANONICAL LIST IS THE CENTRAL DOC, NOT THIS FILE:
+#   G:\My Drive\Project Management\Live\Trading-Command-Suite-Documentation\commercial\DONATION-LINKS.md
+# This file is what GitHub can render; that doc records where every link also appears (other repos,
+# the site, the wiki) and which ones are verified. Update both together.
+#
+# ⚠️ Every URL below was checked on 2026-11-04 and returned HTTP 200. The sweep of the owner's 23
+# repositories found the SAME options written two different ways (a `sponsors/LOLinDark` handle in two
+# repos, and Patreon as both `/ryanbayne` and `/sponsors/ryanbayne`). Anything not listed here should
+# be treated as stale until someone re-checks it.
+#
+# ⚠️ `custom` is capped at four entries by GitHub — do not keep adding to it. New options belong in
+# the support page, which is not limited.
+
+github: [ryanbayne]
+patreon: ryanbayne
 buy_me_a_coffee: ryanbayne
 
 custom:
+  - "https://paypal.me/ryanbayne"
   - "https://fifecic.scot"
   - "mailto:tradingcs@fifecic.scot"
+
+# open_collective: <slug>   # ← only once the account exists; currently under consideration
