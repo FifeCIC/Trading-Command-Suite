@@ -7,7 +7,7 @@
 
 Built by [FifeCIC](https://fifecic.scot) | [Ryan Bayne](https://github.com/RyanBayne)
 
-**[Website](https://fifecic.github.io/Trading-Command-Suite/) · [Screenshots](https://fifecic.github.io/Trading-Command-Suite/showcase/) · [Wiki](https://github.com/FifeCIC/Trading-Command-Suite/wiki) · [Discussions](https://github.com/FifeCIC/Trading-Command-Suite/discussions) · [Issues](https://github.com/FifeCIC/Trading-Command-Suite/issues) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)**
+**[Website](https://fifecic.github.io/Trading-Command-Suite/) · [Screenshots](https://fifecic.github.io/Trading-Command-Suite/showcase/) · [Wiki](https://github.com/FifeCIC/Trading-Command-Suite/wiki) · [Discussions](https://github.com/FifeCIC/Trading-Command-Suite/discussions) · [Issues](https://github.com/FifeCIC/Trading-Command-Suite/issues) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Support](https://fifecic.github.io/Trading-Command-Suite/support/)**
 
 > ### 🌐 [Open the project website →](https://fifecic.github.io/Trading-Command-Suite/)
 >

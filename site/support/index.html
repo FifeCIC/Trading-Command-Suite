@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support Trading Command Suite — Ryan Bayne</title>
+<meta name="description" content="Support the development of Trading Command Suite. The core is free forever; donations and the paid Lab tier are what keep it being built.">
+<link rel="canonical" href="https://fifecic.github.io/Trading-Command-Suite/support/">
+<link rel="icon" href="../showcase/assets/logo.png" type="image/png">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#000000">
+<meta property="og:site_name" content="Trading Command Suite">
+<meta property="og:title" content="Support Trading Command Suite">
+<meta property="og:description" content="The core is free forever. Donations and the paid Lab tier keep it being built.">
+<meta property="og:url" content="https://fifecic.github.io/Trading-Command-Suite/support/">
+<meta property="og:image" content="https://fifecic.github.io/Trading-Command-Suite/social-card.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<!--
+  ⚠️ THIS PAGE ASKS FOR MONEY, SO IT OWES THE READER A CLEAR REASON AND A CLEAR PROMISE.
+  Three rules are load-bearing here and should not be edited away:
+    1. A NO PERFORMANCE CLAIM, and none nearby. The app is not configured to profit; a payment page is
+       the worst possible place to imply otherwise. The disclaimer lives one link away and is named.
+    2. THE FREE-FOREVER PROMISE IS SPELLED OUT, including risk controls. That promise is what makes the
+       ask honest; softening it later would make this page a bait.
+    3. THE THRESHOLD IS NAMED. "The Lab becomes free at £1m after tax across all income" is a
+       commitment the owner made in writing (owner, 2026-11-04). If it changes, it changes visibly,
+       here and in commercial/MONETISATION-ROADMAP.md — not by quietly deleting a paragraph.
+  ⚠️ One primary action. Four equal buttons is a menu, not an ask: Sponsors is first and marked.
+  ⚠️ The PayPal QR is a real payment code (500x500). It is published HERE and nowhere else.
+-->
+<style>
+  :root {
+    color-scheme: dark;
+    --bg:#000; --panel:#0a0d11; --ink:#e5e7eb; --ink-soft:#a1a9b5;
+    --accent:#14b8b9; --accent-soft:#2dd4bf; --border:#242b34; --radius:12px; --max:60rem;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased; }
+  img { max-width:100%; height:auto; display:block; }
+  a { color:var(--accent-soft); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  a:focus-visible { outline:3px solid var(--accent); outline-offset:3px; border-radius:4px; }
+  .wrap { max-width:var(--max); margin:0 auto; padding:0 1.25rem; }
+  .skip { position:absolute; left:-9999px; }
+  .skip:focus { left:1rem; top:1rem; z-index:50; background:var(--accent); color:#06222a; padding:.6rem 1rem; border-radius:8px; font-weight:700; }
+  .top { position:sticky; top:0; z-index:20; background:rgba(0,0,0,.82); backdrop-filter:blur(10px); border-bottom:1px solid var(--border); }
+  .top .wrap { display:flex; align-items:center; gap:1rem; min-height:60px; }
+  .brand { display:flex; align-items:center; gap:.6rem; font-weight:700; color:var(--ink); }
+  .brand img { width:26px; height:26px; border-radius:6px; }
+  .top nav { margin-left:auto; display:flex; gap:1.1rem; font-size:.9rem; }
+  .top nav a { color:var(--ink-soft); }
+  main { padding:3rem 0 2rem; }
+  h1 { font-size:clamp(1.8rem,4vw,2.6rem); line-height:1.1; margin:0 0 .8rem; letter-spacing:-.02em; }
+  h1 .teal { color:var(--accent-soft); }
+  .lede { color:var(--ink-soft); font-size:clamp(1rem,1.5vw,1.1rem); max-width:38rem; margin:0 0 2rem; }
+  h2 { font-size:1.15rem; margin:2.6rem 0 .8rem; }
+  p { margin:.7rem 0; }
+  .options { display:grid; gap:.8rem; margin:1.4rem 0 0; padding:0; list-style:none; }
+  .opt { display:flex; align-items:center; gap:1rem; padding:1rem 1.15rem; border:1px solid var(--border);
+         border-radius:var(--radius); background:var(--panel); }
+  .opt.primary { border-color:var(--accent); }
+  .opt .name { font-weight:650; }
+  .opt .why { color:var(--ink-soft); font-size:.85rem; }
+  .opt a { margin-left:auto; padding:.45rem 1rem; border:1px solid var(--border); border-radius:8px;
+           min-height:44px; display:inline-flex; align-items:center; color:var(--ink); white-space:nowrap; }
+  .opt.primary a { background:var(--accent); border-color:var(--accent); color:#04252a; font-weight:650; }
+  .opt a:hover { text-decoration:none; border-color:var(--accent); }
+  .pill { font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); border:1px solid var(--accent);
+          border-radius:999px; padding:.1rem .5rem; margin-left:.5rem; vertical-align:middle; }
+  .qr { display:flex; gap:1.5rem; align-items:center; flex-wrap:wrap; margin-top:1.4rem; padding:1.15rem;
+        border:1px solid var(--border); border-radius:var(--radius); background:var(--panel); }
+  .qr img { width:180px; height:180px; border-radius:8px; background:#fff; padding:.5rem; }
+  .qr .txt { max-width:26rem; }
+  .promise { border-left:3px solid var(--accent); padding:.2rem 0 .2rem 1.1rem; margin:1.4rem 0; }
+  .warn { border:2px solid #c0362c; background:#1c0f0e; border-radius:var(--radius); padding:1rem 1.1rem; margin:1.6rem 0; }
+  .warn p, .warn li { color:#ffd9d5; }
+  .warn h2 { margin-top:0; color:#ffd9d5; font-size:1rem; }
+  footer { border-top:1px solid var(--border); margin-top:3rem; padding:2rem 0 3rem; color:var(--ink-soft); font-size:.86rem; }
+  footer a { color:var(--ink-soft); }
+  @media (max-width:640px) { .top nav a:not(:last-child) { display:none; } .opt { flex-wrap:wrap; } .opt a { margin-left:0; } }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="../"><img src="../showcase/assets/logo.png" alt="" width="26" height="26">Trading Command Suite</a>
+    <nav aria-label="Main">
+      <a href="../#what">What it does</a>
+      <a href="../#install">Install</a>
+      <a href="https://github.com/FifeCIC/Trading-Command-Suite">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+  <h1>Support the <span class="teal">project</span></h1>
+  <p class="lede">Trading Command Suite is free, open source, and built by one person. If it is useful to
+  you, this page is how you can help it keep existing.</p>
+
+  <h2>What your support actually pays for</h2>
+  <p>My time. That is the whole of it — no servers to run, no data to license, no staff. I am a solo
+  parent of four with limited working hours, and the honest truth is that I need the work to earn
+  something or it cannot continue at this pace.</p>
+  <p>I would rather say that plainly than build a paywall quietly and pretend it was always the plan.</p>
+
+  <h2>Choose whichever suits you</h2>
+  <ul class="options">
+    <li class="opt primary">
+      <span>
+        <span class="name">GitHub Sponsors <span class="pill">preferred</span></span><br>
+        <span class="why">Recurring or one-off, handled by GitHub, shown on the repository</span>
+      </span>
+      <a href="https://github.com/sponsors/ryanbayne">Sponsor →</a>
+    </li>
+    <li class="opt">
+      <span>
+        <span class="name">Patreon</span><br>
+        <span class="why">Monthly support, and progress posts as the work goes on</span>
+      </span>
+      <a href="https://www.patreon.com/ryanbayne">Patreon →</a>
+    </li>
+    <li class="opt">
+      <span>
+        <span class="name">PayPal</span><br>
+        <span class="why">One-off, no account with anyone else required</span>
+      </span>
+      <a href="https://paypal.me/ryanbayne">PayPal →</a>
+    </li>
+    <li class="opt">
+      <span>
+        <span class="name">Buy Me a Coffee</span><br>
+        <span class="why">Small one-offs, quickest of the lot</span>
+      </span>
+      <a href="https://www.buymeacoffee.com/ryanbayne">Buy a coffee →</a>
+    </li>
+  </ul>
+
+  <div class="qr">
+    <img src="qrcode.png" width="500" height="500" alt="PayPal QR code for Ryan Bayne — scan with a phone camera to open the payment page">
+    <div class="txt">
+      <p style="margin-top:0"><strong>On a phone?</strong> Scan this to open PayPal directly.</p>
+      <p class="why">It is the same destination as the PayPal link above — a shortcut, not a different
+      payment method.</p>
+    </div>
+  </div>
+
+  <h2>What stays free, permanently</h2>
+  <div class="promise">
+    <p><strong>Everything that decides whether a trade happens stays free, forever.</strong> Scoring,
+    gating, protocol configuration, bots, positions, exits, risk controls, and the decision trail that
+    explains an order. Those are not features to sell back to you — they are the part that has to be
+    trustworthy.</p>
+    <p>Charging for risk controls would be indefensible. It is written here so that a future version of
+    me cannot quietly forget it.</p>
+  </div>
+
+  <h2>What may become paid, and what that means</h2>
+  <p><strong>The Lab</strong> — the advanced backtesting suite, with highly visual side-by-side A/B
+  comparison of two configurations over the same bars — is intended as a paid tier for people who want
+  a serious tool and would rather pay for it than be handed a shallow one.</p>
+  <div class="promise">
+    <p><strong>And then it becomes free for everyone.</strong> When the income I have received after
+    tax — from every source, the project included — reaches <strong>one million pounds</strong>, the Lab
+    stops being paid and becomes free to all.</p>
+    <p>That is a commitment, not a slogan: it is recorded in the project's own planning documents with
+    the date it was made.</p>
+  </div>
+
+  <div class="warn">
+    <h2>Before you give me anything</h2>
+    <p>This software is <strong>not financial advice</strong>, and it is not configured to profit by
+    default. No strategy it ships with has been shown to be profitable. It is pre-release.</p>
+    <p>The most valuable thing you can do costs nothing: <strong>use a demo account</strong> and tell me
+    what confused you. The second most valuable is reading
+    <a href="https://github.com/FifeCIC/Trading-Command-Suite/blob/master/DISCLAIMER.md">the disclaimer</a>
+    before you connect an account.</p>
+  </div>
+
+  <h2>If you would rather not pay anything</h2>
+  <p>That is completely fine, and the software does not degrade because of it. Starring the repository,
+  filing a clear bug report, or telling one person who might find it useful is worth more than a small
+  donation.</p>
+  <p><a href="https://github.com/FifeCIC/Trading-Command-Suite">github.com/FifeCIC/Trading-Command-Suite</a></p>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Built by <a href="https://ryanbayne.uk">Ryan Bayne</a> ·
+      <a href="https://fifecic.scot">FifeCIC</a> · Licensed under the
+      <a href="https://www.gnu.org/licenses/agpl-3.0.html">GNU AGPL v3.0</a> — no warranty, as set out
+      in sections 15–17.</p>
+    <p><a href="../">Project site</a> ·
+      <a href="https://github.com/FifeCIC/Trading-Command-Suite/wiki">Wiki</a> ·
+      <a href="https://github.com/FifeCIC/Trading-Command-Suite/discussions">Discussions</a> ·
+      <a href="https://discord.gg/8gRFkhbbfg">Discord</a></p>
+    <p>Not financial advice. Test on a demo account.</p>
+  </div>
+</footer>
+</body>
+</html>
