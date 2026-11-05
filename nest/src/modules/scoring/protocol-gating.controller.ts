@@ -117,8 +117,8 @@ export class ProtocolGatingController {
     // ── The SCALE EPOCH (#1115) ────────────────────────────────────────────────────────────────
     //
     // ⚠️ `score_snapshot` SPANS TWO INCOMPATIBLE SCALES, so a MAX across the boundary returns a
-    // figure from a scale the pipeline no longer uses. Measured 2026-10-13: `forex-session-v1`
-    // peaks at `signalPct` **100** before this date and **27.3** after; `xau-speed-v1` **77** vs
+    // figure from a scale the pipeline no longer uses. Measured 2026-10-13: `forex-session-v1-long`
+    // peaks at `signalPct` **100** before this date and **27.3** after; `xau-speed-v1-long` **77** vs
     // **23.8**. An unfiltered MAX is therefore not "the best ever" — it is "the best on the old
     // denominator", which is the ~6.3x error this endpoint's own docblock describes.
     //
@@ -144,14 +144,14 @@ export class ProtocolGatingController {
     //
     // ⚠️ READS `score_snapshot`, NOT `score` (#1115). `score` is SPARSE — measured 2026-10-13 it
     // held 0-25 rows/day for 2026-09-16..10-07 against 2,371-11,752/day in `score_snapshot`, and
-    // the protocols' true peaks fall in that gap (`xau-speed-4h` peaked at 17.25 on 2026-09-11
+    // the protocols' true peaks fall in that gap (`xau-speed-4h-long` peaked at 17.25 on 2026-09-11
     // with ZERO `score` rows that day). Reading it reported that bot's ceiling as 6.2 against a
     // real 17.3 and marked it `cannot fire` — a live bot declared dead by a measurement that
     // never saw its best tick.
     //
     // ⚠️ `symbol` IS CONSTRAINED to the bot's own symbol. The `score` join was protocol-wide, so
     // a protocol scoring several symbols reported the max across all of them as THIS bot's
-    // achievement (all 13 `forex-session-v1` bots shared one `achievedPct`). Switching source
+    // achievement (all 13 `forex-session-v1-long` bots shared one `achievedPct`). Switching source
     // without tightening that would have introduced a fresh false-positive of exactly the kind
     // being fixed.
     //
@@ -327,7 +327,7 @@ export class ProtocolGatingController {
    * Gate groups resolve by (protocolId, groupId-KIND). This is load-bearing: `breakout.groupId` is
    * a KIND ('risk' | 'technical' | 'sentiment'), NOT the group UUID — keying on the UUID matches
    * nothing, silently excludes no gate, and inflates every denominator by exactly the gate capacity
-   * (100 here, 200 for `vix-spike-v1`). That was the first version's bug.
+   * (100 here, 200 for `vix-spike-v1-long`). That was the first version's bug.
    *
    * ⚠️ `unobserved` IS NOT `neverDirectional`. A directive never exercised in the window looks
    * identical to one that is structurally incapable. Collapsing them turns "not measured" into
@@ -546,13 +546,13 @@ export class ProtocolGatingController {
       // predicate the scoring engine uses lives in `directive-inclusion.ts`.
       //
       // Measured 2026-10-01: 52 protocols exist and 50 are served; the two excluded are
-      // `signals-workbench` and `060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d`, and BOTH have zero rows in
+      // `signals-workbench-long` and `conviction-dip-accumulation-long`, and BOTH have zero rows in
       // `protocol_directive_group`. Neither is an accident, and neither is a "ghost entry from
       // legacy seed data" — the old comment here said that and it was wrong. Both are CURRENT,
       // declared seed entries with `groups: []`, and both exclusions are SETTLED DECISIONS
       // (docs/SETTLED-DECISIONS.md, 2026-09-11):
       //
-      //   • `signals-workbench` — a WORKBENCH protocol, populated by
+      //   • `signals-workbench-long` — a WORKBENCH protocol, populated by
       //     `SignalEnvelopeService.persistScores()` rather than scored through the gated pipeline.
       //     Its `active: 1` is correct and its `ProtocolHealthService` "no risk-gate group" warning
       //     is EXPECTED, not a fault. Do not "fix" it by deactivating the row.
@@ -686,7 +686,7 @@ export class ProtocolGatingController {
         }
         // else: this DB strategy has no matching code-registry protocol.
         // Skip it — strategies ≠ protocols. These are legacy entries from
-        // the WordPress plugin era (names like "Signals Workbench → xau-speed-v1").
+        // the WordPress plugin era (names like "Signals Workbench → xau-speed-v1-long").
       }
     } catch {
       // DB might not be available — skip
@@ -805,7 +805,7 @@ export class ProtocolGatingController {
     // WHY: a protocol can honestly report `state: 'scoring'` while writing nothing usable.
     // `symbolsScored` counts envelopes that were *built*, and a tick where every direction-
     // eligible directive read neutral produced `0/0 -> 0` with `signal: 'HOLD'` — a phantom
-    // zero that counted as a score. Live evidence: `spy-day-v1` wrote rows at 11:48 with
+    // zero that counted as a score. Live evidence: `spy-day-v1-long` wrote rows at 11:48 with
     // `rawMax: 0` and then nothing directional for hours, while this table still said
     // 'scoring'. The outage was invisible because nothing compared "claims to be scoring"
     // against "last produced a real reading".
@@ -960,7 +960,7 @@ export class ProtocolGatingController {
    * Query params:
    *   ?timeframe=1d   (default: 1d)
    *   ?bars=100        (default: 100)
-   *   ?protocol=btc-speed-v1  (optional — selects protocol groups)
+   *   ?protocol=btc-speed-v1-long  (optional — selects protocol groups)
    */
   @Get(':symbol')
   async getGatedScore(
@@ -1146,7 +1146,7 @@ export class ProtocolGatingController {
    * `resolveSymbols()` itself was correct, which is why `symbols` was right and only the LABEL lied.
    * That is the "plausible output, no error" shape this repo keeps re-finding, and it matters
    * directly here: a reader checking whether their assignment TOOK would see `derived` and conclude
-   * it had not. Measured before the fix: `probe-1dir-v1` had an EURUSD assignment row and reported
+   * it had not. Measured before the fix: `probe-1dir-v1-long` had an EURUSD assignment row and reported
    * `resolution: "derived"`.
    *
    * The candidates are now built the same way `resolveSymbols()` builds them, so the label and the

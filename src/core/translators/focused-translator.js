@@ -3,7 +3,7 @@
  *
  * Principles:
  *   - Slugs become titles: "forex-majors" → "FOREX Majors"
- *   - Protocol IDs become names: "mt5-technical-core-v1" → "Technical Core v1"
+ *   - Protocol IDs become names: "mt5-technical-core-v1-long" → "Technical Core v1"
  *   - Raw numbers become interpretations: composite 72 → "Strong Buy"
  *   - Technical paths become human descriptions
  *   - Hover reveals the underlying technical value
@@ -41,7 +41,7 @@ var WATCHLIST_NAMES = {
 
 var PROTOCOL_NAMES = {
   'built-in-default': { title: 'Default Pipeline', desc: 'Placeholder protocol — no custom directives active' },
-  'mt5-technical-core-v1': { title: 'Technical Core v1', desc: '30 technical directives including RSI, MACD, ATR, Bollinger, VWAP, candlestick patterns, support/resistance, and volume analysis' },
+  'mt5-technical-core-v1-long': { title: 'Technical Core v1', desc: '30 technical directives including RSI, MACD, ATR, Bollinger, VWAP, candlestick patterns, support/resistance, and volume analysis' },
 };
 
 var BROKER_NAMES = {

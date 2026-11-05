@@ -987,7 +987,7 @@ export const SETTING_FAMILIES: SettingFamily[] = [
      * dies with a cache clear, and no other machine or agent can see which run was accepted. It is a
      * DECISION ABOUT EVIDENCE, so it belongs in the database with the runs it points at.
      *
-     * ⚠️ THE SUBJECT IS A SCOPE, NOT A RUN: a protocol slug (`vix-spike-v1`), because two protocols
+     * ⚠️ THE SUBJECT IS A SCOPE, NOT A RUN: a protocol slug (`vix-spike-v1-long`), because two protocols
      * score different directives against different symbols and their runs are not comparable. There is
      * exactly ONE baseline per scope — accepting a run REPLACES the previous one, which is the point
      * of "this is the new reference".

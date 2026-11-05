@@ -8,7 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
  * ---------------------------------
  * `clearFamily()` derives a prefix and assumes a `:` before the field (`protocol:<s>:<d>:f`). That is
  * correct for the `protocol` family and WRONG for every dot-style family, so
- * `clearFamily('backtestBaseline', 'vix-spike-v1')` deletes nothing and reports `deleted: 0` — which
+ * `clearFamily('backtestBaseline', 'vix-spike-v1-long')` deletes nothing and reports `deleted: 0` — which
  * reads as "there was nothing to clear". A silent no-op on a delete is the failure this repo keeps
  * re-finding: plausible output, no error.
  *
@@ -53,15 +53,15 @@ const resolverWith = (initial: Record<string, string> = {}) => {
   };
 };
 
-const BASELINE = 'backtest.baseline.vix-spike-v1.runId';
+const BASELINE = 'backtest.baseline.vix-spike-v1-long.runId';
 
 describe('SettingsResolverService.clear', () => {
   it('deletes exactly the named key and reports what it replaced', async () => {
     const { resolver, rows } = resolverWith({
       [BASELINE]: 'f05433fd-4bc2-4863-a23a-7932ad0e2e30',
       // A second member of the SAME family: a single-key clear must not touch it.
-      'backtest.baseline.vix-spike-v1.acceptedAt': '2026-10-27T18:00:00.000Z',
-      'backtest.baseline.btc-speed-v1.runId': '521cbe05-701e-4752-8efc-49ea226e21f7',
+      'backtest.baseline.vix-spike-v1-long.acceptedAt': '2026-10-27T18:00:00.000Z',
+      'backtest.baseline.btc-speed-v1-long.runId': '521cbe05-701e-4752-8efc-49ea226e21f7',
     });
 
     const result = await resolver.clear(BASELINE);
@@ -74,8 +74,8 @@ describe('SettingsResolverService.clear', () => {
     expect(rows.has(BASELINE)).toBe(false);
     // ⚠️ The neighbours survive. This is the assertion that would fail if `clear` were implemented by
     // delegating to `clearFamily` — which is the obvious "reuse" a later author would reach for.
-    expect(rows.has('backtest.baseline.vix-spike-v1.acceptedAt')).toBe(true);
-    expect(rows.has('backtest.baseline.btc-speed-v1.runId')).toBe(true);
+    expect(rows.has('backtest.baseline.vix-spike-v1-long.acceptedAt')).toBe(true);
+    expect(rows.has('backtest.baseline.btc-speed-v1-long.runId')).toBe(true);
   });
 
   it('reports absent rather than pretending a delete happened', async () => {

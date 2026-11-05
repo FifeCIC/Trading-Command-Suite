@@ -15,7 +15,7 @@ import { describeRunDifferences, type RunSettingsRow } from './run-differences';
 const base: RunSettingsRow = {
   id: 'a',
   symbol: 'VIX',
-  protocolId: 'vix-spike-v1',
+  protocolId: 'vix-spike-v1-long',
   timeframe: '5m',
   startDate: new Date('2026-09-09T00:00:00Z'),
   endDate: new Date('2026-10-20T00:00:00Z'),

@@ -384,7 +384,7 @@ export class TradeHistoryController {
     //     trade.strategy ──name──▶ trading_strategy ──strategyId──▶ strategy_protocol
     //                                                                      │
     //                                          protocolId is a **SLUG**, not a uuid
-    //                                          ('forex-session-v1', 'xau-speed-1h')
+    //                                          ('forex-session-v1-long', 'xau-speed-1h-long')
     //                                                                      ▼
     //                                                                 protocol.slug
     //                                                                      │  (id, uuid)

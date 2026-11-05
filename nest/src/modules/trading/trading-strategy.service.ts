@@ -662,7 +662,7 @@ export class TradingStrategyService {
   //            canonical table. `watchlist.protocolId` is the one declared exception (protocol uuids).
   // WHY:       measured 2026-10-28 (#800) — `trading_strategy.protocolId` is varchar(36), exactly a
   //            uuid's width, so both forms fitted and nothing rejected either. `WHERE protocolId =
-  //            'cac-speed-v1'` returned 0 bots while the bot existed under its uuid: wrong answer, no
+  //            'cac-speed-v1-long'` returned 0 bots while the bot existed under its uuid: wrong answer, no
   //            error. Slug is what 40/40 bots and 88/88 runs already use, it is what `protocol.slug`
   //            is unique on, and it is the only form a human can read in this column.
   // INSTEAD OF: resolving both forms at every call site — two accepted forms everywhere IS the
@@ -2822,7 +2822,7 @@ export class TradingStrategyService {
    *     `strategy-seed-data.ts` alone changed nothing at all;
    *   • a deliberately wrong value **survived** a re-seed (`{"created":0,"skipped":27}`),
    *     reproduced live on `Gold Swing 1H baseSize = 0.99`;
-   *   • 8 `forex-session-v1` bots exist **only in the database** ("DB activation only, no code
+   *   • 8 `forex-session-v1-long` bots exist **only in the database** ("DB activation only, no code
    *     change") and would be lost on a reinstall with no way to re-seed them.
    *
    * The seed file is the durable artefact — it is in git, the database is not. So the seeder's job
@@ -2906,7 +2906,7 @@ export class TradingStrategyService {
      * Whether the bot starts enabled. Absent = true (the historical behaviour).
      *
      * Added 2026-09-15 so the seed can be a FAITHFUL copy of the database: without it,
-     * a deliberately-INACTIVE bot (the `hourly-3dir-v1` A/B control) came back active on
+     * a deliberately-INACTIVE bot (the `hourly-3dir-v1-long` A/B control) came back active on
      * a fresh install, and "inactive on purpose" was indistinguishable from "lost".
      */
     active?: boolean;
@@ -3295,7 +3295,7 @@ export class TradingStrategyService {
         // records at runtime), while trading_strategy.protocolId may hold a UUID.
         //
         // ⚠️ `role` is DERIVED, not hardcoded. It was hardcoded 'long', which is wrong for the
-        // SHORT_ONLY protocol (vix-short-v1) — a short bot seeded as role 'long' would be routed as
+        // SHORT_ONLY protocol (vix-spike-v1-short) — a short bot seeded as role 'long' would be routed as
         // if it were going long.
         //
         // Precedence: the bot's DECLARED `requireDirection` wins, because that is the field the

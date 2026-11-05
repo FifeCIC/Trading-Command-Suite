@@ -2,8 +2,8 @@
  * Symbols Ladder — All symbols across all active protocols with scores.
  * =====================================================================
  * Uses protocol.resolvedSymbols (server-computed via ProtocolDbService.resolveSymbols())
- * for single-symbol protocols (xau-speed-v1 → XAUUSD) and watchlist-based protocols
- * (forex-session-v1 → EURUSD, GBPUSD, …).
+ * for single-symbol protocols (xau-speed-v1-long → XAUUSD) and watchlist-based protocols
+ * (forex-session-v1-long → EURUSD, GBPUSD, …).
  *
  * Scores come from GET /api/scoring/runs — the protocol-driven scoring pipeline
  * that the automation loop feeds on each tick.

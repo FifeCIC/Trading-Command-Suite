@@ -28,7 +28,7 @@ import {
 } from '../../common/utils/style-thresholds';
 
 /** Strategy ID used when persisting Signals Workbench scores. */
-const SIGNALS_WORKBENCH_STRATEGY_ID = 'signals-workbench';
+const SIGNALS_WORKBENCH_STRATEGY_ID = 'signals-workbench-long';
 
 // ── #718 per-protocol entry gate ────────────────────────────────────────
 // The pre-trade gate is not a hardcoded 65 for every protocol. Order:
@@ -540,7 +540,7 @@ export class SignalEnvelopeService {
     const baseTimeframe = selectBaseTimeframe(protocol?.recommendedTimeframe);
     // ⚠️ #1013 — the BASE cadence must use the ONE sizing rule. `requiredBars[baseTimeframe]
     // || 200` was the same fall-through as the other sites: it returned the base-cadence
-    // declaration (20 for `btc-speed-v1`) and never consulted the larger generic `'1d'`
+    // declaration (20 for `btc-speed-v1-long`) and never consulted the larger generic `'1d'`
     // requirement (72). MEASURED: 4 of that protocol's 13 directives returned 0 on 246 of 247
     // ticks (99.6%) with the reason `need 72 bars, have 20`, while 3,504 fresh 5m bars sat
     // unused in `marketbar`. The `|| 200` never fired, because 20 is TRUTHY.
@@ -631,8 +631,8 @@ export class SignalEnvelopeService {
     // When that array is mixed the inference is meaningless and FRESH data reads
     // as stale: `liquidity-check` returns `score: 0`, the risk engine turns that
     // into a hard gate, and the composite collapses to 0 against a 65 threshold.
-    // Live, that blocked every tick of `spy-day-v1`, `qqq-day-v1` and
-    // `spy-speed-v1`, and 12 of 22 ticks of `xau-speed-v1`. The cadence is
+    // Live, that blocked every tick of `spy-day-v1-long`, `qqq-day-v1-long` and
+    // `spy-speed-v1-long`, and 12 of 22 ticks of `xau-speed-v1-long`. The cadence is
     // already known here — passing it is what stops the false close.
     const gated = await this.protocolGating.scoreWithGating(
       cleanTicker,
@@ -1188,7 +1188,7 @@ export class SignalEnvelopeService {
    *   the bot's minComposite — the bar the BOT was deliberately configured with
    *
    * Nothing reconciled them, so a bot could be configured to act at 55 and be
-   * starved by a gate of 65 it never mentioned. Measured live: `forex-session-v1`
+   * starved by a gate of 65 it never mentioned. Measured live: `forex-session-v1-long`
    * scored USDJPY/USDCAD/USDCHF at 50/50/50.6, the gate held them at 65, and the
    * bots set to 55–60 were never offered the decision. The signal was dropped
    * before reaching the component whose configured intent governs it.
@@ -1554,7 +1554,7 @@ export class SignalEnvelopeService {
             signal: env.signal,
             confidence: env.confidence,
             rarity: env.rarity,
-            source: 'signals-workbench',
+            source: 'signals-workbench-long',
             protocolId: strategyId !== SIGNALS_WORKBENCH_STRATEGY_ID ? strategyId : null,
             riskMultiplier: env.riskGate.multiplier,
             preTradeReady: env.preTradeReady,
@@ -2164,7 +2164,7 @@ export class SignalEnvelopeService {
     });
     if (existing) return existing;
 
-    // Create a placeholder strategy for signals-workbench
+    // Create a placeholder strategy for signals-workbench-long
     const created = await this.prisma.strategy.create({
       data: {
         id: strategyId,

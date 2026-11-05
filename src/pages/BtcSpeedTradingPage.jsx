@@ -1,7 +1,7 @@
 /**
  * Bitcoin Speed Trading Page
  * ===========================
- * Focused BTC scalping cockpit. Locked to BTCUSD with the btc-scalp-v1 protocol.
+ * Focused BTC scalping cockpit. Locked to BTCUSD with the btc-scalp-v1-long protocol.
  * Includes the SpeedDecisionPanel for multi-timeframe trend + micro S/R context.
  *
  * URL: /trading/btc-speed
@@ -226,7 +226,7 @@ export default function BtcSpeedTradingPage() {
 
       {/* ── Footer ──────────────────────────────────────── */}
       <footer className="btc-footer">
-        <span>btc-scalp-v1 protocol</span>
+        <span>btc-scalp-v1-long protocol</span>
         <span>Keys: B=Buy S=Sell C=CloseAll Space=Pause Esc=Lock 1-3=Size</span>
       </footer>
     </div>

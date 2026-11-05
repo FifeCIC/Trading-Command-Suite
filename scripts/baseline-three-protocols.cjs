@@ -33,9 +33,9 @@ const N = (v) => (v === null || v === undefined ? null : Number(v));
  * window cannot measure the bot's own timeframe — stated per arm rather than silently substituted.
  */
 const ARMS = [
-  { protocol: 'xau-speed-v1', symbol: 'XAGUSD', timeframe: '5m', bot: 'Silver Speed Scalp Bot' },
-  { protocol: 'momentum-stock-v1', symbol: 'NVDA', timeframe: '1h', bot: 'Tech Giants - NVDA (runs 15m)' },
-  { protocol: 'forex-session-v1', symbol: 'USDJPY', timeframe: '1h', bot: 'Tokyo USDJPY Session Bot' },
+  { protocol: 'xau-speed-v1-long', symbol: 'XAGUSD', timeframe: '5m', bot: 'Silver Speed Scalp Bot' },
+  { protocol: 'momentum-stock-v1-long', symbol: 'NVDA', timeframe: '1h', bot: 'Tech Giants - NVDA (runs 15m)' },
+  { protocol: 'forex-session-v1-long', symbol: 'USDJPY', timeframe: '1h', bot: 'Tokyo USDJPY Session Bot' },
 ];
 
 async function run(arm) {

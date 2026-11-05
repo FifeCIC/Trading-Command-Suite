@@ -13,7 +13,7 @@
  *
  * ⚠️ THE FIELD NAMES ARE LOAD-BEARING AND WERE MEASURED (2026-10-08), not guessed:
  *   composite          — equals `signalRaw`; this is the number the bot's threshold compares against
- *   signalRaw/signalMax — the raw signal over the protocol's REAL maximum (910 for xau-speed-v1)
+ *   signalRaw/signalMax — the raw signal over the protocol's REAL maximum (910 for xau-speed-v1-long)
  *   signalPct           — the percentage, and it AGREES with raw/max
  *   subRawTotals/subMaxTotals — per-group raw and max, the group-percentage step
  *   riskMultiplier      — applied to the composite
@@ -58,7 +58,7 @@ export default function ScoringMechanicsPanel({ strategies = [] }) {
     .filter((s) => s.protocolId && s.symbol)
     // ⚠️ NO ORDERING HEURISTIC HERE, DELIBERATELY. An earlier version sorted `-copy` protocols last,
     // on the theory that a copy has no protocol behind it and so scores NO_DATA. Measured 2026-10-08
-    // and FALSE: `xau-speed-m5-copy` returns a real score (signalMax 910), while `dow-speed-v1` — not
+    // and FALSE: `xau-speed-m5-copy` returns a real score (signalMax 910), while `dow-speed-v1-long` — not
     // a copy at all — returns NO_DATA. Data availability, not the name, decides it, and a heuristic
     // that cannot be justified is a silent lie in the default the reader sees first.
     .map((s) => ({ key: `${s.protocolId}|${s.symbol}`, protocolId: s.protocolId, symbol: s.symbol, name: s.name }));

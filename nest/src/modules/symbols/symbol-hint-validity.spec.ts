@@ -74,16 +74,16 @@ describe('symbol derivation is retired (#764)', () => {
       // Every one of these resolved to a symbol before #764. They must now return null so
       // the protocol reaches the loud unwired-warning instead of a plausible value.
       for (const slug of [
-        'btc-halving-cycle', 'eth-speed-v1', 'sol-momentum-v1', 'doge-speed-v1',
-        'oil-macro-v1', 'china-speed-v1', 'gold-macro-v1', 'xau-speed-m5',
-        'spy-day-v1', 'qqq-day-v1', 'vix-spike-v1', 'tsla-speed-v1',
+        'btc-halving-cycle', 'eth-speed-v1', 'sol-momentum-v1', 'doge-speed-v1-long',
+        'oil-macro-v1', 'china-speed-v1-long', 'gold-macro-v1-long', 'xau-speed-m5-long',
+        'spy-day-v1-long', 'qqq-day-v1-long', 'vix-spike-v1-long', 'tsla-speed-v1-long',
       ]) {
         expect(deriveSingleSymbolFromSlug(slug)).toBeNull();
       }
     });
 
     it('returns null for a slug matching no hint', () => {
-      expect(deriveSingleSymbolFromSlug('forex-session-v1')).toBeNull();
+      expect(deriveSingleSymbolFromSlug('forex-session-v1-long')).toBeNull();
     });
   });
 

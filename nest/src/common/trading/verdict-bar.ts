@@ -4,8 +4,8 @@
  *
  * ⚠️ WHY THIS EXISTS, with the measurement that produced it (2026-09-23):
  *
- *     xau-speed-m15   totalTrades: 3   winRate: 100   sharpeRatio: 42.31
- *     xau-speed-m5    totalTrades: 0   winRate: 0
+ *     xau-speed-m15-long   totalTrades: 3   winRate: 100   sharpeRatio: 42.31
+ *     xau-speed-m5-long    totalTrades: 0   winRate: 0
  *     best: { id: <m15>, metric: "sharpeRatio", value: 42.31 }    POST /api/backtest/runs/compare
  *
  * The backtest comparison named a **winner on three trades**, presented identically to a result

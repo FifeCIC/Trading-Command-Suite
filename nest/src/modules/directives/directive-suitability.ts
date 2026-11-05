@@ -20,11 +20,11 @@
  *
  *   | protocol            | pairs | directive                     | declared            |
  *   |---------------------|-------|-------------------------------|---------------------|
- *   | `forex-session-v1`  |  **75** | `liquidity-check`           | stocks, crypto      |
+ *   | `forex-session-v1-long`  |  **75** | `liquidity-check`           | stocks, crypto      |
  *   |                     |       | `bollinger-band-squeeze`      | stocks, crypto      |
  *   |                     |       | `session-open-effect`         | stocks, indices     |
  *   |                     |       | `analyst-adjustments`         | stocks              |
- *   | `xau-speed-v1`      |     8 | `spy-qqq-relative-strength`   | stocks, indices     |
+ *   | `xau-speed-v1-long`      |     8 | `spy-qqq-relative-strength`   | stocks, indices     |
  *
  * **75 of 111 are the flagship forex protocol**, and the affected classes are forex (75), index
  * (17), commodity (16), crypto (3). So the rule reads *correctly* — a stocks-only directive should

@@ -13,7 +13,7 @@ import { patternForSymbol, MARKET_PATTERNS, assignedSymbols, venueForSymbol } fr
  * on US hours, and the reason string asserted a US session it had nothing to do with. Measured
  * verbatim from the API log, 2026-09-16:
  *
- *     Queue skip: cac-speed-v1 signalled but blocked pre-trade [FRA40 (Market unavailable: US market after-hours)]
+ *     Queue skip: cac-speed-v1-long signalled but blocked pre-trade [FRA40 (Market unavailable: US market after-hours)]
  *
  * These tests pin the two properties that fix it:
  *   1. the index CFDs resolve to a CONTINUOUS pattern — they are not on a US calendar;

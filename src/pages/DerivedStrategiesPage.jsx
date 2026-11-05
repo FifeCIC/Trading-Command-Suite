@@ -31,7 +31,7 @@
  *
  * ⚠️ AN EARLIER VERSION OF THIS PAGE SAID "symbols are scope, not identity" AND SHOWED 18. That was
  * wrong. The corrected measured count is **26 strategies from 26 bots** (25 reachable), with the
- * `forex-session-v1` family resolving to **14**, one per market. If this page ever shows a strategy
+ * `forex-session-v1-long` family resolving to **14**, one per market. If this page ever shows a strategy
  * spanning multiple markets, the identity has regressed.
  *
  * ⚠️ DUPLICATES ARE A DEFECT, NOT A MERGE. Two byte-identical bots are *not* one strategy — the

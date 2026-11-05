@@ -83,7 +83,7 @@ export interface SeedProtocol {
 }
 
 export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
-  "xau-speed-v1": {
+  "xau-speed-v1-long": {
     "name": "Gold Speed Scalp V1",
     "description": "Sub-minute gold (XAUUSD) scalping protocol. Gold is the ultimate fear gauge — volatile during CPI, FOMC, NFP, geopolitics. Tight spreads, massive liquidity. Reacts to USD strength and real rates.",
     "directionMode": "LONG_ONLY",
@@ -148,7 +148,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
       }
     ]
   },
-  "momentum-stock-v1": {
+  "momentum-stock-v1-long": {
     "name": "Momentum Stocks V1",
     "description": "Group protocol for stocks with 100%+ annual gains and continued high expectations. Trend-following bias — winners keep winning until they don't. Higher sentiment weight than index protocols — these stocks are driven by narrative.",
     "directionMode": "LONG_ONLY",
@@ -210,7 +210,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
       }
     ]
   },
-  "forex-session-v1": {
+  "forex-session-v1-long": {
     "name": "Forex Session V1",
     "description": "Forex scoring protocol — session-based mean reversion with trend following. Works across EURUSD, GBPUSD, USDJPY, USDCAD, EURGBP.",
     "directionMode": "LONG_ONLY",

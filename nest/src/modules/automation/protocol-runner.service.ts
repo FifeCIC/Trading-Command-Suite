@@ -28,11 +28,11 @@ import { selectBaseTimeframe } from '../../common/utils/timeframe';
  * hardcoded `BASE_TIMEFRAME = '1d'` and loaded every protocol's base bars as daily,
  * whatever the protocol actually asked for. The consequences were severe and silent:
  *
- *   `xau-speed-1h` (a 1h protocol) was fed DAILY bars. Its median interval was a day,
+ *   `xau-speed-1h-long` (a 1h protocol) was fed DAILY bars. Its median interval was a day,
  *   so `computeMarketStatus()` correctly reported "last real bar 1105m old" against
  *   the *daily* series — while the symbol's real 1h feed was 26 minutes old and had
  *   been imported two minutes earlier. The card therefore read STALE/PAUSED with a
- *   stale-data reason, and `xau-speed-m15`, `xau-speed-4h` and `xau-speed-1h` all
+ *   stale-data reason, and `xau-speed-m15-long`, `xau-speed-4h-long` and `xau-speed-1h-long` all
  *   reported the SAME ~1000m age because they were all reading one identical daily
  *   bar. Every intraday protocol looked permanently stale.
  *
@@ -112,7 +112,7 @@ export class ProtocolRunnerService {
     // ⚠️ #1013 — delegate to the ONE home for this rule. It was open-coded here as
     // `required[timeframe] ?? required['1d'] ?? 100`: a fall-through where the docstring
     // above means a maximum, so ONE directive declaring a base cadence starved every larger
-    // generic requirement. Measured: btc-speed-v1, 4 of 13 directives dead on 246/247 ticks
+    // generic requirement. Measured: btc-speed-v1-long, 4 of 13 directives dead on 246/247 ticks
     // with 3,504 fresh bars sitting unused.
     const barCount = this.protocolDb.getBaseBarCount(protocolId, timeframe);
     return { timeframe, barCount };

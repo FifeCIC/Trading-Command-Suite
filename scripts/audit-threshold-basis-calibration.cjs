@@ -49,7 +49,7 @@ const BASIS_SRC = path.join(__dirname, '..', 'nest', 'src', 'modules', 'scoring'
 /** A protocol that returns a real payload; used only to read the declared constant back. */
 const API = process.env.TCS_API || 'http://localhost:3201';
 const SYMBOL_FOR_API = process.env.CALIBRATION_SYMBOL || 'XAUUSD';
-const PROTOCOL_FOR_API = process.env.CALIBRATION_PROTOCOL || 'xau-speed-m15';
+const PROTOCOL_FOR_API = process.env.CALIBRATION_PROTOCOL || 'xau-speed-m15-long';
 
 /** Relative tolerance on the labelled SHARE. 10% of a 541-tick target = ±54 ticks. */
 const TOLERANCE = Number(process.env.CALIBRATION_TOLERANCE || 0.10);

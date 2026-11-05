@@ -4,7 +4,7 @@
  * Created 2026-11-02 after measuring the defect this file now locks:
  *
  *   At the previous `minBars` of 20, `loadHigherTfBundle()` supplied 30 daily / 20 hourly / 20
- *   fifteen-minute bars for `btc-scalp-v1`. `ema()` returns nulls throughout when given fewer bars
+ *   fifteen-minute bars for `btc-scalp-v1-long`. `ema()` returns nulls throughout when given fewer bars
  *   than its period, so EMA50 — the thing that DEFINES alignment — was null on all three timeframes.
  *   Both `bullishEma` and `bearishEma` were therefore false, every timeframe fell through to the
  *   `!aboveVwap && !aboveEma50` branch ("price below the mean"), the directive reported

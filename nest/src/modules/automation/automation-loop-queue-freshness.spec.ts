@@ -50,7 +50,7 @@ describe('AutomationLoopService.processSignalQueues — freshness gate (#882)', 
   }
 
   const row = (over: any) => ({
-    id: 'q1', strategyId: 'bot-1', symbol: 'GBPUSD', protocolId: 'forex-session-v1',
+    id: 'q1', strategyId: 'bot-1', symbol: 'GBPUSD', protocolId: 'forex-session-v1-long',
     direction: 'LONG', signal: 'BUY', compositePct: 30, combinedStrength: 30,
     scoreId: 's1', createdAt: new Date(Date.now() - 10 * 86400000), updatedAt: new Date(), ...over,
   });

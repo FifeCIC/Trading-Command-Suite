@@ -16,9 +16,9 @@
 const API = 'http://127.0.0.1:3201/api';
 
 const PAIRS = [
-  { bot: 'Tokyo USDJPY Session Bot', long: 'forex-session-v1', short: 'forex-session-v1-short' },
-  { bot: 'Silver Speed Scalp Bot', long: 'xau-speed-v1', short: 'xau-speed-v1-short' },
-  { bot: 'Tech Giants NVDA Bot', long: 'momentum-stock-v1', short: 'momentum-stock-v1-short' },
+  { bot: 'Tokyo USDJPY Session Bot', long: 'forex-session-v1-long', short: 'forex-session-v1-short' },
+  { bot: 'Silver Speed Scalp Bot', long: 'xau-speed-v1-long', short: 'xau-speed-v1-short' },
+  { bot: 'Tech Giants NVDA Bot', long: 'momentum-stock-v1-long', short: 'momentum-stock-v1-short' },
 ];
 
 async function botIdFor(name) {

@@ -12,8 +12,8 @@ import assert from 'node:assert/strict';
 import { barAboveCeiling, ceilingKnown, MIN_CEILING_SAMPLES } from './threshold-ceiling.js';
 
 // Live values from GET /api/scoring/gated/thresholds on 2026-09-16.
-const FOREX = { ceilingPct: 15.2, samples: 1359 };   // forex-session-v1 — well measured
-const BTC = { ceilingPct: 11.2, samples: 7 };        // btc-scalp-v1 — 7 readings, below the floor
+const FOREX = { ceilingPct: 15.2, samples: 1359 };   // forex-session-v1-long — well measured
+const BTC = { ceilingPct: 11.2, samples: 7 };        // btc-scalp-v1-long — 7 readings, below the floor
 
 test('a bar above the ceiling is reported, naming both numbers', () => {
   const r = barAboveCeiling(FOREX, 65);
@@ -33,7 +33,7 @@ test('a bar below the ceiling is not reported', () => {
 });
 
 test('⚠️ the samples floor suppresses the warning on a barely-measured protocol', () => {
-  // btc-scalp-v1: 11.2% from only 7 readings. 65 is far above it, but 7 readings is not evidence,
+  // btc-scalp-v1-long: 11.2% from only 7 readings. 65 is far above it, but 7 readings is not evidence,
   // so the form stays quiet. Without this the warning fires on every new protocol.
   assert.equal(barAboveCeiling(BTC, 65), null);
   assert.equal(ceilingKnown(BTC), false);
@@ -84,10 +84,10 @@ test('the #839 case — the old 65 default against every real ceiling warns', ()
   // The whole reason #840 exists: 65 is above EVERY protocol's measured maximum. Live ceilings
   // ranged 11.2-31%, so a 65 default is unclearable on all of them.
   const live = [
-    { ceilingPct: 15.2, samples: 1358 },  // forex-session-v1
-    { ceilingPct: 14.2, samples: 101 },   // ftse-speed-v1
-    { ceilingPct: 31.0, samples: 14 },    // earnings-momentum-v1 — the highest measured
-    { ceilingPct: 24.2, samples: 129 },   // gold-macro-v1
+    { ceilingPct: 15.2, samples: 1358 },  // forex-session-v1-long
+    { ceilingPct: 14.2, samples: 101 },   // ftse-speed-v1-long
+    { ceilingPct: 31.0, samples: 14 },    // earnings-momentum-v1-long — the highest measured
+    { ceilingPct: 24.2, samples: 129 },   // gold-macro-v1-long
   ];
   for (const c of live) {
     assert.notEqual(barAboveCeiling(c, 65), null, `65 should warn against a ${c.ceilingPct}% ceiling`);

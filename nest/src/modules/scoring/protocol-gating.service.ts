@@ -58,7 +58,7 @@ import {
  *
  * ⚠️ THE DISTRIBUTION IS PROTOCOL-WIDE HISTORY, NOT A PROPERTY OF THIS BAR. `computeRarity()` used to
  * re-read it on EVERY `scoreWithGating()` call, which is once per bar in a backtest. MEASURED
- * 2026-11-02 on `forex-session-v1` (118,360 snapshots in the window): **601 ms per read**, and a
+ * 2026-11-02 on `forex-session-v1-long` (118,360 snapshots in the window): **601 ms per read**, and a
  * 548-bar USDJPY 1h run spent ~165 s of its 192 s waiting on 548 identical reads of a table that
  * cannot change between two bars a second apart. That was the whole of #1182.
  *
@@ -90,12 +90,12 @@ const RARITY_HISTORY_TTL_MS = 60_000;
  *
  * ⚠️ CONSEQUENCE — capacity is not tradable capacity. A protocol can declare
  * 1,075 points of maxScore and still be unable to reach its own threshold if
- * most of those points sit on neutral directives. Live proof: `ftse-speed-v1`,
- * `dax-speed-v1` and `cac-speed-v1` each carry ~815 points of NEUTRAL technical
+ * most of those points sit on neutral directives. Live proof: `ftse-speed-v1-long`,
+ * `dax-speed-v1-long` and `cac-speed-v1-long` each carry ~815 points of NEUTRAL technical
  * directives around a single 80-point directional one (`analyst-adjustments`),
  * so their all-time maximum composite is **31** against a `minComposite` of 65.
  * Across their whole history they have cleared the gate **0 times**, while
- * `forex-session-v1` cleared it 1,168 times and `xau-speed-v1` 86 times.
+ * `forex-session-v1-long` cleared it 1,168 times and `xau-speed-v1-long` 86 times.
  * Before adding a directive to a protocol, check whether it can emit a
  * `signalClass` — a neutral directive is a display metric, not a signal.
  *
@@ -290,9 +290,9 @@ export interface GatedScore {
      *
      *  Why it is reported: a protocol whose divisor is largely unearnable reaches `STRONG` at a far
      *  lower share of what it could actually achieve, so the SAME 13% means different things in
-     *  different protocols (measured: 31% unearnable for `xau-speed-m15`, 58% for `vix-spike-v1`).
+     *  different protocols (measured: 31% unearnable for `xau-speed-m15-long`, 58% for `vix-spike-v1-long`).
      *  Excluding it from the divisor is NOT a drop-in fix: replayed over 5,873 recorded ticks it
-     *  would move 1,397 (24%) across a threshold, and `vix-spike-v1` would label all 101 of its ticks
+     *  would move 1,397 (24%) across a threshold, and `vix-spike-v1-long` would label all 101 of its ticks
      *  STRONG. The divisor and the thresholds must move together — issue #1131. */
     earnableSignalMax: number;
     /** #1131 — the threshold-basis comparison, persisted on every tick so `signal` and
@@ -553,7 +553,7 @@ export class ProtocolGatingService {
      * `computeMarketStatus` so a freshness check measures staleness against the
      * REAL cadence rather than inferring it from a possibly-mixed array — the
      * mismatch that made fresh data read as closed and hard-gated every tick of
-     * `spy-day-v1`/`qqq-day-v1` (2026-09-10).
+     * `spy-day-v1-long`/`qqq-day-v1-long` (2026-09-10).
      */
     timeframe?: string,
     /**
@@ -614,8 +614,8 @@ export class ProtocolGatingService {
         //   body.protocolId    — POST /api/scoring/gated/batch
         // A caller who followed the old message on a `?protocol=` route passed protocolId, got a
         // SECOND 400 with the same text, and could not discover the right name from it. Measured
-        // 2026-09-21: envelope/XAUUSD?protocolId=xau-speed-1h -> 400,
-        //              envelope/XAUUSD?protocol=xau-speed-1h   -> 200.
+        // 2026-09-21: envelope/XAUUSD?protocolId=xau-speed-1h-long -> 400,
+        //              envelope/XAUUSD?protocol=xau-speed-1h-long   -> 200.
         'Scoring requires a protocol — unscoped default scoring was removed. Pass `?protocol=<slug>` on GET routes, or `protocolId` in the body for POST /api/scoring/gated/batch.',
       );
     }
@@ -793,7 +793,7 @@ export class ProtocolGatingService {
     //
     // Measured before this guard: `session-open-effect` (maxScore 60) was the
     // only offender, across 6 ACTIVE protocols — 60 phantom maxScore each, and
-    // 120 for forex-session-v1 which listed it in three groups.
+    // 120 for forex-session-v1-long which listed it in three groups.
     //
     // We keep the FIRST occurrence (group order is the protocol's own ordering)
     // and skip later ones, mirroring the health check exactly so a protocol's
@@ -886,8 +886,8 @@ export class ProtocolGatingService {
         //     LONG_ONLY + directive reading bearish  → excluded from capacity
         //     BOTH                                → always counted
         //
-        // Measured live after that fix deployed: `forex-session-v1` wrote FIVE
-        // different denominators in 30 minutes (470/560/390/480/410), and `xau-speed-m15`
+        // Measured live after that fix deployed: `forex-session-v1-long` wrote FIVE
+        // different denominators in 30 minutes (470/560/390/480/410), and `xau-speed-m15-long`
         // wrote four. A percentage whose denominator drifts with the market is not
         // comparable over time — which is the exact defect #758 exists to remove. It
         // also made capacity depend on the SYMBOL, because each symbol reaches a
@@ -1165,7 +1165,7 @@ export class ProtocolGatingService {
       // important for analysis and the entire point of the ladder is to order symbols based on the
       // best opportunity in any given moment."*
       //
-      // MEASURED CONSEQUENCE: `probe-1dir-v1` wrote a row every 2 minutes while its single
+      // MEASURED CONSEQUENCE: `probe-1dir-v1-long` wrote a row every 2 minutes while its single
       // directive was bullish, and then nothing at all once the trend turned — so the ladder kept
       // presenting a 2-day-old STRONG_BUY 60/100 as the top card, because it was the newest row
       // that existed. The record contained only the ticks that agreed with the last stored score.
@@ -1333,7 +1333,7 @@ export class ProtocolGatingService {
         //
         // Measured 2026-10-16: `replay.service.ts` reads `selected.meta.directiveCount` when
         // building a replay step. On any tick where the selected protocol produced no
-        // directional evidence — which is MOST ticks right now, since `probe-1dir-v1` has a
+        // directional evidence — which is MOST ticks right now, since `probe-1dir-v1-long` has a
         // single directive and all 47 stock protocols are `active: false` — the entire
         // `POST /api/replay/run` call died with HTTP 500:
         //   Cannot read properties of undefined (reading 'directiveCount')
@@ -1758,7 +1758,7 @@ export class ProtocolGatingService {
    *   3. directives ran, all `neutral`   → the DIRECTIVES themselves
    *
    * ⚠️ The single sentence this replaces said "This is data absence" on EVERY no-data tick, and
-   * that claim was measured wrong. EURUSD/`probe-1dir-v1` was reported as data absence on every
+   * that claim was measured wrong. EURUSD/`probe-1dir-v1-long` was reported as data absence on every
    * tick for two days while holding 51 fresh hourly bars (1h bar 40 minutes old, checked
    * 2026-10-19 19:25Z) and while `ema-structure` returned a real measurement, 29/100, classified
    * `neutral` — because that directive can only ever emit `'bullish'` or `'neutral'`; it has no
@@ -1911,7 +1911,7 @@ export class ProtocolGatingService {
   /**
    * Canonical-symbol guard: ad-hoc evaluation (batch / A-B / explorer) scores
    * arbitrary tickers through a protocol. Persisting those rows pollutes the
-   * runs feed and rarity history (e.g. JBL appearing under vix-spike-v1).
+   * runs feed and rarity history (e.g. JBL appearing under vix-spike-v1-long).
    * Only symbols the protocol actually resolves are canonical.
    */
   private async isCanonicalProtocolSymbol(protocolId: string, symbol: string): Promise<boolean> {
@@ -1938,7 +1938,7 @@ export class ProtocolGatingService {
    * #803 — `active = 0` is a KILL SWITCH for score writes, enforced HERE because this is
    * the ONE place rows are written (`storeSnapshot` → `score` + `score_snapshot`).
    *
-   * Measured 2026-10-09: `usdcad-oil-v1` and `oil-supply-v1` — BOTH `active = 0`, one with no
+   * Measured 2026-10-09: `usdcad-oil-v1-long` and `oil-supply-v1-long` — BOTH `active = 0`, one with no
    * bot and no symbol assignment — were writing rows every few minutes (newest that day). The
    * cause was the CALLERS: `speed-scan.service.ts` fell back to a hardcoded symbol→protocol
    * map that stamped `active: true` without asking the database, and even the flag it HAD read
@@ -2066,7 +2066,7 @@ export class ProtocolGatingService {
        * Without it a `0 / 910` row is indistinguishable from "nothing was measured", which is the
        * wrong conclusion and the one the reader actually draws.
        *
-       * MEASURED, XAUUSD / `xau-speed-m15`, 2026-10-19 22:41Z, `directionMode: LONG_ONLY`:
+       * MEASURED, XAUUSD / `xau-speed-m15-long`, 2026-10-19 22:41Z, `directionMode: LONG_ONLY`:
        *   `gold-round-numbers`        15/25   bearish
        *   `support-resistance-levels`  8/95   bearish
        *   nine other directives measured, all `neutral`
@@ -2212,8 +2212,8 @@ export class ProtocolGatingService {
               // That is exactly what this line used to do, and it silently undid the stable
               // denominator computed in `scoreWithGating()`: `subMaxTotals` is the OBSERVED
               // directional capacity (only directives that read directional this tick), so
-              // the persisted `rawMax` moved tick to tick — `forex-session-v1` wrote NINE
-              // different denominators in six hours (1,928 rows), and `spy-day-v1` alternated
+              // the persisted `rawMax` moved tick to tick — `forex-session-v1-long` wrote NINE
+              // different denominators in six hours (1,928 rows), and `spy-day-v1-long` alternated
               // 90/80/0/null. `score / rawMax` on a moving denominator is not comparable over
               // time, so the stored history was unusable as a series.
               //

@@ -20,7 +20,7 @@
  * check validates a system that does not exist:
  *   1. `symbol_protocol_assignment` (lowest `priority` first) — DB wins
  *   2. the hardcoded `SYMBOL_PROTOCOL_MAP` fallback in speed-scan.service.ts
- *   3. the `^3[A-Z]{2,3}$` / `SQQQ,SPXS,...` leverage pattern -> `leverage-v2`
+ *   3. the `^3[A-Z]{2,3}$` / `SQQQ,SPXS,...` leverage pattern -> `leverage-v2-long`
  *   4. otherwise: no protocol (the symbol is not scored at all)
  *
  * ⚠️ The map is READ FROM THE SOURCE FILE, not duplicated here. A copy would drift
@@ -46,14 +46,14 @@ const ROOT = path.resolve(__dirname, '..');
 const SPEED_SCAN = path.join(ROOT, 'nest/src/modules/scoring/speed-scan.service.ts');
 
 const CANDIDATE_DEFAULT = [
-  'xau-speed-v1-copy', 'mt5-technical-short', 'euro-stoxx-v1', 'nikkei-speed-v1',
-  'usdjpy-risk-v1', 'usdcad-oil-v1',
-  'vwap-bands-v1', 'vwap-simple-v1', 'mtf-conservative-v1', 'mtf-weighted-v1',
-  'gap-scanner-v1', 'hourly-3dir-v1', 'eurusd-macro-v1', 'gbpusd-news-v1',
-  'commodity-pairs-v1',
-  'ftse-speed-v1', 'dax-speed-v1', 'cac-speed-v1', 'china-speed-v1', 'dow-speed-v1',
-  'leverage-v2', 'pandemic-v1', 'earnings-momentum-v1', 'doge-speed-v1',
-  'tsla-speed-v1', 'btc-scalp-v1', 'oil-supply-v1',
+  'xau-speed-v1-copy-long', 'mt5-technical-core-v1-short', 'euro-stoxx-v1-long', 'nikkei-speed-v1-long',
+  'usdjpy-risk-v1-long', 'usdcad-oil-v1-long',
+  'vwap-bands-v1-long', 'vwap-simple-v1-long', 'mtf-conservative-v1-long', 'mtf-weighted-v1-long',
+  'gap-scanner-v1-long', 'hourly-3dir-v1-long', 'eurusd-macro-v1-long', 'gbpusd-news-v1-long',
+  'commodity-pairs-v1-long',
+  'ftse-speed-v1-long', 'dax-speed-v1-long', 'cac-speed-v1-long', 'china-speed-v1-long', 'dow-speed-v1-long',
+  'leverage-v2-long', 'pandemic-v1', 'earnings-momentum-v1-long', 'doge-speed-v1-long',
+  'tsla-speed-v1-long', 'btc-scalp-v1-long', 'oil-supply-v1-long',
 ];
 
 /** Parse `const SYMBOL_PROTOCOL_MAP: Record<string,string> = { ... };` out of the service. */
@@ -115,7 +115,7 @@ function resolveAll({ symbols, assignments, activeBySlug, map, rules }) {
       continue;
     }
     if (isLeverageProduct(symbol, rules)) {
-      out.push({ symbol, slug: 'leverage-v2', source: 'pattern', active: activeBySlug.get('leverage-v2') === true });
+      out.push({ symbol, slug: 'leverage-v2-long', source: 'pattern', active: activeBySlug.get('leverage-v2-long') === true });
       continue;
     }
     out.push({ symbol, slug: null, source: 'none', active: false });
@@ -137,34 +137,34 @@ function selfTest() {
   const fail = [];
   const check = (name, cond) => (cond ? pass++ : fail.push(name));
 
-  const map = new Map([['USDCAD', 'usdcad-oil-v1'], ['BTCUSD', 'btc-scalp-v1']]);
+  const map = new Map([['USDCAD', 'usdcad-oil-v1-long'], ['BTCUSD', 'btc-scalp-v1-long']]);
   const rules = { tickers: ['SQQQ'], patterns: [] };
-  const active = new Map([['usdcad-oil-v1', true], ['forex-session-v1', true], ['btc-scalp-v1', false]]);
+  const active = new Map([['usdcad-oil-v1-long', true], ['forex-session-v1-long', true], ['btc-scalp-v1-long', false]]);
 
   // 1. map fallback, active -> safe
   let r = resolveAll({ symbols: ['USDCAD'], assignments: new Map(), activeBySlug: active, map, rules });
-  check('map fallback resolves', r[0].slug === 'usdcad-oil-v1' && r[0].active === true);
+  check('map fallback resolves', r[0].slug === 'usdcad-oil-v1-long' && r[0].active === true);
 
   // 2. DB assignment beats the map
-  const asg = new Map([['USDCAD', [{ slug: 'forex-session-v1', priority: 0, active: true }]]]);
+  const asg = new Map([['USDCAD', [{ slug: 'forex-session-v1-long', priority: 0, active: true }]]]);
   r = resolveAll({ symbols: ['USDCAD'], assignments: asg, activeBySlug: active, map, rules });
-  check('assignment beats map', r[0].slug === 'forex-session-v1' && r[0].source === 'assignment');
+  check('assignment beats map', r[0].slug === 'forex-session-v1-long' && r[0].source === 'assignment');
 
   // 3. scrubbing the map target is SAFE when an assignment overrides it
-  check('orphan check honours override', findOrphans(r, new Set(['usdcad-oil-v1'])).length === 0);
+  check('orphan check honours override', findOrphans(r, new Set(['usdcad-oil-v1-long'])).length === 0);
 
   // 4. scrubbing the ONLY resolver IS an orphan
   r = resolveAll({ symbols: ['USDCAD'], assignments: new Map(), activeBySlug: active, map, rules });
-  check('orphan when sole resolver scrubbed', findOrphans(r, new Set(['usdcad-oil-v1'])).length === 1);
+  check('orphan when sole resolver scrubbed', findOrphans(r, new Set(['usdcad-oil-v1-long'])).length === 1);
 
   // 5. an inactive resolver is an orphan even if NOT scrubbed
   r = resolveAll({ symbols: ['BTCUSD'], assignments: new Map(), activeBySlug: active, map, rules });
   check('inactive resolver flagged', findOrphans(r, new Set()).length === 1);
 
-  // 6. leverage pattern resolves to leverage-v2
-  r = resolveAll({ symbols: ['3GLD', 'SQQQ'], assignments: new Map(), activeBySlug: new Map([['leverage-v2', true]]), map, rules });
-  check('leverage pattern', r.every((x) => x.slug === 'leverage-v2'));
-  check('leverage scrub is an orphan', findOrphans(r, new Set(['leverage-v2'])).length === 2);
+  // 6. leverage pattern resolves to leverage-v2-long
+  r = resolveAll({ symbols: ['3GLD', 'SQQQ'], assignments: new Map(), activeBySlug: new Map([['leverage-v2-long', true]]), map, rules });
+  check('leverage pattern', r.every((x) => x.slug === 'leverage-v2-long'));
+  check('leverage scrub is an orphan', findOrphans(r, new Set(['leverage-v2-long'])).length === 2);
 
   // 7. unknown symbol -> no protocol
   r = resolveAll({ symbols: ['ZZZZZZ'], assignments: new Map(), activeBySlug: active, map, rules });

@@ -151,7 +151,7 @@ describe('AutomationLoopService.persistDecisions — unit-explicit scores (#909)
     (svc as any).persistDecisions([{
       timestamp: new Date().toISOString(), strategyId: '', symbol: 'BTC',
       brokerId: 'mt5', decision: 'SCORED',
-      reason: 'btc-speed-v1: composite=178 signal=STRONG_BUY',
+      reason: 'btc-speed-v1-long: composite=178 signal=STRONG_BUY',
       compositeRaw: 178, signal: 'STRONG_BUY',
     }], 9);
     await flush();

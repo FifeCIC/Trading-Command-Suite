@@ -29,7 +29,7 @@ import { TradingStrategyService } from './trading-strategy.service';
  * found at all — `update()` now genuinely needs the comparison table to answer.
  */
 describe('TradingStrategyService — activation ceiling gate (#905)', () => {
-  const doomedCeiling = { slug: 'xau-speed-1h', ceilingPct: 7.69, ceilingRaw: 70, capacity: 910, samples: 457 };
+  const doomedCeiling = { slug: 'xau-speed-1h-long', ceilingPct: 7.69, ceilingRaw: 70, capacity: 910, samples: 457 };
 
   function makeService(opts: { strategy?: any; ceiling?: any }) {
     const svc = Object.create(TradingStrategyService.prototype) as TradingStrategyService;
@@ -70,7 +70,7 @@ describe('TradingStrategyService — activation ceiling gate (#905)', () => {
     id: 'bot-1',
     name: 'Gold Swing 1H',
     active: false,
-    protocolId: 'xau-speed-1h',
+    protocolId: 'xau-speed-1h-long',
     minComposite: 9,
   };
 
@@ -88,7 +88,7 @@ describe('TradingStrategyService — activation ceiling gate (#905)', () => {
     expect(err.code).toBe('TCS-TRADE-024');
     expect(err.params).toMatchObject({
       name: 'Gold Swing 1H',
-      protocol: 'xau-speed-1h',
+      protocol: 'xau-speed-1h-long',
       ceiling: '7.7',
       bar: 9,
       samples: 457,
@@ -98,7 +98,7 @@ describe('TradingStrategyService — activation ceiling gate (#905)', () => {
   });
 
   it('ALLOWS activation when the ceiling clears the bar (restore direction)', async () => {
-    const healthy = { slug: 'forex-session-v1', ceilingPct: 27.3, ceilingRaw: 198, capacity: 725, samples: 1500 };
+    const healthy = { slug: 'forex-session-v1-long', ceilingPct: 27.3, ceilingRaw: 198, capacity: 725, samples: 1500 };
     const { svc, update } = makeService({ strategy: doomedBot, ceiling: healthy });
     await svc.toggle('bot-1');
     expect(update).toHaveBeenCalledWith({ where: { id: 'bot-1' }, data: { active: true } });

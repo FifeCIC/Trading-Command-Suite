@@ -6,8 +6,8 @@
  * of 910 (directional) / 1010 (total). The real percentage was never `score / 100` — it is the
  * row's own `signalPct` (`normalizedScore`), which `protocol-gating.service.ts` sets as the
  * classifier's percentage: `signalPct = signalRaw / configured DIRECTIONAL capacity`
- * (xau-speed-v1: 10/910 = 1.0989%), while `composite` is a broader raw sum with NO exposed
- * denominator (BTC btc-scalp-v1: composite 30, signalPct 3.21951% ⇒ signalRaw 33 / capacity
+ * (xau-speed-v1-long: 10/910 = 1.0989%), while `composite` is a broader raw sum with NO exposed
+ * denominator (BTC btc-scalp-v1-long: composite 30, signalPct 3.21951% ⇒ signalRaw 33 / capacity
  * 1025).
  *
  * So the DB-read path now emits `maxPossibleScore: null` and passes `signalPct` through as
@@ -38,7 +38,7 @@ const snapshotRow = (over: Record<string, unknown> = {}) => ({
   signalPct: 11.648,
   tradingSignal: 'BUY',
   snappedAt: new Date('2026-10-09T22:10:00Z'),
-  protocolId: 'xau-speed-v1',
+  protocolId: 'xau-speed-v1-long',
   ...over,
 });
 

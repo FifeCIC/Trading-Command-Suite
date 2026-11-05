@@ -9,7 +9,7 @@ import { normalizeScorePercent } from '../scoring/score-units';
  * `signalPct` divides by the protocol's CONFIGURED directional capacity — every eligible
  * directive, including the ones that read neutral this tick. It answers "how much of the WHOLE
  * protocol agrees?" Measured 2026-10-12: a median 46.5% of that capacity never records a
- * direction (worst case `gold-macro-v1` at 76.7%), so a protocol with one genuinely strong
+ * direction (worst case `gold-macro-v1-long` at 76.7%), so a protocol with one genuinely strong
  * directive still displays ~6-17%. The owner read that, correctly, as "a whole bunch of
  * directives score low, always, as if the market data never shows a good opportunity".
  *

@@ -8,7 +8,7 @@ describe('resolveDirectiveCatalog', () => {
       },
       protocol: {
         findUnique: jest.fn().mockResolvedValue({
-          slug: 'btc-speed-v1',
+          slug: 'btc-speed-v1-long',
           name: 'BTC Investment Monitor V1',
           directiveGroups: [
             {
@@ -31,7 +31,7 @@ describe('resolveDirectiveCatalog', () => {
     };
 
     const result = await resolveDirectiveCatalog({
-      identifier: 'btc-speed-v1',
+      identifier: 'btc-speed-v1-long',
       prisma: prisma as any,
       directivesService: directivesService as any,
       protocolDb: protocolDb as any,

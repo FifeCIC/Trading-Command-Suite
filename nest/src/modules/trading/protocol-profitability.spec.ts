@@ -90,7 +90,7 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
     return { controller, prisma, mt5 };
   }
 
-  const PROTOCOL = { id: 'proto-uuid-1', slug: 'forex-session-v1', name: 'Forex Session V1' };
+  const PROTOCOL = { id: 'proto-uuid-1', slug: 'forex-session-v1-long', name: 'Forex Session V1' };
   /** A closed, trustworthy (pnlValid, exited) trade. */
   const goodTrade = (over: Row = {}): Row => ({
     id: 't1', symbol: 'EURUSD', side: 'buy', pnl: 10, exitPrice: 1.1,
@@ -103,7 +103,7 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
     const { controller } = build({
       trades: [goodTrade()],
       // The bot id and the scoring-strategy id are DIFFERENT, and only the bot id resolves.
-      bots: [{ id: 'bot-uuid-1', name: 'London EURUSD Macro', protocolId: 'forex-session-v1', scoringStrategyId: 'ss-not-this-one' }],
+      bots: [{ id: 'bot-uuid-1', name: 'London EURUSD Macro', protocolId: 'forex-session-v1-long', scoringStrategyId: 'ss-not-this-one' }],
       protocols: [PROTOCOL],
     });
 
@@ -112,7 +112,7 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
     expect(res.attribution.resolvedByPath).toEqual({ trading_strategy: 1 });
     expect(res.attribution.unresolvedCount).toBe(0);
     expect(res.protocols).toHaveLength(1);
-    expect(res.protocols[0].protocolSlug).toBe('forex-session-v1');
+    expect(res.protocols[0].protocolSlug).toBe('forex-session-v1-long');
     expect(res.protocols[0].trades).toBe(1);
     // The old chain must never even be consulted.
     expect(res.attribution.lookupFailures).toHaveLength(0);
@@ -156,7 +156,7 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
         goodTrade({ id: 'fab', pnl: 9999, pnlInvalid: 1 }),   // fabricated row
         goodTrade({ id: 'noexit', pnl: 500, exitPrice: null }), // never closed
       ],
-      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1' }],
+      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1-long' }],
       protocols: [PROTOCOL],
     });
 
@@ -178,7 +178,7 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
         goodTrade({ id: 'flat2', pnl: 0 }),
         goodTrade({ id: 'win', pnl: 4 }),
       ],
-      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1' }],
+      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1-long' }],
       protocols: [PROTOCOL],
     });
 
@@ -196,7 +196,7 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
   it('reports costs as UNMEASURED (available:false, coverage 0, grossPnl null), never as zero', async () => {
     const { controller } = build({
       trades: [goodTrade({ pnl: 10 })],
-      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1' }],
+      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1-long' }],
       protocols: [PROTOCOL],
     });
 
@@ -218,7 +218,7 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
         goodTrade({ id: 'a', pnl: -10, commission: -0.4, swap: -0.1, fee: 0 }),
         goodTrade({ id: 'b', pnl: 4, commission: -0.4, swap: -0.1, fee: 0 }),
       ],
-      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1' }],
+      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1-long' }],
       protocols: [PROTOCOL],
     });
 
@@ -240,7 +240,7 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
         goodTrade({ id: 'a', pnl: -10, commission: -0.4, swap: -0.1, fee: 0 }),
         goodTrade({ id: 'b', pnl: 4 }),
       ],
-      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1' }],
+      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1-long' }],
       protocols: [PROTOCOL],
     });
 
@@ -256,7 +256,7 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
   it('labels the currency the money is in, and does not assume USD', async () => {
     const { controller } = build({
       trades: [goodTrade({ pnl: 10 })],
-      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1' }],
+      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1-long' }],
       protocols: [PROTOCOL],
     });
 
@@ -271,7 +271,7 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
   it('reports the currency as unresolved (null) when the bridge is down, never as USD', async () => {
     const { controller } = build({
       trades: [goodTrade({ pnl: 10 })],
-      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1' }],
+      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1-long' }],
       protocols: [PROTOCOL],
       accountThrows: true,
     });
@@ -290,7 +290,7 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
     const trades = Array.from({ length: 19 }, (_, i) => goodTrade({ id: `t${i}`, pnl: 1 }));
     const { controller } = build({
       trades,
-      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1' }],
+      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1-long' }],
       protocols: [PROTOCOL],
     });
 
@@ -301,7 +301,7 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
 
     const { controller: big } = build({
       trades: [...trades, goodTrade({ id: 't20', pnl: 1 })],
-      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1' }],
+      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1-long' }],
       protocols: [PROTOCOL],
     });
     const ok: any = await big.getProtocolProfitability();
@@ -317,19 +317,19 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
         goodTrade({ id: 'b2', pnl: -3, scoringStrategyId: 'bot-B' }),
       ],
       bots: [
-        { id: 'bot-A', name: 'A', protocolId: 'xau-speed-m5' },
-        { id: 'bot-B', name: 'B', protocolId: 'forex-session-v1' },
+        { id: 'bot-A', name: 'A', protocolId: 'xau-speed-m5-long' },
+        { id: 'bot-B', name: 'B', protocolId: 'forex-session-v1-long' },
       ],
-      protocols: [PROTOCOL, { id: 'proto-uuid-2', slug: 'xau-speed-m5', name: 'XAU M5' }],
+      protocols: [PROTOCOL, { id: 'proto-uuid-2', slug: 'xau-speed-m5-long', name: 'XAU M5' }],
     });
 
     const res: any = await controller.getProtocolProfitability();
     const bySlug = Object.fromEntries(res.protocols.map((p: any) => [p.protocolSlug, p]));
 
-    expect(bySlug['xau-speed-m5'].netPnl).toBe(5);
-    expect(bySlug['forex-session-v1'].netPnl).toBe(-6);
+    expect(bySlug['xau-speed-m5-long'].netPnl).toBe(5);
+    expect(bySlug['forex-session-v1-long'].netPnl).toBe(-6);
     // Sorted by sample size, largest first.
-    expect(res.protocols[0].protocolSlug).toBe('forex-session-v1');
+    expect(res.protocols[0].protocolSlug).toBe('forex-session-v1-long');
   });
 
   it('reports the MEDIAN hold time, so one stale row cannot move it', async () => {
@@ -342,7 +342,7 @@ describe('getProtocolProfitability — attribution + honest numbers (#777)', () 
         goodTrade({ id: 'h4', openedAt: at(0), closedAt: at(3) }),    // 180 min
         goodTrade({ id: 'stale', openedAt: at(0), closedAt: at(23) }), // 1380 min — a #773 stale row
       ],
-      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1' }],
+      bots: [{ id: 'bot-uuid-1', name: 'B', protocolId: 'forex-session-v1-long' }],
       protocols: [PROTOCOL],
     });
 

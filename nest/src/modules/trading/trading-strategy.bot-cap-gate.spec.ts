@@ -74,7 +74,7 @@ describe('TradingStrategyService — active-bot cap (#1193)', () => {
     id: 'bot-1',
     name: 'EURUSD Swing',
     active: false,
-    protocolId: 'xau-speed-1h',
+    protocolId: 'xau-speed-1h-long',
     minComposite: 9,
   };
 

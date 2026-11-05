@@ -102,7 +102,7 @@ describe('directional capacity contract (ADR-011, SETTLED-DECISIONS row 9)', () 
 
   it('capacity does not consult the runtime signalClass either (#758, second pass)', () => {
     // The FIRST fix for #758 still read a RUNTIME value here, so the denominator
-    // remained market-dependent: measured live, `forex-session-v1` wrote FIVE
+    // remained market-dependent: measured live, `forex-session-v1-long` wrote FIVE
     // different denominators in 30 minutes (470/560/390/480/410).
     //
     // Direction-ELIGIBILITY is a property of the CONFIG. Whether a directive happens

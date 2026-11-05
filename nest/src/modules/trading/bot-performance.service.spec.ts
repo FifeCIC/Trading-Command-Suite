@@ -25,7 +25,7 @@ import { BotPerformanceService, DEFAULT_RATING_POLICY } from './bot-performance.
 /** A bot row shaped as the service selects it. */
 function bot(id: string, name: string, extra: Record<string, unknown> = {}) {
   return {
-    id, name, protocolId: 'forex-session-v1', shortProtocolId: null, symbol: 'EURUSD',
+    id, name, protocolId: 'forex-session-v1-long', shortProtocolId: null, symbol: 'EURUSD',
     brokerId: 'mt5', timeframe: '5m', slPct: 1, tpPct: 2, mode: 'auto', active: true,
     maxPositions: 1, ...extra,
   };
@@ -178,14 +178,14 @@ describe('BotPerformanceService — attribution', () => {
 
   /**
    * ⚠️ The dual-meaning column. `symbols.service.ts` measured one USDCAD row holding the
-   * protocol slug `forex-session-v1` where a bot UUID was expected. If that resolved as a bot,
+   * protocol slug `forex-session-v1-long` where a bot UUID was expected. If that resolved as a bot,
    * a protocol's P&L would be reported as some bot's record — silently, with a real name on it.
    */
   it('never attributes a protocol slug to a bot', async () => {
     const prisma = mockPrisma({
       bots: [bot('b1', 'Some Bot')],
-      protocols: [{ slug: 'forex-session-v1' }],
-      aggregates: [agg('forex-session-v1', { trades: 4, wins: 3, losses: 1 })],
+      protocols: [{ slug: 'forex-session-v1-long' }],
+      aggregates: [agg('forex-session-v1-long', { trades: 4, wins: 3, losses: 1 })],
     });
     const out = await svc(prisma).getBotPerformance();
 
@@ -707,8 +707,8 @@ describe('BotPerformanceService — the strategyKey bridge (#876/#894)', () => {
   it('does not attach a strategyKey to a protocol-slug bucket', async () => {
     const prisma = mockPrisma({
       bots: [bot('b1', 'B')],
-      protocols: [{ slug: 'forex-session-v1' }],
-      aggregates: [agg('forex-session-v1', { trades: 4, wins: 3, losses: 1 })],
+      protocols: [{ slug: 'forex-session-v1-long' }],
+      aggregates: [agg('forex-session-v1-long', { trades: 4, wins: 3, losses: 1 })],
       derivedStrategies: [{ strategyKey: 'keyA', botIds: ['b1'] }],
     });
     const out = await svc(prisma).getBotPerformance();

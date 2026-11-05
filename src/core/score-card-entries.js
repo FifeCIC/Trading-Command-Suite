@@ -16,8 +16,8 @@
  *
  * ⚠️ WHY THERE ARE TWO MAPS (exact + family)
  * The gated-protocol registry and the run store name the same strategy slightly
- * differently: the registry uses `xau-speed-v1` while runs are emitted per timeframe as
- * `xau-speed-m5` / `-m15` / `-1h` / `-4h`. Deleting the `-v1` suffix reconciles them. Two
+ * differently: the registry uses `xau-speed-v1-long` while runs are emitted per timeframe as
+ * `xau-speed-m5-long` / `-m15` / `-1h` / `-4h`. Deleting the `-v1` suffix reconciles them. Two
  * maps rather than one because a DIRECT hit must always beat a FAMILY hit: if a protocol
  * ever does emit its own run, that exact score wins and the fallback is inert.
  *
@@ -129,7 +129,7 @@ export function buildScoreEntries(protocols = [], runs = []) {
       if (!exact[key]) exact[key] = row;
 
       // Family key: drop the version suffix and the trailing timeframe.
-      // `xau-speed-m5` and `xau-speed-v1` both become `xau-speed`.
+      // `xau-speed-m5-long` and `xau-speed-v1-long` both become `xau-speed`.
       const fam = `${ticker}::${familyOf(proto)}`;
       const prev = family[fam];
       if (!prev || Date.parse(run.timestamp) > Date.parse(prev.timestamp)) {

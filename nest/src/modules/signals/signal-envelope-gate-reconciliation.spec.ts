@@ -58,12 +58,12 @@ describe('SignalEnvelopeService — gate reconciliation resolves SUBSCRIPTIONS (
     strategyProtocol.findMany.mockResolvedValue([{ strategyId: 'bot-subscribed' }]);
     tradingStrategy.findMany.mockResolvedValue([{ minComposite: 7, mode: 'auto', symbol: 'EURJPY' }]);
 
-    const out = await makeService().reconcileGateWithBots(styleBar(), 'forex-session-v1');
+    const out = await makeService().reconcileGateWithBots(styleBar(), 'forex-session-v1-long');
 
     expect(out.threshold).toBe(7);
     expect(out.label).toContain('lowest participating bot threshold (7)');
     expect(strategyProtocol.findMany).toHaveBeenCalledWith({
-      where: { protocolId: 'forex-session-v1' },
+      where: { protocolId: 'forex-session-v1-long' },
       select: { strategyId: true },
     });
     // …and the bot lookup is scoped by the SUBSCRIPTION's strategy ids.
@@ -81,7 +81,7 @@ describe('SignalEnvelopeService — gate reconciliation resolves SUBSCRIPTIONS (
     strategyProtocol.findMany.mockResolvedValue([]);
     tradingStrategy.findMany.mockResolvedValue([{ minComposite: 7, mode: 'auto', symbol: 'EURJPY' }]);
 
-    const out = await makeService().reconcileGateWithBots(styleBar(), 'forex-session-v1');
+    const out = await makeService().reconcileGateWithBots(styleBar(), 'forex-session-v1-long');
 
     expect(out.threshold).toBe(10);
     expect(tradingStrategy.findMany).not.toHaveBeenCalled();
@@ -92,7 +92,7 @@ describe('SignalEnvelopeService — gate reconciliation resolves SUBSCRIPTIONS (
     tradingStrategy.findMany.mockResolvedValue([{ minComposite: 25, mode: 'auto', symbol: 'XAUUSD' }]);
 
     const base = styleBar();
-    const out = await makeService().reconcileGateWithBots(base, 'xau-speed-v1');
+    const out = await makeService().reconcileGateWithBots(base, 'xau-speed-v1-long');
 
     expect(out).toBe(base); // untouched object, untouched label
     expect(out.threshold).toBe(10);
@@ -102,14 +102,14 @@ describe('SignalEnvelopeService — gate reconciliation resolves SUBSCRIPTIONS (
     strategyProtocol.findMany.mockResolvedValue([{ strategyId: 'bot-zero' }]);
     tradingStrategy.findMany.mockResolvedValue([{ minComposite: 0, mode: 'auto', symbol: 'EURJPY' }]);
 
-    const out = await makeService().reconcileGateWithBots(styleBar(), 'forex-session-v1');
+    const out = await makeService().reconcileGateWithBots(styleBar(), 'forex-session-v1-long');
     expect(out.threshold).toBe(10);
   });
 
   it('an explicit signals.gate override is left verbatim — never second-guessed', async () => {
-    const override = { threshold: 15, source: 'override', label: 'override signals.gate.forex-session-v1 = 15' };
+    const override = { threshold: 15, source: 'override', label: 'override signals.gate.forex-session-v1-long = 15' };
 
-    const out = await makeService().reconcileGateWithBots(override as any, 'forex-session-v1');
+    const out = await makeService().reconcileGateWithBots(override as any, 'forex-session-v1-long');
 
     expect(out).toBe(override);
     expect(strategyProtocol.findMany).not.toHaveBeenCalled();

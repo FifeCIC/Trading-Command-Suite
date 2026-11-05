@@ -35,34 +35,34 @@ const ROOT = path.resolve(__dirname, '..');
  * The reviewed scrub list, 2026-11-02. Grouped by the reason it was chosen, because the
  * reason is the thing a future reader needs — the list alone looks arbitrary.
  *
- * ⚠️ `btc-scalp-v1` is deliberately ABSENT. It was a Tier-3 candidate until
+ * ⚠️ `btc-scalp-v1-long` is deliberately ABSENT. It was a Tier-3 candidate until
  * `audit-protocol-scrub-safety.cjs` showed it is the ONLY resolver for BTC, ETH and SOL —
  * retiring it would have made three kept instruments go quiet with no error. That is the
  * guard earning its place on its first run.
  */
 const SCRUB = {
   debris: [
-    'xau-speed-v1-copy',      // named "(copy)"; 0 symbols, 0 bots, yet ACTIVE
-    'mt5-technical-short',    // 0 symbols, 0 bots; SHORT twin of the same directives
-    'euro-stoxx-v1',          // ACTIVE with 0 symbols and 0 bots
-    'nikkei-speed-v1',        // ACTIVE with 0 symbols and 0 bots
-    'usdjpy-risk-v1',         // ACTIVE with 0 symbols and 0 bots
-    'usdcad-oil-v1',          // named USDCAD but resolves WTI
+    'xau-speed-v1-copy-long',      // named "(copy)"; 0 symbols, 0 bots, yet ACTIVE
+    'mt5-technical-core-v1-short',    // 0 symbols, 0 bots; SHORT twin of the same directives
+    'euro-stoxx-v1-long',          // ACTIVE with 0 symbols and 0 bots
+    'nikkei-speed-v1-long',        // ACTIVE with 0 symbols and 0 bots
+    'usdjpy-risk-v1-long',         // ACTIVE with 0 symbols and 0 bots
+    'usdcad-oil-v1-long',          // named USDCAD but resolves WTI
   ],
   neverWired: [
-    'vwap-bands-v1', 'vwap-simple-v1',           // 0 symbols, 0 bots; ~90% the same directives
-    'mtf-conservative-v1', 'mtf-weighted-v1',    // 0 symbols, 0 bots
-    'gap-scanner-v1',                            // 0 symbols, 0 bots
-    'hourly-3dir-v1',                            // EURUSD, 0 bots; dup of forex-session-v1's EURUSD
-    'eurusd-macro-v1', 'gbpusd-news-v1',         // 0 symbols; dups of forex-session-v1 pairs
-    'commodity-pairs-v1',                        // 0 symbols, 0 bots
+    'vwap-bands-v1-long', 'vwap-simple-v1-long',           // 0 symbols, 0 bots; ~90% the same directives
+    'mtf-conservative-v1-long', 'mtf-weighted-v1-long',    // 0 symbols, 0 bots
+    'gap-scanner-v1-long',                            // 0 symbols, 0 bots
+    'hourly-3dir-v1-long',                            // EURUSD, 0 bots; dup of forex-session-v1-long's EURUSD
+    'eurusd-macro-v1-long', 'gbpusd-news-v1-long',         // 0 symbols; dups of forex-session-v1-long pairs
+    'commodity-pairs-v1-long',                        // 0 symbols, 0 bots
   ],
   outsideKeepList: [
-    'ftse-speed-v1', 'dax-speed-v1', 'cac-speed-v1', 'china-speed-v1', 'dow-speed-v1',
-    'leverage-v2',            // scores 73 leverage symbols every run; no bot
-    'pandemic-v1', 'earnings-momentum-v1',
-    'doge-speed-v1', 'tsla-speed-v1',   // momentum-stock-v1 already owns TSLA
-    'oil-supply-v1',          // 0 symbols; oil-speed-v1 is the wired one
+    'ftse-speed-v1-long', 'dax-speed-v1-long', 'cac-speed-v1-long', 'china-speed-v1-long', 'dow-speed-v1-long',
+    'leverage-v2-long',            // scores 73 leverage symbols every run; no bot
+    'pandemic-v1', 'earnings-momentum-v1-long',
+    'doge-speed-v1-long', 'tsla-speed-v1-long',   // momentum-stock-v1-long already owns TSLA
+    'oil-supply-v1-long',          // 0 symbols; oil-speed-v1-long is the wired one
   ],
 };
 

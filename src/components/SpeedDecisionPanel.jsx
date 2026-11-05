@@ -49,7 +49,7 @@ export default function SpeedDecisionPanel({ symbol = 'BTCUSD', compact = false 
     try {
       // Fetch gated batch score which now includes multi-timeframe + micro-S/R directives
       const result = await apiGet('/api/scoring/gated/batch', {
-        params: { tickers: symbol, protocolId: 'btc-scalp-v1' },
+        params: { tickers: symbol, protocolId: 'btc-scalp-v1-long' },
       });
       // Also fetch recent bars for the panel's own S/R display
       const barsRes = await apiGet(`/api/trading/mt5/candles`, {

@@ -25,7 +25,7 @@
  *
  * ─────────────────────────────────────────────────────────────
  * DIRECTIVE AUDIT CHECKLIST — six recurring failure modes
- * (from the 2026-08-14 xau-speed-v1 audit; check EVERY directive
+ * (from the 2026-08-14 xau-speed-v1-long audit; check EVERY directive
  *  against these before marking it `ready`.)
  * ─────────────────────────────────────────────────────────────
  *  1. Completeness theater — a mock/constant fallback wearing a `ready`
@@ -117,8 +117,8 @@ export interface DirectiveResult {
    * execute at acceptable spread". The real cause was already stated by the
    * directive itself ("market closed — not scored on stale data").
    *
-   * Measured blast radius over 45 minutes: `xau-speed-v1` lost 12 of 22 ticks,
-   * and `spy-day-v1` (11), `qqq-day-v1` (11) and `spy-speed-v1` (7) lost EVERY
+   * Measured blast radius over 45 minutes: `xau-speed-v1-long` lost 12 of 22 ticks,
+   * and `spy-day-v1-long` (11), `qqq-day-v1-long` (11) and `spy-speed-v1-long` (7) lost EVERY
    * tick — those three never once scored a non-zero liquidity value. The same
    * symbol alternated between "highly liquid ... 94/100" and "Market closed"
    * seconds apart. Composite 0 then failed the 65 pre-trade gate → no trade.

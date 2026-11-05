@@ -789,7 +789,7 @@ export class SymbolsService {
     // help investigate the strongest and weakest protocols."*
     //
     // Measured for XAUUSD: **23 protocols write ~85,400 rows; six of them write ~97% of it**, and
-    // `gold-macro-v1` alone wrote 12,802 rows with ZERO bots. A list of names cannot show that.
+    // `gold-macro-v1-long` alone wrote 12,802 rows with ZERO bots. A list of names cannot show that.
     // These three aggregates can:
     //   · `stats`   — average / best / worst score, and how many readings they rest on (n).
     //   · `bots`    — how many ACTIVE bots can actually act on the protocol.
@@ -799,7 +799,7 @@ export class SymbolsService {
     // claim, and this repo has been burned by a statistic quoted without its sample size.
     //
     // ⚠️ `bots: 0` DOES NOT MEAN WORTHLESS, and the numbers here are how you tell. Measured:
-    // `gold-macro-v1` has **0 active bots yet 2 closed trades and +30.48 P&L** on XAUUSD. A rule
+    // `gold-macro-v1-long` has **0 active bots yet 2 closed trades and +30.48 P&L** on XAUUSD. A rule
     // that skipped scoring on "no bot" would have deleted a profitable protocol. `active = 0` is
     // also NOT a kill switch (#803).
     const WINDOW_DAYS = 30;
@@ -1119,9 +1119,9 @@ export class SymbolsService {
     // ⚠️ This used to build `protocolIds` from TWO sources and no authority: the scoring
     // strategies (read from **JSON files on disk** via `scoring_strategy.watchlistName`) and the
     // active bots. Measured 2026-09-27 for XAUUSD that produced **8** protocols while the symbols
-    // the pipeline actually scores number **20** — and the 12 omitted included `xau-speed-v1` and
-    // `xau-speed-v1-copy` (the two rows in `symbol_protocol_assignment`, i.e. the EXPLICIT
-    // assignment) and `gold-macro-v1`, the one protocol with realised P&L on this symbol
+    // the pipeline actually scores number **20** — and the 12 omitted included `xau-speed-v1-long` and
+    // `xau-speed-v1-copy-long` (the two rows in `symbol_protocol_assignment`, i.e. the EXPLICIT
+    // assignment) and `gold-macro-v1-long`, the one protocol with realised P&L on this symbol
     // (2 trades, +30.48). The page therefore hid exactly the protocols a reader most needs.
     //
     // ⚠️ `scoringForSymbol` still resolves from disk and yielded **0** for XAUUSD. That read is a
@@ -1238,7 +1238,7 @@ export class SymbolsService {
 
       return {
         // ⚠️ `attribution` is whatever is in `scoringStrategyId`. It is USUALLY a bot UUID, but
-        // measured 2026-09-21 one USDCAD row holds the PROTOCOL SLUG `forex-session-v1` instead.
+        // measured 2026-09-21 one USDCAD row holds the PROTOCOL SLUG `forex-session-v1-long` instead.
         // `matchedBot` is false for those, so a consumer never silently attributes a protocol's
         // trades to a bot. Do not "fix" this by dropping the row — it is real P&L and losing it
         // would understate the symbol.

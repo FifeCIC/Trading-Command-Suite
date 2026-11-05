@@ -182,7 +182,7 @@ describe('SignalEnvelopeService — stale symbols are not scored (#827)', () => 
     });
 
     it('carries the observed reading through when `meta` IS present', async () => {
-      // The live XAUUSD / gold-macro-v1 figures, 2026-10-13: raw 51 against a configured 795 and
+      // The live XAUUSD / gold-macro-v1-long figures, 2026-10-13: raw 51 against a configured 795 and
       // an observed 90 — the same tick that reads 6.42% as breadth.
       scoreWithGating.mockResolvedValue({
         composite: 51, maxPossible: 795, signal: 'BUY', confidence: 0,

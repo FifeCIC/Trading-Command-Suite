@@ -17,7 +17,7 @@ import type { DirectiveInput, DirectiveResult } from '../directives/interfaces/d
  * Every mechanism that could have protected an open position was measured to be inert or
  * advisory (2026-09-28):
  *
- *   • the 5 "exit" directives live in `mt5-technical-core-v1`, `active = 0` — they have NEVER
+ *   • the 5 "exit" directives live in `mt5-technical-core-v1-long`, `active = 0` — they have NEVER
  *     run. Measured: 0 appearances in 6,693 score breakdowns over 3 days, while control
  *     directives appeared 426–6,687 times. The diagrams page claims they "contribute scores to
  *     the composite"; reality is that they contribute nothing, because they never execute.

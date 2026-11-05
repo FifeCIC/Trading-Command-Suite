@@ -78,7 +78,7 @@ const resolverWith = (initial: Record<string, string> = {}) => {
   };
 };
 
-const KEY = 'protocol:btc-speed-v1:crypto-fear-greed:maxScore';
+const KEY = 'protocol:btc-speed-v1-long:crypto-fear-greed:maxScore';
 
 describe('per-protocol override history (#1144)', () => {
   it('records the FIRST override with oldValue null (absent, not zero) and version 1', async () => {
@@ -87,7 +87,7 @@ describe('per-protocol override history (#1144)', () => {
 
     expect(changes).toHaveLength(1);
     expect(changes[0]).toMatchObject({
-      protocolSlug: 'btc-speed-v1',
+      protocolSlug: 'btc-speed-v1-long',
       directiveId: 'crypto-fear-greed',
       field: 'maxScore',
       oldValue: null,
@@ -111,9 +111,9 @@ describe('per-protocol override history (#1144)', () => {
     await resolver.set(KEY, '300');
 
     expect(changes.map((c) => [c.protocolSlug, c.configVersion])).toEqual([
-      ['btc-speed-v1', 1],
+      ['btc-speed-v1-long', 1],
       ['eth-speed-v1', 1],
-      ['btc-speed-v1', 2],
+      ['btc-speed-v1-long', 2],
     ]);
   });
 
@@ -126,9 +126,9 @@ describe('per-protocol override history (#1144)', () => {
   });
 
   it('records a bulk family reset field by field, because "deleted 2 rows" cannot say what changed', async () => {
-    const other = 'protocol:btc-speed-v1:crypto-fear-greed:minScore';
+    const other = 'protocol:btc-speed-v1-long:crypto-fear-greed:minScore';
     const { resolver, changes } = resolverWith({ [KEY]: '240', [other]: '5' });
-    await resolver.clearFamily('protocol', 'btc-speed-v1:crypto-fear-greed');
+    await resolver.clearFamily('protocol', 'btc-speed-v1-long:crypto-fear-greed');
 
     expect(changes.map((c) => c.field).sort()).toEqual(['maxScore', 'minScore']);
     expect(changes.every((c) => c.newValue === null)).toBe(true);
@@ -136,7 +136,7 @@ describe('per-protocol override history (#1144)', () => {
 
   it('does NOT log a setting that is not a per-protocol override', async () => {
     const { resolver, changes } = resolverWith();
-    await resolver.set('backtest.baseline.btc-speed-v1.runId', 'abc123');
+    await resolver.set('backtest.baseline.btc-speed-v1-long.runId', 'abc123');
     expect(changes).toHaveLength(0);
   });
 

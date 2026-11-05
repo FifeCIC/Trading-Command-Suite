@@ -236,7 +236,7 @@ export default function SymbolFocusPage() {
                           <td className="sf-num">{p.stats ? fmt(p.stats.high, 0) : '—'}</td>
                           <td className="sf-num">{p.stats ? fmt(p.stats.low, 0) : '—'}</td>
                           <td className="sf-num sf-muted">{p.stats ? p.stats.samples : '—'}</td>
-                          {/* ⚠️ `0` bots is not "worthless". gold-macro-v1 has 0 bots AND +30.48
+                          {/* ⚠️ `0` bots is not "worthless". gold-macro-v1-long has 0 bots AND +30.48
                               realised on XAUUSD — a rule that skipped it would have deleted a
                               profitable protocol. It is marked, not judged. */}
                           <td className="sf-num">

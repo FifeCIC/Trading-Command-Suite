@@ -11,7 +11,7 @@ import { signalProfitFactor, tradeProfitFactor } from './profit-factor';
  * ── THE TWO DEFECTS IT GUARDS (#126, 2026-11-02) ──
  *   1. Six stop-plan arms moved net P&L from +63.29 to −657.54 and every one reported
  *      `profitFactor 0.72`, because the field measures ENTRY SIGNALS and is invariant to exits.
- *   2. `btc-speed-v1` stored a profit factor of **956.87** because `grossLoss ... || 1` forced the
+ *   2. `btc-speed-v1-long` stored a profit factor of **956.87** because `grossLoss ... || 1` forced the
  *      denominator to 1, turning a ratio into an absolute value.
  */
 

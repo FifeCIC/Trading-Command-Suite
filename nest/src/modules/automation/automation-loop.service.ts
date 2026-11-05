@@ -1916,7 +1916,7 @@ export class AutomationLoopService implements OnModuleInit {
       // (#908, `signal-envelope.service.ts`), the protocol runner, consensus, and the main loop
       // above. The A/B runner was the ONLY exception, and because an M15 protocol scored on
       // 5-minute bars reads completely differently, it was measuring a configuration that does
-      // not exist. Measured 2026-09-23, XAUUSD, same protocol (`xau-speed-m15`), same second:
+      // not exist. Measured 2026-09-23, XAUUSD, same protocol (`xau-speed-m15-long`), same second:
       //
       //     real pipeline (15m bars) : composite 94, signal BUY  -> bot EXECUTED (ticket ...5422)
       //     A/B runner   ( 5m bars) : composite 15, signal HOLD -> SKIP — no order, ever

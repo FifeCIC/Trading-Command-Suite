@@ -23,7 +23,7 @@ import {
   MarketBar,
 } from '../interfaces/directive.interface';
 
-// ── DECISION (2026-11-02, measured on btc-scalp-v1) ──
+// ── DECISION (2026-11-02, measured on btc-scalp-v1-long) ──
 // WHAT:      MIN_BARS is DERIVED from EMA_SLOW, not declared separately.
 // WHY:       The hand-written 20 let loadHigherTfBundle() fetch 30 daily / 20 hourly / 20 15m bars
 //            while the trend test needs EMA50, so BOTH alignment tests were false on every timeframe

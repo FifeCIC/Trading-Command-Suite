@@ -42,7 +42,7 @@
  *
  * USAGE (from repo root)
  *   node scripts/diff-seed-vs-db.cjs
- *   node scripts/diff-seed-vs-db.cjs --protocol mt5-technical-core-v1
+ *   node scripts/diff-seed-vs-db.cjs --protocol mt5-technical-core-v1-long
  * Exit code: 0 if in sync, 1 if drift detected (so it can be used in a check).
  */
 
@@ -152,7 +152,7 @@ function query(sql) {
  * even though its `protocol` row exists.
  *
  * The result was a report that said the opposite of the truth: `060ed261-…` and
- * `signals-workbench` were printed as `PROTOCOL-ONLY-IN-SEED` ("a re-seed would
+ * `signals-workbench-long` were printed as `PROTOCOL-ONLY-IN-SEED` ("a re-seed would
  * create it") when BOTH already existed as `protocol` rows. That false report was
  * handed to the owner as a decision needing their input, and it did not exist.
  *
@@ -212,13 +212,13 @@ function loadDb() {
  * allowlist that swallows a real problem is worse than no check. Each carries the
  * evidence that makes it benign:
  *
- *   1. `signals-workbench` — a WORKBENCH protocol. Its scores are written by
+ *   1. `signals-workbench-long` — a WORKBENCH protocol. Its scores are written by
  *      `SignalEnvelopeService.persistScores()` (`score-history.service.ts` L54), not
  *      computed through the gated scoring pipeline, so it legitimately has no groups.
  *      This is also why `ProtocolHealthService` warns "no risk-gate group" for it —
  *      that warning is expected, not a fault. `active: 1` is correct.
  *
- *   2. `060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d` — an ABANDONED PLACEHOLDER. A real
+ *   2. `conviction-dip-accumulation-long` — an ABANDONED PLACEHOLDER. A real
  *      protocol row ("Conviction Dip Accumulation", created 2026-07-26) that was never
  *      configured: `active: 0`, **0 groups in BOTH the seed and the DB**, and nothing
  *      references it (verified across `protocol_directive_group`,
@@ -231,11 +231,11 @@ function loadDb() {
  */
 const KNOWN_EMPTY_BY_DESIGN = new Map([
   [
-    'signals-workbench',
+    'signals-workbench-long',
     'workbench protocol — populated by SignalEnvelopeService.persistScores(), not the gated pipeline (score-history.service.ts L54)',
   ],
   [
-    '060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d',
+    'conviction-dip-accumulation-long',
     'abandoned placeholder created 2026-07-26 — active:0, nothing references it; slug is a UUID because the id was copied into it',
   ],
 ]);
@@ -303,8 +303,8 @@ for (const slug of slugs) {
     // ── DECISION (2026-11-02, packaging split) ──
     // WHAT:      A protocol present in the database but NOT in the shipped seed is PARKED, not
     //            drift, and no longer fails this gate. The count is reported.
-    // WHY:       The public package ships three protocols (`xau-speed-v1`, `momentum-stock-v1`,
-    //            `forex-session-v1`). This installation's database deliberately keeps all 50 —
+    // WHY:       The public package ships three protocols (`xau-speed-v1-long`, `momentum-stock-v1-long`,
+    //            `forex-session-v1-long`). This installation's database deliberately keeps all 50 —
     //            the seeder is upsert-only, so an absent entry simply stays. Before the split the
     //            two sides were the same set and equality was the right assertion; afterwards the
     //            database is a SUPERSET by design, so equality would fail on correct behaviour and

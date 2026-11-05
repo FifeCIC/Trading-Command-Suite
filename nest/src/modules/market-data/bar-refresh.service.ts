@@ -99,8 +99,8 @@ const REFRESH_INTERVAL_MS = process.env.BAR_REFRESH_INTERVAL_MS
  * ------------------------------------
  * This list was `['5m','15m','1h','4h','1d']`, but `selectBaseTimeframe()` resolves a
  * protocol's `recommendedTimeframe` onto this set, and several protocols declare a
- * SUB-MINUTE horizon: `xau-speed-v1`, `spy-speed-v1`, `qqq-speed-v1`, `ftse-speed-v1`
- * and `vix-spike-v1` all carry `'5s–30s'`, which resolves to **`1m`**.
+ * SUB-MINUTE horizon: `xau-speed-v1-long`, `spy-speed-v1-long`, `qqq-speed-v1-long`, `ftse-speed-v1-long`
+ * and `vix-spike-v1-long` all carry `'5s–30s'`, which resolves to **`1m`**.
  *
  * `1m` was never fetched, and the DB held ZERO `1m` bars — so those protocols asked the
  * canonical loader for a cadence that did not exist, received an empty array, and their
@@ -776,7 +776,7 @@ export class BarRefreshService {
             // — well inside the old bound — so it was persisted, whereupon it pinned
             // `MAX(timestamp)` ahead of now and made `computeMarketStatus()` fail closed
             // with "data clock skew" on EVERY pass. Live effect: `Gold Position 4H`
-            // (XAUUSD / `xau-speed-4h`) could not trade at all, and the row was
+            // (XAUUSD / `xau-speed-4h-long`) could not trade at all, and the row was
             // unoverwritable because the upsert only touches rows it just fetched.
             //
             // Alignment cannot rescue this case: `alignBarTimestamp` FLOORS, and a bar

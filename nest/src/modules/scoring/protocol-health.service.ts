@@ -68,7 +68,7 @@ export function formatCoverageWarning(payload: CoveragePayload | null | undefine
  * ProtocolHealthService — static protocol-config validation.
  * ===========================================================
  * Catches configuration faults BEFORE they corrupt scoring output. The
- * motivating bug (2026-09-03, #716 follow-up): vix-spike-v1 shipped with a
+ * motivating bug (2026-09-03, #716 follow-up): vix-spike-v1-long shipped with a
  * Sentiment group weighted 0.35 but ZERO directiveIds, so 35% of the
  * protocol's signal read 0 forever and manufactured permanent divergences.
  *
@@ -109,7 +109,7 @@ export interface ProtocolHealthIssue {
  * The defect was that `auditMeasuredCeilings()` read the `score` table and described what it found
  * as "the highest composite EVER recorded". Measured 2026-09-27, that is false: `score` held 6,304
  * rows spanning 2026-08-29 -> 09-27, while `score_snapshot` held 314,024 rows spanning 06-30 ->
- * 09-27. And the number is not stable — for `xau-speed-m15` the `score` maximum was 55 when the
+ * 09-27. And the number is not stable — for `xau-speed-m15-long` the `score` maximum was 55 when the
  * issue was written and 32 when this was fixed, against a true all-history maximum of **638**.
  *
  * MY FIRST ATTEMPT AT THE FIX WAS WRONG, and it is recorded here because the mistake is the
@@ -263,22 +263,22 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
    *
    * ⚠️ #999 — IT USED TO SAY "EVER RECORDED" HERE, AND THAT WAS FALSE. `score` is a shorter,
    * non-stationary window than `score_snapshot` (6,304 rows / 29 days against 314,024 rows /
-   * 89 days, measured 2026-09-27), and its maximum moves: 55 then 32 for `xau-speed-m15`, against
+   * 89 days, measured 2026-09-27), and its maximum moves: 55 then 32 for `xau-speed-m15-long`, against
    * a true all-history peak of 638. So the range is now NAMED in the message, and a `score_snapshot`
    * cross-check can veto the finding when the longer history contradicts it. A measurement that
    * describes a window must say so; a verdict that history falsifies must not be an error.
    *
-   * THE CASE THAT MOTIVATED IT: `ftse-speed-v1`, `dax-speed-v1` and
-   * `cac-speed-v1` each had an all-time maximum composite of **31** against a
+   * THE CASE THAT MOTIVATED IT: `ftse-speed-v1-long`, `dax-speed-v1-long` and
+   * `cac-speed-v1-long` each had an all-time maximum composite of **31** against a
    * `minComposite` of **65**. They had cleared their gate 0 times in their entire
-   * history while `forex-session-v1` cleared it 1,168 times. Every individual
+   * history while `forex-session-v1-long` cleared it 1,168 times. Every individual
    * directive looked healthy, so nothing reported a problem — the fault was only
    * visible by comparing the ceiling to the threshold.
    *
    * ⚠️ UNITS — FIXED 2026-09-19 (#905). This compared the RAW composite against
    * `minComposite`, but the GATE (protocol-gating) compares compositePct =
    * rawComposite / configuredSignalMax × 100 against it. Raw-vs-percent made the audit
-   * silently blind: `xau-speed-1h`'s raw ceiling of 70 "cleared" its bar of 9, while its
+   * silently blind: `xau-speed-1h-long`'s raw ceiling of 70 "cleared" its bar of 9, while its
    * true 7.7% could never clear 9% — two bots active and incapable with this detector green.
    * The audit now measures the SAME quantity the gate does, and `measureProtocolCeiling()`
    * below shares that basis so detector and gate cannot disagree again.
@@ -329,7 +329,7 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
       // 2026-06-30 -> 09-27 (89 days). The message below nevertheless said "highest composite
       // EVER recorded", and `(N readings)` printed a bare count with no window on it.
       //
-      // ⚠️ WORSE, ITEM: THE WINDOW IS NOT EVEN STABLE. For `xau-speed-m15` the `score` maximum was
+      // ⚠️ WORSE, ITEM: THE WINDOW IS NOT EVEN STABLE. For `xau-speed-m15-long` the `score` maximum was
       // 55 when #999 was written and is 32 now, against a TRUE all-history maximum of 638 in
       // `score_snapshot`. So the audit can pronounce a protocol unable to reach its bar using a
       // number that is (a) window-dependent and (b) contradicted by the protocol's own history.
@@ -355,7 +355,7 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
       //
       // MEASURED 2026-09-27, and it is why "EVER" was false: `score` held 6,304 rows spanning
       // 2026-08-29 -> 09-27 (29 days) while `score_snapshot` held 314,024 rows spanning 06-30 ->
-      // 09-27 (89 days). ⚠️ The window is not even stable — for `xau-speed-m15` the `score` maximum
+      // 09-27 (89 days). ⚠️ The window is not even stable — for `xau-speed-m15-long` the `score` maximum
       // was 55 when #999 was written and 32 when this was fixed, against a TRUE all-history maximum
       // of 638. A number that moves is not "EVER", and it cannot be the basis of a definite error.
       rows = await this.prisma.$queryRawUnsafe(`
@@ -435,7 +435,7 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
       // history, so when it shows a composite HIGHER than anything in the window, the protocol has
       // demonstrably reached further than the window suggests and this verdict is NOT established.
       //
-      // Measured for `xau-speed-m15`: window maximum raw 32, full-history maximum 638. Reporting
+      // Measured for `xau-speed-m15-long`: window maximum raw 32, full-history maximum 638. Reporting
       // "cannot reach 91" from the window alone would have been a false error contradicted by the
       // protocol's own record — the exact shape this repo keeps re-finding (plausible output, no
       // error, wrong underneath).

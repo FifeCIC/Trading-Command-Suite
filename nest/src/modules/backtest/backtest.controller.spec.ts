@@ -83,7 +83,7 @@ describe('BacktestController — repeat-check accepts one window', () => {
       getResult: (id: string) =>
         Promise.resolve({
           id,
-          protocolId: 'btc-speed-v1',
+          protocolId: 'btc-speed-v1-long',
           scoreSeries: id === 'aaa' ? aSeries : bSeries,
         }),
     });

@@ -20,7 +20,7 @@ export default function ScoringDebugLab() {
     setLoading(true);
     setError(null);
     try {
-      const params = `protocol=mt5-technical-core-v1&bars=${barCount}&timeframe=${timeframe}`;
+      const params = `protocol=mt5-technical-core-v1-long&bars=${barCount}&timeframe=${timeframe}`;
       const shortParams = `protocol=default-short&bars=${barCount}&timeframe=${timeframe}`;
       const [l, s] = await Promise.all([
         fetch(`${API}/scoring/gated/${symbol}?${params}`).then(r => r.json()),
@@ -48,7 +48,7 @@ export default function ScoringDebugLab() {
       <header className="sdl-header">
         <h2>🔬 Dual-Protocol Inspector</h2>
         <p className="muted">
-          Compare LONG (mt5-technical-core-v1) vs SHORT (vix-short-v1) protocol scores in real time.
+          Compare LONG (mt5-technical-core-v1-long) vs SHORT (vix-spike-v1-short) protocol scores in real time.
           This is a Lab tool to explore the dual-protocol scoring pipeline.
         </p>
       </header>
@@ -85,7 +85,7 @@ export default function ScoringDebugLab() {
         <div className={`sdl-protocol ${winner === 'LONG' ? 'sdl-winner' : ''}`}>
           <div className="sdl-protocol-header long">
             <h3>📈 LONG Protocol</h3>
-            <code>mt5-technical-core-v1</code>
+            <code>mt5-technical-core-v1-long</code>
             <span className="sdl-direction">LONG_ONLY</span>
           </div>
           {longResult ? (

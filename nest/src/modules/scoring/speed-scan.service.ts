@@ -111,17 +111,17 @@ export interface ScanResult {
 const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
   // Kept as fallback for bootstrap / DB-unavailable scenarios.
   // The DB table symbol_protocol_assignment is the primary source.
-  BTCUSD: 'btc-scalp-v1',  'BTC-USD': 'btc-scalp-v1',
-  ETHUSD: 'btc-scalp-v1',  'ETH-USD': 'btc-scalp-v1',
-  XAUUSD: 'xau-speed-v1',  XAGUSD: 'xau-speed-v1',
-  USOIL: 'oil-speed-v1',   UKOIL: 'oil-speed-v1',
-  SPX500: 'spy-speed-v1',  SPY: 'spy-speed-v1', US500: 'spy-speed-v1',
-  TECH100: 'qqq-speed-v1', QQQ: 'qqq-speed-v1',
-  VIX: 'vix-spike-v1',
-  EURUSD: 'forex-session-v1', GBPUSD: 'forex-session-v1', USDJPY: 'forex-session-v1',
-  AUDUSD: 'forex-session-v1', USDCHF: 'forex-session-v1', NZDUSD: 'forex-session-v1',
-  USDCAD: 'usdcad-oil-v1', US30: 'dow-speed-v1', DJI30: 'dow-speed-v1',
-  UK100: 'ftse-speed-v1', JPN225: 'nikkei-speed-v1', EUSTX50: 'euro-stoxx-v1',
+  BTCUSD: 'btc-scalp-v1-long',  'BTC-USD': 'btc-scalp-v1-long',
+  ETHUSD: 'btc-scalp-v1-long',  'ETH-USD': 'btc-scalp-v1-long',
+  XAUUSD: 'xau-speed-v1-long',  XAGUSD: 'xau-speed-v1-long',
+  USOIL: 'oil-speed-v1-long',   UKOIL: 'oil-speed-v1-long',
+  SPX500: 'spy-speed-v1-long',  SPY: 'spy-speed-v1-long', US500: 'spy-speed-v1-long',
+  TECH100: 'qqq-speed-v1-long', QQQ: 'qqq-speed-v1-long',
+  VIX: 'vix-spike-v1-long',
+  EURUSD: 'forex-session-v1-long', GBPUSD: 'forex-session-v1-long', USDJPY: 'forex-session-v1-long',
+  AUDUSD: 'forex-session-v1-long', USDCHF: 'forex-session-v1-long', NZDUSD: 'forex-session-v1-long',
+  USDCAD: 'usdcad-oil-v1-long', US30: 'dow-speed-v1-long', DJI30: 'dow-speed-v1-long',
+  UK100: 'ftse-speed-v1-long', JPN225: 'nikkei-speed-v1-long', EUSTX50: 'euro-stoxx-v1-long',
 };
 
 /**
@@ -130,7 +130,7 @@ const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
  * IMPORTANT: Uses `include` (not `select`) to join the Protocol table.
  * `select: { protocolId: true }` returns the UUID foreign key, not the
  * human-readable slug. This caused #459 — Speed Scanner showed UUIDs like
- * "42f2ec59-..." instead of "usdcad-oil-v1". Always use `include` with
+ * "42f2ec59-..." instead of "usdcad-oil-v1-long". Always use `include` with
  * relations when you need fields from the related table, not just the FK.
  *
  * Also returns `active` status so the frontend can filter inactive protocols.
@@ -184,7 +184,7 @@ export async function resolveProtocolForSymbol(symbol: string, prisma: any): Pro
   // Fall back to the hardcoded map — but the DATABASE is the truth about `active` (#803).
   //
   // ⚠️ This used to return `{ slug, active: true }` with the comment "all hardcoded protocols
-  // are active by default" — a claim nobody verified. Measured 2026-10-09: `usdcad-oil-v1`
+  // are active by default" — a claim nobody verified. Measured 2026-10-09: `usdcad-oil-v1-long`
   // (active = 0, no bot, no symbol assignment) was scored and PERSISTED every ~3.5 minutes
   // through this fallback. A slug that does not resolve to a protocol row is refused outright:
   // an unknown protocol cannot be shown to be active, and "cannot judge" must not read as "on".
@@ -194,7 +194,7 @@ export async function resolveProtocolForSymbol(symbol: string, prisma: any): Pro
   // Pattern-match leverage products — verified against the database the same way.
   if (/^3[A-Z]{2,3}$/.test(symbol) || /^[A-Z]{2,3}3$/.test(symbol) ||
       ['TECS','SQQQ','SPXS','SOXS','FNGD','YANG','SRTY'].includes(symbol)) {
-    return withDbActive('leverage-v2', prisma);
+    return withDbActive('leverage-v2-long', prisma);
   }
   return null; // no protocol assigned — unscoped 'default' scoring removed (2026-08-22)
 }
@@ -275,7 +275,7 @@ export class SpeedScanService {
         // it. This path used to fetch with a literal `bars = 20` (the old default parameter) and
         // a literal `30` for every higher timeframe, whatever the directives declared.
         //
-        // MEASURED 2026-09-28: `btc-speed-v1` starved 4 of its 13 directives on 246 of 247 ticks
+        // MEASURED 2026-09-28: `btc-speed-v1-long` starved 4 of its 13 directives on 246 of 247 ticks
         // (99.6%) for 24h+, each returning 0 with `Insufficient data: need 72 bars, have 20`,
         // while 3,504 fresh 5m bars sat unused in `marketbar`. `bollinger-band-squeeze` needed 72.
         // Nothing threw — the 0 folded silently into an additive composite, which is why this

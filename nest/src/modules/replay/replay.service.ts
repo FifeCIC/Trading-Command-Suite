@@ -28,14 +28,14 @@ import type { MarketBar } from '../directives/interfaces/directive.interface';
  *
  *   | protocol             | time   | ms/step |
  *   |----------------------|--------|---------|
- *   | euro-stoxx-v1        |  2.44s |    11.5 |
- *   | doge-speed-v1        |  2.53s |    11.9 |
- *   | vix-spike-v1         |  4.20s |    19.8 |
- *   | gold-macro-v1        |  4.29s |    20.2 |
- *   | momentum-stock-v1    |  6.75s |    31.9 |
- *   | xau-speed-v1         |  8.48s |    40.0 |
- *   | btc-speed-v1         |  9.44s |    44.5 |
- *   | btc-scalp-v1         | 12.65s |    59.7 |
+ *   | euro-stoxx-v1-long        |  2.44s |    11.5 |
+ *   | doge-speed-v1-long        |  2.53s |    11.9 |
+ *   | vix-spike-v1-long         |  4.20s |    19.8 |
+ *   | gold-macro-v1-long        |  4.29s |    20.2 |
+ *   | momentum-stock-v1-long    |  6.75s |    31.9 |
+ *   | xau-speed-v1-long         |  8.48s |    40.0 |
+ *   | btc-speed-v1-long         |  9.44s |    44.5 |
+ *   | btc-scalp-v1-long         | 12.65s |    59.7 |
  *
  * So `steps × protocols` predicts NOTHING usable: 800 ops is 9s for the cheapest protocol and 48s
  * for the dearest. `REPLAY_OP_FAST_REFUSE` therefore exists only to refuse the obviously impossible

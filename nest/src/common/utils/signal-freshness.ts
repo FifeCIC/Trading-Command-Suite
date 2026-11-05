@@ -23,7 +23,7 @@
  *
  * WHY 360 MINUTES IS THE DEFAULT.
  *   - xau-speed-* bots execute in under 11 minutes — this bound is 30x their whole lifecycle.
- *   - forex-session-v1 entries that were LEGITIMATELY waiting were being re-confirmed every
+ *   - forex-session-v1-long entries that were LEGITIMATELY waiting were being re-confirmed every
  *     ~2 minutes (scoring cadence) — they have fresh `updatedAt` and never approach the bound.
  *   - the entries that actually caused harm were 20.6h–120h without confirmation.
  *   - 6h sits an order of magnitude below the harm cases and two orders above the refresh

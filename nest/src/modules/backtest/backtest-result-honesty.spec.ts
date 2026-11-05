@@ -36,7 +36,7 @@ function storedRun(overrides: Record<string, any> = {}) {
   return {
     id: 'run-1',
     symbol: { ticker: 'BTC' },
-    protocolId: 'btc-speed-v1',
+    protocolId: 'btc-speed-v1-long',
     timeframe: '15m',
     // ⚠️ A DAY LATER THAN THE PERIOD — the warm-up. This is the value a naive implementation uses.
     startDate: new Date('2026-09-10T00:00:00.000Z'),

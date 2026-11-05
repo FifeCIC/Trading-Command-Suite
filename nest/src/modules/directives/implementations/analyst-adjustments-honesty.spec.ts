@@ -22,8 +22,8 @@ import { MarketBar } from '../interfaces/directive.interface';
  *
  *  2. DIRECTION FROM NOISE. A tradeable direction came from the SIGN of
  *     `accelerating`, so +0.02% momentum — indistinguishable from zero —
- *     produced a full `bullish` classification. For `ftse-speed-v1` /
- *     `dax-speed-v1` / `cac-speed-v1` this was the ONLY directional directive,
+ *     produced a full `bullish` classification. For `ftse-speed-v1-long` /
+ *     `dax-speed-v1-long` / `cac-speed-v1-long` this was the ONLY directional directive,
  *     so that coin-flip WAS the composite.
  *
  * WHY IT MATTERS: the app may one day trade real money. When a feed stops, the

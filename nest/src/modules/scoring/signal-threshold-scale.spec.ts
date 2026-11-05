@@ -55,9 +55,9 @@ describe('Threshold scale — the 2026-09-15 rescale is pinned (#761)', () => {
     expect(SIGNAL_THRESHOLDS.scale).toContain('CONFIGURED');
   });
 
-  it('band ordering and reachability arithmetic (worked example: gold-macro-v1)', () => {
+  it('band ordering and reachability arithmetic (worked example: gold-macro-v1-long)', () => {
     expect(SIGNAL_THRESHOLDS.strong).toBeGreaterThan(SIGNAL_THRESHOLDS.entry);
-    // gold-macro-v1's configured capacity is 795. A reading of 104 raw points
+    // gold-macro-v1-long's configured capacity is 795. A reading of 104 raw points
     // is 13.1% — it MUST classify STRONG (≥13), not merely BUY.
     const strongReading = normalizeScorePercent(104, 795);
     expect(strongReading).toBeGreaterThanOrEqual(SIGNAL_THRESHOLDS.strong);
@@ -99,7 +99,7 @@ describe('Threshold scale — the 2026-09-15 rescale is pinned (#761)', () => {
     expect(resolveStyleThreshold('Tick Scalp')).toMatchObject({ threshold: 12, source: 'style' });
     expect(resolveStyleThreshold('Speed')).toMatchObject({ threshold: 13, source: 'style' });
     // The extended-vocabulary case that used to fall through to a mystery
-    // default and stalled forex-session-v1 (see style-thresholds.ts header).
+    // default and stalled forex-session-v1-long (see style-thresholds.ts header).
     expect(resolveStyleThreshold('Session / Mean Reversion')).toMatchObject({
       threshold: 10,
       source: 'style',

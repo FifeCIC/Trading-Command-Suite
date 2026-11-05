@@ -155,7 +155,7 @@ export interface SeedTradingStrategy {
   /**
    * Whether the bot starts ENABLED. Absent = true (the historical behaviour).
    *
-   * Exists so a deliberately-inactive bot (the `hourly-3dir-v1` A/B control) can be
+   * Exists so a deliberately-inactive bot (the `hourly-3dir-v1-long` A/B control) can be
    * described here. Without it, a fresh install re-activated it and "off on purpose" was
    * indistinguishable from "lost in the reinstall".
    */
@@ -170,7 +170,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     symbol: 'XAGUSD',
 
     magic: 234104,
-    protocolId: 'xau-speed-v1',
+    protocolId: 'xau-speed-v1-long',
     brokerId: 'mt5',
     // semi-auto -> auto (2026-09-15) for data generation. baseSize stays 0.01: silver's
     // broker floor IS 0.01, unlike the index symbols.
@@ -214,7 +214,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     symbol: 'USDJPY',
 
     magic: 234109,
-    protocolId: 'forex-session-v1',
+    protocolId: 'forex-session-v1-long',
     brokerId: 'mt5',
     // `mode: auto` and `maxHoldHours` were DB-only — see the block note above 'Gold Scalp M5'.
     mode: 'auto',
@@ -250,7 +250,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     symbol: 'NVDA',
 
     magic: 234128,
-    protocolId: 'momentum-stock-v1',
+    protocolId: 'momentum-stock-v1-long',
     brokerId: 'mt5',
     mode: 'auto',
     timeframe: '15m',

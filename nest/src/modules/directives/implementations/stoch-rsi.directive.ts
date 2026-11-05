@@ -16,7 +16,7 @@
  * The sibling `stochastic.directive.ts` declares `maxScore = 100` but classifies with
  * `total >= 60 ? … : 'neutral'` — so the **bottom 60 of its range can never enter the Signal**, and
  * a well-formed score of 40 is discarded as if it were 0. Measured across ~200,000 real readings
- * (2026-09-25), eight of the eleven directives in `xau-speed-m15` had NEVER once been directional
+ * (2026-09-25), eight of the eleven directives in `xau-speed-m15-long` had NEVER once been directional
  * for the same shape of reason, and `earnings-momentum`/`adx`/`support-resistance-levels`/
  * `btc-halving-cycle` had best-ever scores of 0/16/25/59 against declared maxima of 100/100/95/200.
  *

@@ -6,9 +6,9 @@
  * same 13% is a different conviction bar in every protocol:
  *
  *     protocol          configured  earn-able   raw for STRONG   as % of EARN-ABLE
- *     xau-speed-m15          910       630      13% × 910 = 118        18.8%
- *     vix-spike-v1           480       200      13% × 480 =  62        31.2%
- *     forex-session-v1       725       635      13% × 725 =  94        14.8%
+ *     xau-speed-m15-long          910       630      13% × 910 = 118        18.8%
+ *     vix-spike-v1-long           480       200      13% × 480 =  62        31.2%
+ *     forex-session-v1-long       725       635      13% × 725 =  94        14.8%
  *
  * A protocol carrying a large unearnable share must reach ~31% of everything it could earn to clear
  * a bar another protocol clears at ~15%. The bar is not one bar. That is present today; it needs no

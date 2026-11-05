@@ -2,7 +2,7 @@
 //
 // Direction 1 (RESTORE): null the theory on the six seed-owned protocols, re-seed, expect every
 //   one of them back. A seeder that RUNS is not a seeder that RESTORES.
-// Direction 2 (PRESERVE): write a sentinel into a protocol the seed does NOT own (gold-macro-v1),
+// Direction 2 (PRESERVE): write a sentinel into a protocol the seed does NOT own (gold-macro-v1-long),
 //   re-seed, expect the sentinel untouched. This is the direction that was BROKEN: `?? null` wiped
 //   DB-only prose on 2026-11-03 in a single re-seed, with no error.
 //
@@ -10,11 +10,11 @@
 const { PrismaClient } = require('../nest/node_modules/@prisma/client');
 const SEED_URL = 'http://localhost:3201/api/scoring/gated/protocols/seed';
 const OWNED = [
-  'xau-speed-v1', 'xau-speed-v1-short',
-  'forex-session-v1', 'forex-session-v1-short',
-  'momentum-stock-v1', 'momentum-stock-v1-short',
+  'xau-speed-v1-long', 'xau-speed-v1-short',
+  'forex-session-v1-long', 'forex-session-v1-short',
+  'momentum-stock-v1-long', 'momentum-stock-v1-short',
 ];
-const DB_ONLY = 'gold-macro-v1';
+const DB_ONLY = 'gold-macro-v1-long';
 const SENTINEL = 'CANARY-SENTINEL-DO-NOT-KEEP';
 
 const p = new PrismaClient();
@@ -71,7 +71,7 @@ const reseed = async () => {
     await p.$disconnect();
     process.exit(2);
   }
-  console.log(`  sentinel placed (gold-macro-v1 was ${goldBefore} chars)`);
+  console.log(`  sentinel placed (gold-macro-v1-long was ${goldBefore} chars)`);
   console.log('  re-seeding:', await reseed());
   const goldAfter = (await lens([DB_ONLY]))[DB_ONLY];
   if (goldAfter === SENTINEL.length) {

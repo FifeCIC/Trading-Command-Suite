@@ -277,11 +277,11 @@ export default function LadderPage() {
   // Build symbol→score lookup from the scoring runs (latest run per symbol+protocol).
   //
   // ⚠️ WHY THERE ARE TWO MAPS. The ladder keys a card by `symbol::protocolId` using
-  // the id from /api/scoring/gated/protocols (e.g. `xau-speed-v1`), but the run
+  // the id from /api/scoring/gated/protocols (e.g. `xau-speed-v1-long`), but the run
   // store keys the same symbol by the TIMEFRAME variant that produced it
-  // (`xau-speed-m5`, `xau-speed-m15`, `xau-speed-1h`, `xau-speed-4h`). An exact
-  // match therefore misses the speed/scalp protocols entirely: `XAUUSD::xau-speed-v1`
-  // is absent while `XAUUSD::xau-speed-m5` is present.
+  // (`xau-speed-m5-long`, `xau-speed-m15-long`, `xau-speed-1h-long`, `xau-speed-4h-long`). An exact
+  // match therefore misses the speed/scalp protocols entirely: `XAUUSD::xau-speed-v1-long`
+  // is absent while `XAUUSD::xau-speed-m5-long` is present.
   //
   // Deleting the `-v1` suffix — the same rule the ladder already uses below for
   // per-protocol filtering, where a protocol is "relevant" to a run when either id
@@ -313,7 +313,7 @@ export default function LadderPage() {
       // Rank on whether the card is actually actionable BEFORE score size.
       // A frozen (market-closed) scan is a historical read, not a live signal —
       // it must never outrank a live score, which is what happened when
-      // `spy-day-v1`/`qqq-day-v1` (closed) sat above a live Gold BUY.
+      // `spy-day-v1-long`/`qqq-day-v1-long` (closed) sat above a live Gold BUY.
       const ta = a.hasScore && !a.vm.frozen ? 1 : 0;
       const tb = b.hasScore && !b.vm.frozen ? 1 : 0;
       if (ta !== tb) return tb - ta;

@@ -29,7 +29,7 @@ describe('convictionPercent (#915 Option C)', () => {
   });
 
   it('answers a DIFFERENT question from signalPct — same numerator, different denominator', () => {
-    // The live `gold-macro-v1` figures verified 2026-10-13: raw 50 points against a configured
+    // The live `gold-macro-v1-long` figures verified 2026-10-13: raw 50 points against a configured
     // capacity of 795 (the Signal reading) and an observed capacity of 185 (the conviction).
     const raw = 50;
     expect(convictionPercent(raw, 795)).toBeCloseTo(6.29, 2);

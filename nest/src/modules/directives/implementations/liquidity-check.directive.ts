@@ -64,8 +64,8 @@ export class LiquidityCheckDirective implements IDirective {
     // vetoed the whole trade and blamed "Symbol liquidity too low", a reason
     // that is simply untrue. "I could not measure liquidity" is absence of
     // evidence; it must never be evidence of illiquidity. Measured before the
-    // fix: `spy-day-v1`, `qqq-day-v1` and `spy-speed-v1` were hard-gated on
-    // every single tick over 45 minutes, and `xau-speed-v1` on 12 of 22.
+    // fix: `spy-day-v1-long`, `qqq-day-v1-long` and `spy-speed-v1-long` were hard-gated on
+    // every single tick over 45 minutes, and `xau-speed-v1-long` on 12 of 22.
     const marketStatus = computeMarketStatus(bars, input.asOf ?? new Date(), input.timeframe);
     if (!marketStatus.open) {
       return {

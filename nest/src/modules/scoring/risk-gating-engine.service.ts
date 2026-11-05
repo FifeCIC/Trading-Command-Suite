@@ -181,8 +181,8 @@ export class RiskGatingEngine {
     // Live evidence: `liquidity-check` returns score 0 when its stale-data guard
     // fires. That made severity 1.0 → the `severity > 0.9` HARD GATE vetoed the
     // trade with the false reason "Symbol liquidity too low — cannot execute at
-    // acceptable spread". Over 45 minutes `spy-day-v1` (11 ticks), `qqq-day-v1`
-    // (11) and `spy-speed-v1` (7) were hard-gated on EVERY tick, and `xau-speed-v1`
+    // acceptable spread". Over 45 minutes `spy-day-v1-long` (11 ticks), `qqq-day-v1-long`
+    // (11) and `spy-speed-v1-long` (7) were hard-gated on EVERY tick, and `xau-speed-v1-long`
     // on 12 of 22 — the same symbol oscillating between "highly liquid 94/100"
     // and "Market closed" seconds apart.
     //

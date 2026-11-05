@@ -51,7 +51,7 @@ export const ADAPTIVE_TARGET_MIN_SAMPLES = 20;
 /**
  * The target may never fall below this fraction of the protocol's configured capacity.
  * A protocol that has only ever produced a near-zero peak (a genuinely broken or
- * mis-fitted protocol — `spy-speed-v1` scored max 21% originally) must not be "normalised"
+ * mis-fitted protocol — `spy-speed-v1-long` scored max 21% originally) must not be "normalised"
  * into looking healthy. 25% keeps a dead protocol visibly dead.
  */
 export const ADAPTIVE_TARGET_FLOOR_RATIO = 0.25;

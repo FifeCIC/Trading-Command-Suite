@@ -477,7 +477,7 @@ export default function MetaStackExplorerPage() {
   // `ceilingWindowDays` (90). Measured 2026-10-20: one-directive probes reach 60-100%, three
   // directives reach 42%, and the 7-13 directive protocols reach 17-29%. A tick cannot exceed the
   // ceiling, so the practical scoring range is 0 -> ceiling, while `entry` (6%) and `strong` (13%)
-  // are fixed percentages of CONFIGURED capacity. On `xau-speed-m15` (ceiling 24.2%) "strong" is
+  // are fixed percentages of CONFIGURED capacity. On `xau-speed-m15-long` (ceiling 24.2%) "strong" is
   // 54% of everything the protocol can ever achieve. See #1131.
   //
   // Declared HERE, above `technicalValues`, for the reason recorded at `scoreQuery`: a top-level
@@ -558,7 +558,7 @@ export default function MetaStackExplorerPage() {
   // ⚠️ Every field below is produced by the engine and was ALREADY in the payload; the page showed
   // only name + score + class. The two that explain a wrong-looking number are `reason` (the
   // engine's own sentence) and `inSignal` (whether that reading counted). Measured 2026-10-19:
-  // `xau-speed-m15` returned `0 / 910` while eleven directives measured, two of them `bearish`,
+  // `xau-speed-m15-long` returned `0 / 910` while eleven directives measured, two of them `bearish`,
   // and nothing on this page could show that.
   const directiveRows = useMemo(() => {
     const breakouts = scored?.breakouts || {};
@@ -586,7 +586,7 @@ export default function MetaStackExplorerPage() {
   // ⚠️ THE SHARE COLUMN'S DENOMINATOR IS *NOT* THE TICK'S DIVISOR, and conflating them would
   // produce a confidently wrong percentage for every gate directive.
   //
-  // `configuredSignalMax` (910 on `xau-speed-m15`) EXCLUDES gate directives — `liquidity-check`
+  // `configuredSignalMax` (910 on `xau-speed-m15-long`) EXCLUDES gate directives — `liquidity-check`
   // declares 100 but is not in the signal divisor. So dividing each directive's maxScore by 910
   // would overstate gate directives and the shares would not sum to 100%.
   //
@@ -886,7 +886,7 @@ export default function MetaStackExplorerPage() {
         {
           // #1131 — the divisor includes capacity that NOTHING can earn, so the same 13% buys a
           // STRONG label at very different levels of real conviction between protocols. Measured
-          // spread: 12% (`forex-session-v1`) to 58% (`vix-spike-v1`). Reporting only — the label is
+          // spread: 12% (`forex-session-v1-long`) to 58% (`vix-spike-v1-long`). Reporting only — the label is
           // still decided against `configured`, because excluding this capacity without moving the
           // thresholds pushed 24% of recorded ticks across one.
           label: 'Earnable capacity',

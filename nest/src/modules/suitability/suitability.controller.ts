@@ -96,7 +96,7 @@ export class SuitabilityController {
    * header said activation gates used it — measured 2026-10-01, **it was imported by nothing**. Making
    * it fire CHANGES WHAT A SCORED SYMBOL SCORES, so it is a maths change: the owner's rule requires a
    * COPIED configuration and a comparison, never an in-place edit. Measured blast radius: **111**
-   * pairs, of which **75 are `forex-session-v1`** — four directive slots would leave the flagship
+   * pairs, of which **75 are `forex-session-v1-long`** — four directive slots would leave the flagship
    * forex protocol. The rule reads correctly and could over-reject catastrophically; only measurement
    * tells the two apart.
    *

@@ -13,7 +13,7 @@
  * The arithmetic consequence: a duplicated directive contributes its `score`
  * AND its `maxScore` once per group. `session-open-effect` (maxScore 60) was the
  * only offender in the live data, across 6 ACTIVE protocols, carrying 60 phantom
- * maxScore each — 120 for `forex-session-v1`, which listed it in three groups.
+ * maxScore each — 120 for `forex-session-v1-long`, which listed it in three groups.
  * That inflates the denominator (making every other directive's contribution
  * look smaller) and double-weights the duplicated signal itself.
  *
@@ -143,7 +143,7 @@ function makeService(groups: Array<{ id: string; directiveIds: string[]; weight?
 describe('INV-ONE-DIRECTIVE-ONE-GROUP — a duplicated directive is not double-counted', () => {
   it('counts a duplicated directive ONCE, so capacity is not inflated', async () => {
     // Same directive in TWO groups — the exact live shape of `session-open-effect`
-    // in ftse-speed-v1 / dax-speed-v1 / cac-speed-v1 / qqq-speed-v1 / spy-speed-v1.
+    // in ftse-speed-v1-long / dax-speed-v1-long / cac-speed-v1-long / qqq-speed-v1-long / spy-speed-v1-long.
     const { service } = makeService([
       { id: 'technical', directiveIds: ['dup-directive'] },
       { id: 'risk', directiveIds: ['dup-directive'], isRiskGate: true },
@@ -158,7 +158,7 @@ describe('INV-ONE-DIRECTIVE-ONE-GROUP — a duplicated directive is not double-c
   });
 
   it('counts a duplicated directive ONCE even when it appears in THREE groups', async () => {
-    // forex-session-v1 listed it in three groups -> 180 of phantom capacity before the fix.
+    // forex-session-v1-long listed it in three groups -> 180 of phantom capacity before the fix.
     const { service } = makeService([
       { id: 'technical', directiveIds: ['dup-directive'] },
       { id: 'sentiment', directiveIds: ['dup-directive'] },

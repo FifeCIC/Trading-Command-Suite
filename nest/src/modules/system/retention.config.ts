@@ -106,7 +106,7 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
   //        the refresh upserts 200 bars per timeframe each cycle, so ~290 days of daily bars are
   //        re-written continuously, over-supplying what the prune removes. The daily depth is a
   //        SIDE-EFFECT OF THE FETCH WINDOW, not a retention policy. `btc-halving-cycle`, in the
-  //        ACTIVE `btc-speed-v1`, declares 365 daily bars; we hold 206. If the fetch limit ever
+  //        ACTIVE `btc-speed-v1-long`, declares 365 daily bars; we hold 206. If the fetch limit ever
   //        drops below the deepest declaration, the series thins SILENTLY. A per-timeframe window
   //        is the shape that would make this deliberate. ⚠️ An earlier version of this note said
   //        the bound was "not applied" — that came from reading the GLOBAL `MIN(timestamp)` (296d,
@@ -133,7 +133,7 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
   // ⚠️ RAISED 60 → 365 on 2026-10-04. The 60-day figure was MINE, not the owner's: they had been
   //    asking about *"general trading history and app activity"*, and bars were never in scope.
   //    The binding declaration is `btc-halving-cycle` at **365 daily bars**, in the ACTIVE
-  //    `btc-speed-v1` — so 60 could never have satisfied it. See #1070.
+  //    `btc-speed-v1-long` — so 60 could never have satisfied it. See #1070.
   marketbar:           { dateCol: 'timestamp',    defaultDays: 365, envKey: 'DATA_RETENTION_BARS_DAYS',      label: 'Market Bars' },
 
   // ══ NEWS — DELIBERATELY UNBOUNDED, and that IS the owner's ask. Read before adding a bound. ══

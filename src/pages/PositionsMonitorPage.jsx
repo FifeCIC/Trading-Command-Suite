@@ -118,7 +118,40 @@ function CFDPosition({ pos, index, onClose, isClosing, highlight }) {
         )}
         <div><span>Stop Loss</span><span>{pos.sl != null ? `$${Number(pos.sl).toFixed(2)}` : '—'}</span></div>
         <div><span>Take Profit</span><span>{pos.tp != null ? `$${Number(pos.tp).toFixed(2)}` : '—'}</span></div>
+        {/* THE PEAK AND WHAT IT GAVE BACK (2026-11-05). A position that touched +0.35% and is now
+            −0.60% is a different problem from one that never moved: the first had profit and lost
+            it, the second never had any. `peakProfitPct` is the high-water mark maintained by
+            position-sync (#998); `giveBackPct` comes from exit-consensus. Sampled at sync cadence,
+            so the peak is a LOWER bound — the card says so rather than implying tick precision. */}
+        <div>
+          <span>Peak</span>
+          <span title={pos.peak?.peakPrice != null
+            ? `Highest recorded price ${Number(pos.peak.peakPrice).toFixed(5)} — sampled when the position syncs, so the true peak may be higher`
+            : 'No peak recorded yet for this position'}>
+            {pos.peak?.peakProfitPct != null
+              ? `${pos.peak.peakProfitPct >= 0 ? '+' : ''}${Number(pos.peak.peakProfitPct).toFixed(2)}%`
+              : '—'}
+          </span>
+        </div>
+        <div>
+          <span>Gave back</span>
+          <span
+            className={pos.peak?.giveBackPct >= 0.25 ? 'pm-loss' : ''}
+            title="Peak profit % minus current profit %. Sampled, so this is the MINIMUM that was given back."
+          >
+            {pos.peak?.giveBackPct != null ? `${Number(pos.peak.giveBackPct).toFixed(2)}%` : '—'}
+          </span>
+        </div>
       </div>
+      {/* Only when it is material. 0.25 of a percentage point on these sizes is real money, and a
+          line that fires on every position is one nobody reads. */}
+      {pos.peak?.giveBackPct >= 0.25 && pos.peak?.peakProfitPct > 0 && (
+        <div className="pm-warning">
+          ⚠ Gave back <strong>{Number(pos.peak.giveBackPct).toFixed(2)}%</strong> of price from its peak
+          ({Number(pos.peak.peakProfitPct).toFixed(2)}% → {Number(pos.peak.profitPct ?? pos.pnlPct ?? 0).toFixed(2)}%).
+          {pos.peak.conviction ? ` Exit consensus: ${pos.peak.conviction}.` : ''}
+        </div>
+      )}
       {pos.overnightFee > 0 && (
         <div className="pm-warning">⚠ Overnight fee accruing: ${pos.overnightFee.toFixed(2)}/day</div>
       )}
@@ -400,6 +433,36 @@ export default function PositionsMonitorPage() {
     return m;
   }, [guardianQuery.data]);
 
+  /**
+   * HOW FAR EACH POSITION HAS ALREADY RUN — the peak, and what it gave back.
+   *
+   * ⚠️ READ, NOT RE-DERIVED (2026-11-05). The high-water mark is maintained by `position-sync`
+   * (`nextPeak` / `peakProfitPctFor`, monotonic — #998: an unknown reading never erases it) and
+   * the give-back is computed in `exit-consensus.service.ts` as `peakProfitPct − profitPct`.
+   * Recomputing either here from `currentPrice` would be a SECOND implementation of a rule that
+   * already has one owner — and a page that disagrees with Exit Signals is worse than a page that
+   * shows nothing.
+   *
+   * ⚠️ WHY IT BELONGS HERE. Exit Signals is the only place these numbers were visible, one click
+   * away from the positions themselves. MEASURED 2026-11-05 22:20 UTC, this book: XAUUSD had
+   * reached **+0.35%** and was **−0.60%** — 0.95 points given back, and the whole −£18.42. A
+   * position fading off its peak is the single thing a positions view should show and did not.
+   */
+  const exitQuery = useQuery({
+    queryKey: ['exit-consensus'],
+    queryFn: () => apiGet('/api/scoring/exit-consensus').catch(() => null),
+    refetchInterval: 30000,
+  });
+
+  const peakByTicket = useMemo(() => {
+    const m = new Map();
+    const rows = exitQuery.data?.assessments;
+    if (Array.isArray(rows)) {
+      for (const a of rows) m.set(String(a.ticket), a);
+    }
+    return m;
+  }, [exitQuery.data]);
+
   // Close mutation
   const closeMutation = useMutation({
     mutationFn: ({ ticket }) => fetch(`/api/trading/mt5/close/${ticket}`, { method: 'DELETE' }).then(r => r.json()),
@@ -461,6 +524,9 @@ export default function PositionsMonitorPage() {
       contested: Boolean(p.contested),
       comment: p.comment,
       owner: ownerByTicket.get(String(p.ticket)) ?? null,
+      // Peak / give-back, joined from `/api/scoring/exit-consensus`. Null when that read failed OR
+      // when the position has no peak yet — the card distinguishes the two rather than showing 0%.
+      peak: peakByTicket.get(String(p.ticket)) ?? null,
       // ⚠️ CLOSE ROUTING IS NOT BROKER-AWARE YET (#1033). `DELETE /close/:ticket` sends to the
       // PRIMARY bridge only, so a Close pressed on a broker-3 row would be AIMED AT THE WRONG
       // ACCOUNT. Showing this page's other rows is safe — they are read-only — but a visible
@@ -471,7 +537,7 @@ export default function PositionsMonitorPage() {
       // silently does nothing is a nuisance; a Close that reaches the wrong account is a loss.
       closable: p.brokerId === mt5Query.data?.brokers?.[0]?.brokerId,
     };
-  }), [mt5Query.data, ownerByTicket]);
+  }), [mt5Query.data, ownerByTicket, peakByTicket]);
 
   // Map Trading212 positions (long-only Invest accounts — direction is always BUY)
   const t212Positions = useMemo(() => (t212Query.data?.positions || []).map((p) => ({

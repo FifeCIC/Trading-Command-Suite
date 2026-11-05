@@ -217,7 +217,7 @@ export const BOT_RULES: BotRule[] = [
     summary: 'Gate 4.5 — tags (asian/london/us) the bot may act in. `\'all-hours\'` = declared bypass; NULL = UNFILLED (#982).',
     caveat:
       '⚠️ NULL used to be ambiguous by design — measured live 2026-10-06: of the four city-news pairs ' +
-      'in forex-session-v1, ONE twin was gated and the other was not (Tokyo USDJPY=asian vs EURJPY=NULL; ' +
+      'in forex-session-v1-long, ONE twin was gated and the other was not (Tokyo USDJPY=asian vs EURJPY=NULL; ' +
       'Sydney AUDUSD=asian vs AUDJPY=NULL; Wellington NZDUSD=asian vs NZDJPY=NULL; Zurich USDCHF=london ' +
       'vs EURCHF=NULL). RESOLVED AS A CLASS (#982, 2026-10-08): NULL now reads as UNFILLED ' +
       '(`sessionSlotKind()`, surfaced on GET /api/automation/status) while the deliberate case is the ' +
@@ -311,7 +311,7 @@ export const BOT_RULES: BotRule[] = [
     caveat:
       '⚠️ EXPLAINED 2026-10-06 — the earlier "winners exit at +0.02–0.15% against a tpPct of 1.0, ' +
       'unexplained" note named the wrong suspect: nothing closes a winner EARLY. Measured on ' +
-      'forex-session-v1 (bot "Tokyo EURJPY Session", 18 closed trades): 0 exits at TP, 9 on ' +
+      'forex-session-v1-long (bot "Tokyo EURJPY Session", 18 closed trades): 0 exits at TP, 9 on ' +
       '`system:time-stop` (maxHoldHours 12) and 6 at the broker (stop/trail) — peak profit before a ' +
       'time-stop close was +0.44%. A 1% target needs a 1%+ run inside 12h; the 12h stop and the ' +
       'guardian trail (≥ slPct from ENTRY) simply own the exit. TP is reachable but rarely reached.' },
@@ -320,7 +320,7 @@ export const BOT_RULES: BotRule[] = [
     summary: 'Closes a position held longer than this. NULL = no limit (opt-in).',
     caveat:
       '⚠️ Was inert until 2026-09-17: it parsed an order-comment format nothing emits (0 of 76) and ' +
-      'defaulted to dry-run. ARMED AND FIRING, measured 2026-10-06: 9 closes on forex-session-v1\'s ' +
+      'defaulted to dry-run. ARMED AND FIRING, measured 2026-10-06: 9 closes on forex-session-v1-long\'s ' +
       'EURJPY bot with `closeReason = system:time-stop` recorded (#949). ⚠️ Hold AT CLOSE was ' +
       '12.1–52h against the 12h limit because the 5-minute sweep runs only while the API is up and ' +
       'the dev machine is off overnight — closes land on the first sweeps after boot (2026-10-06: ' +

@@ -59,7 +59,7 @@ describe('adaptive-target', () => {
     });
 
     it('floors a near-zero peak so a dead protocol stays visibly dead', () => {
-      // spy-speed-v1 historically peaked at ~3% of capacity. If the target were allowed
+      // spy-speed-v1-long historically peaked at ~3% of capacity. If the target were allowed
       // to equal that peak, a dead protocol would read as ~100% and look healthy.
       const configured = 1000;
       const r = resolveAdaptiveTarget(state({ peak: 30, samples: ENOUGH }), configured);

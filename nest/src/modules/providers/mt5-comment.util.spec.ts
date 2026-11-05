@@ -58,8 +58,8 @@ describe('extractStrategyFromComment — canonical parser (#884)', () => {
  */
 describe('classifyMt5Comment + resolveStrategyForClose (#949)', () => {
   it('the legacy colon form yields the STRATEGY, not the protocol', () => {
-    expect(extractStrategyFromComment('TCS:xau-speed-m5:a')).toBe('a');
-    expect(classifyMt5Comment('TCS:xau-speed-m5:a')).toEqual({ kind: 'strategy', name: 'a' });
+    expect(extractStrategyFromComment('TCS:xau-speed-m5-long:a')).toBe('a');
+    expect(classifyMt5Comment('TCS:xau-speed-m5-long:a')).toEqual({ kind: 'strategy', name: 'a' });
   });
 
   it('an origin stamp is an ACTOR, never a strategy', () => {
@@ -71,8 +71,8 @@ describe('classifyMt5Comment + resolveStrategyForClose (#949)', () => {
   });
 
   it('`TCS manual …` is a HUMAN trade — no strategy, and the classifier says so', () => {
-    expect(extractStrategyFromComment('TCS manual forex-session-v1')).toBeUndefined();
-    expect(classifyMt5Comment('TCS manual forex-session-v1').kind).toBe('manual');
+    expect(extractStrategyFromComment('TCS manual forex-session-v1-long')).toBeUndefined();
+    expect(classifyMt5Comment('TCS manual forex-session-v1-long').kind).toBe('manual');
   });
 
   it('a foreign comment is still passed through unchanged (not ours to reinterpret)', () => {

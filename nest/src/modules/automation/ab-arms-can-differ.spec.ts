@@ -40,7 +40,7 @@ describe('AbTestService — arms that cannot differ (#929)', () => {
     snapshot: {
       mode: 'score',
       name: 'XAU M15 Day-Trade',
-      protocolId: 'xau-speed-m15',
+      protocolId: 'xau-speed-m15-long',
       brokerId: 'mt5',
       tradeThreshold: 10,
       weightStrategy: 'group-weighted',

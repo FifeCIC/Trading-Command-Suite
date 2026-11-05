@@ -7,10 +7,10 @@
  * protocol's base bars as DAILY, whatever the protocol declared. The failure was silent
  * because a wrong cadence still produces a plausible number:
  *
- *   `xau-speed-1h` (a 1h protocol) was fed daily bars. `computeMarketStatus()` then
+ *   `xau-speed-1h-long` (a 1h protocol) was fed daily bars. `computeMarketStatus()` then
  *   measured staleness against the daily series and reported "last real bar 1105m old" —
  *   while the symbol's real 1h feed was 26 minutes old, imported two minutes earlier.
- *   `xau-speed-m15`, `xau-speed-4h` and `xau-speed-1h` ALL reported ~1000m for the same
+ *   `xau-speed-m15-long`, `xau-speed-4h-long` and `xau-speed-1h-long` ALL reported ~1000m for the same
  *   reason: every one of them was reading one identical daily bar. The whole Ladder read
  *   STALE/PAUSED during an active London session.
  *
@@ -59,14 +59,14 @@ describe('ProtocolRunnerService — per-protocol cadence', () => {
     // Real `recommendedTimeframe` values from protocols-seed-data.ts, with the cadence
     // each must resolve to and the live symptom the hardcode produced.
     it.each([
-      ['xau-speed-1h', '1h', '1h'],
-      ['xau-speed-m15', '15m', '15m'],
-      ['xau-speed-4h', '4h', '4h'],
-      ['xau-speed-m5', '5m', '5m'],
-      ['xau-speed-v1', '5s–30s', '1m'],
-      ['forex-session-v1', '5m', '5m'],
-      ['gold-macro-v1', '1d–1w', '1d'],
-      ['vix-spike-v1', '1m–5m', '1m'],
+      ['xau-speed-1h-long', '1h', '1h'],
+      ['xau-speed-m15-long', '15m', '15m'],
+      ['xau-speed-4h-long', '4h', '4h'],
+      ['xau-speed-m5-long', '5m', '5m'],
+      ['xau-speed-v1-long', '5s–30s', '1m'],
+      ['forex-session-v1-long', '5m', '5m'],
+      ['gold-macro-v1-long', '1d–1w', '1d'],
+      ['vix-spike-v1-long', '1m–5m', '1m'],
     ])('%s declares %j and must load %j bars', (protocolId, declared, expected) => {
       const { timeframe } = resolveCadence(protocolId, dbWith(declared));
       expect(timeframe).toBe(expected);
@@ -100,7 +100,7 @@ describe('ProtocolRunnerService — per-protocol cadence', () => {
       // `required[tf] ?? required['1d']` returned 120 — the SMALLER one — and that is exactly
       // how the starvation hid (#1013).
       const { timeframe, barCount } = resolveCadence(
-        'xau-speed-1h',
+        'xau-speed-1h-long',
         dbWith('1h', { '1d': 200, '1h': 120, '15m': 30 }),
       );
       expect(timeframe).toBe('1h');
@@ -108,14 +108,14 @@ describe('ProtocolRunnerService — per-protocol cadence', () => {
     });
 
     it('#1013 — a base-cadence declaration must NOT suppress a larger generic one', () => {
-      // THE MEASURED CASE. `btc-speed-v1` declares `'15m–1d'` → `selectBaseTimeframe` → `'15m'`.
+      // THE MEASURED CASE. `btc-speed-v1-long` declares `'15m–1d'` → `selectBaseTimeframe` → `'15m'`.
       // `multi-timeframe-trend` declares `{ '1d': 20, '1h': 20, '15m': 20 }` — a real
       // base-cadence key — while `bollinger-band-squeeze` needs 72 under the generic `'1d'`.
       // The old fall-through returned 20, so 4 of the protocol's 13 directives returned 0 on
       // 246 of 247 ticks (99.6%) with the reason `need 72 bars, have 20`, while 3,504 fresh
       // 5m bars sat unused in `marketbar`. Nothing threw: the 0 folded into the composite.
       const { timeframe, barCount } = resolveCadence(
-        'btc-speed-v1',
+        'btc-speed-v1-long',
         dbWith('15m–1d', { '15m': 20, '1d': 72 }),
       );
       expect(timeframe).toBe('15m');
@@ -142,9 +142,9 @@ describe('ProtocolRunnerService — per-protocol cadence', () => {
       // on. A mismatch is what made fresh data read as closed on 2026-09-10, and is the
       // reason the value is resolved once rather than passed twice.
       const cases: Array<[string, string]> = [
-        ['xau-speed-1h', '1h'],
-        ['xau-speed-v1', '5s–30s'],
-        ['gold-macro-v1', '1d–1w'],
+        ['xau-speed-1h-long', '1h'],
+        ['xau-speed-v1-long', '5s–30s'],
+        ['gold-macro-v1-long', '1d–1w'],
       ];
       for (const [id, declared] of cases) {
         const resolved = resolveCadence(id, dbWith(declared));
@@ -154,11 +154,11 @@ describe('ProtocolRunnerService — per-protocol cadence', () => {
     });
 
     it('would have caught the live bug — a 1h protocol must not report a daily age', () => {
-      // The observed symptom: xau-speed-1h reported "last real bar 1105m old" while its
+      // The observed symptom: xau-speed-1h-long reported "last real bar 1105m old" while its
       // real 1h feed was 26m. 1105m is the age of the DAILY bar. Asserting the cadence is
       // '1h' is what makes that impossible: a 1h series cannot be ~18h stale while its
       // own newest bar is 26 minutes old.
-      expect(resolveCadence('xau-speed-1h', dbWith('1h')).timeframe).toBe('1h');
+      expect(resolveCadence('xau-speed-1h-long', dbWith('1h')).timeframe).toBe('1h');
     });
   });
 });

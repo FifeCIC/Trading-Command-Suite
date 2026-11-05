@@ -19,18 +19,18 @@
  * ⚠️ The values are NOT a mechanical ÷6.3 of the old numbers. A first pass did exactly that
  * (55/50/60/55 -> 9/8/10/9) and was WRONG: it preserved the old ORDERING but ignored each
  * protocol's declared `tradingStyle`, which is the semantic the app actually uses. Under the
- * owner's own resolution the order is different — `btc-speed-v1` is `Monitor / Position`
- * (position = 7, the LOWEST) while `xau-speed-v1` and `oil-speed-v1` are `Tick Scalp`
+ * owner's own resolution the order is different — `btc-speed-v1-long` is `Monitor / Position`
+ * (position = 7, the LOWEST) while `xau-speed-v1-long` and `oil-speed-v1-long` are `Tick Scalp`
  * (scalp = 12, the HIGHEST). The ÷6.3 pass had BTC highest. That is not a rescale, it is a
  * silent re-ranking.
  *
  * Each value below is therefore the output of `resolveStyleThreshold(protocol.tradingStyle)`
  * — the SAME function the running app uses, so seed and runtime cannot disagree:
  *
- *     xau-speed-v1     'Tick Scalp'                -> scalp      -> 12
- *     oil-speed-v1     'Tick Scalp'                -> scalp      -> 12
- *     forex-session-v1 'Session / Mean Reversion'   -> day-trade  -> 10
- *     btc-speed-v1     'Monitor / Position'         -> position   ->  7
+ *     xau-speed-v1-long     'Tick Scalp'                -> scalp      -> 12
+ *     oil-speed-v1-long     'Tick Scalp'                -> scalp      -> 12
+ *     forex-session-v1-long 'Session / Mean Reversion'   -> day-trade  -> 10
+ *     btc-speed-v1-long     'Monitor / Position'         -> position   ->  7
  *
  * Re-derive with: `node nest/scripts/align-scoring-strategy-thresholds.cjs` (dry run).
  *
@@ -54,7 +54,7 @@ export const DEFAULT_SCORING_STRATEGIES: SeedScoringStrategy[] = [
   // ── Gold ──
   {
     name: 'Gold Speed (default)',
-    protocolId: 'xau-speed-v1',
+    protocolId: 'xau-speed-v1-long',
     watchlistName: 'default',
     tradeThreshold: 12, // 'Tick Scalp' -> scalp
     mode: 'score',
@@ -65,7 +65,7 @@ export const DEFAULT_SCORING_STRATEGIES: SeedScoringStrategy[] = [
   // ── Forex Majors ──
   {
     name: 'Forex Session (default)',
-    protocolId: 'forex-session-v1',
+    protocolId: 'forex-session-v1-long',
     watchlistName: 'default',
     tradeThreshold: 10, // 'Session / Mean Reversion' -> day-trade
     mode: 'score',
@@ -76,7 +76,7 @@ export const DEFAULT_SCORING_STRATEGIES: SeedScoringStrategy[] = [
   // ── BTC ──
   {
     name: 'BTC Speed (default)',
-    protocolId: 'btc-speed-v1',
+    protocolId: 'btc-speed-v1-long',
     watchlistName: 'default',
     tradeThreshold: 7, // 'Monitor / Position' -> position (the LOWEST bar, not the highest)
     mode: 'score',
@@ -84,7 +84,7 @@ export const DEFAULT_SCORING_STRATEGIES: SeedScoringStrategy[] = [
   // ── Oil ──
   {
     name: 'Oil Speed (default)',
-    protocolId: 'oil-speed-v1',
+    protocolId: 'oil-speed-v1-long',
     watchlistName: 'default',
     tradeThreshold: 12, // 'Tick Scalp' -> scalp
     mode: 'score',

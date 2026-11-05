@@ -203,7 +203,7 @@ function factProtocolSeedEntries() {
   const src = read('nest/src/modules/scoring/protocols-seed-data.ts');
   // The seed is an object literal keyed by protocol slug, entries at two-space indent:
   //   export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
-  //     "btc-speed-v1": {
+  //     "btc-speed-v1-long": {
   // The indent is load-bearing — it is what distinguishes a protocol entry from a nested group.
   const slugs = new Set();
   for (const m of src.matchAll(/^ {2}"([^"]+)": \{/gm)) slugs.add(m[1]);

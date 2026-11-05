@@ -84,7 +84,7 @@ export default function MetaStackStatusPage() {
   const triggerFreshScoring = async () => {
     setFreshScoring(true);
     try {
-      const data = await apiGet('/api/scoring/ranked?fresh=true&protocol=xau-speed-v1&limit=10');
+      const data = await apiGet('/api/scoring/ranked?fresh=true&protocol=xau-speed-v1-long&limit=10');
       setFreshScoreResult(data);
       scoringQ.refetch();
     } catch {
@@ -341,12 +341,12 @@ export default function MetaStackStatusPage() {
 
               {/* What's needed to get a trade */}
               <div className="mss-checklist">
-                <h4 className="mss-checklist-title">End-to-End Readiness (xau-speed-v1 — 14 directives)</h4>
+                <h4 className="mss-checklist-title">End-to-End Readiness (xau-speed-v1-long — 14 directives)</h4>
                 <div className="mss-checklist-item mss-checklist--ok">
                   ✅ MT5 Bridge — connected, orders accepted (read + write)
                 </div>
                 <div className="mss-checklist-item mss-checklist--ok">
-                  ✅ Protocol mapped — xau-speed-v1 with 14 directives (incl. new gold-round-numbers + gold-session-profile)
+                  ✅ Protocol mapped — xau-speed-v1-long with 14 directives (incl. new gold-round-numbers + gold-session-profile)
                 </div>
                 <div className="mss-checklist-item mss-checklist--ok">
                   ✅ Bar data — 200 bars all timeframes (5m/15m/1h/4h/1d)

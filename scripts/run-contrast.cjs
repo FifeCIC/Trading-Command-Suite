@@ -64,7 +64,7 @@ const pick = (j) => {
 
   // ⚠️ A PAIRED bot refuses a bare `botId` run, naming both legs — so the LEG is declared
   // explicitly and is therefore IDENTICAL on both sides. It is not the contrast's variable.
-  const COMMON = { botId, legProtocolId: 'forex-session-v1' };
+  const COMMON = { botId, legProtocolId: 'forex-session-v1-long' };
 
   console.log('\nbaseline …');
   const base = pick(await run(COMMON));

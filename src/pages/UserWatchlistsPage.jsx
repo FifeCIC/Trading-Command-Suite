@@ -28,7 +28,7 @@ function cleanLabel(label) {
  *
  * WHY THIS EXISTS: protocols built for a single symbol do not need a watchlist at all, but the
  * system creates one anyway — measured 2026-09-23, **23 of 42 watchlists hold exactly 1 symbol**
- * and almost all are `kind: 'system'` with a protocol slug as the label (`xau-speed-v1`,
+ * and almost all are `kind: 'system'` with a protocol slug as the label (`xau-speed-v1-long`,
  * `gold-macro-index`). They are real rows with a real purpose, so the answer is to keep them in
  * the database and let the user hide them from the list — not to delete them.
  *

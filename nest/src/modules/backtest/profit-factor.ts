@@ -7,7 +7,7 @@
  * Measured 2026-11-02 while A/B testing stop plans on XAGUSD: six arms moved net P&L from
  * +63.29 to −657.54 and EVERY arm reported `profitFactor 0.72`. The field was computed from
  * `returns10d` — the forward return of every ENTRY SIGNAL — so it cannot see an exit change.
- * The same day `btc-speed-v1` carried a stored factor of **956.87**, because
+ * The same day `btc-speed-v1-long` carried a stored factor of **956.87**, because
  * `grossLoss ... || 1` forced the denominator to 1 when nothing lost, turning the ratio into an
  * absolute value wearing a ratio's name.
  *

@@ -20,8 +20,8 @@
  * decision; it does not settle it.
  *
  * USAGE
- *   node scripts/ab-stop-plan.cjs --symbol XAGUSD --protocol probe-1dir-rsi --timeframe 1h
- *   node scripts/ab-stop-plan.cjs --symbol US500 --protocol spy-speed-v1 --timeframe 1h
+ *   node scripts/ab-stop-plan.cjs --symbol XAGUSD --protocol probe-1dir-rsi-long --timeframe 1h
+ *   node scripts/ab-stop-plan.cjs --symbol US500 --protocol spy-speed-v1-long --timeframe 1h
  */
 
 const ROOT = require('path').resolve(__dirname, '..');
@@ -79,7 +79,7 @@ async function runArm(base, arm) {
 async function main() {
   const base = {
     symbol: arg('--symbol', 'XAGUSD'),
-    protocolId: arg('--protocol', 'probe-1dir-rsi'),
+    protocolId: arg('--protocol', 'probe-1dir-rsi-long'),
     timeframe: arg('--timeframe', '1h'),
     directionMode: arg('--direction', 'long'),
     newsExclusion: 'none',

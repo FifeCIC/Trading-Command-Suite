@@ -151,7 +151,7 @@ describe('signal-direction — one authority for signal class → direction (#71
       expect(resolveEffectiveRole(null, 'SELL')).toBe('short');
       expect(resolveEffectiveRole(undefined, 'BUY')).toBe('long');
       expect(resolveEffectiveRole('', 'SELL')).toBe('short');
-      // The real row: vix-short-v1 subscription role='short', bot requireDirection='SELL'.
+      // The real row: vix-spike-v1-short subscription role='short', bot requireDirection='SELL'.
       expect(resolveEffectiveRole('short', 'SELL')).toBe('short');
       // The real row: 24 forex/xau subscriptions role='long', requireDirection null.
       expect(resolveEffectiveRole('long', null)).toBe('long');
@@ -185,7 +185,7 @@ describe('signal-direction — one authority for signal class → direction (#71
       const role = resolveEffectiveRole('short', 'SELL');
       expect(directionAllowed(role, 'SHORT')).toBe(true);
       expect(directionAllowed(role, 'LONG')).toBe(false);
-      // …and this is what the routing gate now does with a STRONG_SELL from vix-short-v1:
+      // …and this is what the routing gate now does with a STRONG_SELL from vix-spike-v1-short:
       expect(directionAllowed(role, signalToDirection('STRONG_SELL')!)).toBe(true);
     });
   });

@@ -7,7 +7,7 @@
  *
  * This page is a HISTORY VIEWER — it does NOT auto-refresh. It shows a fixed
  * scoring run, deep-linked from Symbols Ladder via
- *   ?symbol=XAUUSD&protocol=xau-speed-v1&runId=<Score table UUID>
+ *   ?symbol=XAUUSD&protocol=xau-speed-v1-long&runId=<Score table UUID>
  * The runId locks the view to one historical moment. For a live-updating view
  * of a single symbol + protocol, see SinglesMonitorPage.
  */

@@ -44,11 +44,11 @@ const API = 'http://localhost:3201/api';
  * stated here rather than silently omitted.
  */
 const PIPELINES = [
-  { tickers: ['QQQ'], why: 'qqq-speed-v1 + qqq-day-v1 (both active)', weekendGapOk: true, timeframes: ['1m', '5m', '15m', '1h', '4h'] },
-  { tickers: ['WTI'], why: 'oil-speed-v1 (active, 1 bot)', weekendGapOk: false, timeframes: ['1m', '5m', '15m', '1h', '4h', '1d'] },
+  { tickers: ['QQQ'], why: 'qqq-speed-v1-long + qqq-day-v1-long (both active)', weekendGapOk: true, timeframes: ['1m', '5m', '15m', '1h', '4h'] },
+  { tickers: ['WTI'], why: 'oil-speed-v1-long (active, 1 bot)', weekendGapOk: false, timeframes: ['1m', '5m', '15m', '1h', '4h', '1d'] },
   {
     tickers: ['AUDJPY', 'EURCAD', 'EURCHF', 'EURGBP', 'EURJPY', 'GBPCAD', 'GBPJPY', 'NZDJPY'],
-    why: 'forex-session-v1 (active) — 8 of its 15 pairs',
+    why: 'forex-session-v1-long (active) — 8 of its 15 pairs',
     weekendGapOk: false,
     timeframes: ['5m', '1h', '1d'],
   },

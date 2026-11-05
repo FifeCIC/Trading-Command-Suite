@@ -23,8 +23,8 @@ const SAMPLE_ROWS = [
   { symbol: 'MSFT', score: 65, signal: 'HOLD', confidence: 58, rarity: 'Standard', protocol: 'kitchen-sink-v1', riskGate: '0.70×', directives: '8/12', lastScored: '8m ago', provider: 'MT5' },
   { symbol: 'XAUUSD', score: 88, signal: 'BUY', confidence: 90, rarity: 'Cyclical', protocol: 'gold-hedge-v1', riskGate: '0.95×', directives: '14/16', lastScored: '1m ago', provider: 'MT5' },
   { symbol: 'TSLA', score: 42, signal: 'SELL', confidence: 35, rarity: 'Standard', protocol: 'meme-stock-v1', riskGate: '0.40×', directives: '4/10', lastScored: '12m ago', provider: 'T212' },
-  { symbol: 'EURUSD', score: 55, signal: 'HOLD', confidence: 48, rarity: 'Standard', protocol: 'forex-session-v1', riskGate: '0.65×', directives: '6/10', lastScored: '15m ago', provider: 'MT5' },
-  { symbol: 'SPY', score: 71, signal: 'BUY', confidence: 68, rarity: 'Strong', protocol: 'spy-day-v1', riskGate: '0.82×', directives: '11/14', lastScored: '3m ago', provider: 'T212' },
+  { symbol: 'EURUSD', score: 55, signal: 'HOLD', confidence: 48, rarity: 'Standard', protocol: 'forex-session-v1-long', riskGate: '0.65×', directives: '6/10', lastScored: '15m ago', provider: 'MT5' },
+  { symbol: 'SPY', score: 71, signal: 'BUY', confidence: 68, rarity: 'Strong', protocol: 'spy-day-v1-long', riskGate: '0.82×', directives: '11/14', lastScored: '3m ago', provider: 'T212' },
 ];
 
 const BREAKPOINTS = [

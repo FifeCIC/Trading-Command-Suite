@@ -50,7 +50,7 @@ describe('isAbTestRow — which population is this trade in?', () => {
       { abTestId: 't1', strategy: 'AB-A x' },
       { abTestId: null, strategy: 'Gold Macro Position' },
       { abTestId: null, strategy: 'AB-B y' },
-      { abTestId: null, strategy: 'forex-session-v1' },
+      { abTestId: null, strategy: 'forex-session-v1-long' },
     ];
     const ab = rows.filter(isAbTestRow);
     const live = rows.filter((r) => !isAbTestRow(r));

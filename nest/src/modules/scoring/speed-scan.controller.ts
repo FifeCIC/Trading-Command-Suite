@@ -254,7 +254,7 @@ export class SpeedScanController {
           data: {
             id: strategyId,
             name: `Speed Auto — ${ticker}`,
-            protocolId: protocolId || 'dxy-sensitivity-v1',
+            protocolId: protocolId || 'dxy-sensitivity-v1-long',
             symbol: ticker,
             timeframe: '5s',
             mode: 'semi-auto',

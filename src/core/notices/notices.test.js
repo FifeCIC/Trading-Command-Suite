@@ -277,11 +277,11 @@ test('listNotices() exposes the whole catalogue to tooling', () => {
     // naming the ceiling, the bar and the remedy was dropped. The service now throws
     // TCS-TRADE-024, and this pins BOTH halves — the identity, and that the numbers survive.
     const detail =
-      'USDCAD Oil Event Bot (usdcad-oil-v1): ceiling 0.0% (raw 0 of 490) over 21 readings; minComposite 10%';
+      'USDCAD Oil Event Bot (usdcad-oil-v1-long): ceiling 0.0% (raw 0 of 490) over 21 readings; minComposite 10%';
     const err = Object.assign(new Error(`Request failed with 400: ${detail}`), {
       status: 400,
       code: 'TCS-TRADE-024',
-      params: { name: 'USDCAD Oil Event Bot', protocol: 'usdcad-oil-v1', ceiling: '0.0', bar: 10, samples: 21 },
+      params: { name: 'USDCAD Oil Event Bot', protocol: 'usdcad-oil-v1-long', ceiling: '0.0', bar: 10, samples: 21 },
       detail,
     });
 

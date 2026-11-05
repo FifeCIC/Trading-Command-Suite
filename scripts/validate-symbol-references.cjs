@@ -14,7 +14,7 @@
  *
  *     resolvedSymbols → marketData.getBars(sym.id, ...) → sym is undefined
  *
- * Real incident: XAGUSD was assigned to `xau-speed-v1` and appears in two
+ * Real incident: XAGUSD was assigned to `xau-speed-v1-long` and appears in two
  * watchlists, but no `symbol` row was ever created. It rendered a permanent
  * "Not scored" ladder card that looked like a transient state ("waiting"), when
  * the truth was a misconfiguration nothing would ever repair. Both MT5 bridges

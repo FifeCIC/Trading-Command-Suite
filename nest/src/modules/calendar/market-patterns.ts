@@ -13,8 +13,8 @@
  * and `MarketCalendarService.SESSIONS` contains only `US`. So every non-24h instrument was judged
  * on US hours. Measured live 2026-09-16, verbatim from the API log:
  *
- *     Queue skip: ftse-speed-v1 signalled but blocked pre-trade [UK100 (Market unavailable: US market after-hours)]
- *     Queue skip: cac-speed-v1  signalled but blocked pre-trade [FRA40 (Market unavailable: US market after-hours)]
+ *     Queue skip: ftse-speed-v1-long signalled but blocked pre-trade [UK100 (Market unavailable: US market after-hours)]
+ *     Queue skip: cac-speed-v1-long  signalled but blocked pre-trade [FRA40 (Market unavailable: US market after-hours)]
  *
  * A French index blocked by "US market after-hours" is wrong on its face, and the reason string
  * sends the reader to the wrong component.

@@ -10,7 +10,7 @@
  *
  * The consequence was not cosmetic. A `:45` bar written at 18:25 for a 4h cadence lands at
  * `20:45` — 2h20m in the FUTURE — so `computeMarketStatus()` correctly failed closed and
- * `xau-speed-4h` read "data clock skew: last real bar stamped 82m in the future", flagging
+ * `xau-speed-4h-long` read "data clock skew: last real bar stamped 82m in the future", flagging
  * the market shut for 20+ symbols during an active session.
  *
  * `isBarBeyondItsOwnLength()` could not catch it: it permits a lead of up to one full bar

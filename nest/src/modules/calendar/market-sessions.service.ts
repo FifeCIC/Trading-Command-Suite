@@ -88,17 +88,17 @@ const SESSIONS: MarketSession[] = [
   {
     scope: 'tokyo', name: 'Tokyo', flag: '🇯🇵', iana: 'Asia/Tokyo',
     open: '09:00', close: '15:00', daysOfWeek: [1, 2, 3, 4, 5],
-    quality: 0.4, protocols: ['usdjpy-risk-v1', 'forex-session-v1'],
+    quality: 0.4, protocols: ['usdjpy-risk-v1-long', 'forex-session-v1-long'],
   },
   {
     scope: 'london', name: 'London', flag: '🇬🇧', iana: 'Europe/London',
     open: '08:00', close: '16:30', daysOfWeek: [1, 2, 3, 4, 5],
-    quality: 0.8, protocols: ['xau-speed-v1', 'forex-session-v1', 'eurusd-macro-v1'],
+    quality: 0.8, protocols: ['xau-speed-v1-long', 'forex-session-v1-long', 'eurusd-macro-v1-long'],
   },
   {
     scope: 'ny', name: 'New York', flag: '🇺🇸', iana: 'America/New_York',
     open: '09:30', close: '16:00', daysOfWeek: [1, 2, 3, 4, 5],
-    quality: 0.9, protocols: ['spy-speed-v1', 'spy-day-v1', 'oil-speed-v1'],
+    quality: 0.9, protocols: ['spy-speed-v1-long', 'spy-day-v1-long', 'oil-speed-v1-long'],
   },
 ];
 

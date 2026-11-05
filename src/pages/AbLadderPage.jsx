@@ -456,7 +456,7 @@ export default function AbLadderPage() {
               <p className="lad-empty-title">No pair to show yet.</p>
               <p>
                 This view compares two scoring protocols; they are chosen by whatever owns
-                A/B pairing. A link such as ?pair=xau-speed-m15,xau-speed-1h selects a pair
+                A/B pairing. A link such as ?pair=xau-speed-m15-long,xau-speed-1h-long selects a pair
                 directly.
               </p>
             </div>

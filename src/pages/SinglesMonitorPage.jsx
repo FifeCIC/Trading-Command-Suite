@@ -6,7 +6,7 @@
  * PURPOSE: Focus on a single symbol/protocol pair in near-real-time. This is
  * the live counterpart to ProtocolTrailPage, which is a fixed history viewer.
  *
- * Deep-links via ?symbol=XAUUSD&protocol=xau-speed-v1 (same params as
+ * Deep-links via ?symbol=XAUUSD&protocol=xau-speed-v1-long (same params as
  * ProtocolTrail). Refreshes in sync with the automation loop tick, with a
  * countdown indicator in the top row.
  *
@@ -141,7 +141,7 @@ export default function SinglesMonitorPage() {
       {!symbol ? (
         <div className="dt-empty">
           <p>No symbol selected.</p>
-          <p className="dt-empty-hint">Search for a symbol above to monitor it live, or open via ?symbol=XAUUSD&protocol=xau-speed-v1.</p>
+          <p className="dt-empty-hint">Search for a symbol above to monitor it live, or open via ?symbol=XAUUSD&protocol=xau-speed-v1-long.</p>
         </div>
       ) : isLoading ? (
         <LoadingSkeleton variant="card" count={4} />

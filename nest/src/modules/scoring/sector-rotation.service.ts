@@ -12,17 +12,17 @@ import { ProtocolDbService } from './protocol-db.service';
 import { MarketDataService } from '../market-data/market-data.service';
 
 const SECTOR_ETFS = [
-  { etf: 'XLK', name: 'Technology', protocols: ['spy-speed-v1', 'momentum-stock-v1', 'qqq-speed-v1', 'leverage-v2'] as string[] },
-  { etf: 'XLF', name: 'Financials', protocols: ['spy-speed-v1', 'momentum-stock-v1', 'forex-session-v1'] as string[] },
-  { etf: 'XLE', name: 'Energy', protocols: ['oil-speed-v1', 'oil-supply-v1'] as string[] },
-  { etf: 'XLV', name: 'Healthcare', protocols: ['spy-speed-v1', 'pandemic-v1'] as string[] },
-  { etf: 'XLY', name: 'Consumer Disc.', protocols: ['spy-speed-v1', 'momentum-stock-v1'] as string[] },
-  { etf: 'XLP', name: 'Consumer Staples', protocols: ['spy-speed-v1', 'spy-day-v1'] as string[] },
-  { etf: 'XLI', name: 'Industrials', protocols: ['dow-speed-v1', 'spy-speed-v1'] as string[] },
-  { etf: 'XLB', name: 'Materials', protocols: ['gold-macro-v1', 'dxy-sensitivity-v1'] as string[] },
-  { etf: 'XLRE', name: 'Real Estate', protocols: ['spy-speed-v1', 'spy-day-v1'] as string[] },
-  { etf: 'XLU', name: 'Utilities', protocols: ['spy-speed-v1'] as string[] },
-  { etf: 'XLC', name: 'Communication', protocols: ['qqq-speed-v1', 'momentum-stock-v1'] as string[] },
+  { etf: 'XLK', name: 'Technology', protocols: ['spy-speed-v1-long', 'momentum-stock-v1-long', 'qqq-speed-v1-long', 'leverage-v2-long'] as string[] },
+  { etf: 'XLF', name: 'Financials', protocols: ['spy-speed-v1-long', 'momentum-stock-v1-long', 'forex-session-v1-long'] as string[] },
+  { etf: 'XLE', name: 'Energy', protocols: ['oil-speed-v1-long', 'oil-supply-v1-long'] as string[] },
+  { etf: 'XLV', name: 'Healthcare', protocols: ['spy-speed-v1-long', 'pandemic-v1'] as string[] },
+  { etf: 'XLY', name: 'Consumer Disc.', protocols: ['spy-speed-v1-long', 'momentum-stock-v1-long'] as string[] },
+  { etf: 'XLP', name: 'Consumer Staples', protocols: ['spy-speed-v1-long', 'spy-day-v1-long'] as string[] },
+  { etf: 'XLI', name: 'Industrials', protocols: ['dow-speed-v1-long', 'spy-speed-v1-long'] as string[] },
+  { etf: 'XLB', name: 'Materials', protocols: ['gold-macro-v1-long', 'dxy-sensitivity-v1-long'] as string[] },
+  { etf: 'XLRE', name: 'Real Estate', protocols: ['spy-speed-v1-long', 'spy-day-v1-long'] as string[] },
+  { etf: 'XLU', name: 'Utilities', protocols: ['spy-speed-v1-long'] as string[] },
+  { etf: 'XLC', name: 'Communication', protocols: ['qqq-speed-v1-long', 'momentum-stock-v1-long'] as string[] },
 ];
 
 export interface SectorRotationResult {

@@ -98,7 +98,7 @@ export default function RsiDivergencePanel({ symbol, timeframe, days, periodId, 
   const [settled, setSettled] = useState(DEFAULTS);
   /**
    * ⚠️ THE PANEL CARRIES ITS OWN SUBJECT SO IT CANNOT BE UNREACHABLE (measured 2026-11-01).
-   * `divergence-suite-v1` is the ONLY protocol containing `rsi-divergence`, and it resolves **no symbols,
+   * `divergence-suite-v1-long` is the ONLY protocol containing `rsi-divergence`, and it resolves **no symbols,
    * no watchlist and no bot** — so the Lab's step 2 refuses to advance and a panel that inherited its
    * symbol would never render for anyone. Rather than hide the tool behind wiring that does not exist, it
    * takes an explicit subject and falls back to the page's selection when there is one.

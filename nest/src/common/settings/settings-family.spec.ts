@@ -93,19 +93,19 @@ describe('key families', () => {
   });
 
   it('matches the accepted-baseline key for a protocol slug, and only its two fields', () => {
-    const m = matchFamily('backtest.baseline.vix-spike-v1.runId');
+    const m = matchFamily('backtest.baseline.vix-spike-v1-long.runId');
     expect(m).not.toBeNull();
     expect(m.family.id).toBe('backtestBaseline');
-    expect(m.subject).toBe('vix-spike-v1');
+    expect(m.subject).toBe('vix-spike-v1-long');
     expect(m.field).toBe('runId');
-    expect(matchFamily('backtest.baseline.vix-spike-v1.acceptedAt')?.field).toBe(
+    expect(matchFamily('backtest.baseline.vix-spike-v1-long.acceptedAt')?.field).toBe(
       'acceptedAt',
     );
     // ⚠️ The scope is a slug, not a run: a key carrying anything else, or an undeclared field, is NOT
     // a baseline and must fall through to the undeclared signal rather than being read as one.
-    expect(matchFamily('backtest.baseline.vix-spike-v1.runId.extra')).toBeNull();
+    expect(matchFamily('backtest.baseline.vix-spike-v1-long.runId.extra')).toBeNull();
     expect(matchFamily('backtest.baseline.Vix_Spike.runId')).toBeNull();
-    expect(matchFamily('backtest.baseline.vix-spike-v1.isBaseline')).toBeNull();
+    expect(matchFamily('backtest.baseline.vix-spike-v1-long.isBaseline')).toBeNull();
   });
 
   it('a baseline runId is any non-empty string — the store does not know what a run is', () => {

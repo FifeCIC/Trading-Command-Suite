@@ -46,16 +46,16 @@ describe('SignalQueueService — pre-trade block cause is forwarded, not inferre
     const { svc, persisted } = make();
     // ⚠️ DECOY, both halves. A text classifier would read "Signal below" and say BELOW_GATE.
     const notRouteable = new Map<string, { code: string; reason: string }>([
-      ['dax-speed-v1|GER40', {
+      ['dax-speed-v1-long|GER40', {
         code: 'MARKET_UNAVAILABLE',
         reason: "Signal below 12% (6.5%) [style 'Mean Reversion / Scalp' → scalp]",
       }],
     ]);
 
-    await svc.syncQueues([], new Set(['dax-speed-v1|GER40']), notRouteable);
+    await svc.syncQueues([], new Set(['dax-speed-v1-long|GER40']), notRouteable);
 
     expect(persisted).toHaveLength(1);
-    expect(persisted[0].protocolId).toBe('dax-speed-v1');
+    expect(persisted[0].protocolId).toBe('dax-speed-v1-long');
     expect(persisted[0].symbol).toBe('GER40');
     // The gate's word wins. If this ever reads BELOW_GATE, someone started parsing the message.
     expect(persisted[0].cause).toBe('MARKET_UNAVAILABLE');
@@ -66,13 +66,13 @@ describe('SignalQueueService — pre-trade block cause is forwarded, not inferre
   it('the reverse decoy also holds — the code is not a function of the text', async () => {
     const { svc, persisted } = make();
     const notRouteable = new Map<string, { code: string; reason: string }>([
-      ['ftse-speed-v1|UK100', {
+      ['ftse-speed-v1-long|UK100', {
         code: 'BELOW_GATE',
         reason: 'Market unavailable: US market closed',
       }],
     ]);
 
-    await svc.syncQueues([], new Set(['ftse-speed-v1|UK100']), notRouteable);
+    await svc.syncQueues([], new Set(['ftse-speed-v1-long|UK100']), notRouteable);
 
     expect(persisted).toHaveLength(1);
     expect(persisted[0].cause).toBe('BELOW_GATE');
@@ -81,7 +81,7 @@ describe('SignalQueueService — pre-trade block cause is forwarded, not inferre
   it('a pair with NO entry is silent, and is NOT persisted as a block', async () => {
     const { svc, persisted, deleted } = make();
     // No notRouteable entry → the protocol never signalled → the void pass runs, no block recorded.
-    await svc.syncQueues([], new Set(['forex-session-v1|EURUSD']));
+    await svc.syncQueues([], new Set(['forex-session-v1-long|EURUSD']));
 
     expect(persisted).toHaveLength(0);
     // Still voids the pending row, which is the pre-existing behaviour this must not disturb.
@@ -91,14 +91,14 @@ describe('SignalQueueService — pre-trade block cause is forwarded, not inferre
   it('records one event per blocked symbol, not one per protocol', async () => {
     const { svc, persisted } = make();
     const notRouteable = new Map<string, { code: string; reason: string }>([
-      ['momentum-stock-v1|AAPL', { code: 'BELOW_GATE', reason: 'below 10% (6.1%)' }],
-      ['momentum-stock-v1|AMZN', { code: 'BELOW_GATE', reason: 'below 10% (6.1%)' }],
-      ['momentum-stock-v1|MARA', { code: 'DIRECTIVE_CONFLICT', reason: 'high-severity conflict' }],
+      ['momentum-stock-v1-long|AAPL', { code: 'BELOW_GATE', reason: 'below 10% (6.1%)' }],
+      ['momentum-stock-v1-long|AMZN', { code: 'BELOW_GATE', reason: 'below 10% (6.1%)' }],
+      ['momentum-stock-v1-long|MARA', { code: 'DIRECTIVE_CONFLICT', reason: 'high-severity conflict' }],
     ]);
 
     await svc.syncQueues(
       [],
-      new Set(['momentum-stock-v1|AAPL', 'momentum-stock-v1|AMZN', 'momentum-stock-v1|MARA']),
+      new Set(['momentum-stock-v1-long|AAPL', 'momentum-stock-v1-long|AMZN', 'momentum-stock-v1-long|MARA']),
       notRouteable,
     );
 
@@ -111,11 +111,11 @@ describe('SignalQueueService — pre-trade block cause is forwarded, not inferre
     // This is the shape `signal-queue-expiry.spec.ts` constructs: prisma stub only.
     (svc as any).auditLog = undefined;
     const notRouteable = new Map<string, { code: string; reason: string }>([
-      ['dax-speed-v1|GER40', { code: 'BELOW_GATE', reason: 'below 12% (6.5%)' }],
+      ['dax-speed-v1-long|GER40', { code: 'BELOW_GATE', reason: 'below 12% (6.5%)' }],
     ]);
 
     await expect(
-      svc.syncQueues([], new Set(['dax-speed-v1|GER40']), notRouteable),
+      svc.syncQueues([], new Set(['dax-speed-v1-long|GER40']), notRouteable),
     ).resolves.toBeUndefined();
   });
 });

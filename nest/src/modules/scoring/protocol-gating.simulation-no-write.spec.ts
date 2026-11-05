@@ -4,7 +4,7 @@ import { ProtocolGatingService } from './protocol-gating.service';
  * A backtest is a SIMULATION and must write nothing to the live tables (#1183).
  *
  * ⚠️ WHY THIS EXISTS. `storeSnapshot()` runs at the end of every `scoreWithGating()` call, and a
- * backtest calls it once per bar. One 548-bar `forex-session-v1` / USDJPY 1h run added **+320** to
+ * backtest calls it once per bar. One 548-bar `forex-session-v1-long` / USDJPY 1h run added **+320** to
  * `score_snapshot`, **+320** to `Score`, and **+320** to `protocol.adaptiveTargetSamples` — measured
  * 2026-11-02. Two of those are correctness bugs, not untidiness:
  *
@@ -78,7 +78,7 @@ describe('ProtocolGatingService simulation mode never writes (#1183)', () => {
   }
 
   const call = (svc: ProtocolGatingService, opts?: { simulation?: boolean }) =>
-    (svc as any).storeSnapshot('forex-session-v1', 'USDJPY', 25, 'HOLD', 55, BREAKDOWN, opts);
+    (svc as any).storeSnapshot('forex-session-v1-long', 'USDJPY', 25, 'HOLD', 55, BREAKDOWN, opts);
 
   /** `storeSnapshot` is fire-and-forget; give its IIFE a turn to reach the writes. */
   const settle = () => new Promise((r) => setTimeout(r, 20));

@@ -76,7 +76,7 @@ export default function ScoringSettingsPage() {
             className="settings-input"
             value={prefs.defaultProtocol}
             onChange={e => set('defaultProtocol', e.target.value)}
-            placeholder="btc-speed-v1"
+            placeholder="btc-speed-v1-long"
           />
         </SettingRow>
         <SettingRow label="Default Signal Symbols" hint="Comma-separated tickers pre-filled in Scoring Workbench.">

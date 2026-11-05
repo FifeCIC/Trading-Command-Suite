@@ -54,7 +54,7 @@ export class SignalsController {
    *
    * Query params:
    *   ?symbols=AAPL,NVDA,MSFT  (comma-separated; defaults to portfolio positions)
-   *   ?protocol=btc-speed-v1    (optional protocol preset)
+   *   ?protocol=btc-speed-v1-long    (optional protocol preset)
    */
   @Get('ladder')
   async getLadder(

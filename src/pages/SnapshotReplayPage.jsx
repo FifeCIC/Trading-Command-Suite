@@ -25,7 +25,7 @@ const DEFAULT_SYMBOLS = ['EURUSD', 'GBPUSD', 'XAUUSD', 'USDCAD'];
  *    literal does not.
  *
  * 2. The replacement (5m over 10 days) was the SLOWEST possible choice. A replay costs roughly
- *    10ms and 2.2KB per bar, measured on `euro-stoxx-v1`:
+ *    10ms and 2.2KB per bar, measured on `euro-stoxx-v1-long`:
  *
  *      | window     | time   | payload | steps |
  *      |------------|--------|---------|-------|

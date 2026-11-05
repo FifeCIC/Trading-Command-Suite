@@ -5,7 +5,7 @@
  * WHAT THIS GUARDS, and why each one is here rather than in prose:
  *
  *   1. **The sample bar.** Measured 2026-09-23: `POST /api/backtest/runs/compare` named a winner
- *      on THREE trades (`xau-speed-m15`, sharpe 42.31) and presented it identically to a result
+ *      on THREE trades (`xau-speed-m15-long`, sharpe 42.31) and presented it identically to a result
  *      from three hundred. Two of these tests exist to keep that impossible.
  *   2. **The units.** The old formatter applied one ×100 to `winRate` (a fraction), `maxDrawdown`
  *      (already a percent) and `avgTradePnl` (already a percent). A 0.27% drawdown was served as
@@ -26,7 +26,7 @@ function run(id: string, over: Record<string, unknown> = {}) {
   return {
     id,
     symbolId: 'sym-1',
-    protocolId: 'xau-speed-m15',
+    protocolId: 'xau-speed-m15-long',
     timeframe: '15m',
     startDate: new Date('2026-08-01T00:00:00Z'),
     endDate: new Date('2026-08-31T00:00:00Z'),
@@ -106,14 +106,14 @@ describe('BacktestService.compareRuns — the sample bar (#965 item 1)', () => {
   /**
    * ⚠️ THE SHARPEST FORM OF THE DEFECT, and the one the bar exists for: a THIN run whose Sharpe is
    * inflated by a handful of samples out-scoring a THICK run. Measured on the live table, the thin
-   * side was `xau-speed-m15` (3 trades, sharpe 42.31) and the thick side was 48–59 trades at
+   * side was `xau-speed-m15-long` (3 trades, sharpe 42.31) and the thick side was 48–59 trades at
    * sharpe 1.4–4.3. Without the bar, the 3-trade run was named `best`.
    */
   it('will not let a 3-trade run out-score a 40-trade run', async () => {
     const prisma = mockPrisma({
       runs: [
-        run('r-thick', { protocolId: 'xau-speed-m5', totalTrades: 40, totalSignals: 200, sharpeRatio: 1.4 }),
-        run('r-thin', { protocolId: 'xau-speed-m15', totalTrades: 3, totalSignals: 40, sharpeRatio: 42.31 }),
+        run('r-thick', { protocolId: 'xau-speed-m5-long', totalTrades: 40, totalSignals: 200, sharpeRatio: 1.4 }),
+        run('r-thin', { protocolId: 'xau-speed-m15-long', totalTrades: 3, totalSignals: 40, sharpeRatio: 42.31 }),
       ],
       trades: [['r-thick', 22, 18], ['r-thin', 0, 3]],
     });
@@ -249,8 +249,8 @@ describe('BacktestService.compareRuns — units and populations (#965 item 2)', 
   it('says NOT LIKE-FOR-LIKE when the two sides were sized differently', async () => {
     const prisma = mockPrisma({
       runs: [
-        run('r-a', { protocolId: 'xau-speed-m5', totalTrades: 40, totalSignals: 200, botId: 'bot-a', botBaseSize: 0.01 }),
-        run('r-b', { protocolId: 'xau-speed-m15', totalTrades: 40, totalSignals: 200, botId: 'bot-b', botBaseSize: 0.02 }),
+        run('r-a', { protocolId: 'xau-speed-m5-long', totalTrades: 40, totalSignals: 200, botId: 'bot-a', botBaseSize: 0.01 }),
+        run('r-b', { protocolId: 'xau-speed-m15-long', totalTrades: 40, totalSignals: 200, botId: 'bot-b', botBaseSize: 0.02 }),
       ],
       trades: [['r-a', 20, 20], ['r-b', 20, 20]],
     });
@@ -295,7 +295,7 @@ describe('BacktestService.compareRuns — units and populations (#965 item 2)', 
     expect(out.verdict.sizeWarning).toMatch(/LOT SIZE is UNKNOWN/);
     expect(out.verdict.sizeWarning).toMatch(/Unknown is not the same as equal/);
     // ⚠️ NAMED BY RUN, not by protocol@timeframe: two variants of one protocol share both of those,
-    // and the message used to read "xau-speed-m15 @15m, xau-speed-m15 @15m" — naming neither side.
+    // and the message used to read "xau-speed-m15-long @15m, xau-speed-m15-long @15m" — naming neither side.
     expect(out.verdict.sizeWarning).toMatch(/\[r-a\]/);
   });
 });
@@ -339,29 +339,29 @@ describe('BacktestService.compareRuns — SAME COSTS (#1141)', () => {
   it('names WHICH side is unrecorded when only one is', async () => {
     const prisma = mockPrisma({
       runs: [
-        run('r-a', { protocolId: 'xau-speed-m5', totalTrades: 40, totalSignals: 200, ...recorded }),
-        run('r-b', { protocolId: 'xau-speed-m15', totalTrades: 40, totalSignals: 200 }),
+        run('r-a', { protocolId: 'xau-speed-m5-long', totalTrades: 40, totalSignals: 200, ...recorded }),
+        run('r-b', { protocolId: 'xau-speed-m15-long', totalTrades: 40, totalSignals: 200 }),
       ],
       trades: [['r-a', 20, 20], ['r-b', 20, 20]],
     });
     const out = await svc(prisma).compareRuns(['r-a', 'r-b']);
 
     // Named by RUN ID as well as protocol, because two variants of one protocol share both.
-    expect(out.verdict.comparabilityWarning).toMatch(/EXECUTION COSTS ARE UNKNOWN for 1 of 2 run\(s\) \(xau-speed-m15 @15m \[r-b\]\)/);
+    expect(out.verdict.comparabilityWarning).toMatch(/EXECUTION COSTS ARE UNKNOWN for 1 of 2 run\(s\) \(xau-speed-m15-long @15m \[r-b\]\)/);
   });
 
   it('says NOT A CLEAN COST PAIR and names both costings when they differ', async () => {
     const prisma = mockPrisma({
       runs: [
         run('r-a', {
-          protocolId: 'spy-speed-v1',
+          protocolId: 'spy-speed-v1-long',
           totalTrades: 40,
           totalSignals: 200,
           ...recorded,
           slippage: 0.01,
           spread: 0.01,
         }),
-        run('r-b', { protocolId: 'spy-speed-v1', totalTrades: 40, totalSignals: 200, ...recorded }),
+        run('r-b', { protocolId: 'spy-speed-v1-long', totalTrades: 40, totalSignals: 200, ...recorded }),
       ],
       trades: [['r-a', 20, 20], ['r-b', 20, 20]],
     });
@@ -425,7 +425,7 @@ describe('mergeBotConfig — "backtest this bot" as one call (#965 item 3)', () 
     id: 'bot-1',
     name: 'EURCAD Macro Session',
     symbol: 'EURCAD',
-    protocolId: 'forex-session-v1',
+    protocolId: 'forex-session-v1-long',
     timeframe: '5m',
     slPct: 1,
     tpPct: 1,
@@ -439,7 +439,7 @@ describe('mergeBotConfig — "backtest this bot" as one call (#965 item 3)', () 
     const out = mergeBotConfig({ botId: 'bot-1' }, bot());
 
     expect(out.request.symbol).toBe('EURCAD');
-    expect(out.request.protocolId).toBe('forex-session-v1');
+    expect(out.request.protocolId).toBe('forex-session-v1-long');
     expect(out.request.timeframe).toBe('5m');
     expect(out.request.slPct).toBe(1);
     expect(out.request.tpPct).toBe(1);
@@ -459,7 +459,7 @@ describe('mergeBotConfig — "backtest this bot" as one call (#965 item 3)', () 
     expect(out.request.symbol).toBe('XAUUSD');
     expect(out.drivenBy.overridden).toContain('slPct');
     // The bot's own value is still reported, so the two can be compared.
-    expect(out.drivenBy.protocolId).toBe('forex-session-v1');
+    expect(out.drivenBy.protocolId).toBe('forex-session-v1-long');
   });
 
   /**
@@ -573,7 +573,7 @@ describe('BacktestService.compareRuns — SAME DATA (the window guard)', () => {
           startDate: new Date('2026-08-01T00:00:00Z'), endDate: new Date('2026-08-31T00:00:00Z'),
         }),
         run('r-sep', {
-          totalTrades: 40, totalSignals: 120, sharpeRatio: 1.1, protocolId: 'xau-speed-m5',
+          totalTrades: 40, totalSignals: 120, sharpeRatio: 1.1, protocolId: 'xau-speed-m5-long',
           startDate: new Date('2026-09-01T00:00:00Z'), endDate: new Date('2026-09-30T00:00:00Z'),
         }),
       ],
@@ -600,7 +600,7 @@ describe('BacktestService.compareRuns — SAME DATA (the window guard)', () => {
     const prisma = mockPrisma({
       runs: [
         run('r-a', { totalTrades: 40, totalSignals: 120, sharpeRatio: 1.9 }),
-        run('r-b', { totalTrades: 40, totalSignals: 120, sharpeRatio: 1.1, protocolId: 'xau-speed-m5' }),
+        run('r-b', { totalTrades: 40, totalSignals: 120, sharpeRatio: 1.1, protocolId: 'xau-speed-m5-long' }),
       ],
       trades: [['r-a', 22, 18], ['r-b', 10, 30]],
     });
@@ -621,7 +621,7 @@ describe('BacktestService.compareRuns — SAME DATA (the window guard)', () => {
           startDate: new Date('2026-09-14T00:00:00Z'), endDate: new Date('2026-10-20T00:00:00Z'),
         }),
         run('r-b', {
-          totalTrades: 40, totalSignals: 120, sharpeRatio: 1.1, protocolId: 'xau-speed-m5',
+          totalTrades: 40, totalSignals: 120, sharpeRatio: 1.1, protocolId: 'xau-speed-m5-long',
           periodId: 'period-1',
           // SAME period, longer warm-up → a later first scorable bar.
           startDate: new Date('2026-09-18T00:00:00Z'), endDate: new Date('2026-10-20T00:00:00Z'),
@@ -644,7 +644,7 @@ describe('BacktestService.compareRuns — SAME DATA (the window guard)', () => {
       runs: [
         run('r-thin-aug', { startDate: new Date('2026-08-01T00:00:00Z'), endDate: new Date('2026-08-31T00:00:00Z') }),
         run('r-thin-sep', {
-          protocolId: 'xau-speed-m5',
+          protocolId: 'xau-speed-m5-long',
           startDate: new Date('2026-09-01T00:00:00Z'), endDate: new Date('2026-09-30T00:00:00Z'),
         }),
       ],

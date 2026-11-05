@@ -4,7 +4,7 @@ import { resolveProtocolForSymbol } from './speed-scan.service';
 /**
  * #803 — ONE scoring path: `active = 0` is a kill switch.
  *
- * ⚠️ THE DEFECT THESE TESTS PIN (measured 2026-10-09): `usdcad-oil-v1` and `oil-supply-v1` —
+ * ⚠️ THE DEFECT THESE TESTS PIN (measured 2026-10-09): `usdcad-oil-v1-long` and `oil-supply-v1-long` —
  * both `active = 0`, one with no bot and no symbol assignment — were writing score rows every
  * few minutes (newest 22:10 that day). Two causes, both closed here:
  *
@@ -32,7 +32,7 @@ describe('#803 — single scoring path / active = 0 kill switch', () => {
 
   it('the hardcoded fallback reports the DATABASE active flag — never a hardcoded true (#803)', async () => {
     const res = await resolveProtocolForSymbol('USDCAD', prismaWith({ active: false }));
-    expect(res).toEqual({ slug: 'usdcad-oil-v1', active: false });
+    expect(res).toEqual({ slug: 'usdcad-oil-v1-long', active: false });
   });
 
   it('a fallback slug with no protocol row is refused (#803)', async () => {
@@ -46,9 +46,9 @@ describe('#803 — single scoring path / active = 0 kill switch', () => {
   it('the DB assignment path still wins and carries its own active flag (#803 control)', async () => {
     const prisma = prismaWith();
     prisma.symbolProtocolAssignment.findMany = jest.fn(async () => [
-      { protocol: { slug: 'xau-speed-v1', active: true } },
+      { protocol: { slug: 'xau-speed-v1-long', active: true } },
     ]);
-    expect(await resolveProtocolForSymbol('XAUUSD', prisma)).toEqual({ slug: 'xau-speed-v1', active: true });
+    expect(await resolveProtocolForSymbol('XAUUSD', prisma)).toEqual({ slug: 'xau-speed-v1-long', active: true });
   });
 
   // ── #1181 — `priority` alone does not ORDER, and an inactive winner SKIPS the symbol ──
@@ -57,7 +57,7 @@ describe('#803 — single scoring path / active = 0 kill switch', () => {
    *
    * `symbol_protocol_assignment` is unique on `(symbol, protocolId)`, NOT on `(symbol, priority)`,
    * so two protocols can claim one symbol at the same priority. Measured: EURUSD
-   * (`probe-1dir-v1` + `forex-session-v1`) and XAGUSD (`probe-1dir-rsi` + `xau-speed-v1`, the
+   * (`probe-1dir-v1-long` + `forex-session-v1-long`) and XAGUSD (`probe-1dir-rsi-long` + `xau-speed-v1-long`, the
    * latter INACTIVE), all at `priority = 0`.
    *
    * Two separate faults followed:
@@ -88,7 +88,7 @@ describe('#803 — single scoring path / active = 0 kill switch', () => {
   };
 
   it('orders by priority AND a unique key — priority alone is not unique (#1181)', async () => {
-    const prisma = tiedPrisma([{ slug: 'probe-1dir-v1', active: true }]);
+    const prisma = tiedPrisma([{ slug: 'probe-1dir-v1-long', active: true }]);
     await resolveProtocolForSymbol('EURUSD', prisma as any);
     const args = prisma.findMany.mock.calls[0][0];
     expect(Array.isArray(args.orderBy)).toBe(true);
@@ -97,7 +97,7 @@ describe('#803 — single scoring path / active = 0 kill switch', () => {
   });
 
   it('the second sort key is a UNIQUE column, so the tie cannot fall through (#1181)', async () => {
-    const prisma = tiedPrisma([{ slug: 'probe-1dir-v1', active: true }]);
+    const prisma = tiedPrisma([{ slug: 'probe-1dir-v1-long', active: true }]);
     await resolveProtocolForSymbol('EURUSD', prisma as any);
     const second = prisma.findMany.mock.calls[0][0].orderBy[1];
     // Unique-or-near-unique identifiers only. A non-unique column (e.g. `symbol`) would leave the
@@ -107,7 +107,7 @@ describe('#803 — single scoring path / active = 0 kill switch', () => {
   });
 
   it('the same query shape is used on every call — no per-call variation (#1181)', async () => {
-    const prisma = tiedPrisma([{ slug: 'probe-1dir-v1', active: true }]);
+    const prisma = tiedPrisma([{ slug: 'probe-1dir-v1-long', active: true }]);
     await resolveProtocolForSymbol('EURUSD', prisma as any);
     await resolveProtocolForSymbol('EURUSD', prisma as any);
     expect(prisma.findMany.mock.calls[0][0]).toEqual(prisma.findMany.mock.calls[1][0]);
@@ -116,11 +116,11 @@ describe('#803 — single scoring path / active = 0 kill switch', () => {
   it('PREFERS the active protocol when a tie would otherwise pick the inactive one (#1181)', async () => {
     // The real XAGUSD shape, in the order `priority, protocolId` returns it: the inactive one first.
     const prisma = tiedPrisma([
-      { slug: 'xau-speed-v1', active: 0 },
-      { slug: 'probe-1dir-rsi', active: 1 },
+      { slug: 'xau-speed-v1-long', active: 0 },
+      { slug: 'probe-1dir-rsi-long', active: 1 },
     ]);
     expect(await resolveProtocolForSymbol('XAGUSD', prisma)).toEqual({
-      slug: 'probe-1dir-rsi',
+      slug: 'probe-1dir-rsi-long',
       active: true,
     });
   });
@@ -186,7 +186,7 @@ describe('#803 — single scoring path / active = 0 kill switch', () => {
 
   it('an inactive protocol writes NOTHING — neither score nor snapshot (#803)', async () => {
     const { svc, scoreCreate, snapshotCreate } = makeGating(false);
-    (svc as any).storeSnapshot('usdcad-oil-v1', 'USDCAD', 85, 'HOLD', null, breakdown);
+    (svc as any).storeSnapshot('usdcad-oil-v1-long', 'USDCAD', 85, 'HOLD', null, breakdown);
     await flush(); await flush();
     expect(scoreCreate).not.toHaveBeenCalled();
     expect(snapshotCreate).not.toHaveBeenCalled();
@@ -197,7 +197,7 @@ describe('#803 — single scoring path / active = 0 kill switch', () => {
 
   it('the ACTIVE direction still writes both tables (#803 control)', async () => {
     const { svc, scoreCreate, snapshotCreate } = makeGating(true);
-    (svc as any).storeSnapshot('xau-speed-v1', 'XAUUSD', 85, 'BUY', null, breakdown);
+    (svc as any).storeSnapshot('xau-speed-v1-long', 'XAUUSD', 85, 'BUY', null, breakdown);
     await flush(); await flush();
     expect(snapshotCreate).toHaveBeenCalledTimes(1);
     expect(scoreCreate).toHaveBeenCalledTimes(1);

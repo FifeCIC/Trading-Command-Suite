@@ -263,7 +263,7 @@ export function parseAbArmName(name: string | null | undefined): { side: 'A' | '
  * silently skipped — including XAUUSD, which has 4 bots.
  *
  * Two independent reasons that stayed invisible for so long, both worth naming:
- *   1. The integration test fed the DOCUMENTED format (`TCS:xau-speed-m5:a`), so it passed
+ *   1. The integration test fed the DOCUMENTED format (`TCS:xau-speed-m5-long:a`), so it passed
  *      while the production path was dead. A fixture that does not match reality proves
  *      only that the mock agrees with itself (see `development-philosophy` §3).
  *   2. A skip was a bare `continue` + a log line, so "could not tell whose position this

@@ -54,7 +54,7 @@ describe('normaliseSymbolClass — the two vocabularies', () => {
 
 describe('directiveFitsSymbolClass — unknown NEVER excludes', () => {
   it('excludes a stocks-only directive from a forex symbol — the measured case', () => {
-    // `analyst-adjustments` declares ['stocks'] and is placed in `forex-session-v1`.
+    // `analyst-adjustments` declares ['stocks'] and is placed in `forex-session-v1-long`.
     const v = directiveFitsSymbolClass('analyst-adjustments', 'forex');
     expect(v.fits).toBe(false);
     expect(v.symbolClass).toBe('forex');

@@ -53,7 +53,7 @@ describe('SignalQueueService.syncQueues — expiry sweep (#882)', () => {
     const exec = jest.fn(async (sql: string, ...args: any[]) => (execImpl ? execImpl(sql, args) : 0));
     const query = jest.fn(async (sql: string) => {
       if (sql.includes('FROM strategy_signal_queue') && sql.includes('TIMESTAMPDIFF')) {
-        return [{ id: 'q-stale', symbol: 'USDJPY', protocolId: 'forex-session-v1', ageMin: 444 }];
+        return [{ id: 'q-stale', symbol: 'USDJPY', protocolId: 'forex-session-v1-long', ageMin: 444 }];
       }
       return []; // subs query
     });
@@ -65,7 +65,7 @@ describe('SignalQueueService.syncQueues — expiry sweep (#882)', () => {
   it('archives stale pending entries and names the cause in the log', async () => {
     const { svc, exec } = make();
     // A pair was scored and did not signal (void runs too), and one entry is stale.
-    await svc.syncQueues([], new Set(['forex-session-v1|EURUSD']));
+    await svc.syncQueues([], new Set(['forex-session-v1-long|EURUSD']));
     const logs = ((svc as any).logger.log as jest.Mock).mock.calls.map((c) => String(c[0]));
     expect(logs.some((l) => l.startsWith('Queue expire:') && l.includes('USDJPY 444m'))).toBe(true);
     const expireUpd = exec.mock.calls.find((c) => String(c[0]).includes("SET status = 'expired'") && String(c[0]).includes('TIMESTAMPDIFF') === false && String(c[0]).includes('updatedAt <'));
@@ -75,7 +75,7 @@ describe('SignalQueueService.syncQueues — expiry sweep (#882)', () => {
 
   it('the staleness UPDATE keys on updatedAt, never createdAt', async () => {
     const { svc, exec } = make();
-    await svc.syncQueues([], new Set(['forex-session-v1|EURUSD']));
+    await svc.syncQueues([], new Set(['forex-session-v1-long|EURUSD']));
     const sql = exec.mock.calls.map((c) => String(c[0])).join('\n');
     expect(sql).toContain('updatedAt < UTC_TIMESTAMP()');
     expect(sql).not.toContain('createdAt <');
@@ -83,7 +83,7 @@ describe('SignalQueueService.syncQueues — expiry sweep (#882)', () => {
 
   it('expires unconsumable entries (no active bot+subscription) in the same pass, count logged', async () => {
     const { svc, exec } = make((sql) => (sql.includes('NOT EXISTS') ? 2 : 0));
-    await svc.syncQueues([], new Set(['forex-session-v1|EURUSD']));
+    await svc.syncQueues([], new Set(['forex-session-v1-long|EURUSD']));
     const logs = ((svc as any).logger.log as jest.Mock).mock.calls.map((c) => String(c[0]));
     expect(logs.some((l) => l.includes('no active bot subscription'))).toBe(true);
     expect(exec.mock.calls.some((c) => String(c[0]).includes('NOT EXISTS') && String(c[0]).includes("SET status = 'expired'"))).toBe(true);
@@ -91,7 +91,7 @@ describe('SignalQueueService.syncQueues — expiry sweep (#882)', () => {
 
   it("void and expire read as different events in the log (#882 acceptance)", async () => {
     const { svc } = make();
-    await svc.syncQueues([], new Set(['forex-session-v1|EURUSD']));
+    await svc.syncQueues([], new Set(['forex-session-v1-long|EURUSD']));
     const logs = ((svc as any).logger.log as jest.Mock).mock.calls.map((c) => String(c[0]));
     expect(logs.some((l) => l.startsWith('Queue void:'))).toBe(true);
     expect(logs.some((l) => l.startsWith('Queue expire:'))).toBe(true);

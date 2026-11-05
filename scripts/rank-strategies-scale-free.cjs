@@ -2,7 +2,7 @@
 /**
  * rank-strategies-scale-free.cjs — rank backtests on metrics that survive a sizing change.
  *
- * ⚠️ WHY NOT `totalPnl`. Measured 2026-11-02 on `probe-1dir-rsi`/XAGUSD: `totalPnl` 2,792.68
+ * ⚠️ WHY NOT `totalPnl`. Measured 2026-11-02 on `probe-1dir-rsi-long`/XAGUSD: `totalPnl` 2,792.68
  * across 13 trades while `avgTradePnl` was 1.62. Those are NOT in conflict — `totalPnl` sums
  * `trade.pnl` (CURRENCY, so it moves with notional and leverage) and `avgTradePnl` averages
  * `trade.pnlPct` (PERCENT, scale-free). `winRate` is likewise a FRACTION of entry signals while

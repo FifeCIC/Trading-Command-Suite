@@ -62,7 +62,7 @@ export class OverheadSupplyPressureDirective implements IDirective {
   /**
    * ⚠️ FIXED 2026-11-03 — was the literal `56`, while the guard below refuses below `MIN_BARS`
    * (`LOOKBACK + 8` = 58). Measured consequence: **71 ticks** of `Insufficient data: need 58 bars,
-   * have 56` in `xau-short-m15`, i.e. 100 maxScore of permanent dead capacity in an active protocol.
+   * have 56` in `xau-speed-m15-short`, i.e. 100 maxScore of permanent dead capacity in an active protocol.
    *
    * This is the exact class `validate-directive-bar-requirement.cjs` exists for, and it did NOT
    * catch it: the declared value looked plausible and the internal requirement is a SUM of a named

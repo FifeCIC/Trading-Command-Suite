@@ -120,7 +120,7 @@ function TheoryMark({ strategy }) {
  * joins `strategy_protocol` — never `protocolId`.
  *
  * ⚠️ THE TWO CAN DISAGREE, AND THAT IS THE POINT. Measured 2026-09-18: `Hourly Triple-Directive
- * Control` carries `protocolId = 'hourly-3dir-v1'` but has ZERO subscriptions. The old card showed
+ * Control` carries `protocolId = 'hourly-3dir-v1-long'` but has ZERO subscriptions. The old card showed
  * it as wired. Routing joins `strategy_protocol`, so it can never receive a signal — a bot that
  * LOOKS configured and silently does nothing.
  *

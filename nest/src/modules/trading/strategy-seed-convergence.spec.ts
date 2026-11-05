@@ -31,7 +31,7 @@ import { TradingStrategyService } from './trading-strategy.service';
 const SEEDED = {
   name: 'Gold Swing 1H',
   symbol: 'XAUUSD',
-  protocolId: 'xau-speed-1h',
+  protocolId: 'xau-speed-1h-long',
   brokerId: 'mt5',
   mode: 'semi-auto',
   timeframe: '1h',

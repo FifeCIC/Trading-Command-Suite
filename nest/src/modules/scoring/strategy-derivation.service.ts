@@ -16,7 +16,7 @@ import { parseSessionWindow, parseExitBoundary } from '../trading/session-window
  *         = one "MetaStack". 13 bots sharing `auto-forex-session-v1` produced ONE blended rating
  *         covering six genuinely different configurations. You could not tell which one worked.
  * AFTER:  a strategy is the bot's WHOLE configuration — protocol + role + market + broker +
- *         execution policy. 26 bots resolve to 26 strategies, and the `forex-session-v1` family to
+ *         execution policy. 26 bots resolve to 26 strategies, and the `forex-session-v1-long` family to
  *         14, one per market.
  * NEXT:   #875 pins a name onto a key and stores the part IDs, so a named strategy survives an
  *         edit to one of its parts and the UI can show WHAT changed.

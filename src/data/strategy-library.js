@@ -663,7 +663,7 @@ innovation upside.
     difficulty: 'Beginner',
     timeframe: 'M5 / M15',
     status: 'supported',
-    tcsProtocol: 'forex-session-v1',
+    tcsProtocol: 'forex-session-v1-long',
 
     overview: `
 Trade the highest-volume forex pairs during the 4-hour London-New York
@@ -769,7 +769,7 @@ A session strategy MUST match the pair to its most liquid window.
     difficulty: 'Intermediate',
     timeframe: 'M5 / M15',
     status: 'supported',
-    tcsProtocol: 'forex-session-v1',
+    tcsProtocol: 'forex-session-v1-long',
 
     overview: `
 GBPUSD ("Cable") is the most volatile major forex pair during the London
@@ -859,7 +859,7 @@ morning. The NY afternoon contributes less to Cable than to EURUSD.
     difficulty: 'Intermediate',
     timeframe: '1H / 4H',
     // ⚠️ 2026-11-02 — demoted 'supported' → 'partial' because the protocol that implements it is no
-    // longer in the shipped seed. The link to 'usdcad-oil-v1' is REMOVED, not forgotten. It still
+    // longer in the shipped seed. The link to 'usdcad-oil-v1-long' is REMOVED, not forgotten. It still
     // exists in this installation's database, so the strategy runs here — both return if it re-ships.
     status: 'partial',
 
@@ -964,7 +964,7 @@ the tradeable edge.
     difficulty: 'Advanced',
     timeframe: 'M1 / M5',
     status: 'supported',
-    tcsProtocol: 'xau-speed-v1',
+    tcsProtocol: 'xau-speed-v1-long',
 
     overview: `
 Gold (XAUUSD) is the world's most liquid commodity for retail traders —
@@ -1078,7 +1078,7 @@ are filtered out when DXY is strongly rising.
     difficulty: 'Intermediate',
     timeframe: '4H / Daily',
     // ⚠️ 2026-11-02 — demoted 'supported' → 'partial' because the protocol that implements it is no
-    // longer in the shipped seed. The link to 'gold-macro-v1' is REMOVED, not forgotten. It still
+    // longer in the shipped seed. The link to 'gold-macro-v1-long' is REMOVED, not forgotten. It still
     // exists in this installation's database, so the strategy runs here — both return if it re-ships.
     status: 'partial',
 

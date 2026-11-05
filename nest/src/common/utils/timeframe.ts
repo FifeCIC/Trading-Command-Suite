@@ -284,7 +284,7 @@ export const BAR_LEAD_TOLERANCE_MS = 120_000;
  * The consequence is the same one this guard was built for (#780), just smaller:
  * the row pins `MAX(timestamp)` ahead of now, so `computeMarketStatus()` fails closed
  * with *"data clock skew"* and the symbol reads as permanently untradeable. Live
- * evidence: `Gold Position 4H` (XAUUSD / `xau-speed-4h`) was blocked pre-trade on every
+ * evidence: `Gold Position 4H` (XAUUSD / `xau-speed-4h-long`) was blocked pre-trade on every
  * pass, and the row is unoverwritable because the upsert only touches rows it fetched.
  *
  * The duplicate is also redundant: `open[20:00]` was identical to `open[16:00]`, so the

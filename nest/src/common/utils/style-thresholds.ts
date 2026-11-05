@@ -16,8 +16,8 @@
  * -------------------------------
  * `styleGateFallback()` matched on only five keywords (scalp/tick, speed, day,
  * swing, position). Any other wording silently fell through to the default.
- * Measured 2026-09-10: 2 of 17 active protocols hit that hole — `signals-workbench`
- * (NULL style) and **`forex-session-v1`** (`'Session / Mean Reversion'`), the
+ * Measured 2026-09-10: 2 of 17 active protocols hit that hole — `signals-workbench-long`
+ * (NULL style) and **`forex-session-v1-long`** (`'Session / Mean Reversion'`), the
  * protocol driving all six FX pairs. Its symbols scored ~54 against a gate of 65
  * that no one could explain, because the value was a fallback, not a decision.
  *
@@ -68,10 +68,10 @@ export interface StyleGateResolution {
  * reached 60-100. After the denominator change the same readings became ~10-33.
  * Measured peak `compositePct` per protocol (2026-09-15):
  *
- *     hourly-3dir-v1 33.3   vix-short-v1 25.8   xau-speed-v1/m5/m15 23-24
- *     gold-macro-v1  21.6   vix-spike-v1 18.8   spy-speed-v1 18.7
- *     qqq-speed-v1   17.2   xau-speed-4h 16.6   forex-session-v1 15.0
- *     ftse/dax/cac   13.5-16.4                   china-speed-v1 10.2
+ *     hourly-3dir-v1-long 33.3   vix-spike-v1-short 25.8   xau-speed-v1-long/m5/m15 23-24
+ *     gold-macro-v1-long  21.6   vix-spike-v1-long 18.8   spy-speed-v1-long 18.7
+ *     qqq-speed-v1-long   17.2   xau-speed-4h-long 16.6   forex-session-v1-long 15.0
+ *     ftse/dax/cac   13.5-16.4                   china-speed-v1-long 10.2
  *
  * Against a bar of 65-80, **nothing could ever clear the gate**, and live trading
  * stopped on 2026-09-10 — the last queue entry and the last closed trade are both

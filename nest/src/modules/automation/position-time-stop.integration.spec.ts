@@ -356,7 +356,7 @@ describe('PositionTimeStopService — #773 position slot lifecycle', () => {
       const { svc } = makeService({
         positions: [{
           ticket: 777, symbol: 'XAUUSD', type: 'buy', volume: 0.01, profit: 0,
-          openedAt: ago(200), comment: 'TCS:xau-speed-m5:a',
+          openedAt: ago(200), comment: 'TCS:xau-speed-m5-long:a',
         }],
         strategies: [
           { id: 'a', name: 'Gold Scalp M5', symbol: 'XAUUSD', maxHoldHours: 4 },
@@ -478,7 +478,7 @@ describe('PositionTimeStopService — #773 position slot lifecycle', () => {
    *
    * So the regex matched NOTHING. Every position fell through to symbol-only matching, and
    * every multi-bot symbol — XAUUSD has 4 bots — was skipped. The reason this survived 29
-   * passing tests: the older test above feeds `'TCS:xau-speed-m5:a'`, the DOCUMENTED format,
+   * passing tests: the older test above feeds `'TCS:xau-speed-m5-long:a'`, the DOCUMENTED format,
    * which nothing has ever produced. **A fixture that does not match reality only proves the
    * mock agrees with itself.**
    *
@@ -497,13 +497,13 @@ describe('PositionTimeStopService — #773 position slot lifecycle', () => {
     });
 
     it('treats `TCS manual <protocol>` as a human trade, not a bot', () => {
-      // Real rows: 'TCS manual forex-session-v1', 'TCS manual xau-speed-v1 | 283e4397'
-      expect(classifyMt5Comment('TCS manual forex-session-v1').kind).toBe('manual');
-      expect(classifyMt5Comment('TCS manual xau-speed-v1 | 283e4397').kind).toBe('manual');
+      // Real rows: 'TCS manual forex-session-v1-long', 'TCS manual xau-speed-v1-long | 283e4397'
+      expect(classifyMt5Comment('TCS manual forex-session-v1-long').kind).toBe('manual');
+      expect(classifyMt5Comment('TCS manual xau-speed-v1-long | 283e4397').kind).toBe('manual');
     });
 
     it('still honours the legacy documented form', () => {
-      expect(classifyMt5Comment('TCS:xau-speed-m5:a')).toEqual({ kind: 'strategy', name: 'a' });
+      expect(classifyMt5Comment('TCS:xau-speed-m5-long:a')).toEqual({ kind: 'strategy', name: 'a' });
     });
 
     it('returns none for absent or non-TCS comments', () => {
@@ -559,7 +559,7 @@ describe('PositionTimeStopService — #773 position slot lifecycle', () => {
       const { svc, closeCalls } = makeService({
         positions: [{
           ticket: 12, symbol: 'AUDUSD', type: 'buy', volume: 0.01, profit: 0,
-          openedAt: ago(500), comment: 'TCS manual forex-session-v1',
+          openedAt: ago(500), comment: 'TCS manual forex-session-v1-long',
         }],
         strategies: [AUDUSD_STRATEGY],
         dryRun: false, // armed

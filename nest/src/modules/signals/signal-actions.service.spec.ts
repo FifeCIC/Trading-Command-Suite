@@ -51,9 +51,9 @@ function buildModule(feasibilityResult: unknown) {
     score: {
       findUnique: jest.fn().mockResolvedValue({
         id: 'sig-1',
-        strategyId: 'btc-speed-v1',
+        strategyId: 'btc-speed-v1-long',
         breakdown: {
-          protocolId: 'btc-speed-v1',
+          protocolId: 'btc-speed-v1-long',
           marketStatus: { open: true, stale: false },
         },
         timestamp: new Date('2026-09-20T00:00:00Z'),

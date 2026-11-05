@@ -188,9 +188,9 @@ export const KNOWN_FEATURES = {
   'Capital.com Adapter (CFD Broker)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
   'PositionSyncService (Broker-Agnostic)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
   'Strategy Library (9 strategies)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Gold Scalp Protocol (xau-speed-v1)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'USDCAD Oil-Pair Protocol (usdcad-oil-v1)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Forex Session Protocol (forex-session-v1)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Gold Scalp Protocol (xau-speed-v1-long)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'USDCAD Oil-Pair Protocol (usdcad-oil-v1-long)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Forex Session Protocol (forex-session-v1-long)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'META.Stack Status Dashboard': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
   'Auto-Trading Safety (15 disabled)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
   'AI Cost Tracking (Usage API)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
@@ -345,7 +345,7 @@ export const KNOWN_FEATURES = {
   // Scoring design & capacity (2026-09-11)
   'Directional capacity accounting (three output classes)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
   'Scoring design documents (A/B/C + change protocol)': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'hourly-3dir-v1 control protocol (100% directional)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'hourly-3dir-v1-long control protocol (100% directional)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
   // Guards & contracts (2026-09-10 / 11)
   'Gate Membership Guard (INV-GATE-MEMBERSHIP)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Bar Length Guard (INV-NO-FUTURE-ROWS)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
@@ -664,7 +664,7 @@ export const KNOWN_FEATURES = {
   //    QA entry only, so they carry no capability). Theme: the number and the surface — measure the ceiling
   //    where the gate reads it, count what actually read, and show the instrument beside the strategy.
   //    uiSurfaces: 0 is a FINDING, not a blank (2 of these). ⚠️ The two one-directive probe handoffs are ONE
-  //    capability recorded at its final state (the pair); the first landing built `probe-1dir-v1` alone.
+  //    capability recorded at its final state (the pair); the first landing built `probe-1dir-v1-long` alone.
     'Gate ceiling reporting (bot threshold vs measured ceiling)': { dataPersistence: 'none', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
     'Signal Conviction — the second reading': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
     'Risk cap control on the dashboard': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
@@ -924,7 +924,7 @@ export const KNOWN_FEATURES = {
   //    nothing consumes. (3) Batch #46's 'Strategy packaging' row owns the shipped seed; this
   //    batch owns the bot-per-protocol coverage that sits on top of it.
   //    VERIFIED AGAINST THE TREE 2026-11-04, and the tree has moved PAST the handoffs: protocol→bot
-  //    coverage is **52 of 54** (the file says 51), `nikkei-speed-v1` NOW resolves JP225 (that
+  //    coverage is **52 of 54** (the file says 51), `nikkei-speed-v1-long` NOW resolves JP225 (that
   //    deferred item is CLOSED and is deliberately NOT recorded as a gap), and there are 68 bots
   //    (26 active / 42 inactive), 0 without "Bot" in the name.
   //    uiSurfaces: 0 is a FINDING, not a blank — none here (3, 1 and 1).

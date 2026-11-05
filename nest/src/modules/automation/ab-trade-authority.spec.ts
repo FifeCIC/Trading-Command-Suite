@@ -34,7 +34,7 @@ const CONTROL_SNAPSHOT = {
   version: '1.0.1',
   // ⚠️ The score-style mode that used to be mistaken for a trading mode. Its presence in these
   // fixtures is deliberate: it is what the runner must IGNORE.
-  snapshot: { mode: 'score', protocolId: 'xau-speed-m15', brokerId: 'mt5', tradeThreshold: 10 },
+  snapshot: { mode: 'score', protocolId: 'xau-speed-m15-long', brokerId: 'mt5', tradeThreshold: 10 },
 };
 
 /**
@@ -55,7 +55,7 @@ const VARIANT_SNAPSHOT = {
   id: 'snap-variant',
   scoringStrategyId: 'ss-gold',
   version: '1.0.2',
-  snapshot: { mode: 'score', protocolId: 'xau-speed-m15', brokerId: 'mt5', tradeThreshold: 20 },
+  snapshot: { mode: 'score', protocolId: 'xau-speed-m15-long', brokerId: 'mt5', tradeThreshold: 20 },
 };
 
 function make(opts: { snapshot?: any; bots?: any[]; running?: any[] } = {}) {

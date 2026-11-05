@@ -26,7 +26,7 @@ import { TradingStrategyService } from './trading-strategy.service';
 
 const INCUMBENT = {
   id: 'bot-a', name: 'Gold Day-Trade M15', symbol: 'XAUUSD', active: true,
-  duplicatedFromId: null, protocolId: 'xau-speed-m15', minComposite: 10,
+  duplicatedFromId: null, protocolId: 'xau-speed-m15-long', minComposite: 10,
 };
 const VARIANT = {
   id: 'bot-b', name: 'Gold Day-Trade M15 (copy)', symbol: 'XAUUSD', active: false,
@@ -116,7 +116,7 @@ function make(opts: {
   };
   (svc as any).protocolHealth = {
     measureProtocolCeiling: jest.fn(async () =>
-      opts.ceiling === undefined ? { ceilingPct: 90, samples: 100, slug: 'xau-speed-m15', ceilingRaw: 90, capacity: 100 } : opts.ceiling,
+      opts.ceiling === undefined ? { ceilingPct: 90, samples: 100, slug: 'xau-speed-m15-long', ceilingRaw: 90, capacity: 100 } : opts.ceiling,
     ),
   };
   // #1193 — the progression cap also gates pair activation. Stubbed as ENFORCED-BUT-UNCAPPED so

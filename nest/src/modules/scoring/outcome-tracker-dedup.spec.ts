@@ -27,7 +27,7 @@ describe('OutcomeTrackerService — identity dedup (#825)', () => {
   }
 
   const item = (over: any = {}) => ({
-    directiveId: 'rsi-oversold', symbol: 'BTC', strategyId: 'btc-speed-v1',
+    directiveId: 'rsi-oversold', symbol: 'BTC', strategyId: 'btc-speed-v1-long',
     timeframe: '15m', score: 42, signalClass: 'bullish', confidence: 0.4,
     predictedAt: new Date('2026-09-22T10:00:00Z'), priceAtPredict: 100, ...over,
   });
@@ -52,8 +52,8 @@ describe('OutcomeTrackerService — identity dedup (#825)', () => {
 
   it('the SAME directive+symbol under TWO protocols records BOTH (cross-protocol suppression is gone)', async () => {
     const { svc } = make();
-    const a = await svc.recordOutcomes([item({ strategyId: 'forex-session-v1' })]);
-    const b = await svc.recordOutcomes([item({ strategyId: 'gold-macro-v1' })]);
+    const a = await svc.recordOutcomes([item({ strategyId: 'forex-session-v1-long' })]);
+    const b = await svc.recordOutcomes([item({ strategyId: 'gold-macro-v1-long' })]);
     expect(a).toBe(1);
     expect(b).toBe(1); // one protocol's observation must not cancel another's
   });

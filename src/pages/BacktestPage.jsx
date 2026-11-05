@@ -754,7 +754,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
   // nothing branches on, and "has symbols" filtered for a BROKEN STATE rather than a property — the
   // right fix for a protocol with no symbols is to say so on its card, not to offer a checkbox that
   // hides it. ⚠️ Measured the same day: **14 of 47 protocols resolve zero symbols**, one of them
-  // (`eurusd-macro-v1`) ACTIVE — so the state is real and is now shown on the card instead.
+  // (`eurusd-macro-v1-long`) ACTIVE — so the state is real and is now shown on the card instead.
   /**
    * ⚠️ THE SEARCH REMEMBERS ITSELF, PER SUBJECT (owner direction, 2026-10-30: *"Auto fill with the
    * previous search"*). A backtesting session is many runs in a row on the same handful of strategies,
@@ -1209,7 +1209,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
 
   /**
    * Never leave an unusable timeframe selected. The protocol effect picks the protocol's
-   * RECOMMENDED cadence, which is a wish, not a fact about the store — `forex-session-v1` recommends
+   * RECOMMENDED cadence, which is a wish, not a fact about the store — `forex-session-v1-long` recommends
    * 5m and the frozen window has no 5m bars for its pairs. Without this the select would show a
    * disabled option as the current value, which reads as "selected and fine".
    */

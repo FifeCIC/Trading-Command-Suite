@@ -105,7 +105,7 @@ export interface ProtocolConfig {
  *   - `required[tf]`   — the base-cadence declaration, when a directive made one;
  *   - `required['1d']` — the GENERIC key 74 of 108 directives use, because a directive
  *     cannot know the protocol's runtime cadence.
- * ONE base-cadence declaration must never suppress a larger generic requirement (`btc-speed-v1`
+ * ONE base-cadence declaration must never suppress a larger generic requirement (`btc-speed-v1-long`
  * returned 20 where 72 was declared — 4 of 13 directives starved on 99.6% of ticks).
  * `|| 100` matches `getRequiredBars()`'s documented fallback.
  */
@@ -187,7 +187,7 @@ export class ProtocolDbService implements OnModuleInit {
    * ONE directive declaring `'15m'` suppressed the fall-through and every larger generic
    * requirement was silently ignored.
    *
-   * Measured: `btc-speed-v1` (`recommendedTimeframe '15m–1d'` → `selectBaseTimeframe` → `'15m'`
+   * Measured: `btc-speed-v1-long` (`recommendedTimeframe '15m–1d'` → `selectBaseTimeframe` → `'15m'`
    * → `required['15m'] = 20`) starved 4 of its 13 directives on **246 of 247 ticks (99.6%)**
    * for 24h+ — each returning `0` with the reason `Insufficient data: need N bars, have 20`,
    * while 3,504 fresh 5m bars sat unused in `marketbar`. `bollinger-band-squeeze` needed 72.
@@ -963,7 +963,7 @@ export class ProtocolDbService implements OnModuleInit {
             // #689 THEORY — seeded since 2026-11-03, and ⚠️ CONDITIONAL, unlike `focusRank`.
             //
             // `theory: config.theory ?? null` was written here first and DESTROYED PROSE. Measured
-            // the same day: one re-seed nulled `forex-session-v1` (735 chars) and `xau-speed-v1`
+            // the same day: one re-seed nulled `forex-session-v1-long` (735 chars) and `xau-speed-v1-long`
             // (773 chars), because those two carry their theory in the DATABASE and their seed entry
             // does not declare it — and `?? null` coerces "not declared" into "write NULL". Nothing
             // errored; the Theories panel simply went blank on two live protocols, which is this

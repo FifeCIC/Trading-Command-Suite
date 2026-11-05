@@ -10,7 +10,7 @@ import { MarketBar } from './interfaces/directive.interface';
  * over WHATEVER bars the caller passed. Two consequences, both live:
  *
  *  1. MIXED ARRAYS. A protocol loading `1d` bars while the caller's array also
- *     held `1m`/`5m`/`15m` produced a meaningless median. `ftse-speed-v1` (a 1d
+ *     held `1m`/`5m`/`15m` produced a meaningless median. `ftse-speed-v1-long` (a 1d
  *     protocol) was told "last real bar 4m old (market closed)" while its newest
  *     5m bar was 8 minutes old — entirely fresh.
  *
@@ -21,8 +21,8 @@ import { MarketBar } from './interfaces/directive.interface';
  * The failure was not cosmetic. `liquidity-check` converts a closed reading into
  * `score: 0`, which the risk engine turned into a HARD GATE — so fresh data
  * reading as closed zeroed the composite and blocked the trade, blaming "symbol
- * liquidity too low". Over 45 minutes `spy-day-v1` (11 ticks), `qqq-day-v1` (11)
- * and `spy-speed-v1` (7) were gated shut on EVERY tick.
+ * liquidity too low". Over 45 minutes `spy-day-v1-long` (11 ticks), `qqq-day-v1-long` (11)
+ * and `spy-speed-v1-long` (7) were gated shut on EVERY tick.
  *
  * THE CONTRACT
  * ------------
@@ -74,7 +74,7 @@ describe('computeMarketStatus — timeframe-relative staleness window', () => {
   // and is STILL THE CURRENT BAR. Measured live on a Thursday evening with XAUUSD
   // actively trading (its 5m bar was 3 minutes old) the whole gold family read
   // CLOSED, and because a `frozen` card sorts below a live one in the Ladder, the
-  // HIGHEST-scoring card (`xau-speed-1h`, composite 185) never reached the top.
+  // HIGHEST-scoring card (`xau-speed-1h-long`, composite 185) never reached the top.
   //
   // The first rework used `cadence + 15m` (75m for 1h) and passed every test in
   // this file, because every case was a 5m feed. These cases exist so the window
@@ -129,7 +129,7 @@ describe('computeMarketStatus — timeframe-relative staleness window', () => {
   });
 
   it('reads OPEN on a 1d protocol even though its daily bar is ~17h old', () => {
-    // `ftse-speed-v1` runs on 1d bars. A daily bar opened at 21:00 UTC the
+    // `ftse-speed-v1-long` runs on 1d bars. A daily bar opened at 21:00 UTC the
     // previous evening is mid-formation, not stale — the case that flapped.
     const lastDaily = new Date('2026-09-09T21:00:00Z');
     expect(computeMarketStatus(series(30, lastDaily, 1440), NOW, '1d').open).toBe(true);

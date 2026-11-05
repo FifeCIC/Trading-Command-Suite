@@ -48,7 +48,7 @@ export const SCORE_STATES = {
  * PAUSED and STALE describe the MARKET at the moment the row was written. Neither can describe
  * the row itself, because both are stamped into the row and then frozen with it.
  *
- * Measured 2026-10-19, `probe-1dir-v1` / EURUSD:
+ * Measured 2026-10-19, `probe-1dir-v1-long` / EURUSD:
  *
  *   • the automation loop ran the protocol every 2 minutes — `lastTickAt` was 81 seconds old
  *   • the single directive returned a real 29/100 measurement and classified itself `neutral`
@@ -313,7 +313,7 @@ export function buildScoreDisplay(raw = {}, options = {}) {
 
   // ── REFUSED EVIDENCE — say what was measured and not counted ────────────────
   //
-  // ⚠️ MEASURED, XAUUSD / `xau-speed-m15`, 2026-10-19 22:41Z: eleven directives ran, two returned
+  // ⚠️ MEASURED, XAUUSD / `xau-speed-m15-long`, 2026-10-19 22:41Z: eleven directives ran, two returned
   // `bearish`, the engine recorded `0 / 910`, and the card read `SIGNAL 0`. The direction split it
   // refused was 80/240 bearish (33%).
   //

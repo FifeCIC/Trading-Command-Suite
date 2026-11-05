@@ -1562,7 +1562,7 @@ export class Sp500RegimeDirective implements IDirective {
    *
    * WHAT:      The reason now says `SPX context (index overlay, NOT the traded symbol): …`, and
    *            the display name carries `(index overlay)`.
-   * WHY:       Sitting in `vix-spike-v1` / `vix-short-v1`, a bare `SP500 regime:` reason read as
+   * WHY:       Sitting in `vix-spike-v1-long` / `vix-spike-v1-short`, a bare `SP500 regime:` reason read as
    *            though the protocol traded SPX. The owner's direction (2026-11-02): protocols must
    *            be obviously purpose-built for THEIR symbol. This directive still MEASURES the S&P
    *            500 — that is correct, VIX is derived from SPX options — but the number belongs to
@@ -1589,8 +1589,8 @@ export class Sp500RegimeDirective implements IDirective {
    * `validate-directive-group-kind.cjs` (INV-GATE-MEMBERSHIP) could not classify this
    * directive and reported it as `⚠ no category — NOT CHECKED` on every build.
    *
-   * It mattered because this directive sits in the `risk` gate of `vix-spike-v1` and
-   * `vix-short-v1`, and the seed documents that deliberately:
+   * It mattered because this directive sits in the `risk` gate of `vix-spike-v1-long` and
+   * `vix-spike-v1-short`, and the seed documents that deliberately:
    *     "Risk gate (SP500 regime) is mandatory."
    * So the PLACEMENT is intended. What was missing was the DECLARATION that makes the
    * intent machine-checkable.
@@ -1602,7 +1602,7 @@ export class Sp500RegimeDirective implements IDirective {
    * (`protocol-gating.service.ts` L689/L749/L763).
    *
    * ⚠️ If this is ever moved OUT of a risk gate, re-read `docs/SETTLED-DECISIONS.md` first —
-   * `vix-short-v1`'s description states the gate is mandatory.
+   * `vix-spike-v1-short`'s description states the gate is mandatory.
    */
   readonly category = 'structural' as const;
 
@@ -1613,7 +1613,7 @@ export class Sp500RegimeDirective implements IDirective {
    * `minBars` is the ONLY thing that tells the caller how many bars to fetch (`getRequiredBars()` →
    * `loadHigherTfBundle()`). So the pipeline supplied whatever the protocol's OTHER directives
    * needed, and this gate reported `Insufficient data: need 200 bars, have 72 — unmeasured` on EVERY
-   * pass in `vix-spike-v1` and `vix-short-v1`, where its own seed calls it a MANDATORY risk gate.
+   * pass in `vix-spike-v1-long` and `vix-spike-v1-short`, where its own seed calls it a MANDATORY risk gate.
    *
    * A requirement that lives only in the method body is a requirement the pipeline cannot honour.
    */

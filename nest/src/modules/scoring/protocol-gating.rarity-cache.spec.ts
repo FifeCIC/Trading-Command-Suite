@@ -6,7 +6,7 @@ import { RARITY_MIN_SAMPLES, rarityPercentile } from './rarity-bands';
  *
  * ⚠️ WHY THIS EXISTS. `computeRarity()` read the protocol's whole 365-day `score_snapshot`
  * distribution on EVERY `scoreWithGating()` call — which is once per bar in a backtest. MEASURED
- * 2026-11-02 on `forex-session-v1`: **118,360 rows / 601 ms per read**, and a 548-bar USDJPY 1h run
+ * 2026-11-02 on `forex-session-v1-long`: **118,360 rows / 601 ms per read**, and a 548-bar USDJPY 1h run
  * spent ~165 s of its 192 s inside 548 reads of a table that cannot change between two bars a second
  * apart. A 1h backtest that should take ~30 s took over three minutes, and the user-visible effect was
  * the Backtesting Protocols view hanging after "Run".
@@ -51,7 +51,7 @@ describe('ProtocolGatingService rarity distribution cache (#1182)', () => {
   it('reads the distribution ONCE for many calls — the property that was wrong', async () => {
     const { svc, reads } = makeService();
 
-    for (let i = 0; i < 548; i++) await rarityOf(svc, 'forex-session-v1', 40);
+    for (let i = 0; i < 548; i++) await rarityOf(svc, 'forex-session-v1-long', 40);
 
     expect(reads).toHaveLength(1);
   });
@@ -64,15 +64,15 @@ describe('ProtocolGatingService rarity distribution cache (#1182)', () => {
       let now = 1_000_000;
       Date.now = () => now;
 
-      await rarityOf(svc, 'forex-session-v1', 40);
+      await rarityOf(svc, 'forex-session-v1-long', 40);
       expect(reads).toHaveLength(1);
 
       now += 59_000; // still inside the 60 s window
-      await rarityOf(svc, 'forex-session-v1', 40);
+      await rarityOf(svc, 'forex-session-v1-long', 40);
       expect(reads).toHaveLength(1);
 
       now += 2_000; // 61 s — expired
-      await rarityOf(svc, 'forex-session-v1', 40);
+      await rarityOf(svc, 'forex-session-v1-long', 40);
       expect(reads).toHaveLength(2);
     } finally {
       Date.now = realNow;
@@ -82,11 +82,11 @@ describe('ProtocolGatingService rarity distribution cache (#1182)', () => {
   it('keys by PROTOCOL, not by symbol — two protocols do not share one distribution', async () => {
     const { svc, reads } = makeService();
 
-    await rarityOf(svc, 'forex-session-v1', 40);
-    await rarityOf(svc, 'xau-speed-v1', 40);
-    await rarityOf(svc, 'forex-session-v1', 40);
+    await rarityOf(svc, 'forex-session-v1-long', 40);
+    await rarityOf(svc, 'xau-speed-v1-long', 40);
+    await rarityOf(svc, 'forex-session-v1-long', 40);
 
-    expect(reads.map(r => r.protocolId)).toEqual(['forex-session-v1', 'xau-speed-v1']);
+    expect(reads.map(r => r.protocolId)).toEqual(['forex-session-v1-long', 'xau-speed-v1-long']);
   });
 
   it('returns the SAME percentile the uncached path would — caching must not move the number', async () => {
@@ -94,9 +94,9 @@ describe('ProtocolGatingService rarity distribution cache (#1182)', () => {
 
     // Three calls: the first populates, the next two are served from the cache. All three must agree
     // with the pure function applied to the same distribution.
-    const first = await rarityOf(svc, 'forex-session-v1', 40);
-    const second = await rarityOf(svc, 'forex-session-v1', 40);
-    const third = await rarityOf(svc, 'forex-session-v1', 12);
+    const first = await rarityOf(svc, 'forex-session-v1-long', 40);
+    const second = await rarityOf(svc, 'forex-session-v1-long', 40);
+    const third = await rarityOf(svc, 'forex-session-v1-long', 12);
 
     expect(first.percentile).toBe(rarityPercentile(DISTRIBUTION, 40));
     expect(second).toEqual(first);
@@ -134,8 +134,8 @@ describe('ProtocolGatingService rarity distribution cache (#1182)', () => {
       },
     };
 
-    expect(await rarityOf(svc, 'forex-session-v1', 40)).toBeUndefined(); // failed read → no rarity
-    const afterRecovery = await rarityOf(svc, 'forex-session-v1', 40);     // must have retried
+    expect(await rarityOf(svc, 'forex-session-v1-long', 40)).toBeUndefined(); // failed read → no rarity
+    const afterRecovery = await rarityOf(svc, 'forex-session-v1-long', 40);     // must have retried
     expect(reads).toHaveLength(2);
     expect(afterRecovery.percentile).toBe(rarityPercentile(DISTRIBUTION, 40));
   });

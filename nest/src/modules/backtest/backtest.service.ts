@@ -672,7 +672,7 @@ export function describeCostDivergence(runs: CostFacts[]): string | null {
 
   // ⚠️ THE RUN ID IS IN THE LABEL, not just protocol@timeframe. Two variants of ONE protocol are
   // the primary use of this page, and they share both of those — the sizes warning already reads
-  // "xau-speed-m15 @15m, xau-speed-m15 @15m" for exactly that reason, which names nothing.
+  // "xau-speed-m15-long @15m, xau-speed-m15-long @15m" for exactly that reason, which names nothing.
   const labelled = (r: CostFacts) => `${r.protocolId} @${r.timeframe} [${String(r.id).slice(0, 8)}]`;
   const unrecorded = runs.filter((r) => !r.costs.recorded);
 
@@ -1979,7 +1979,7 @@ export class BacktestService {
     //            resulting `profitFactor` is NULL rather than a fabricated number.
     // WHY:       `|| 1` made `profitFactor` equal `grossProfit` whenever nothing lost — an
     //            arbitrary denominator dressed as a ratio. Measured 2026-11-02 during an A/B of
-    //            stop plans: `btc-speed-v1` carried a stored profit factor of **956.87**, which is
+    //            stop plans: `btc-speed-v1-long` carried a stored profit factor of **956.87**, which is
     //            not a profit factor at all and cannot be compared with 1.4. NULL says "no losing
     //            sample", which is the true statement, and matches the rule the same file applies
     //            to `tradeWinRate` (#1021) and `maxReturn10d` (#1134).
@@ -2276,7 +2276,7 @@ export class BacktestService {
             totalPnl: Number(totalPnl.toFixed(4)),
             // ⚠️ NULL, not a fabricated ratio — see the DECISION at the computation site. A stored
             // run with no losing signal used to carry `grossProfit / 1`, which read as a profit
-            // factor of 956.87 on `btc-speed-v1` and is not comparable with 1.4.
+            // factor of 956.87 on `btc-speed-v1-long` and is not comparable with 1.4.
             profitFactor: signalProfitFactor === null ? null : Number(signalProfitFactor.toFixed(4)),
             // Trade-based, so a stored run can be compared on its exits. Not yet a column on
             // `backtestrun` (the fresh-run response carries it); recorded as the follow-up in
@@ -3010,8 +3010,8 @@ export class BacktestService {
    *
    * ⚠️ #965 ITEM 1 — THE SAMPLE BAR. Measured 2026-09-23, before this change:
    *
-   *     xau-speed-m15   totalTrades: 3   winRate: 100   sharpeRatio: 42.31
-   *     xau-speed-m5    totalTrades: 0   winRate: 0
+   *     xau-speed-m15-long   totalTrades: 3   winRate: 100   sharpeRatio: 42.31
+   *     xau-speed-m5-long    totalTrades: 0   winRate: 0
    *     best: { id: <m15>, metric: "sharpeRatio", value: 42.31 }
    *
    * A winner on THREE trades was served identically to one from three hundred. The live snapshot
@@ -3259,7 +3259,7 @@ export class BacktestService {
         .filter((f) => f.botBaseSize === null)
         // ⚠️ THE RUN ID BELONGS IN THE LABEL. Two variants of ONE protocol are this page's primary
         // comparison, and `protocolId @timeframe` is identical for both — measured 2026-10-26, a real
-        // comparison printed "spy-speed-v1 @1h, spy-speed-v1 @1h", which names neither side.
+        // comparison printed "spy-speed-v1-long @1h, spy-speed-v1-long @1h", which names neither side.
         .map((f) => `${f.protocolId} @${f.timeframe} [${String(f.id).slice(0, 8)}]`);
       if (unknown.length > 0) {
         return (
@@ -3936,7 +3936,7 @@ export class BacktestService {
      * Live scoring has always passed it — `speed-scan.service.ts` sends `loadedTimeframe` as
      * `scoreWithGating()`'s 6th argument. The backtest passed five arguments, so every historical bar
      * was scored with `input.timeframe === undefined` while the live tick was scored with the real
-     * cadence. MEASURED consequence: `spy-day-v1` on SPY peaked at **28.7** in a backtest at BOTH 5m
+     * cadence. MEASURED consequence: `spy-day-v1-long` on SPY peaked at **28.7** in a backtest at BOTH 5m
      * and 1h, against **92.9** in the live `score_snapshot` for the same protocol and symbol — so a
      * backtest could not reproduce a score the live system actually produces, which is precisely what
      * a backtest is for.

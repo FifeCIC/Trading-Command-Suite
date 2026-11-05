@@ -26,7 +26,7 @@
  *   node scripts/measure-label-basis-outcomes.cjs [--horizons=1,4,24] [--self-test]
  *
  * ⚠️⚠️ AN AGGREGATE HIT RATE OVER THIS DATA IS MOSTLY ONE PROTOCOL. Measured 2026-10-22: of 121
- * directional calls, **99 came from `probe-1dir-v1`** — an isolated single-directive probe — and only
+ * directional calls, **99 came from `probe-1dir-v1-long`** — an isolated single-directive probe — and only
  * 22 from real protocols. The first run of this script reported "62.8% hit rate" as if it described
  * the engine; it described a probe. A per-protocol split is printed for exactly this reason and warns
  * when one protocol supplies more than half the calls. Do not quote the aggregate without it.

@@ -10,7 +10,7 @@ import { PrismaService } from '../../database/prisma.service';
  * 2026-09-27 for XAUUSD: `symbol_protocol_assignment` said 2 protocols, the bots said 8, the
  * linked watchlists said 3, `GET /:ticker/protocols` said **0** (it read a legacy `strategy`
  * table that has nothing to do with any of the others), and `decision_log` showed a protocol
- * (`gold-macro-v1`) that appears in none of them. A symbol could therefore be *assigned but not
+ * (`gold-macro-v1-long`) that appears in none of them. A symbol could therefore be *assigned but not
  * traded*, *traded but not assigned*, or *scored by neither* — and every consumer picked a
  * different mechanism, so two screens disagreed about the same symbol and neither looked wrong.
  *
@@ -241,7 +241,7 @@ export class SymbolProtocolAuthorityService {
 
     // ── rank 4 — EVIDENCE: a score snapshot proves this protocol actually scored this symbol.
     //    This is the only source that records what HAPPENED rather than what was configured,
-    //    which is why it can catch `gold-macro-v1` — a protocol in no table for XAUUSD that was
+    //    which is why it can catch `gold-macro-v1-long` — a protocol in no table for XAUUSD that was
     //    nonetheless scoring and trading it. ⚠️ `score_snapshot.protocolId` holds a SLUG. ──
     await runSource('observed', async () => {
       const rows: any[] = await (this.prisma as any).scoreSnapshot.findMany({
@@ -278,7 +278,7 @@ export class SymbolProtocolAuthorityService {
    *
    * Kept separate because it is the actionable subset: an `assignment`-backed protocol is
    * intended, while an `observed`-only one is a protocol scoring a symbol that no configuration
-   * links to it. That is `gold-macro-v1`'s exact shape, and it deserves to be nameable.
+   * links to it. That is `gold-macro-v1-long`'s exact shape, and it deserves to be nameable.
    */
   async observedOnly(ticker: string): Promise<string[]> {
     const { protocols } = await this.resolve(ticker);

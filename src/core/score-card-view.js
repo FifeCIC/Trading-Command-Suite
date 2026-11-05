@@ -77,8 +77,8 @@ export function stateClass(vm) {
 /**
  * familyOf(protocolId) — the protocol identity with its VARIANT stripped.
  *
- * A scoring run records the protocol that produced it (`xau-speed-v1`,
- * `xau-speed-m5`, …) but a card is labelled with the protocol the user selected,
+ * A scoring run records the protocol that produced it (`xau-speed-v1-long`,
+ * `xau-speed-m5-long`, …) but a card is labelled with the protocol the user selected,
  * which may be the family name. Matching on the raw id would leave the card
  * blank whenever a variant ran but the family was selected; stripping the
  * version and timeframe suffix means the card can find its score whichever name
@@ -87,8 +87,8 @@ export function stateClass(vm) {
 export function familyOf(protocolId) {
   return String(protocolId || '')
     .toLowerCase()
-    .replace(/-v\d+$/, '')                    // xau-speed-v1   -> xau-speed
-    .replace(/-(m1|m5|m15|m30|h1|h4|d1|w1|mn1|\d+[mhd])$/, ''); // xau-speed-m5 -> xau-speed
+    .replace(/-v\d+$/, '')                    // xau-speed-v1-long   -> xau-speed
+    .replace(/-(m1|m5|m15|m30|h1|h4|d1|w1|mn1|\d+[mhd])$/, ''); // xau-speed-m5-long -> xau-speed
 }
 
 /**

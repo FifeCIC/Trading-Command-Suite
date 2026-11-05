@@ -4,7 +4,7 @@
  * Run with: `node --test src/core/score-display.test.js` (and in `prebuild`).
  *
  * ⚠️ THE DEFECT THESE TESTS PIN (measured 2026-09-10 on /scoring/live-ordering-stack):
- * `spy-day-v1` / `qqq-day-v1` cards read MARKET CLOSED while `xau-speed-*` read STALE — all with
+ * `spy-day-v1-long` / `qqq-day-v1-long` cards read MARKET CLOSED while `xau-speed-*` read STALE — all with
  * `open:false`. The label came from DATA FRESHNESS folded into the market question, so:
  *   1. a closed market could render as `STALE` — making a genuine feed failure (open + behind)
  *      look like a quiet Sunday;
@@ -84,7 +84,7 @@ test('the tooltip surfaces the SERVER’s reason, and names the alarming state p
 // ── EXPIRED — the third axis: is this row still being REPLACED? ──────────────────────────────
 //
 // ⚠️ THE DEFECT THESE PIN (measured 2026-10-19 on /scoring/live-ordering-stack):
-// EURUSD / `probe-1dir-v1` held a `STRONG_BUY` 60/100 dated 16 Oct and rendered **Live** for two
+// EURUSD / `probe-1dir-v1-long` held a `STRONG_BUY` 60/100 dated 16 Oct and rendered **Live** for two
 // days while ranked ABOVE every live score. The protocol was being run every 2 minutes on fresh
 // bars; its single directive returned 29/100 and classified itself `neutral`, and a neutral tick
 // writes no row. So the newest row stayed 2 days old, still carrying the
@@ -144,7 +144,7 @@ test('no age supplied means NO AGE RULE — legacy callers are unchanged', () =>
 
 // ── REFUSED EVIDENCE — a zero that excludes a real measurement must say so ───────────────────
 //
-// ⚠️ MEASURED, XAUUSD / `xau-speed-m15`, 2026-10-19 22:41Z, directionMode LONG_ONLY:
+// ⚠️ MEASURED, XAUUSD / `xau-speed-m15-long`, 2026-10-19 22:41Z, directionMode LONG_ONLY:
 //   eleven directives ran · `gold-round-numbers` 15/25 bearish · `support-resistance-levels` 8/95
 //   bearish · nine neutral · persisted as `signal NO_READING, rawComposite 0, rawMax 910`
 // A live re-score reported the refused split as `bearishRaw 80, bearishMax 240` (33%).

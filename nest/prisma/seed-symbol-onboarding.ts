@@ -60,12 +60,12 @@ const SYMBOLS: Array<{ ticker: string; name: string; type: string; exchange?: st
   { ticker: 'GER40', name: 'DAX 40 Index', type: 'index' },
   { ticker: 'FRA40', name: 'CAC 40 Index', type: 'index' },
   // USTEC — added 2026-10-12, owner-approved onboarding of the three unsubscribed ladder
-  // protocols. The `symbol` row and its `qqq-speed-v1` assignment ALREADY existed in the
+  // protocols. The `symbol` row and its `qqq-speed-v1-long` assignment ALREADY existed in the
   // database (scoring worked), but with no entry here a reinstall would lose the row and the
   // instrument would silently become unscorable — the exact class recorded for VIX, XAGUSD
   // and the USD majors above.
   { ticker: 'USTEC', name: 'NASDAQ 100 Index', type: 'index' },
-  // Silver — added 2026-09-10. XAGUSD was already ASSIGNED to xau-speed-v1 but had
+  // Silver — added 2026-09-10. XAGUSD was already ASSIGNED to xau-speed-v1-long but had
   // no `symbol` row, so it rendered a permanent "Not scored" ladder card and could
   // never be scored. Both MT5 bridges price it live. The `symbol` row is the
   // precondition for every other reference to it.
@@ -74,10 +74,10 @@ const SYMBOLS: Array<{ ticker: string; name: string; type: string; exchange?: st
   // `symbol_route`, so no broker could price it. It is the app's only tradable
   // short instrument, which made the short-side path untestable.
   { ticker: 'VIX', name: 'CBOE Volatility Index', type: 'index' },
-  // ── FX crosses for the forex-session-v1 session pairs (2026-09-15) ──────────
+  // ── FX crosses for the forex-session-v1-long session pairs (2026-09-15) ──────────
   //
   // Eight bots exist for these pairs (`… Session`, active:false) but their SYMBOLS WERE
-  // NEVER REGISTERED — so `forex-session-v1` could not resolve them, no bars were ever
+  // NEVER REGISTERED — so `forex-session-v1-long` could not resolve them, no bars were ever
   // fetched, and the bots could not have traded even if enabled. Registering the symbol is
   // the precondition for every other reference to it (the same lesson as XAGUSD above).
   //
@@ -270,59 +270,59 @@ const ROUTES: Array<{ symbol: string; brokerId: number; note: string; provider?:
 // they need their own seeder, not an entry here.
 
 const ASSIGNMENTS: Array<{ symbol: string; protocolSlug: string; priority?: number }> = [
-  { symbol: 'UK100', protocolSlug: 'ftse-speed-v1' },
-  { symbol: 'GER40', protocolSlug: 'dax-speed-v1' },
-  { symbol: 'FRA40', protocolSlug: 'cac-speed-v1' },
-  { symbol: 'XAGUSD', protocolSlug: 'xau-speed-v1' },
+  { symbol: 'UK100', protocolSlug: 'ftse-speed-v1-long' },
+  { symbol: 'GER40', protocolSlug: 'dax-speed-v1-long' },
+  { symbol: 'FRA40', protocolSlug: 'cac-speed-v1-long' },
+  { symbol: 'XAGUSD', protocolSlug: 'xau-speed-v1-long' },
   // FX crosses (2026-09-15) — path 0 of the resolution chain in
   // docs/guides/symbol-onboarding-procedure.md (a real FK, not name guessing --
   // INV-NO-SYMBOL-GUESSING). Assignment is ALSO what puts a symbol into the
   // bar-refresh set: that feature resolves ['positions','active-strategies',
   // 'forex-floor','protocol-symbols'], and `protocol-symbols` IS this table.
-  { symbol: 'AUDJPY', protocolSlug: 'forex-session-v1' },
-  { symbol: 'EURCAD', protocolSlug: 'forex-session-v1' },
-  { symbol: 'EURCHF', protocolSlug: 'forex-session-v1' },
-  { symbol: 'EURGBP', protocolSlug: 'forex-session-v1' },
-  { symbol: 'EURJPY', protocolSlug: 'forex-session-v1' },
-  { symbol: 'GBPCAD', protocolSlug: 'forex-session-v1' },
-  { symbol: 'GBPJPY', protocolSlug: 'forex-session-v1' },
-  { symbol: 'NZDJPY', protocolSlug: 'forex-session-v1' },
+  { symbol: 'AUDJPY', protocolSlug: 'forex-session-v1-long' },
+  { symbol: 'EURCAD', protocolSlug: 'forex-session-v1-long' },
+  { symbol: 'EURCHF', protocolSlug: 'forex-session-v1-long' },
+  { symbol: 'EURGBP', protocolSlug: 'forex-session-v1-long' },
+  { symbol: 'EURJPY', protocolSlug: 'forex-session-v1-long' },
+  { symbol: 'GBPCAD', protocolSlug: 'forex-session-v1-long' },
+  { symbol: 'GBPJPY', protocolSlug: 'forex-session-v1-long' },
+  { symbol: 'NZDJPY', protocolSlug: 'forex-session-v1-long' },
   // USD majors (2026-09-22) — see the block in SYMBOLS above. These were the five/six that
   // went silent on 2026-09-15.
   //
-  // ⚠️ `forex-session-v1` for ALL of them, deliberately — including USDCAD, whose hardcoded
-  // entry in `speed-scan.service.ts` says `usdcad-oil-v1`. That protocol is **active=0**, so
+  // ⚠️ `forex-session-v1-long` for ALL of them, deliberately — including USDCAD, whose hardcoded
+  // entry in `speed-scan.service.ts` says `usdcad-oil-v1-long`. That protocol is **active=0**, so
   // following it would re-point the assignment at a disabled protocol and leave the symbol
   // exactly as silent as it is now. The rule applied here: the assignment must name the same
   // protocol the SYMBOL'S BOT subscribes to (`strategy_protocol`), or the bot waits for a
   // signal from a protocol that is not the one scoring its symbol. Every one of these bots
-  // subscribes to `forex-session-v1`.
-  { symbol: 'AUDUSD', protocolSlug: 'forex-session-v1' },
-  { symbol: 'EURUSD', protocolSlug: 'forex-session-v1' },
-  { symbol: 'GBPUSD', protocolSlug: 'forex-session-v1' },
-  { symbol: 'USDCAD', protocolSlug: 'forex-session-v1' },
-  { symbol: 'USDCHF', protocolSlug: 'forex-session-v1' },
-  { symbol: 'USDJPY', protocolSlug: 'forex-session-v1' },
-  { symbol: 'NZDUSD', protocolSlug: 'forex-session-v1' },
+  // subscribes to `forex-session-v1-long`.
+  { symbol: 'AUDUSD', protocolSlug: 'forex-session-v1-long' },
+  { symbol: 'EURUSD', protocolSlug: 'forex-session-v1-long' },
+  { symbol: 'GBPUSD', protocolSlug: 'forex-session-v1-long' },
+  { symbol: 'USDCAD', protocolSlug: 'forex-session-v1-long' },
+  { symbol: 'USDCHF', protocolSlug: 'forex-session-v1-long' },
+  { symbol: 'USDJPY', protocolSlug: 'forex-session-v1-long' },
+  { symbol: 'NZDUSD', protocolSlug: 'forex-session-v1-long' },
   // ── The seven protocols whose assignments existed ONLY in the database (#1137) ──
   // Measured 2026-10-25: 12 protocols had `symbol_protocol_assignment` rows and only 5 were
   // declared here, so a reinstall would have silently un-wired seven protocols that are wired
   // today. The rows were copied DB → seed (the only sanctioned direction for a value that has
   // no seed path) and round-tripped: delete one, re-seed, it returns.
-  // ⚠️ `dow-speed-v1` and `btc-scalp-v1` matter most — `dow-index.json` already declares the
-  // FK to `dow-speed-v1`, so the watchlist link and the assignment must not disagree about
+  // ⚠️ `dow-speed-v1-long` and `btc-scalp-v1-long` matter most — `dow-index.json` already declares the
+  // FK to `dow-speed-v1-long`, so the watchlist link and the assignment must not disagree about
   // which protocol scores US30.
-  { symbol: 'US30', protocolSlug: 'dow-speed-v1' },
-  { symbol: 'BTC', protocolSlug: 'btc-scalp-v1' },
-  { symbol: 'ETH', protocolSlug: 'btc-scalp-v1' },
-  { symbol: 'SOL', protocolSlug: 'btc-scalp-v1' },
-  { symbol: 'WTI', protocolSlug: 'oil-speed-v1' },
-  { symbol: 'QQQ', protocolSlug: 'qqq-speed-v1' },
-  { symbol: 'USTEC', protocolSlug: 'qqq-speed-v1' },
-  { symbol: 'SPY', protocolSlug: 'spy-speed-v1' },
-  { symbol: 'US500', protocolSlug: 'spy-speed-v1' },
-  { symbol: 'XAGUSD', protocolSlug: 'probe-1dir-rsi' },
-  { symbol: 'EURUSD', protocolSlug: 'probe-1dir-v1' },
+  { symbol: 'US30', protocolSlug: 'dow-speed-v1-long' },
+  { symbol: 'BTC', protocolSlug: 'btc-scalp-v1-long' },
+  { symbol: 'ETH', protocolSlug: 'btc-scalp-v1-long' },
+  { symbol: 'SOL', protocolSlug: 'btc-scalp-v1-long' },
+  { symbol: 'WTI', protocolSlug: 'oil-speed-v1-long' },
+  { symbol: 'QQQ', protocolSlug: 'qqq-speed-v1-long' },
+  { symbol: 'USTEC', protocolSlug: 'qqq-speed-v1-long' },
+  { symbol: 'SPY', protocolSlug: 'spy-speed-v1-long' },
+  { symbol: 'US500', protocolSlug: 'spy-speed-v1-long' },
+  { symbol: 'XAGUSD', protocolSlug: 'probe-1dir-rsi-long' },
+  { symbol: 'EURUSD', protocolSlug: 'probe-1dir-v1-long' },
 
   // ── XAUUSD: two protocols, priorities made EXPLICIT (#1181) ──
   //
@@ -333,11 +333,11 @@ const ASSIGNMENTS: Array<{ symbol: string; protocolSlug: string; priority?: numb
   // DECISIVE tie in the database, and it is decisive in the sense that matters: the resolver prefers
   // an ACTIVE row, both are active, so the answer fell through to alphabetical luck.
   //
-  // Measured 2026-11-03 (7-day snapshot counts): `xau-speed-v1` 7,980 · `xau-short-m15` 39. The
+  // Measured 2026-11-03 (7-day snapshot counts): `xau-speed-v1-long` 7,980 · `xau-speed-m15-short` 39. The
   // long/xau protocol is what actually reports on gold, so it takes 0 and the short variant is
   // reachable at 1.
-  { symbol: 'XAUUSD', protocolSlug: 'xau-speed-v1', priority: 0 },
-  { symbol: 'XAUUSD', protocolSlug: 'xau-short-m15', priority: 1 },
+  { symbol: 'XAUUSD', protocolSlug: 'xau-speed-v1-long', priority: 0 },
+  { symbol: 'XAUUSD', protocolSlug: 'xau-speed-m15-short', priority: 1 },
 
   // ── PAIRED LEGS: the SHORT half of each shipped strategy (#1185) ──  //
   // A paired bot subscribes to TWO protocols on ONE symbol — a LONG leg and a SHORT leg — and
@@ -355,7 +355,7 @@ const ASSIGNMENTS: Array<{ symbol: string; protocolSlug: string; priority?: numb
   // `priority: 2`, not 0 or 1. `symbol_protocol_assignment` is unique on `(symbol, protocolId)`,
   // NOT on `(symbol, priority)`, so a leg placed at a level already in use creates a fresh priority
   // TIE — the ambiguity #1181 settled. `npm --prefix nest run db:symbol-priority-ties` reported
-  // XAGUSD as a LATENT tie at 1 (`probe-1dir-rsi` | `xau-speed-v1-short`) when this said 1, so the
+  // XAGUSD as a LATENT tie at 1 (`probe-1dir-rsi-long` | `xau-speed-v1-short`) when this said 1, so the
   // level is chosen per symbol from what the reporter shows, not guessed.
   { symbol: 'XAGUSD', protocolSlug: 'xau-speed-v1-short', priority: 2 },
   { symbol: 'NVDA', protocolSlug: 'momentum-stock-v1-short', priority: 1 },
@@ -367,8 +367,8 @@ const ASSIGNMENTS: Array<{ symbol: string; protocolSlug: string; priority?: numb
   // ⚠️ GRML IS DELIBERATELY NOT ASSIGNED, and this is a decision rather than an omission.
   //
   // The assignment decides which PROTOCOL scores the symbol. There are 21 active protocols
-  // and **not one is suited to a US small-cap equity** — the stock-ish ones (`spy-speed-v1`,
-  // `spy-day-v1`, `qqq-speed-v1`, `qqq-day-v1`) are built for index ETFs, and their
+  // and **not one is suited to a US small-cap equity** — the stock-ish ones (`spy-speed-v1-long`,
+  // `spy-day-v1-long`, `qqq-speed-v1-long`, `qqq-day-v1-long`) are built for index ETFs, and their
   // directives would run against a microcap that shares none of an index's behaviour.
   //
   // Assigning one anyway would produce the exact defect this repo keeps re-finding: a

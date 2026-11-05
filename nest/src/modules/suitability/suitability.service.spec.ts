@@ -71,10 +71,10 @@ describe('SuitabilityService', () => {
 
   describe('inferProtocolSymbolTypes', () => {
     it('recognises forex from slug', () => {
-      expect(svc.inferProtocolSymbolTypes({ slug: 'forex-session-v1' })).toContain('forex');
+      expect(svc.inferProtocolSymbolTypes({ slug: 'forex-session-v1-long' })).toContain('forex');
     });
     it('recognises gold as commodity', () => {
-      expect(svc.inferProtocolSymbolTypes({ slug: 'gold-macro-v1' })).toContain('commodity');
+      expect(svc.inferProtocolSymbolTypes({ slug: 'gold-macro-v1-long' })).toContain('commodity');
     });
     it('returns empty when unsure', () => {
       expect(svc.inferProtocolSymbolTypes({ slug: 'mystery-protocol' })).toEqual([]);

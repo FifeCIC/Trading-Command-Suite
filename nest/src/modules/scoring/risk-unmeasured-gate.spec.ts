@@ -17,11 +17,11 @@ import { RiskGatingEngine } from './risk-gating-engine.service';
  *
  * MEASURED BLAST RADIUS (45-minute window, before the fix)
  * -------------------------------------------------------
- *   xau-speed-v1  12 of 22 ticks hard-gated
- *   spy-day-v1    11 of 11  (never once scored non-zero liquidity)
- *   qqq-day-v1    11 of 11
- *   qqq-speed-v1  10 of 11
- *   spy-speed-v1   7 of 7
+ *   xau-speed-v1-long  12 of 22 ticks hard-gated
+ *   spy-day-v1-long    11 of 11  (never once scored non-zero liquidity)
+ *   qqq-day-v1-long    11 of 11
+ *   qqq-speed-v1-long  10 of 11
+ *   spy-speed-v1-long   7 of 7
  *
  * The same symbol alternated between "highly liquid ... 94/100" and
  * "Market closed ... stale" seconds apart.

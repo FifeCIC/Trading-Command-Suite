@@ -84,7 +84,7 @@ export interface RecentlyAnalysedSymbol {
  *   1. `protocol-gating`   — the full pipeline result. breakdown carries
  *                            `rawMax`, `rawComposite`, `marketStatus`,
  *                            `denominatorMode`, `readinessGate` — 21 keys.
- *   2. `signals-workbench` — `SignalEnvelopeService.persistScores()`. Same
+ *   2. `signals-workbench-long` — `SignalEnvelopeService.persistScores()`. Same
  *                            `value`, but a thin 8-key breakdown: no `rawMax`,
  *                            no `marketStatus`. It lands ~0.2–4.5s AFTER the
  *                            gating row (measured: 233 rich vs 208 thin rows in
@@ -405,10 +405,10 @@ export class ScoreHistoryService {
     // WHY THIS IS NOT A SIMPLE findMany + slice. A "run" is a group of Score rows
     // bucketed to the minute, so the *number of runs* a protocol emits per tick is
     // its symbol count. A global `orderBy timestamp desc, take: 10000` therefore
-    // spends its budget on the busiest protocol: forex-session-v1 writes 7 symbols
+    // spends its budget on the busiest protocol: forex-session-v1-long writes 7 symbols
     // a tick (~420 rows), so 10k rows covered only ~24 minutes, and by the time the
-    // page was sliced (limit=200) the low-volume protocols — spy-speed-v1, vix-spike-v1,
-    // qqq-speed-v1 — had already fallen off the end. Their scores were in the DB and
+    // page was sliced (limit=200) the low-volume protocols — spy-speed-v1-long, vix-spike-v1-long,
+    // qqq-speed-v1-long — had already fallen off the end. Their scores were in the DB and
     // simply never reached the API, which is why those Ladder cards looked broken.
     //
     // So: first find WHEN each protocol last scored (cheap — a handful of strings,
@@ -440,7 +440,7 @@ export class ScoreHistoryService {
     // one a reader investigates — fell outside that window and the endpoint returned
     // `{ runs: [], total: 0 }` while its rows sat in the database.
     //
-    // MEASURED 2026-10-19: `search=EURUSD&strategyId=probe-1dir-v1` returned `total: 0` and that
+    // MEASURED 2026-10-19: `search=EURUSD&strategyId=probe-1dir-v1-long` returned `total: 0` and that
     // empty result was read as "the Oct 16 row no longer exists". It existed the whole time. A
     // filter applied to one half of a two-step query is the same defect as no filter.
     const latestWhere: string[] = ['timestamp >= ?'];
@@ -597,7 +597,7 @@ export class ScoreHistoryService {
             opportunityMax: (e as any).breakdown?.opportunityMax ?? null,
             marketStatus: (e as any).breakdown?.marketStatus ?? null,
             // The pre-filter direction split. `rawComposite: 0` is only readable next to this:
-            // XAUUSD/`xau-speed-m15` measured 80/240 bearish (33%) and persists as 0/910 purely
+            // XAUUSD/`xau-speed-m15-long` measured 80/240 bearish (33%) and persists as 0/910 purely
             // because the protocol is LONG_ONLY. Without this field the card cannot distinguish
             // "nothing was measured" from "everything was measured and the answer was refused".
             directionalEvidence: (e as any).breakdown?.directionalEvidence ?? null,

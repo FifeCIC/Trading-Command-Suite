@@ -639,8 +639,8 @@ export class ScoringService implements OnModuleInit {
     // This header previously carried a flat `100`, which matched nothing: DB-read rows span
     // MULTIPLE protocols with different capacities, and `score` (composite) has no denominator
     // on this payload at all. MEASURED 2026-10-10: `signalPct` = signalRaw / configured
-    // DIRECTIONAL capacity (xau-speed-v1: 10/910 = 1.0989%) while `composite` is a broader raw
-    // sum (BTC btc-scalp-v1: composite 30 but its stored signalPct 3.21951% implies signalRaw
+    // DIRECTIONAL capacity (xau-speed-v1-long: 10/910 = 1.0989%) while `composite` is a broader raw
+    // sum (BTC btc-scalp-v1-long: composite 30 but its stored signalPct 3.21951% implies signalRaw
     // 33 over capacity 1025). The real percentage is on each row as `normalizedScore`; nothing
     // pairs with `score`, so no denominator is fabricated here.
     const base = {

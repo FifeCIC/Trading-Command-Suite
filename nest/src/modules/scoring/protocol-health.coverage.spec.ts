@@ -19,13 +19,13 @@ const base = (over: Partial<CoveragePayload> = {}): CoveragePayload => ({
 describe('formatCoverageWarning', () => {
   it('names the bot when a protocol never declares its own symbol (the #970 instance)', () => {
     const out = formatCoverageWarning(base({
-      failures: [{ bot: 'US SPY Speed', symbol: 'US500', protocol: 'spy-speed-v1', set: ['SPY'] }],
+      failures: [{ bot: 'US SPY Speed', symbol: 'US500', protocol: 'spy-speed-v1-long', set: ['SPY'] }],
       covered: 37,
     }));
     expect(out).toContain('1 bot(s)');
     expect(out).toContain('US SPY Speed');
     expect(out).toContain('US500');
-    expect(out).toContain('spy-speed-v1');
+    expect(out).toContain('spy-speed-v1-long');
     expect(out).toContain('SPY');
   });
 
@@ -48,7 +48,7 @@ describe('formatCoverageWarning', () => {
   it('returns null when bots merely COULD NOT BE JUDGED', () => {
     const out = formatCoverageWarning(base({
       covered: 38,
-      cannotJudge: [{ bot: 'London EURUSD Macro', symbol: 'EURUSD', protocol: 'eurusd-macro-v1' }],
+      cannotJudge: [{ bot: 'London EURUSD Macro', symbol: 'EURUSD', protocol: 'eurusd-macro-v1-long' }],
     }));
     expect(out).toBeNull();
   });

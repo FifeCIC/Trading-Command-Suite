@@ -35,7 +35,7 @@ describe('MetaStackVersioningService.cloneSnapshotWithChanges (#929)', () => {
   const base = () => ({
     id: 'snap-base',
     version: '1.0.0',
-    snapshot: { name: 'US SPX500 Day', protocolId: 'spy-day-v1', tradeThreshold: BOT_BAR_DEFAULT, weightStrategy: 'group-weighted', slPct: 1 },
+    snapshot: { name: 'US SPX500 Day', protocolId: 'spy-day-v1-long', tradeThreshold: BOT_BAR_DEFAULT, weightStrategy: 'group-weighted', slPct: 1 },
   });
 
   it('creates a bumped variant and names the changed keys in the change log', async () => {
@@ -48,7 +48,7 @@ describe('MetaStackVersioningService.cloneSnapshotWithChanges (#929)', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           version: '1.0.1',
-          snapshot: expect.objectContaining({ tradeThreshold: BOT_BAR_DEFAULT + 5, protocolId: 'spy-day-v1' }),
+          snapshot: expect.objectContaining({ tradeThreshold: BOT_BAR_DEFAULT + 5, protocolId: 'spy-day-v1-long' }),
         }),
       }),
     );

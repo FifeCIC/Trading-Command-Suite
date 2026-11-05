@@ -50,7 +50,7 @@ async function ratingFor(tradeRows: { pnl: number; openedAt: Date }[]): Promise<
   const rating = await service.computeMetaStackRating(
     'ss-guard',
     'Guard Stack',
-    'probe-1dir-v1',
+    'probe-1dir-v1-long',
     'Guard Watchlist',
     '2',
     null,

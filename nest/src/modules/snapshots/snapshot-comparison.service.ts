@@ -115,11 +115,11 @@ export class SnapshotComparisonService {
 
     // Seasonality shift
     const seasonalityA = this.seasonality.getMultiplier(
-      protocolId || 'spy-day-v1',
+      protocolId || 'spy-day-v1-long',
       new Date(dateA),
     );
     const seasonalityB = this.seasonality.getMultiplier(
-      protocolId || 'spy-day-v1',
+      protocolId || 'spy-day-v1-long',
       new Date(dateB),
     );
     const seasonalityShift =
@@ -226,7 +226,7 @@ export class SnapshotComparisonService {
               risk: gated.subScores?.risk ?? 50,
             },
             seasonalityMultiplier: this.seasonality.getMultiplier(
-              protocolId || 'spy-day-v1',
+              protocolId || 'spy-day-v1-long',
               targetDate,
             ),
           };
@@ -252,7 +252,7 @@ export class SnapshotComparisonService {
               breakouts,
               subScores: { technical: 50, sentiment: 50, risk: 50 },
               seasonalityMultiplier: this.seasonality.getMultiplier(
-                protocolId || 'spy-day-v1',
+                protocolId || 'spy-day-v1-long',
                 targetDate,
               ),
             };

@@ -336,7 +336,7 @@ function BotOutcomeCard({ o }) {
  * ⚠️ AND THE SYMBOL MAY HAVE SEVERAL PROTOCOLS — IT USUALLY DOES.
  * `/api/signals/envelope/:symbol` REFUSES to run unscoped (400 TCS-SYS-002, "Pass a protocol"),
  * so a single score was never available and is not a meaningful question. XAUUSD scores under
- * FIVE protocols at once (xau-speed-v1, -1h, -4h, -m5, -m15); picking one would attribute a real
+ * FIVE protocols at once (xau-speed-v1-long, -1h, -4h, -m5, -m15); picking one would attribute a real
  * number to a protocol the user did not ask about. So: one score per protocol, each LABELLED with
  * the protocol it came from (#921, #925, #926).
  */
@@ -842,7 +842,7 @@ export default function SymbolPage() {
       {/* ── Charts ── inline SVG/CSS, no chart library (ui-standards: SVG <100 nodes) ── */}
       <div className="sym-charts">
         {/* Directive evidence — the one place on this page carrying real spread when the protocol
-            composite reads NO_DATA. XAUUSD's xau-speed-1h groups all sit at exactly 50, but its
+            composite reads NO_DATA. XAUUSD's xau-speed-1h-long groups all sit at exactly 50, but its
             directives range 22-100, so the detail is where the information is. */}
         {evidenceRows.length > 0 && (
           <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.105 }}>
@@ -871,7 +871,7 @@ export default function SymbolPage() {
         <motion.section className="sym-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.11 }}>
           <h2>Protocol Strength</h2>
           {/* ⚠️ The bar is `signalPct`, NOT `composite`.
-              Measured 2026-09-21: gold-macro-v1 returns composite=99 with maxPossible=795, and the
+              Measured 2026-09-21: gold-macro-v1-long returns composite=99 with maxPossible=795, and the
               four xau-speed-* protocols return composite=0 with maxPossible=0. `composite` is a SUM
               of directive scores, so using it as a 0-100 bar width would have drawn 99 as a
               near-full bar when it is 12% of capacity — wrong by ~8x. `signalPct` is already the

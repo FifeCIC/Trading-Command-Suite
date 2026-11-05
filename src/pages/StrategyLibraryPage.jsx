@@ -60,7 +60,7 @@ const READINESS_STYLES = {
  * ⚠️ WHICH BOT IS READ, and why it is not "the first active one": the claims resolve against
  * bots whose `protocolId` equals THIS entry's `tcsProtocol`. Two library entries can name the
  * same protocol (`forex-session-trading` and `forex-session-cable` both name
- * `forex-session-v1`), so they will legitimately show identical live values. That is a
+ * `forex-session-v1-long`), so they will legitimately show identical live values. That is a
  * property of the current model, not a bug in this component — see the sprint record.
  */
 function StrategyDecisionPath({ strategy, bots, botsNotice, directives }) {

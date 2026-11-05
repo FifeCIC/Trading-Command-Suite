@@ -32,7 +32,7 @@ const os = require('node:os');
 
 const URL_UNDER_TEST = process.env.MSE_URL || 'http://localhost:5173/status/meta-stack-explorer';
 const PORT = Number(process.env.MSE_CDP_PORT || 9337);
-const PROTOCOL_HINT = process.env.MSE_PROTOCOL || 'xau-speed-m15';
+const PROTOCOL_HINT = process.env.MSE_PROTOCOL || 'xau-speed-m15-long';
 
 /** Rows that must exist once a protocol is selected. Each entry fails the run when absent. */
 const REQUIRED_ROWS = [

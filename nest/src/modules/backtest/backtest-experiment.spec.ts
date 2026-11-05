@@ -85,13 +85,13 @@ describe('resolveExperiment — the iteration is derived, not trusted', () => {
 
 describe('currentConfigVersion — 0 is a state, null is an absence', () => {
   it('reads 0 when no override has ever been recorded', async () => {
-    expect(await priv(svc(prismaStub())).currentConfigVersion('btc-speed-v1')).toBe(0);
+    expect(await priv(svc(prismaStub())).currentConfigVersion('btc-speed-v1-long')).toBe(0);
   });
 
   it('reads the latest recorded version', async () => {
     const prisma = prismaStub();
     prisma.protocolDirectiveChange.aggregate = jest.fn(async () => ({ _max: { configVersion: 7 } }));
-    expect(await priv(svc(prisma)).currentConfigVersion('btc-speed-v1')).toBe(7);
+    expect(await priv(svc(prisma)).currentConfigVersion('btc-speed-v1-long')).toBe(7);
   });
 
   it('returns null (NOT RECORDED) when the log cannot be read, rather than inventing 0', async () => {
@@ -99,7 +99,7 @@ describe('currentConfigVersion — 0 is a state, null is an absence', () => {
     prisma.protocolDirectiveChange.aggregate = jest.fn(async () => {
       throw new Error('table missing');
     });
-    expect(await priv(svc(prisma)).currentConfigVersion('btc-speed-v1')).toBeNull();
+    expect(await priv(svc(prisma)).currentConfigVersion('btc-speed-v1-long')).toBeNull();
   });
 });
 
@@ -107,14 +107,14 @@ describe('experiments — create and close', () => {
   it('refuses an experiment with no protocol or no label', async () => {
     const s = svc(prismaStub());
     await expect(s.createExperiment({ label: 'x' })).rejects.toThrow(/protocolId/);
-    await expect(s.createExperiment({ protocolId: 'btc-speed-v1' })).rejects.toThrow(/label/);
+    await expect(s.createExperiment({ protocolId: 'btc-speed-v1-long' })).rejects.toThrow(/label/);
   });
 
   it('stores the goal and window, because they are the termination condition', async () => {
     const prisma = prismaStub();
     const s = svc(prisma);
     await s.createExperiment({
-      protocolId: 'btc-speed-v1',
+      protocolId: 'btc-speed-v1-long',
       label: 'raise signal sum',
       goal: '+10% Σ signal % without more worsened bars',
       windowLabel: 'dev-window-v1',

@@ -4,7 +4,7 @@
  * ⚠️ WHY THIS IS GENERATED AND NOT DECLARED. `rawMax` (the SIGNAL divisor) is the sum of every
  * direction-eligible directive's `maxScore`. A directive that can only ever return
  * `signalClass: 'neutral'` can never add to the numerator, so its capacity is denominator weight
- * that nothing can earn — measured at 31% of `xau-speed-m15`'s divisor and 58% of `vix-spike-v1`'s
+ * that nothing can earn — measured at 31% of `xau-speed-m15-long`'s divisor and 58% of `vix-spike-v1-long`'s
  * (#1131). To REPORT that share the engine needs the set of such directives.
  *
  * The obvious shortcut — adding `canExpressDirection: false` to 43 classes — is a DECLARATION, and

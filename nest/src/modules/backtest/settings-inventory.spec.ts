@@ -42,7 +42,7 @@ function bot(overrides: Partial<Record<string, unknown>> = {}): BotForBacktest {
     name: 'Probe 1-Directive',
     symbol: 'EURUSD',
     timeframe: '1h',
-    protocolId: 'probe-1dir-rsi',
+    protocolId: 'probe-1dir-rsi-long',
     slPct: 1.5,
     tpPct: 3,
     baseSize: 0.01,

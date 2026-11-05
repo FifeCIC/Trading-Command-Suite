@@ -43,11 +43,11 @@ export interface MarketStatus {
  * computed over whatever bars the caller passed. When a caller hands in a MIXED
  * timeframe array (a protocol loading `1d` bars for its directives while the
  * market-status check saw `1m`/`5m`/`15m` too), the median is meaningless — and
- * a perfectly fresh feed reads as closed. Measured live: `ftse-speed-v1` (a 1d
+ * a perfectly fresh feed reads as closed. Measured live: `ftse-speed-v1-long` (a 1d
  * protocol) was told "last real bar 4m old (market closed)" while its newest 5m
  * bar was 8 minutes old, i.e. entirely fresh. The same symbol alternated
  * between "highly liquid 94/100" and "Market closed" seconds apart, and
- * `spy-day-v1` / `qqq-day-v1` were gated shut on EVERY tick in a 45-minute
+ * `spy-day-v1-long` / `qqq-day-v1-long` were gated shut on EVERY tick in a 45-minute
  * window. Bar ages observed tripping the false close were 4m, 17m and 18m —
  * 17m and 18m being ordinary mid-formation states for a 15m bar.
  *
@@ -247,9 +247,9 @@ export function computeMarketStatus(
   //     The 15m case is the tighter proof: a 15m bar stamped 19:45 covers
   //     19:45–20:00, and it was being read at 20:38 as "market closed" — 8 minutes
   //     after that bar's window ENDED, which is one normal refresh cycle away from
-  //     the next bar. Both `xau-speed-m15` and `xau-speed-1h` were buried in the
+  //     the next bar. Both `xau-speed-m15-long` and `xau-speed-1h-long` were buried in the
   //     Ladder's ordering as a direct result (a `frozen` card sorts below a live
-  //     one), so the HIGHEST-scoring card on the page — `xau-speed-1h` at
+  //     one), so the HIGHEST-scoring card on the page — `xau-speed-1h-long` at
   //     composite 185 — never appeared at the top.
   //
   //     `2 × cadence` allows a bar to be up to one full window old while still
