@@ -1,0 +1,63 @@
+/*
+ * CurrentStrategyPage.css — the page frame only.
+ *
+ * ⚠️ THE ROOT ELEMENT USES THE SHELL'S OWN `.pb-page` (see `backtest-lab.css`), NOT a bespoke page
+ * class. Owner report, 2026-11-04: *"the entire pages content is touching the left sidebar which means
+ * the page hasn't been created with the standard layout."* `.pb-page` is what every Lab page uses and
+ * it carries the gutter (`padding: 1.25rem 1.5rem 2rem`), the max width and the vertical rhythm. A
+ * local wrapper with `padding: 0` removed that gutter, so this page alone sat flush against the nav.
+ *
+ * ⚠️ THE PANELS ARE NOT RESTYLED HERE. `RunPanel`, `RunSettingsDiff` and `RunDiffPanel` bring their
+ * own classes (`.bt-ab-panel`, `.bt-table`, `.bt-pair-bar`) from `backtest-lab.css` and
+ * `backtest-panel-base.css`, which this page imports. Copying them would create the second
+ * implementation of the backtest panels that the Backtest Runs page was careful not to create.
+ *
+ * Only tokens that exist are used — `--ink`, `--ink-soft`, `--line`, `--panel`. See
+ * `.github/skills/create-new-page` for the list and `scripts/validate-css-tokens.cjs` for the gate.
+ */
+
+.cs-header {
+  margin: 0;
+}
+
+.cs-header h2 {
+  margin: 0 0 0.25rem;
+  color: var(--ink);
+  font-size: 1.25rem;
+}
+
+.cs-lede {
+  margin: 0;
+  max-width: 70ch;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* ── THE FOCUS CONTROL ────────────────────────────────────────────────────────────────────────────
+   One row: the label, the picker, and the facts about the chosen strategy. It is the page's only
+   input — everything below it is a reading of what that strategy's runs did. */
+.cs-focus-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.7rem;
+  margin: 0 0 0.85rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.cs-focus-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.cs-focus-meta {
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}

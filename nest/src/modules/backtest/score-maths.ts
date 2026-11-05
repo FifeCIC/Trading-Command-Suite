@@ -158,6 +158,112 @@ export interface TradeLike {
   barsHeld?: number | null;
   /** TRUE when the hold crossed a hole > 1h in the bar series. */
   spansGap?: boolean | null;
+  /**
+   * Best excursion in the position's favour, as a PERCENTAGE of the entry price (1.05 = 1.05%),
+   * measured on raw bar highs/lows and therefore **GROSS of spread, slippage and commission**.
+   * `null`/absent on a trade recorded before the columns existed (2026-10-29) — an absence, not 0.
+   */
+  maxFavourablePct?: number | null;
+  /** Worst excursion against the position, same unit and same gross basis as `maxFavourablePct`. */
+  maxAdversePct?: number | null;
+  /** The price the position was opened at, cost-adjusted. Needed for a currency excursion figure. */
+  entryPrice?: number | null;
+  /** Units held. `null`/0 means the money figure cannot be computed for this trade. */
+  positionSize?: number | null;
+  /** Commission actually charged on this trade, in currency. */
+  commission?: number | null;
+}
+
+/**
+ * ── THE EXCURSION AGGREGATE (2026-11-04) ──────────────────────────────────────────────────────
+ * Owner question: *"how much slippage has happened … the app is recording the price changes, storing
+ * the highest amount of profit recognised within its processing. If you total that up for all
+ * backtesting positions opened what does it show?"*
+ *
+ * ⚠️ THE TWO POPULATIONS MUST NEVER BE MIXED, AND MEASURING THE DATABASE IS WHY. Of 48,992 stored
+ * trades carrying an excursion, **15 carried 98.2% of the entire summed total** and every one of them
+ * had `spansGap = true` — a position held across a hole in the bar series while the machine was
+ * asleep, which books days of price movement as a tradeable excursion. Largest observed: **227,755%**.
+ * Gap-crossing trades average **154.41%** MFE against **1.05%** for trades that never crossed a hole.
+ *
+ * So they are COUNTED (`excludedGap`) and excluded from the averages — never averaged in, and never
+ * dropped silently. A reader given only "average best available" would have no way to know the
+ * population had changed under them.
+ *
+ * ⚠️ AND THE TWO SIDES ARE DIFFERENT UNITS OF TRUTH. `avgFavourablePct` is GROSS of costs (raw bar
+ * extremes); `avgRealisedPct` is NET (it comes from `pnlPct`, computed from the cost-adjusted entry
+ * and exit). So `uncapturedPct` is "cost + exit timing", and `CostTotals` separates the part that is
+ * the configured charge.
+ *
+ * ⚠️ `spansGap === null` IS TREATED AS NOT-CROSSING, on evidence rather than convenience: the 1,143
+ * trades with a NULL flag average **1.99%** MFE, which is the clean population's shape, not the
+ * gap-crossing one's. Excluding them would discard measured trades on a guess.
+ */
+export interface ExcursionTotals {
+  /** Trades carrying a recorded `maxFavourablePct`. */
+  measured: number;
+  /** Trades with no excursion at all — a run stored before 2026-10-29. NOT a zero. */
+  unmeasured: number;
+  /** Measured trades excluded because the hold crossed a data hole. Counted, never averaged. */
+  excludedGap: number;
+  /** The trades every average below is over: `measured` minus `excludedGap`. */
+  usable: number;
+  /** Mean best excursion in the position's favour — GROSS of costs, % of entry price. */
+  avgFavourablePct: number | null;
+  /** Mean worst excursion against the position — GROSS of costs, % of entry price. */
+  avgAdversePct: number | null;
+  /** Mean realised `pnlPct` over the same population — NET of costs. */
+  avgRealisedPct: number | null;
+  /** `avgFavourablePct − avgRealisedPct`: what was available and not taken, per trade. */
+  uncapturedPct: number | null;
+  /** `avgRealisedPct / avgFavourablePct`, as a percentage; null when no favourable move was seen. */
+  captureRatePct: number | null;
+  /**
+   * Σ currency P&L **if every trade had exited at its own best recorded price** — the theoretical
+   * outcome the owner asked for: *"money values telling me the theoretic trading outcome if we took
+   * profit at the highest value of each position as recorded."*
+   *
+   * Per trade: `maxFavourablePct/100 × entryPrice × positionSize`, minus that trade's commission (one
+   * round trip is still paid). `null` when no trade carried all three inputs — an absence, never 0.
+   * ⚠️ Same caveat as Σ P&L: `positionSize` comes from the run's own sizing, which can commit several
+   * times the account (#1142), so this is a like-for-like comparison against `realisedPnl` and NOT a
+   * claim about an account balance.
+   */
+  theoreticalPnl: number | null;
+  /** Σ realised currency P&L over the SAME trades, so the two figures are directly comparable. */
+  realisedPnl: number | null;
+  /** `theoreticalPnl − realisedPnl`: the money the exits left behind, in currency. */
+  leftOnTablePnl: number | null;
+  /** Trades the three money figures are over — needs `entryPrice`, `positionSize` and `pnl`. */
+  moneyTrades: number;
+}
+
+/**
+ * The configured round-trip charge, as a percentage of price — spread once plus slippage twice,
+ * charged on entry AND exit. This is the SAME quantity `BacktestPage` prints as "Break-even".
+ *
+ * Returns `null` when either input is missing: a run stored before the cost columns existed must
+ * read as "cost not recorded", never as zero. ⚠️ `Number(null)` is `0` and `Number.isFinite(0)` is
+ * true, so the type check is load-bearing — a null-check alone would fabricate a free trade.
+ */
+export function roundTripCostPct(spread: unknown, slippage: unknown): number | null {
+  if (typeof spread !== 'number' || typeof slippage !== 'number') return null;
+  if (!Number.isFinite(spread) || !Number.isFinite(slippage)) return null;
+  return Number(((spread + 2 * slippage) * 100).toFixed(4));
+}
+
+export interface CostTotals {
+  /** Configured round-trip charge as a percentage of price: `(spread + 2 × slippage) × 100`. */
+  roundTripPct: number;
+  /**
+   * `uncapturedPct` minus `roundTripPct` — the part of the gap that is EXIT TIMING rather than cost.
+   *
+   * ⚠️ APPROXIMATE BY CONSTRUCTION, and labelled so rather than presented as exact: the charge is a
+   * fraction of PRICE while `pnlPct` is a fraction of the committed NOTIONAL. They agree to first
+   * order and diverge as the charge grows. It answers "roughly how much of the gap is cost", which
+   * is the question; it is not an accounting identity.
+   */
+  timingPct: number | null;
 }
 
 /**
@@ -218,6 +324,13 @@ export interface TradeTotals {
   measured: number;
   /** Trades with no `pnlPct` — reported, never silently averaged in as zero. */
   unmeasured: number;
+  /**
+   * What the trades could have made against what they did. Always present: `usable === 0` reads as
+   * "this run recorded no excursion", which is a different statement from "flat".
+   */
+  excursion: ExcursionTotals;
+  /** Configured-cost decomposition of `excursion.uncapturedPct`; `null` when no cost was stored. */
+  costs: CostTotals | null;
 }
 
 /** Minutes between two instants, or null when either is missing/unparseable — never a fabricated 0. */
@@ -231,7 +344,11 @@ function holdMinutes(entry: string | Date | null | undefined, exit: string | Dat
   return (b - a) / 60_000;
 }
 
-export function tradeTotals(trades: TradeLike[] | null | undefined): TradeTotals {
+export function tradeTotals(
+  trades: TradeLike[] | null | undefined,
+  /** The run's configured costs, from the STORED row — omitted means "not recorded", not "free". */
+  costs?: { spread?: number | null; slippage?: number | null } | null,
+): TradeTotals {
   const rows = trades ?? [];
   const r4 = (v: number) => Number(v.toFixed(4));
 
@@ -251,6 +368,21 @@ export function tradeTotals(trades: TradeLike[] | null | undefined): TradeTotals
   let barsCount = 0;
   let tradesSpanningGap = 0;
 
+  // Excursion accumulators — a separate population from `measured` above, which counts `pnlPct`.
+  let excMeasured = 0;
+  let excExcludedGap = 0;
+  let excUsable = 0;
+  let favSum = 0;
+  let favCount = 0;
+  let advSum = 0;
+  let advCount = 0;
+  let excRealSum = 0;
+  let excRealCount = 0;
+  // Currency accumulators — the theoretical "sold at its best" outcome against what actually happened.
+  let theoreticalSum = 0;
+  let realisedSum = 0;
+  let moneyTrades = 0;
+
   /** reason → running totals, so per-reason averages are one pass rather than a second filter. */
   const byReason = new Map<string, { count: number; holdSum: number; holdCount: number; pctSum: number; pctCount: number }>();
 
@@ -269,6 +401,51 @@ export function tradeTotals(trades: TradeLike[] | null | undefined): TradeTotals
       barsCount += 1;
     }
     if (t.spansGap) tradesSpanningGap += 1;
+
+    /**
+     * Excursion is accumulated HERE, before the `pnlPct` `continue` below, because the two
+     * populations are independent: a trade can carry a measured excursion and no percentage P&L.
+     */
+    const favRaw = t.maxFavourablePct == null ? null : Number(t.maxFavourablePct);
+    if (favRaw != null && !Number.isNaN(favRaw)) {
+      excMeasured += 1;
+      // Only `true` excludes. A NULL flag is treated as not-crossing — see `ExcursionTotals`.
+      if (t.spansGap === true) {
+        excExcludedGap += 1;
+      } else {
+        excUsable += 1;
+        favSum += favRaw;
+        favCount += 1;
+        const advRaw = t.maxAdversePct == null ? null : Number(t.maxAdversePct);
+        if (advRaw != null && !Number.isNaN(advRaw)) {
+          advSum += advRaw;
+          advCount += 1;
+        }
+        if (t.pnlPct != null && !Number.isNaN(Number(t.pnlPct))) {
+          excRealSum += Number(t.pnlPct);
+          excRealCount += 1;
+        }
+        /**
+         * The currency pair. All three inputs are required — half a money sum is worse than none,
+         * because it reads as the whole answer. A trade missing `positionSize` (unrecorded sizing)
+         * or `pnl` is counted out of `moneyTrades` rather than contributing a zero.
+         */
+        const moneyPrice = t.entryPrice == null ? null : Number(t.entryPrice);
+        const moneyUnits = t.positionSize == null ? null : Number(t.positionSize);
+        const moneyPnl = t.pnl == null ? null : Number(t.pnl);
+        if (
+          moneyPrice != null && Number.isFinite(moneyPrice) && moneyPrice > 0
+          && moneyUnits != null && Number.isFinite(moneyUnits) && moneyUnits > 0
+          && moneyPnl != null && Number.isFinite(moneyPnl)
+        ) {
+          const commissionPaid = t.commission == null ? 0 : Number(t.commission);
+          const commissionSafe = Number.isFinite(commissionPaid) ? commissionPaid : 0;
+          theoreticalSum += (favRaw / 100) * moneyPrice * moneyUnits - commissionSafe;
+          realisedSum += moneyPnl;
+          moneyTrades += 1;
+        }
+      }
+    }
 
     const reason = t.exitReason ?? 'UNKNOWN';
     const g = byReason.get(reason) ?? { count: 0, holdSum: 0, holdCount: 0, pctSum: 0, pctCount: 0 };
@@ -311,6 +488,31 @@ export function tradeTotals(trades: TradeLike[] | null | undefined): TradeTotals
     }))
     .sort((a, b) => b.count - a.count);
 
+  const avgFavourablePct = favCount ? r4(favSum / favCount) : null;
+  const avgRealisedPct = excRealCount ? r4(excRealSum / excRealCount) : null;
+  const uncapturedPct =
+    avgFavourablePct != null && avgRealisedPct != null ? r4(avgFavourablePct - avgRealisedPct) : null;
+  const roundTripPct = roundTripCostPct(costs?.spread, costs?.slippage);
+
+  const excursion: ExcursionTotals = {
+    measured: excMeasured,
+    unmeasured: rows.length - excMeasured,
+    excludedGap: excExcludedGap,
+    usable: excUsable,
+    avgFavourablePct,
+    avgAdversePct: advCount ? r4(advSum / advCount) : null,
+    avgRealisedPct,
+    uncapturedPct,
+    captureRatePct:
+      avgFavourablePct != null && avgRealisedPct != null && avgFavourablePct > 0
+        ? r4((avgRealisedPct / avgFavourablePct) * 100)
+        : null,
+    theoreticalPnl: moneyTrades ? r4(theoreticalSum) : null,
+    realisedPnl: moneyTrades ? r4(realisedSum) : null,
+    leftOnTablePnl: moneyTrades ? r4(theoreticalSum - realisedSum) : null,
+    moneyTrades,
+  };
+
   return {
     count: rows.length,
     wins,
@@ -328,6 +530,14 @@ export function tradeTotals(trades: TradeLike[] | null | undefined): TradeTotals
     byExitReason,
     measured,
     unmeasured,
+    excursion,
+    costs:
+      roundTripPct == null
+        ? null
+        : {
+            roundTripPct,
+            timingPct: uncapturedPct == null ? null : r4(uncapturedPct - roundTripPct),
+          },
   };
 }
 

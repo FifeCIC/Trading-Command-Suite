@@ -119,6 +119,21 @@ function make(opts: {
       opts.ceiling === undefined ? { ceilingPct: 90, samples: 100, slug: 'xau-speed-m15', ceilingRaw: 90, capacity: 100 } : opts.ceiling,
     ),
   };
+  // #1193 — the progression cap also gates pair activation. Stubbed as ENFORCED-BUT-UNCAPPED so
+  // these tests keep describing pairing behaviour (#963). Without the stub every pair test that
+  // activates failed with `Cannot read properties of undefined (reading 'isEnforcementEnabled')`.
+  (svc as any).progression = {
+    isEnforcementEnabled: jest.fn(async () => ({ enabled: true, source: 'default' })),
+    getView: jest.fn(async () => ({
+      status: 'ok',
+      activeBots: 0,
+      botCap: null,
+      level: { level: 5 },
+      xp: 1000,
+      nextLevel: null,
+      levels: [],
+    })),
+  };
   (svc as any).logger = { log: jest.fn(), warn: jest.fn(), error: jest.fn() };
 
   return { svc, updates, state: () => rows, pairs: () => pairRows };
@@ -282,7 +297,7 @@ describe('setPairActive — both sides move together (#963, decision 25)', () =>
     });
 
     // minComposite is 10; the protocol has never exceeded 5% of capacity.
-    await expect(svc.setPairActive('bot-a', true)).rejects.toThrow(/could never fire/);
+    await expect(svc.setPairActive('bot-a', true)).rejects.toMatchObject({ code: 'TCS-TRADE-024' });
     expect(updates.length).toBe(0);
   });
 
@@ -349,7 +364,9 @@ describe('startPair / stopPair — the comparison becomes a RECORDED fact (#963)
       ceiling: { ceilingPct: 5, samples: 100, slug: 'xau-speed-m15-copy', ceilingRaw: 5, capacity: 100 },
     });
 
-    await expect(svc.startPair('bot-a', { declaredChange: 'weightStrategy' })).rejects.toThrow(/could never fire/);
+    await expect(svc.startPair('bot-a', { declaredChange: 'weightStrategy' })).rejects.toMatchObject({
+      code: 'TCS-TRADE-024',
+    });
     expect(pairs().length).toBe(0); // nothing registered, nothing activated
   });
 

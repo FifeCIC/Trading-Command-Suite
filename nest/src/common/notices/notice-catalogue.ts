@@ -79,6 +79,15 @@ export const SERVER_NOTICES: Record<string, ServerNotice> = {
   // valid; the decision record carries this code. 400: the refusal is configuration/venue-shaped,
   // and the remedy is client-actionable.
   'TCS-TRADE-023': { httpStatus: 400, severity: 'error', label: 'Position size could not be computed' },
+  // #905 — activating a bot whose protocol has never reached its own bar is refused. 400: the
+  // remedy is configuration the operator owns (the bar, or the protocol's capacity). 'warning',
+  // not 'error': an expected, client-actionable refusal must not shout like a crash in the log.
+  'TCS-TRADE-024': { httpStatus: 400, severity: 'warning', label: 'Bot activation refused — it could never fire' },
+  // #1193 — the progression-level active-bot ceiling. 409, not 400: the request is well-formed and
+  // the operator is who they say they are; the STATE (how many bots are already active for this
+  // level) is what refuses it. 'warning' for the same reason as 024 — an expected, actionable
+  // refusal must not shout like a crash.
+  'TCS-TRADE-025': { httpStatus: 409, severity: 'warning', label: 'Bot activation refused — active-bot limit for this progression level' },
 };
 
 /** Fallback for a code that is not declared above. Deliberately loud rather than blank. */

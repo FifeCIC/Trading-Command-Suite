@@ -363,6 +363,13 @@ export interface BrokerAccount {
   mode: 'live' | 'demo' | 'paper' | 'mock';
   connected: boolean;
   accountId?: string;
+  /**
+   * How many positions one symbol may hold, straight from the broker
+   * (`account_info().margin_mode`): `netting` MERGES a second order into the existing position,
+   * `hedging` OPENS a second one. Absent/`unknown` must be treated as the conservative
+   * (one-position) case, never as permission.
+   */
+  positionModel?: 'netting' | 'exchange' | 'hedging' | 'unknown';
 }
 
 /** Standardized order request for any broker. */

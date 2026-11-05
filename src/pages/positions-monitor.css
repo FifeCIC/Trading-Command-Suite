@@ -12,6 +12,15 @@
   font-size: 1.4rem;
 }
 
+/* Which position model each account runs. It is the answer to "why did my second order merge
+   instead of opening a second position?", so it belongs beside the page title rather than in a
+   tooltip on a table cell. Muted because it is context, not a finding. */
+.pm-account-models {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+
 /* Tabs */
 .pm-tabs {
   display: flex;

@@ -134,6 +134,7 @@ import DataAreaLandingPage from '../pages/DataAreaLandingPage.jsx';
 import DatabaseTablesPage from '../pages/DatabaseTablesPage.jsx';
 import BacktestDataPage from '../pages/BacktestDataPage.jsx';
 import BacktestRunsPage from '../pages/BacktestRunsPage.jsx';
+import CurrentStrategyPage from '../pages/CurrentStrategyPage.jsx';
 import DataStatusPage from '../pages/DataStatusPage.jsx';
 import DataElementsPage from '../pages/DataElementsPage.jsx';
 import DecoderPage from '../pages/DecoderPage.jsx';
@@ -353,6 +354,10 @@ export const VIEW_COMPONENTS = {
   // on its own. BacktestPage remains the shared implementation; these are its two routes.
   'backtest': BacktestProtocolsPage,
   'backtest-strategies': BacktestStrategiesPage,
+  // ⚠️ ADDED 2026-11-04 (owner direction). The A/B reference panels moved OFF the strategies page
+  // (*"results displayed twice"*) onto this one, which is about a single strategy and its accepted
+  // reference. It reads stored runs only — it never runs a backtest.
+  'current-strategy': CurrentStrategyPage,
   // #1134 — `/lab/protocol-backtest` and `ProtocolBacktestPage.jsx` were MERGED into `/lab/backtest`
   // on 2026-10-22. The protocol surface is now the "Protocols" subject toggle on that page, and its
   // per-bar score table is a drill-down (`ProtocolScoreDetail`). One route, one stored run history.

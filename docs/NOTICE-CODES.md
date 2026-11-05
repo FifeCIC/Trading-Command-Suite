@@ -76,8 +76,10 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-TRADE-021` | critical | TRADE | Bridge is on the wrong account — orders refused |
 | `TCS-TRADE-022` | warning | TRADE | Order outcome UNKNOWN — it may have been placed |
 | `TCS-TRADE-023` | error | TRADE | Position size could not be computed — no order sent |
+| `TCS-TRADE-024` | warning | TRADE | Bot not activated — its protocol never reaches the bar |
+| `TCS-TRADE-025` | warning | TRADE | Bot not activated — the active-bot limit for your level |
 
-**55 codes** — 3 critical, 27 error, 14 warning, 5 info, 6 success.
+**57 codes** — 3 critical, 27 error, 16 warning, 5 info, 6 success.
 
 ## Codes by area
 
@@ -311,6 +313,26 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Params:** `model`, `symbol`, `reason`
 - **Call:** `notice('TCS-TRADE-023', { model, symbol, reason })`
 - **Related:** *none*
+
+#### `TCS-TRADE-024` — Bot not activated — its protocol never reaches the bar
+
+- **Severity:** warning
+- **Message:** “{name}” was left DISABLED. Protocol {protocol} has never produced more than {ceiling}% of its capacity, and this bot’s minComposite is {bar}%.
+- **Cause:** A bot whose bar its protocol has never reached is not a risky bot, it is a DECORATIVE one: it scores every tick, writes queue entries and skips with a plausible reason, while being mathematically incapable of trading. The ceiling is the protocol’s all-time maximum composite as a percentage of its configured capacity, measured over {samples} readings.
+- **Action:** Fix the protocol’s capacity — its directives and weights set the ceiling. A bar at or below {ceiling}% would also let this bot fire. Deactivating never refuses.
+- **Params:** `name`, `protocol`, `ceiling`, `bar`, `samples`
+- **Call:** `notice('TCS-TRADE-024', { name, protocol, ceiling, bar, samples })`
+- **Related:** *none*
+
+#### `TCS-TRADE-025` — Bot not activated — the active-bot limit for your level
+
+- **Severity:** warning
+- **Message:** “{name}” was left DISABLED. Progression level {level} allows {cap} active bot(s); {active} already running.
+- **Cause:** The app is new and running many bots at once is resource-intensive, while several trading safeguards are still outstanding. So a fresh install starts with one active bot, and the limit lifts as you use the app you have installed — the level is earned from closed trades, completed backtest runs and days of use, measured from your own record.
+- **Action:** Deactivate a bot to free a slot, or reach level {nextLevel} ({nextXp} XP) to allow {nextCap}. Deactivating is always allowed — this limit never stops you reducing what is running. It is a guardrail, not a licence: it can be lifted in Settings.
+- **Params:** `name`, `level`, `cap`, `active`, `nextLevel`, `nextXp`, `nextCap`
+- **Call:** `notice('TCS-TRADE-025', { name, level, cap, active, nextLevel, nextXp, nextCap })`
+- **Related:** #1193
 
 ### SCORE — Scoring and signals
 

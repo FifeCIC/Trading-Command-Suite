@@ -1,6 +1,6 @@
 {
   "name": "nest",
-  "version": "0.152.0",
+  "version": "0.153.0",
   "description": "",
   "author": "",
   "private": true,
@@ -77,7 +77,8 @@
     "test:e2e:playwright:ui": "npx playwright test --config e2e/playwright.config.ts --ui",
     "seed:dev-window": "node scripts/seed-dev-test-window.cjs",
     "seed:dev-window:apply": "node scripts/seed-dev-test-window.cjs --apply",
-    "seed:dev-window:check": "node scripts/seed-dev-test-window.cjs --check"
+    "seed:dev-window:check": "node scripts/seed-dev-test-window.cjs --check",
+    "db:rule-inventory": "node scripts/report-rule-inventory.cjs"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",

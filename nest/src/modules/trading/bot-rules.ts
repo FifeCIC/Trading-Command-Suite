@@ -228,7 +228,20 @@ export const BOT_RULES: BotRule[] = [
       'call on the name-vs-news reading — do NOT re-gate on a name alone.' },
   { field: 'maxPyramidTiers', label: 'Max pyramid tiers', stage: 'entry', enforcement: 'live',
     enforcedBy: 'nest/src/modules/trading/pyramid-policy.service.ts',
-    summary: 'Scale-in cap: extra entries allowed when price is favourable. 1 = never add.' },
+    summary: 'Scale-in cap: extra entries allowed when price is favourable. 1 = never add.',
+    caveat:
+      '⚠️ PYRAMID IS AN OPTIONAL MECHANISM, and it is one of the things that makes a bot distinct — ' +
+      'a scalper that never adds is a different strategy from one that presses a winner. Values > 1 ' +
+      'are only reached when the extra entries pass the scale-in conditions (profit locked in at ' +
+      'breakeven-or-better by a real broker SL, and the tier budget not yet used). ' +
+      'MEASURED 2026-11-04: this policy is ALSO what lets a bot hold a symbol another bot already ' +
+      'holds. Until then the open-position filter matched symbol + account only, so Bot B was ' +
+      'blocked by Bot A\'s position. That is correct on a NETTING account (a second order MERGES ' +
+      'into the existing position — it would silently rewrite size and price) and wrong on a ' +
+      'HEDGING account (the broker opens a separate position). The policy now scopes positions by ' +
+      'the trading bot\'s own `magic` when the account reports `hedging`, and falls back to the ' +
+      'symbol-wide rule when the model or the magic is unknown. So on a hedging account several ' +
+      'bots may share a symbol; on a netting account they still may not.' },
 
   // ── sizing ─────────────────────────────────────────────────────────────────────────────────
   { field: 'baseSize', label: 'Base size', stage: 'sizing', enforcement: 'live',

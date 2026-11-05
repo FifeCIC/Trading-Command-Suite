@@ -385,6 +385,33 @@ def detect_server_utc_offset(force=False):
 #             account has no current risk acknowledgement (#1153).
 _ACCOUNT_TRADE_MODE_KIND = {0: 'demo', 1: 'contest', 2: 'real'}
 
+# MT5 `account_info().margin_mode` -> how MANY positions one symbol may hold at once.
+#
+# ⚠️ ADDED 2026-11-04 because the app enforces a one-position-per-symbol rule and never said WHY.
+# The owner asked whether that is a broker constraint or an app policy, and could not tell from the
+# UI. It is a real distinction: ACCOUNT_MARGIN_MODE_RETAIL_NETTING **merges** a second order on the
+# same symbol into the existing position (it can even reverse it), while RETAIL_HEDGING **opens a
+# second, separate position**. Same code path, opposite meaning for the trader.
+#   netting  -> one position per symbol is a HARD broker property
+#   hedging  -> one position per symbol is a CHOICE the app makes (duplicate-guard.service.ts)
+# Written as integers, like the trade-mode map above, because this module must import on a machine
+# with no MetaTrader5 package.
+_ACCOUNT_MARGIN_MODE_POSITION_MODEL = {0: 'netting', 1: 'exchange', 2: 'hedging'}
+
+def classify_position_model(margin_mode):
+  """MT5 `account_info().margin_mode` -> 'netting' | 'exchange' | 'hedging' | 'unknown'.
+
+  `unknown` for a malformed reading — never a default of 'netting', which would state a hard broker
+  property the terminal did not report. `bool` is rejected explicitly for the same reason as
+  `classify_account_kind`: it is an int subclass, so `int(True)` would invent 'exchange'.
+  """
+  if isinstance(margin_mode, bool):
+    return 'unknown'
+  try:
+    return _ACCOUNT_MARGIN_MODE_POSITION_MODEL[int(margin_mode)]
+  except (TypeError, ValueError, KeyError):
+    return 'unknown'
+
 def classify_account_kind(trade_mode):
     """MT5 `account_info().trade_mode` -> 'demo' | 'contest' | 'real' | 'unknown'.
 
@@ -1004,6 +1031,11 @@ STATE_ACCOUNT_UNAVAILABLE = 'account-unavailable'
 # what turns 4,325 identical lines into one line with the remedy (#992).
 _CONNECTION_STATE = None
 _CONNECTION_STATE_DETAIL = None
+# The watchdog's escalation counter, published so the bound is OBSERVABLE.
+# ⚠️ Added 2026-11-03: both bridges latched at 5/5 and sat disconnected ~11 hours with the terminals
+# open, and nothing in /health said so. A counter that decides whether recovery is ever attempted
+# must be readable from outside the process.
+_TERMINAL_DOWN_ATTEMPTS = 0
 
 # Throttle for the offset probe's 'terminal not connected' line (#992). The probe is
 # called on every request, so an unthrottled line is 4x/minute forever.
@@ -1263,7 +1295,7 @@ def connection_watchdog():
                both directions, but they cover CLASSIFICATION ONLY; nothing here
                fails if this limitation is forgotten)
     """
-    global _CONNECTION_STATE, _CONNECTION_STATE_DETAIL
+    global _CONNECTION_STATE, _CONNECTION_STATE_DETAIL, _TERMINAL_DOWN_ATTEMPTS
     failures = 0
     backoff = WATCHDOG_POLL_SECONDS
     next_attempt_at = 0.0
@@ -1289,6 +1321,7 @@ def connection_watchdog():
             backoff = WATCHDOG_POLL_SECONDS
             next_attempt_at = 0.0
             terminal_down_attempts = 0
+            _TERMINAL_DOWN_ATTEMPTS = 0
             continue
 
         failures += 1
@@ -1306,10 +1339,34 @@ def connection_watchdog():
         # Measured 2026-09-27 - broker 2 sat in this state for hours with 71 connection errors and
         # `POST /reconnect` fixed it on the first call. The remedy was in the log; the code declined
         # to use it. The bound keeps the anti-thrash intent without the false premise.
+        #
+        # ── CORRECTED 2026-11-03: the bound was a LATCH, and it locked both bridges out ────────
+        # WHAT:      Reaching the bound no longer stops trying. Past it the attempt cadence is
+        #            governed by `next_attempt_at` (already capped at WATCHDOG_MAX_BACKOFF_SECONDS),
+        #            so it retries slowly — one attempt per 30 min — instead of never.
+        # WHY:       The old form `if attempts >= MAX: continue` could never clear itself. The
+        #            counter is reset ONLY by an observed STATE_OK poll, and this state clears only
+        #            via a reconnect — which the latch forbade. That is a DEADLOCK, not a bound, and
+        #            the premise "a terminal that comes back will be observed OK and reset" is false
+        #            for exactly the stale-IPC case the 2026-09-27 fix was written for.
+        #            MEASURED 2026-11-03: both bridges hit 5/5 at 12:28 with the terminals OPEN and
+        #            algo trading enabled, backed off to 1800s, and stayed disconnected for ~11
+        #            hours (connectionErrors 7,490 and 32,251). `POST /reconnect` on each returned
+        #            `{"success": true}` on the FIRST call — accounts 10011309743 and 62149650. The
+        #            terminals had been fine the whole time; nothing was ever going to notice.
+        # INSTEAD OF: An unbounded retry every 30s. That is the restart-thrash the bound exists to
+        #            prevent. The ceiling keeps the cadence sane while removing the deadlock.
+        # REVERSE BY: Restore `if terminal_down_attempts >= MAX: continue`.
+        # REGISTER:  docs/SETTLED-DECISIONS.md row 147
+        # GUARD:     test_connection_watchdog.py
+        #              test_terminal_down_keeps_retrying_past_the_bound  (latch cannot return)
+        #              test_terminal_down_below_the_bound_escalates_normally
         if state == STATE_TERMINAL_DOWN:
-            if terminal_down_attempts >= WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS:
-                continue
-            terminal_down_attempts += 1
+            if terminal_down_attempts < WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS:
+                terminal_down_attempts += 1
+            _TERMINAL_DOWN_ATTEMPTS = terminal_down_attempts
+            # At/over the bound: do NOT increment (the log stays honest at N/MAX) and do NOT
+            # `continue` — fall through to the attempt, paced by `next_attempt_at`.
 
         ok, _err = reconnect_mt5(
             f'watchdog: {failures} consecutive bad polls in state {state} ({detail})'
@@ -1670,9 +1727,30 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     # only thread, and a second blocking read here is how #1000 happened.
                     # `unknown` when the terminal is down — never 'demo'. See the classifier.
                     'accountKind': classify_account_kind(acc.trade_mode) if acc else 'unknown',
+                    # ⚠️ 2026-11-04 — HOW MANY POSITIONS ONE SYMBOL MAY HOLD, from the same
+                    # `acc` this handler already read. No second native call: /health shares the
+                    # bridge's only thread and a second blocking read here is how #1000 happened.
+                    # 'netting' means a second order MERGES (the one-per-symbol rule is the
+                    # broker's); 'hedging' means it OPENS A SECOND (the rule is the app's).
+                    'positionModel': classify_position_model(acc.margin_mode) if acc else 'unknown',
+                    'positionModelCode': int(acc.margin_mode) if acc and isinstance(acc.margin_mode, int) else None,
                     'balance': float(acc.balance) if acc else None,
                     'equity': float(acc.equity) if acc else None,
                     'connectionErrors': connection_errors,
+            # ⚠️ Visible on purpose (2026-11-03): the watchdog bound decides whether recovery is
+            # EVER attempted again. When it latched at 5/5 on both bridges, /health still looked
+            # normal and the outage ran ~11 hours. `boundReached` is the readable summary: at true,
+            # the bridge is only retrying at the slow ceiling, so POST /reconnect now.
+            'reconnectWatchdog': {
+                'terminalDownAttempts': _TERMINAL_DOWN_ATTEMPTS,
+                'bound': WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS,
+                'boundReached': _TERMINAL_DOWN_ATTEMPTS >= WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS,
+                'note': (
+                    'bound reached — retrying only at the slow ceiling; POST /reconnect to recover now'
+                    if _CONNECTION_STATE == STATE_TERMINAL_DOWN and _TERMINAL_DOWN_ATTEMPTS >= WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS
+                    else 'within bound'
+                ),
+            },
                     'circuitBreaker': {'state': circuit_state, 'failures': circuit_failures, 'threshold': CIRCUIT_BREAKER_THRESHOLD, 'cooldown': CIRCUIT_BREAKER_COOLDOWN},
                     # ⚠️ #1036 — what the last /reconnect (manual OR watchdog) actually did.
                     # `sessionLeftDown` is true when the attempt FAILED, which means `shutdown()`
@@ -1808,7 +1886,13 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     'marginLevel': float(info.margin_level) if info.margin_level else None, 'currency': info.currency,
                     'leverage': info.leverage, 'name': info.name,
                     # #1153 — same fact as /health, same rule: `unknown` is never 'demo'.
-                    'accountKind': classify_account_kind(info.trade_mode)})
+                    'accountKind': classify_account_kind(info.trade_mode),
+                    # ⚠️ 2026-11-04 — the position model travels with the ACCOUNT because it is a
+                    # property of it, and the duplicate guard needs it to know whether a second order
+                    # on one symbol OPENS (hedging) or MERGES (netting). Read from the same
+                    # `account_info()` above — no second native call.
+                    'positionModel': classify_position_model(info.margin_mode),
+                    'positionModelCode': int(info.margin_mode) if isinstance(info.margin_mode, int) else None})
 
             # /positions
             if path == '/positions':

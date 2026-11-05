@@ -317,6 +317,29 @@
   border-radius: 6px;
   background: color-mix(in srgb, var(--accent) 5%, var(--panel));
 }
+/* Under the Result stat cards (owner direction, 2026-11-04) — above the sentence notes, so the action
+   sits with the numbers it acts on rather than below a screen of caveats. */
+.bt-accept-bar--result {
+  margin: 0.75rem 0 0.6rem;
+}
+
+/* ── CURRENT STRATEGY: A AND B SIDE BY SIDE (owner direction, 2026-11-04) ─────────────────────────
+   The two runs were separate tabs, so comparing them meant reading one, then the other, from memory.
+   ⚠️ FLEX-WRAP, NOT `grid auto-fit` — the same reason `.bt-trade-tiles` uses it (see the note there):
+   `auto-fit` in this container produced `620px 620px 0px`, a third phantom track whose gap stayed
+   reserved, so the two panels sat 6px narrower than their share and the right edge looked ragged.
+   `flex: 1 1 340px` keeps them side by side on a wide pane and stacks them on a narrow one, with no
+   phantom track to pay for. */
+.bt-pair-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+.bt-pair-grid > * {
+  flex: 1 1 340px;
+  min-width: 0;
+}
 .bt-panel-btn--primary {
   border-color: var(--accent);
   color: var(--accent);

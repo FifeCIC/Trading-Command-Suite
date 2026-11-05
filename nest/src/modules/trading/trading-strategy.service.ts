@@ -55,6 +55,10 @@ import { ProtocolHealthService } from '../scoring/protocol-health.service';
 // symbol wiring), so the deep copy lives THERE rather than here — one implementation, not two.
 import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { TcsNoticeException } from '../../common/notices/tcs-notice.exception';
+// #1193 — the earned progression level decides how many bots may be ACTIVE. The model itself lives
+// in `progression-levels.ts`; this service only asks the question and refuses the increase.
+import { ProgressionService } from '../progression/progression.service';
+import { wouldExceedBotCap } from '../progression/progression-levels';
 import { MarketBar } from '../directives/interfaces/directive.interface';
 // ⚠️ The CANONICAL session parser + serialiser (#982 — ONE owner for the storage format). Used to
 // NORMALISE `sessionWindow` for display, because the column is stored in two forms (`london` and
@@ -216,6 +220,9 @@ export class TradingStrategyService {
     private readonly settings: SettingsResolverService,
     private readonly protocolHealth: ProtocolHealthService,
     private readonly protocolDb: ProtocolDbService,
+  // #1193 — the active-bot ceiling. Injected rather than re-derived here so ONE definition of
+  // "how many bots may run" exists, shared with the surface that explains it.
+  private readonly progression: ProgressionService,
   ) {}
 
   // ── CRUD ──────────────────────────────────────────────
@@ -702,6 +709,12 @@ export class TradingStrategyService {
      */
     magic?: number | null;
   }) {
+    // #1193 — a bot created ACTIVE is an increase of one. Checked before anything is written, so a
+    // refusal leaves no half-created scoring strategy behind.
+    if (data.active) {
+      await this.assertBotCapAllowsActivation([data.name]);
+    }
+
     // Auto-create ScoringStrategy when watchlist is provided without a scoringStrategyId
     let scoringStrategyId = data.scoringStrategyId ?? null;
     if (!scoringStrategyId && (data.watchlistId || data.watchlistName)) {
@@ -800,6 +813,13 @@ export class TradingStrategyService {
     const resultingActive = data.active !== undefined ? Boolean(data.active) : existing.active;
     const reactivation = resultingActive && !existing.active;
     const barOrProtocolChanged = data.minComposite !== undefined || data.protocolId !== undefined;
+
+    // #1193 — the active-bot ceiling. Only a transition inactive → active is an INCREASE; a
+    // re-save of an active bot never reaches this check.
+    if (reactivation) {
+      await this.assertBotCapAllowsActivation([existing.name]);
+    }
+
     if (resultingActive && (reactivation || barOrProtocolChanged)) {
       await this.assertCeilingAllowsActivation(
         data.protocolId ?? existing.protocolId,
@@ -1352,6 +1372,17 @@ export class TradingStrategyService {
         const row = await this.prisma.tradingStrategy.findUnique({ where: { id: side.id } });
         if (row) await this.assertCeilingAllowsActivation(row.protocolId, row.minComposite, row.name);
       }
+
+      // #1193 — the pair is an INCREASE of however many sides are currently inactive. Checked once,
+      // as one operation: checking each side against the same snapshot would allow both when only
+      // one slot was free, and the pair would land half-activated.
+      const newlyActive = [pair.incumbent, pair.variant].filter((side) => !side.active);
+      if (newlyActive.length > 0) {
+        await this.assertBotCapAllowsActivation(
+          newlyActive.map((side) => side.name),
+          newlyActive.length,
+        );
+      }
     }
 
     const incumbentId = pair.incumbent.id;
@@ -1608,6 +1639,79 @@ export class TradingStrategyService {
   }
 
   /**
+   * assertBotCapAllowsActivation() — refuse to activate a bot beyond the progression level's ceiling
+   * (#1193).
+   *
+   * ⚠️ THIS IS A GUARDRAIL, NOT A LICENCE CHECK. The owner's framing, verbatim in intent: the app is
+   * new, running many bots is resource-intensive, and several trading safeguards are still
+   * outstanding — so a fresh install should not be able to run a crowd of bots on day one, and the
+   * ceiling should lift as the operator demonstrably uses the app. Nothing here is for sale. That
+   * distinction is recorded in #1193 and #809, and conflating them is the defect both issues name.
+   *
+   * ⚠️ THREE RULES, each of which a simpler version gets wrong:
+   *
+   *   1. **Only an INCREASE is refused.** Callers pass the number of bots that would newly become
+   *      active. Re-saving an already-active bot never reaches this method at all, so an install
+   *      above its ceiling is never locked out of editing a running bot.
+   *   2. **Grandfathering.** An install already above the ceiling keeps working — it may deactivate
+   *      and edit, and may not add until it is back under. Retro-deactivating bots to enforce a new
+   *      rule would be a silent TRADING action taken by a documentation change.
+   *   3. **FAIL-OPEN on cannot-judge.** If the level cannot be computed, allow and log. The repo's
+   *      own lesson from `#905` applies exactly: the defect being fixed is a false GREEN, and the
+   *      fix must not become a false RED that blocks a legitimate activation. The setting
+   *      `progression.botCapEnabled` is the operator's own way out, and it is honest about it.
+   *
+   * ⚠️ THE REFUSAL IS CODED (`TCS-TRADE-025`), mirroring `TCS-TRADE-024`. A bare 400 is flattened by
+   * the notice filter into "The request to the API failed", which on a trading control is a failure
+   * with no reason — the exact defect `#905`'s comment records.
+   */
+  private async assertBotCapAllowsActivation(botNames: string[], increase = 1): Promise<void> {
+    if (increase <= 0) return;
+
+    const enforcement = await this.progression.isEnforcementEnabled();
+    if (!enforcement.enabled) return;
+
+    let view: Awaited<ReturnType<ProgressionService['getView']>>;
+    try {
+      view = await this.progression.getView();
+    } catch (err) {
+      this.logger.warn(`Bot cap not enforced — progression unreadable: ${(err as Error).message}`);
+      return;
+    }
+    // `unavailable` means the counts could not be read. Allow, and say why in the log — a guardrail
+    // that cannot read its input must not become a lock.
+    if (view.status !== 'ok') {
+      this.logger.warn(`Bot cap not enforced — progression unavailable: ${view.reason}`);
+      return;
+    }
+
+    const projected = view.activeBots + increase - 1;
+    if (!wouldExceedBotCap(projected, view.botCap)) return;
+
+    const next = view.nextLevel;
+    throw new TcsNoticeException(
+      'TCS-TRADE-025',
+      {
+        name: botNames.join(', '),
+        level: view.level.level,
+        cap: view.botCap,
+        active: view.activeBots,
+        nextLevel: next?.level ?? view.level.level,
+        nextXp: next?.xpRequired ?? view.xp,
+        nextCap: String(next?.activeBotCap ?? 'unlimited'),
+      },
+      {
+        // The raw arithmetic stays as the CAUSE text: the friendly message names the level and the
+        // count, and this is the only place the underlying numbers survive for a diagnosis.
+        detail:
+          `progression level ${view.level.level} (${view.xp} XP) allows ${view.botCap ?? 'unlimited'} ` +
+          `active bot(s); ${view.activeBots} active, ${increase} requested ` +
+          `(${botNames.join(', ')}); enforcement=${enforcement.source}`,
+      },
+    );
+  }
+
+  /**
    * assertCeilingAllowsActivation() — refuse to activate a bot that can NEVER fire (#905).
    *
    * The measurement is the protocol's all-time maximum `compositePct` (the SAME percentage
@@ -1625,6 +1729,12 @@ export class TradingStrategyService {
    * or a measurement failure all ALLOW the activation. Refusing on an unmeasurable protocol
    * would block new protocols from being tried — the defect being fixed is a false GREEN, and
    * the fix must not become a false RED.
+   *
+   * ⚠️ THE REFUSAL IS CODED (TCS-TRADE-024), not a bare BadRequestException. A bare 400 fell through
+   * to the filter's generic branch, so the Strategies page rendered "The request to the API failed
+   * (HTTP 400)" and DROPPED this whole explanation — the operator saw a failure with no reason on a
+   * trading-safety control. The code carries the specifics as params, so the client registry owns
+   * the wording and the numbers still render.
    */
   private async assertCeilingAllowsActivation(
     protocolId: string,
@@ -1637,12 +1747,23 @@ export class TradingStrategyService {
     if (!measured || measured.samples < 10) return;
     if (measured.ceilingPct >= bar) return;
 
-    throw new BadRequestException(
-      `Refused: "${botName}" could never fire. Protocol ${measured.slug} has never produced ` +
-        `more than ${measured.ceilingPct.toFixed(1)}% of its capacity (raw ${measured.ceilingRaw} ` +
-        `of ${measured.capacity}) across ${measured.samples} readings, and this bot's ` +
-        `minComposite is ${bar}%. Lower minComposite below ${measured.ceilingPct.toFixed(1)}, ` +
-        `fix the protocol's capacity, or keep the bot disabled (#905).`,
+    throw new TcsNoticeException(
+      'TCS-TRADE-024',
+      {
+        name: botName,
+        protocol: measured.slug,
+        ceiling: measured.ceilingPct.toFixed(1),
+        bar,
+        samples: measured.samples,
+      },
+      {
+        // The raw arithmetic is kept as the CAUSE text: the friendly message names the two
+        // percentages, and this is the only place the underlying counts survive for a diagnosis.
+        detail:
+          `${botName} (${protocolId}): ceiling ${measured.ceilingPct.toFixed(1)}% ` +
+          `(raw ${measured.ceilingRaw} of ${measured.capacity}) over ${measured.samples} readings; ` +
+          `minComposite ${bar}%`,
+      },
     );
   }
 

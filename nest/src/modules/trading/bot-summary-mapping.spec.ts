@@ -68,6 +68,12 @@ function make(row: Record<string, any>) {
     protocol: { findMany: jest.fn(async () => { throw new Error('no protocol table'); }) },
     watchlist: { findMany: jest.fn(async () => { throw new Error('no watchlist table'); }) },
   };
+  // ⚠️ `findAll()` LOGS on its best-effort paths (`#1189` track-record counts) and `logger` is a
+  // property initialiser, so an Object.create'd instance has none. Without this stub the deliberate
+  // throws above surface as "Cannot read properties of undefined (reading 'warn')" — which reads as
+  // the mapping having dropped a field, i.e. the exact defect this suite guards for a reason that
+  // has nothing to do with the mapping.
+  (svc as any).logger = { log: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
   return svc;
 }
 

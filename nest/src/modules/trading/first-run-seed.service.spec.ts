@@ -56,8 +56,14 @@ function makeService(opts: {
       return { created: 3, updated: 0, unchanged: 0, failed: 0, changes: [] };
     }),
   };
-  const svc = new FirstRunSeedService(prisma, protocolDb, tradingStrategy);
-  return { svc, calls, protocolDb, tradingStrategy, prisma };
+  // #1193 — the first-run seeder caps how many shipped bots start ACTIVE. Stubbed as UNLIMITED so
+  // these tests keep describing the seeding order and idempotence they were written for; the cap
+  // itself is covered by `progression-levels.spec.ts` and the bot-cap gate spec.
+  const progression: any = {
+    activeBotsForFreshInstall: jest.fn(async () => ({ limit: null, judged: true })),
+  };
+  const svc = new FirstRunSeedService(prisma, protocolDb, tradingStrategy, progression);
+  return { svc, calls, protocolDb, tradingStrategy, prisma, progression };
 }
 
 describe('FirstRunSeedService — seed once, never twice', () => {
@@ -129,5 +135,47 @@ describe('FirstRunSeedService — seed once, never twice', () => {
     expect(result).toEqual({ protocolsSeeded: null, botsCreated: null, skippedBecause: 'database unavailable' });
     expect(protocolDb.seedProtocolsToDatabase).not.toHaveBeenCalled();
     expect(tradingStrategy.seedDefaults).not.toHaveBeenCalled();
+  });
+
+  describe('#1193 — how many shipped bots start ACTIVE', () => {
+    /** What the seeder actually handed to `seedDefaults()`. */
+    const seeded = (tradingStrategy: any) => tradingStrategy.seedDefaults.mock.calls[0][0] as any[];
+
+    it('⚠️ a fresh install starts with ONE active bot, not the whole shipped set', async () => {
+      const { svc, tradingStrategy, progression } = makeService({
+        protocolCount: 0,
+        botCount: 0,
+        protocolCountAfterSeed: 3,
+      });
+      progression.activeBotsForFreshInstall = jest.fn(async () => ({ limit: 1, judged: true }));
+
+      await svc.seedIfEmpty();
+
+      const bots = seeded(tradingStrategy);
+      expect(bots.length).toBeGreaterThan(1);
+      expect(bots[0].active).not.toBe(false); // the first keeps its seeded flag
+      expect(bots.slice(1).every((b) => b.active === false)).toBe(true);
+    });
+
+    it('an uncapped level keeps every shipped active flag', async () => {
+      const { svc, tradingStrategy } = makeService({ protocolCount: 0, botCount: 0, protocolCountAfterSeed: 3 });
+
+      await svc.seedIfEmpty();
+
+      expect(seeded(tradingStrategy).some((b) => b.active === false)).toBe(false);
+    });
+
+    it('⚠️ FAIL-OPEN: an unreadable level keeps the shipped flags rather than shipping a one-bot install', async () => {
+      const { svc, tradingStrategy, progression } = makeService({
+        protocolCount: 0,
+        botCount: 0,
+        protocolCountAfterSeed: 3,
+      });
+      progression.activeBotsForFreshInstall = jest.fn(async () => ({ limit: null, judged: false }));
+
+      await svc.seedIfEmpty();
+
+      expect(seeded(tradingStrategy).some((b) => b.active === false)).toBe(false);
+    });
   });
 });

@@ -47,7 +47,19 @@ export const EXPERIENCE_MATRIX = {
     // Scoring
     'directives-registry':    { beginner: false, experienced: true,  expert: true },
     'configure-directives':  { beginner: false, experienced: false, expert: true },
-    'live-ordering-stack':   { beginner: false, experienced: false, expert: true },
+    // ── DECISION (2026-11-04) ──
+    // WHAT:      `live-ordering-stack` (the Ladder) is visible at EVERY level.
+    // WHY:       It is the only entry in the Scoring rail that was gated — `ab-ladder`,
+    //            `symbols-ladder` and `singles-monitor` are undeclared, and an undeclared id is
+    //            visible at every level (`isNavVisible` returns true). So the one page that DEFINES
+    //            the area was the only one a non-expert could not reach: the owner reported it as
+    //            "the Scoring area is missing a page: the main ladder". A gate that hides the
+    //            subject of its own menu is a defect, not curation.
+    // INSTEAD OF: `{ beginner: false, experienced: false, expert: true }` — expert only, added
+    //            2026-11-03 from the Page Walkthrough score. A weak score says "this page needs
+    //            work"; it does not say "remove the area's front door".
+    // REVERSE BY: Restoring the expert-only triple above.
+    'live-ordering-stack':   { beginner: true,  experienced: true,  expert: true },
     'sees-advanced':         { beginner: false, experienced: false, expert: true },
     'exit-signals':          { beginner: false, experienced: true,  expert: true },
     'sees-arena':            { beginner: false, experienced: false, expert: true },
@@ -83,11 +95,26 @@ export const EXPERIENCE_MATRIX = {
     'provider-health':       { beginner: false, experienced: true,  expert: true },
     'import-jobs':           { beginner: false, experienced: false, expert: true },
     'data-elements':         { beginner: false, experienced: false, expert: true },
-    'backtest-data':         { beginner: false, experienced: false, expert: true },
+    // ── DECISION (2026-11-04) ──
+    // WHAT:      `backtest-data` is visible at EVERY level.
+    // WHY:       Both of its siblings in this same Lab block are already `true` at every level, and
+    //            for a stated reason: `backtest-runs` — "an entry point to the results is never
+    //            hidden behind an experience setting" — and `current-strategy` — "it must not be
+    //            hidden behind an experience setting". The Data inventory is the third entry point of
+    //            that same suite, so gating it expert-only made the Lab's own rule apply to two of
+    //            three. `hidden-views.js` also names `/lab/backtest*` as deliberately NOT withheld.
+    //            The owner reported it as "the Backtesting Data page in the Lab area" missing.
+    // INSTEAD OF: `{ beginner: false, experienced: false, expert: true }`, added 2026-11-03.
+    // REVERSE BY: Restoring the expert-only triple above.
+    'backtest-data':         { beginner: true,  experienced: true,  expert: true },
   // Stored-run review is the same audience as the data inventory: it is for finding out what changed
   // between measurements, which only matters once you are iterating on one. Visible to every level so
   // an entry point to the results is never hidden behind an experience setting.
   'backtest-runs':         { beginner: true, experienced: true, expert: true },
+  // The A/B comparison of ONE strategy (2026-11-04). Same audience as stored-run review, and for the
+  // same reason: it is where you find out whether a change helped, so it must not be hidden behind an
+  // experience setting.
+  'current-strategy':      { beginner: true, experienced: true, expert: true },
     'decoder':               { beginner: false, experienced: false, expert: true },
     'database-tables':       { beginner: false, experienced: false, expert: true },
     'api-activity':          { beginner: false, experienced: false, expert: true },

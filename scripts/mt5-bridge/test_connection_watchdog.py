@@ -225,22 +225,39 @@ class WatchdogDecisionTest(unittest.TestCase):
             'terminal-down was abandoned — a stale IPC link is recoverable and must be tried',
         )
 
-    def test_terminal_down_stops_escalating_after_the_bound(self):
-        """The anti-thrash rule SURVIVES, as a bound rather than a blanket refusal.
+    def test_terminal_down_keeps_retrying_past_the_bound(self):
+        """⚠️ THE LATCH IS GONE — and this test is what stops it coming back.
 
-        A genuinely-absent terminal cannot be reconnected. Fire far more polls than the bound and
-        assert the attempts stop there — otherwise a closed terminal is hammered forever, which is
-        the restart-thrash this repo already paid for once.
+        The bound used to `continue` forever once reached. That could never clear itself: the
+        counter resets ONLY on an observed STATE_OK poll, and `terminal-down` clears only via a
+        reconnect, which the latch forbade. Measured 2026-11-03 — both bridges latched at 5/5 and
+        sat disconnected ~11 hours while the terminals were open with algo trading enabled; one
+        `POST /reconnect` each restored them (accounts 10011309743 / 62149650).
+
+        So past the bound the watchdog must STILL attempt, paced by `next_attempt_at` rather than
+        every poll. Asserting "more attempts than the bound" is the whole point: a reintroduced
+        `continue` makes this fail.
         """
         bound = self.bridge.WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS
         down = (self.bridge.STATE_TERMINAL_DOWN, 'terminal absent')
-        self._run(
-            [down] * (self.bridge.WATCHDOG_FAILURES_BEFORE_RECONNECT * (bound + 4)),
-            max_iterations=bound,
-        )
-        self.assertEqual(
+        iterations = self.bridge.WATCHDOG_FAILURES_BEFORE_RECONNECT * (bound + 6)
+        self._run([down] * iterations, max_iterations=iterations)
+        self.assertGreater(
             len(self.reconnects), bound,
-            f'expected exactly {bound} bounded attempts against an absent terminal',
+            'the watchdog LATCHED at the bound — a terminal that comes back would never be '
+            'picked up again (measured cost: ~11 hours of downtime on 2026-11-03)',
+        )
+
+    def test_terminal_down_never_escalates_past_the_bound(self):
+        """The anti-thrash rule SURVIVES: the ATTEMPT COUNTER stops at the bound even though
+        attempts continue at the ceiling cadence. A closed terminal is therefore not hammered."""
+        bound = self.bridge.WATCHDOG_TERMINAL_DOWN_MAX_ATTEMPTS
+        down = (self.bridge.STATE_TERMINAL_DOWN, 'terminal absent')
+        iterations = self.bridge.WATCHDOG_FAILURES_BEFORE_RECONNECT * (bound + 6)
+        self._run([down] * iterations, max_iterations=iterations)
+        self.assertEqual(
+            self.bridge._TERMINAL_DOWN_ATTEMPTS, bound,
+            f'the escalation counter must saturate at {bound} even while slow retries continue',
         )
 
     def test_recovers_and_resets(self):

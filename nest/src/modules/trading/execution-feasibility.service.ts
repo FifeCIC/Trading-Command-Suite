@@ -72,6 +72,28 @@ export class ExecutionFeasibilityService {
   ) {}
 
   /**
+   * The account's position model, cached briefly.
+   *
+   * ⚠️ `unknown` is a legitimate answer and is returned as such — it makes both the scale-in policy
+   * and the duplicate guard fall back to their conservative rule. It is never coerced to 'netting'.
+   */
+  private positionModelCache = new Map<string, { at: number; model: string | null }>();
+
+  private async accountPositionModel(brokerId: string, adapter: any): Promise<string | null> {
+    const key = String(brokerId || '');
+    const hit = this.positionModelCache.get(key);
+    if (hit && Date.now() - hit.at < 60_000) return hit.model;
+    let model: string | null = null;
+    try {
+      const acct = await adapter?.getAccount?.();
+      const raw = acct && (acct as any).positionModel;
+      if (typeof raw === 'string' && raw.length > 0) model = raw;
+    } catch { model = null; }
+    this.positionModelCache.set(key, { at: Date.now(), model });
+    return model;
+  }
+
+  /**
    * Assess whether a trade on `symbol` via `brokerId` would be accepted.
    *
    * `positions` (generation phase) reuses the ladder's single per-run fetch;
@@ -93,6 +115,16 @@ export class ExecutionFeasibilityService {
      * which inverted the two-phase design. #914.)
      */
     size?: number | null;
+    /**
+     * The bot about to trade. Given, the scale-in policy uses ITS `maxPyramidTiers` and — on a
+     * hedging account — only counts positions THIS bot opened, so two bots can hold one symbol.
+     *
+     * ⚠️ ADDED 2026-11-04. Optional on purpose: the manual path and the ladder (which has no bot)
+     * legitimately pass nothing, and omitting it keeps the previous behaviour exactly.
+     */
+    strategyId?: string | null;
+    /** The account's position model (`netting` | `exchange` | `hedging`), when known. */
+    positionModel?: string | null;
   }): Promise<FeasibilityResult> {
     const { symbol, side, brokerId, protocolId } = params;
     const blockers: FeasibilityBlocker[] = [];
@@ -229,12 +261,33 @@ export class ExecutionFeasibilityService {
       }
     }
 
+    // ── The bot's own identity, when the caller supplied it ──────────────────────────────────────
+    // `magic` is the attribution key (#1018); the scale-in policy needs it to tell THIS bot's
+    // position from another bot's on the same symbol. One indexed read, and only when a bot is
+    // named, so the manual/ladder paths are unchanged.
+    let incomingMagic: number | null = null;
+    let positionModel: string | null = params.positionModel ?? null;
+    if (params.strategyId) {
+      try {
+        const bot: any = await this.prisma.tradingStrategy.findUnique({ where: { id: params.strategyId } });
+        if (bot && bot.magic != null) incomingMagic = Number(bot.magic);
+      } catch { /* unknown — the policy falls back to its symbol-wide rule */ }
+    }
+    if (positionModel == null) {
+      // Asked once per broker and cached for a minute: this runs per envelope in the generation
+      // phase, and a bridge round-trip per envelope is how #1000 (a blocked /health) happened.
+      positionModel = await this.accountPositionModel(brokerId, adapter);
+    }
+
     const pyramid = await this.pyramidPolicy.evaluate({
       symbol: ticker,
       side,
       brokerId,
       positions,
       accountId: routedAccountId,
+      strategyId: params.strategyId ?? null,
+      positionModel,
+      incomingMagic,
     });
     for (const b of pyramid.blockers) {
       blockers.push({ key: b.key, message: b.message, hint: b.hint });
@@ -274,7 +327,9 @@ export class ExecutionFeasibilityService {
     // Duplicate guard as final structural check (execution-phase parity).
     if (blockers.length === 0 && !pyramid.hasOpenPosition) {
       try {
-        const dup = await this.duplicateGuard.checkDuplicate(ticker, brokerId, protocolId ?? undefined, undefined, routedAccountId);
+        const dup = await this.duplicateGuard.checkDuplicate(
+          ticker, brokerId, protocolId ?? undefined, undefined, routedAccountId, positionModel,
+        );
         if (dup.blocked) {
           blockers.push({
             key: 'duplicate-position',

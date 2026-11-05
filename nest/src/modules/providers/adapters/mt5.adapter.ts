@@ -1134,6 +1134,9 @@ export class Mt5Adapter implements IProviderAdapter {
       mode: 'demo',
       connected: true,
       accountId: data.login != null ? String(data.login) : undefined,
+      // ⚠️ 2026-11-04 — carried from the bridge's `/account`, which reads it from the SAME
+      // `account_info()` call. `unknown` when the terminal did not report it; never defaulted.
+      positionModel: data.positionModel ?? 'unknown',
     };
   }
 

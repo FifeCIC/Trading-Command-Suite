@@ -18,11 +18,18 @@ import { noticeFromError } from '../core/notices/from-error.js';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import ToggleSwitch from '../components/ToggleSwitch';
-import { filterStrategies, isActiveStrategy, isTradingStrategy, isScoringStrategy, isFaultyStrategy } from '../core/strategy-filters';
+import NoticeBlock from '../components/NoticeBlock';
+import { filterStrategies, isActiveStrategy, isTradingStrategy, isScoringStrategy, isFaultyStrategy, matchesBotSearch } from '../core/strategy-filters';
+import { useSort } from '../core/use-sort';
 import StrategyFaultBadge from '../components/StrategyFaultBadge';
+import PageInfoPopover from '../components/PageInfoPopover';
 // The scoring mechanics panel (owner request, 2026-10-08): the maths behind the Score column, shown
 // on live numbers rather than described.
 import ScoringMechanicsPanel from '../components/ScoringMechanicsPanel.jsx';
+// #1193 — the earned level and the active-bot ceiling it decides. Mounted ABOVE the table because
+// it states a constraint on activation (what the toggles below will refuse), not an explanation of
+// a column.
+import ProgressionPanel from '../components/ProgressionPanel.jsx';
 import styles from './strategies-list.module.css';
 
 const API = '/api/trading/strategies';
@@ -227,9 +234,38 @@ function LegResults({ legs, unavailable }) {
   );
 }
 
+/**
+ * SortTh — a sortable column header.
+ *
+ * The ORDERING RULE is not re-implemented here: it comes from `core/use-sort.jsx` (`useSort`),
+ * which is the one place nulls-last, numeric-vs-text and the `aria-sort` vocabulary are decided.
+ * Only the MARKUP is local, because `SortableTh` in that file hardcodes the Backtest Lab's
+ * `bt-sort` classes and a CSS module hashes its own names — the two cannot share a button style
+ * without dragging a global stylesheet onto this page.
+ *
+ * ⚠️ The button lives INSIDE the `<th>` so the column keeps its table semantics and the `aria-sort`
+ * value is announced with the header. A clickable `<th>` alone would not be reachable by keyboard.
+ */
+function SortTh({ col, label, title, api, className, firstDir = 'desc' }) {
+  const active = api.sortKey === col;
+  return (
+    <th scope="col" aria-sort={api.ariaSort(col)} className={className} title={title}>
+      <button
+        type="button"
+        className={`${styles.sortBtn}${active ? ` ${styles.sortOn}` : ''}`}
+        onClick={() => api.toggle(col, firstDir)}
+      >
+        {label}
+        <span className={styles.sortArrow} aria-hidden="true">{active ? (api.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
+      </button>
+    </th>
+  );
+}
+
 export default function StrategiesListPage() {
   const [selectedId, setSelectedId] = useState(null);
-  const [filter, setFilter] = useState('all'); // all | active | trading | scoring | faulty
+  const [filter, setFilter] = useState('all'); // all | active | disabled | trading | scoring | faulty
+  const [search, setSearch] = useState('');
   const [toggleError, setToggleError] = useState(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -302,8 +338,39 @@ export default function StrategiesListPage() {
     return map;
   }, [legData]);
 
-  // ── Filter ──
+  // ── Filter → search → sort ──
   const filtered = useMemo(() => filterStrategies(strategies, filter), [strategies, filter]);
+  const searched = useMemo(() => filtered.filter((s) => matchesBotSearch(s, search)), [filtered, search]);
+
+  /**
+   * The rows the table actually renders.
+   *
+   * ⚠️ TYPE, WATCHLIST, PROTOCOLS, LEGS AND POS ARE DERIVED, so they cannot be sorted on the raw
+   * API object — `useSort` reads `row[key]`, and sorting on a value the cell does not display is
+   * the "plausible number, wrong basis" defect in table form. Each is computed ONCE here and then
+   * both rendered and sorted, so the two can never disagree.
+   *
+   * ⚠️ `watchlistLabel` reads `watchlists[]` because `watchlistName` IS NOT ON THIS PAYLOAD —
+   * measured 2026-11-04, the column rendered `—` on all 68 rows. `watchlistName` is kept as the
+   * fallback so a future server field of that name still wins.
+   */
+  const rows = useMemo(() => searched.map((s, i) => {
+    const watchlistNames = (Array.isArray(s.watchlists) ? s.watchlists : [])
+      .map((w) => (typeof w === 'string' ? w : w?.name))
+      .filter(Boolean);
+    return {
+      ...s,
+      rank: i + 1,
+      typeLabel: isTradingStrategy(s) ? 'Trading' : isScoringStrategy(s) ? 'Scoring' : 'Strategy',
+      watchlistLabel: watchlistNames.join(', ') || s.watchlistName || '—',
+      protocolCount: Array.isArray(s.protocols) ? s.protocols.length : 0,
+      posCount: posBySymbol[String(s.symbol || '').toUpperCase()] || 0,
+      legPnl: legsById[s.id]?.combined?.totalPnl ?? null,
+    };
+  }), [searched, posBySymbol, legsById]);
+
+  // Sorting is opt-in: until a header is clicked the list keeps the server's registry order.
+  const sort = useSort(rows, null, 'desc');
 
   const handleToggle = async (id) => {
     setToggleError(null);
@@ -337,38 +404,104 @@ export default function StrategiesListPage() {
   return (
     <div className={styles.page}>
       <motion.header className={styles.header} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <div>
-          <h1>Trading Bots</h1>
-          <p className={styles.subtitle}>
-            {isError ? 'Could not load bots' : `${strategies.length} bots — trading, scoring, and monitoring`}
-          </p>
-          {/* #1189 — the narrative tally. An ABSENT theory is a fact about the fleet, and a per-row
-              "no theory" badge on 60+ rows is noise nobody reads. Counting it once here keeps the
-              absence visible without spending a column on it. ⚠️ When the counts could not be read
-              the line says so and shows no number — `null` (cannot judge) must never render as `0`
-              (nothing observed), because those are different facts. */}
-          {!isError && theoryTally && (
-            <p className={styles.subtitle}>
-              {theoryTally.withTheory} of {theoryTally.total} have a theory
-              {' · '}
-              {theoryTally.observations == null
-                ? 'track record unavailable'
-                : `${theoryTally.observations} observation${theoryTally.observations === 1 ? '' : 's'} recorded`}
-            </p>
-          )}
-        </div>
-        <div className={styles.filterBar}>
-          {['all', 'active', 'trading', 'scoring', 'faulty'].map(f => (
-            <button
-              key={f}
-              className={`${styles.filterChip} ${filter === f ? styles.filterActive : ''} ${f === 'faulty' ? styles.filterFaulty : ''}`}
-              onClick={() => setFilter(f)}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
+        {/* The page title lives in the breadcrumb (`.main-top-row`), and `index.css` hides a
+            page-level `h1` — so it is kept only for the "exactly one h1" landmark rule. */}
+        <h1>Trading Bots</h1>
+
+        {/* ── Control bar ─────────────────────────────────────────────────────────────────────
+            Modelled on `.lad-toolbar` (LadderPage, `/scoring/live-ordering-stack`): ONE panel row
+            holding every control for the table. Controls scattered into the page header read as
+            unrelated to the table they act on, and the header had no width to give them.
+
+            ⚠️ The descriptions and the live tally are NOT here any more — they sit behind the ℹ
+            popover at the end of the row, which is the app's idiom for "what is this page" text
+            (`components/PageInfoPopover`, the same trigger as the Ladder). */}
+        <div className={styles.toolbar}>
+          <div className={styles.search}>
+            <span className={styles.searchIcon} aria-hidden="true">⌕</span>
+            <input
+              type="search"
+              className={styles.searchInput}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search bots, symbols, protocols…"
+              aria-label="Search bots by name, symbol, watchlist, protocol, broker or active state"
+            />
+            {search && (
+              <button
+                type="button"
+                className={styles.searchClear}
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+                title="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </div>
+
+          <div className={styles.filterBar}>
+            {/* ⚠️ `disabled` is the COMPLEMENT of `active`, not an extra facet — `active` is the
+                kill-switch column, so every bot is in exactly one of the two. Measured 2026-11-04:
+                61 of the 68 bots are switched off, and before this chip they were only reachable by
+                scanning the unfiltered list for grey status dots. Appended last so the positions of
+                the existing chips — which operators know by position — do not move. */}
+            {['all', 'active', 'trading', 'scoring', 'faulty', 'disabled'].map(f => (
+              <button
+                key={f}
+                className={`${styles.filterChip} ${filter === f ? styles.filterActive : ''} ${f === 'faulty' ? styles.filterFaulty : ''}`}
+                onClick={() => setFilter(f)}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* ⚠️ A `<div>`, not a `<span>`: `PageInfoPopover` renders a `<div>` popover, and flow
+              content inside phrasing content is invalid nesting (the same defect `appearance-area.css`
+              records against a `<p>`). */}
+          <div className={styles.toolbarInfo}>
+            <PageInfoPopover label="About this bot list">
+              {isError ? (
+                <p className={styles.popoverLine}>
+                  <strong>The registry could not be read.</strong> GET /api/trading/strategies failed,
+                  so this is a failed read — not an empty registry, and no bot has been deleted.
+                </p>
+              ) : (
+                <>
+                  <p className={styles.popoverLine}>
+                    <strong>{strategies.length} bots</strong> — trading, scoring, and monitoring. The
+                    list refreshes every 15 seconds.
+                  </p>
+                  {/* #1189 — the narrative tally. An ABSENT theory is a fact about the fleet, and a
+                      per-row "no theory" badge on 60+ rows is noise nobody reads. Counting it once
+                      keeps the absence visible without spending a column on it. ⚠️ When the counts
+                      could not be read the line says so and shows no number — `null` (cannot judge)
+                      must never render as `0` (nothing observed); those are different facts. */}
+                  {theoryTally && (
+                    <p className={styles.popoverLine}>
+                      <strong>{theoryTally.withTheory} of {theoryTally.total}</strong> have a theory
+                      {' · '}
+                      {theoryTally.observations == null
+                        ? 'track record unavailable'
+                        : `${theoryTally.observations} observation${theoryTally.observations === 1 ? '' : 's'} recorded`}
+                    </p>
+                  )}
+                  <p className={styles.popoverLine}>
+                    Click a column header to sort, and click it again to reverse. Select a row to see
+                    that bot's configuration in the panel beside the table.
+                  </p>
+                </>
+              )}
+            </PageInfoPopover>
+          </div>
         </div>
       </motion.header>
+
+      {/* #1193 — the active-bot ceiling for this install's progression level. Above the table on
+          purpose: it explains what the toggles below will REFUSE, and a refusal discovered by
+          clicking is a refusal with no context. */}
+      <ProgressionPanel />
 
       {isError && (
         <EmptyState
@@ -378,9 +511,13 @@ export default function StrategiesListPage() {
         />
       )}
       {toggleError && (
-        <div className={styles.toggleError} role="alert">
-          <strong>{toggleError.notice.title}</strong> {toggleError.notice.message}
-          {toggleError.notice.action ? ` ${toggleError.notice.action}` : ''}
+        <div className={styles.toggleError}>
+          {/* ⚠️ NoticeBlock, NOT title+message. The hand-rolled banner below rendered `message` and
+              `action` but DROPPED `cause`, which is where the server's specifics land: a refused
+              activation showed "The request to the API failed (HTTP 400)" and nothing about WHY the
+              bot was refused. NoticeBlock is the one renderer (components/NoticeBlock.jsx) and shows
+              the cause and the stable code. */}
+          <NoticeBlock notice={toggleError.notice} compact />
         </div>
       )}
       {!isLoading && faultyStrategies.length > 0 && filter !== 'faulty' && (
@@ -390,9 +527,22 @@ export default function StrategiesListPage() {
         </div>
       )}
       {/* ⚠️ `!isError` is load-bearing. Without it a FAILED read renders "No bots" beside the error
-          block, and "there are none" is a very different claim from "the request failed". */}
-      {!isLoading && !isError && filtered.length === 0 && (
-        <EmptyState icon="🎯" title="No bots" description="Nothing matches this filter." />
+          block, and "there are none" is a very different claim from "the request failed".
+          ⚠️ And the SEARCH is its own empty state, with its own escape. "Nothing matches this
+          filter" while a search term is hiding 61 of 68 bots misreports WHY — the failure
+          `LadderEmptyState` documents at length. */}
+      {!isLoading && !isError && rows.length === 0 && (
+        search.trim() ? (
+          <EmptyState
+            icon="🔍"
+            title={`No bots match “${search.trim()}”`}
+            description="The registry loaded, but no bot matches this search. Clear the search to see the list again."
+            actionLabel="Clear search"
+            actionOnClick={() => setSearch('')}
+          />
+        ) : (
+          <EmptyState icon="🎯" title="No bots" description="Nothing matches this filter." />
+        )
       )}
 
       {/* ── ONE bot table, plus a sticky sidebar for the selected row ───────────────────────────────
@@ -412,26 +562,28 @@ export default function StrategiesListPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th scope="col" className={styles.thRank}>#</th>
-                <th scope="col">Bot</th>
-                <th scope="col">Type</th>
-                <th scope="col">Symbol</th>
-                <th scope="col">Watchlist</th>
-                <th scope="col">Protocols</th>
-                <th scope="col" title="Per-leg closed-trade results: trades and P&L for each leg of a paired bot, then the combined total">Legs</th>
-                <th scope="col" className={styles.thNum}>Broker</th>
-                <th scope="col" className={styles.thNum}>Score</th>
-                <th scope="col" className={styles.thNum}>Pos</th>
+                {/* `#` is the bot's REGISTRY position and is sortable like any other column: sorting
+                    it ascending restores the server's order, which is also the only way back out of
+                    a sort once one is applied. It shows the registry rank rather than the row's
+                    on-screen index so the number stays a fact about the bot, not about the sort. */}
+                <SortTh col="rank" label="#" api={sort} className={styles.thRank} firstDir="asc" title="Registry order — the position the bot is registered in" />
+                <SortTh col="name" label="Bot" api={sort} firstDir="asc" />
+                <SortTh col="typeLabel" label="Type" api={sort} firstDir="asc" />
+                <SortTh col="symbol" label="Symbol" api={sort} firstDir="asc" />
+                <SortTh col="watchlistLabel" label="Watchlist" api={sort} firstDir="asc" />
+                <SortTh col="protocolCount" label="Protocols" api={sort} title="Number of protocol subscriptions — routing joins strategy_protocol, not the legacy protocolId column" />
+                <SortTh col="legPnl" label="Legs" api={sort} title="Per-leg closed-trade results: trades and P&L for each leg of a paired bot, then the combined total" />
+                <SortTh col="brokerId" label="Broker" api={sort} className={styles.thNum} firstDir="asc" />
+                <SortTh col="lastComposite" label="Score" api={sort} className={styles.thNum} />
+                <SortTh col="posCount" label="Pos" api={sort} className={styles.thNum} />
               </tr>
             </thead>
             <tbody>
-              {filtered.map((s, i) => {
+              {sort.sorted.map((s) => {
                 const isActive = isActiveStrategy(s);
-                const isTrading = isTradingStrategy(s);
-                const isScoring = isScoringStrategy(s);
-                const typeLabel = isTrading ? 'Trading' : isScoring ? 'Scoring' : 'Strategy';
-                const typeColor = isTrading ? 'var(--accent)' : isScoring ? 'var(--risk-watch)' : 'var(--ink-soft)';
-                const posCount = posBySymbol[s.symbol?.toUpperCase()] || 0;
+                // The chip tone follows the LABEL the derived row already carries, so the colour and
+                // the text cannot disagree.
+                const typeColor = s.typeLabel === 'Trading' ? 'var(--accent)' : s.typeLabel === 'Scoring' ? 'var(--risk-watch)' : 'var(--ink-soft)';
 
                 return (
                   <tr
@@ -439,7 +591,7 @@ export default function StrategiesListPage() {
                     className={`${styles.row} ${selectedId === s.id ? styles.rowSelected : ''}`}
                     onClick={() => setSelectedId(selectedId === s.id ? null : s.id)}
                   >
-                    <td className={styles.tdRank}>{i + 1}</td>
+                    <td className={styles.tdRank}>{s.rank}</td>
                     <td>
                       <span className={styles.nameCell}>
                         <span className={styles.cardDot} style={{ background: isActive ? STATUS_COLORS.active : STATUS_COLORS.disabled }} />
@@ -450,11 +602,27 @@ export default function StrategiesListPage() {
                     </td>
                     <td>
                       <span className={styles.cardType} style={{ background: `color-mix(in srgb, ${typeColor} 12%, transparent)`, color: 'var(--ink)', borderColor: typeColor }}>
-                        {typeLabel}
+                        {s.typeLabel}
                       </span>
                     </td>
-                    <td><strong>{s.symbol || '—'}</strong></td>
-                    <td className={styles.tdMuted}>{s.watchlistName || '—'}</td>
+                    <td>
+                      <strong>{s.symbol || '—'}</strong>
+                      {Number(s.maxPyramidTiers) > 1 && (
+                        // ⚠️ PYRAMID PRESENCE (2026-11-04, owner request). Pyramid is an OPTIONAL
+                        // per-bot mechanism and part of what makes one strategy distinct from
+                        // another, so the global view has to show when it is ON. Rendered from the
+                        // same declared field the rules view reads (`bot-rules.ts`), not a
+                        // hand-rolled duplicate of the rule.
+                        <span
+                          className={styles.cardType}
+                          style={{ marginLeft: 6, fontSize: 11 }}
+                          title={`Pyramid ON — up to ${s.maxPyramidTiers} tiers (scale-in allowed when a tier's conditions are met)`}
+                        >
+                          ⟂{s.maxPyramidTiers}
+                        </span>
+                      )}
+                    </td>
+                    <td className={styles.tdMuted}>{s.watchlistLabel}</td>
                     <td><ProtocolChips strategies={s} /></td>
                     <td><LegResults legs={legsById[s.id]} unavailable={legsUnavailable} /></td>
                     <td className={styles.tdNum}>{s.brokerId || '—'}</td>
@@ -468,7 +636,7 @@ export default function StrategiesListPage() {
                       )}
                     </td>
                     <td className={styles.tdNum}>
-                      {posCount > 0 ? <span className={styles.posChip}>{posCount}</span> : <span className={styles.tdMuted}>—</span>}
+                      {s.posCount > 0 ? <span className={styles.posChip}>{s.posCount}</span> : <span className={styles.tdMuted}>—</span>}
                     </td>
                   </tr>
                 );

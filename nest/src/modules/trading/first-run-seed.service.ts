@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { TradingStrategyService } from './trading-strategy.service';
+import { ProgressionService } from '../progression/progression.service';
 import { DEFAULT_TRADING_STRATEGIES } from './strategy-seed-data';
 
 /**
@@ -44,6 +45,7 @@ export class FirstRunSeedService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly protocolDb: ProtocolDbService,
     private readonly tradingStrategy: TradingStrategyService,
+    private readonly progression: ProgressionService,
   ) {}
 
   onModuleInit(): void {
@@ -52,6 +54,43 @@ export class FirstRunSeedService implements OnModuleInit {
         this.logger.warn(`First-run seed did not complete: ${err instanceof Error ? err.message : String(err)}`);
       });
     }, FirstRunSeedService.START_DELAY_MS);
+  }
+
+  /**
+   * The shipped bots, with the ones beyond this install's active-bot ceiling created INACTIVE (#1193).
+   *
+   * ⚠️ WHY HERE AND NOWHERE ELSE. A fresh install has no activity, so its progression level is 1 and
+   * its ceiling is one bot. Seeding all of them ACTIVE would hand a first-day user exactly the
+   * concurrency the guardrail exists to withhold — and it would make the limit true only for bots
+   * added later, which is not a limit at all.
+   *
+   * ⚠️ IT CANNOT RETRO-DEACTIVATE ANYTHING, and that is why it is safe: this class only runs when
+   * `trading_strategy` is EMPTY. `seedDefaults()` convergence on an existing install is deliberately
+   * left ungated — reverting a live bot's active flag because a level changed would be a silent
+   * TRADING action taken by a seed run.
+   *
+   * ⚠️ FAIL-OPEN. If the level cannot be judged, every shipped bot keeps its seeded active flag: a
+   * guardrail that cannot read its input must not quietly ship a one-bot install.
+   */
+  private async seedForInstallLevel() {
+    const { limit, judged } = await this.progression.activeBotsForFreshInstall();
+    if (!judged || limit === null) {
+      this.logger.log(
+        judged
+          ? 'FIRST RUN — no active-bot ceiling at this level, so the shipped active flags are kept.'
+          : 'FIRST RUN — progression level unreadable, so the shipped active flags are kept (fail-open).',
+      );
+      return DEFAULT_TRADING_STRATEGIES;
+    }
+    const seeded = DEFAULT_TRADING_STRATEGIES.map((s, index) =>
+      index < limit ? s : { ...s, active: false },
+    );
+    const deactivated = seeded.filter((s, i) => (DEFAULT_TRADING_STRATEGIES[i] as any).active !== false && i >= limit).length;
+    this.logger.log(
+      `FIRST RUN — progression level allows ${limit} active bot(s); ` +
+        `${deactivated} shipped bot(s) created INACTIVE (#1193).`,
+    );
+    return seeded;
   }
 
   /** Exposed so the behaviour can be exercised without waiting for a timer. */
@@ -89,7 +128,7 @@ export class FirstRunSeedService implements OnModuleInit {
             'A bot pointing at a missing protocol would look active and never trade.',
         );
       } else {
-        const r = await this.tradingStrategy.seedDefaults(DEFAULT_TRADING_STRATEGIES);
+        const r = await this.tradingStrategy.seedDefaults(await this.seedForInstallLevel());
         botsCreated = r.created;
         this.logger.log(
           `FIRST RUN — created ${r.created} bot(s) (${r.unchanged} already present, ${r.failed} failed).`,

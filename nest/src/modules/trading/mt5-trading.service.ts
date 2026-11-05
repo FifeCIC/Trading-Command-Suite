@@ -51,6 +51,19 @@ export interface Mt5Account {
    * estimate ~11x. It blocked 78 trades in one day.
    */
   leverage: number;
+  /**
+   * How this account treats a SECOND position on a symbol it already holds.
+   *
+   * `netting` (MT5 margin_mode 0) MERGES the two into one averaged position; `exchange` (1) the
+   * broker decides; `hedging` (2) opens a genuine second ticket. It is the account's property, not
+   * a global setting — broker 2 on this machine is netting and broker 3 is hedging.
+   *
+   * ⚠️ Added 2026-11-03 with the per-bot pyramid work. `duplicate-guard` and `pyramid-policy` both
+   * branch on it, so a UI that shows "2 positions allowed" without this field cannot explain WHY a
+   * second order merged instead of opening. `unknown` is refused by both gates — never read a
+   * missing value as permission.
+   */
+  positionModel?: 'netting' | 'exchange' | 'hedging' | 'unknown';
 }
 
 /** Symbol specification from the broker — what a position SIZE actually costs. */
@@ -191,6 +204,10 @@ price, `price` came back `0`, and the per-symbol cap refused:
         // ⚠️ `?? 0`, not `?? 100`. A missing leverage must show up as an unusable account rather
         // than a plausible default that quietly produces a wrong margin estimate.
         leverage: Number(data.leverage ?? 0),
+        // Passed through verbatim: the bridge classifies `margin_mode` and sends 'unknown' when it
+        // cannot read it, which is the value both order gates refuse on. Defaulting here would
+        // re-introduce the "unknown reads as permission" defect at the API boundary.
+        positionModel: (data.positionModel ?? 'unknown') as Mt5Account['positionModel'],
       };
     } catch { return null; }
   }
@@ -333,6 +350,11 @@ price, `price` came back `0`, and the per-symbol cap refused:
           balance: acct?.balance ?? null,
           equity: acct?.equity ?? null,
           marginFree: acct?.margin_free ?? acct?.marginFree ?? null,
+          // How this account treats a SECOND position on a symbol it already holds. The bridge
+          // classifies MT5 `margin_mode` and sends 'unknown' when it cannot read it, and 'unknown'
+          // must surface as unknown — both order gates refuse on it, so a page that showed a blank
+          // would hide the reason a second position never appeared.
+          positionModel: acct?.positionModel ?? 'unknown',
           label,
         });
 

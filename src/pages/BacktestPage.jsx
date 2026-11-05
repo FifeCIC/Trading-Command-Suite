@@ -14,6 +14,9 @@ import ProtocolCarousel from '../components/ProtocolCarousel';
  */
 import TradeTable from '../components/backtest/TradeTable.jsx';
 import StopSweepPanel from '../components/backtest/StopSweepPanel.jsx';
+import ProfitCapturePanel from '../components/backtest/ProfitCapturePanel.jsx';
+import StatCard from '../components/backtest/StatCard.jsx';
+import { usePreferences } from '../core/hooks/usePreferences';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import { getAssetType } from '../core/asset-types.js';
@@ -90,22 +93,11 @@ const ProtocolDirectiveSettings = lazy(() => import('../components/backtest/Prot
 /** Step 4 of the PROTOCOLS page: the per-protocol directive editor (2026-10-27). */
 const DirectiveSettingsPanel = lazy(() => import('../components/backtest/DirectiveSettingsPanel'));
 /**
- * The manual A/B pair (#1143): A = the bot's realised record, B = the most recent stored run.
- * Lazy for the same reason as the three above — the main chunk sits against the PWA precache cap.
+ * ⚠️ `RunPanel`, `RunDiffPanel` and `RunSettingsDiff` were REMOVED FROM THIS PAGE 2026-11-04. They
+ * render the A/B comparison, which moved to `/lab/current-strategy` (owner direction: the strategies
+ * page was *"displaying results twice"*). Only `ScoreTable` is still used here — the per-bar reading
+ * of THIS run is part of its own result, not a comparison.
  */
-const RunPanel = lazy(() =>
-  import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.RunPanel })));
-const RunDiffPanel = lazy(() =>
-  import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.RunDiffPanel })));
-/**
- * WHAT THE TWO RUNS WERE CONFIGURED WITH (#1141). Separate from `RunDiffPanel` because it answers a
- * different question — that panel differences the SCORES, this one differences the SETTINGS — and it
- * is the only surface for `POST /api/backtest/runs/compare`'s `differences` payload, which was being
- * computed and discarded.
- */
-const RunSettingsDiff = lazy(() =>
-  import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.RunSettingsDiff })));
-/** The per-bar score table, shared with the A/B panels so a protocol run's own reading has one shape. */
 const ScoreSeriesTable = lazy(() =>
   import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.ScoreTable })));
 
@@ -488,6 +480,21 @@ const moneyOrDash = (v) =>
     : `${v < 0 ? '−' : ''}$${Math.abs(Number(v)).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
+ * The class for a CURRENCY value: the money sizing, plus the profit/loss colour of the number itself.
+ *
+ * ⚠️ TWO ENCODINGS, TWO QUESTIONS — and the tile had only one of them (owner report, 2026-11-04:
+ * *"So the value is red for minus and the box is currently green suggesting an improvement since the
+ * previous backtesting."*). The BORDER carries the comparison verdict (green = improved on the
+ * previous run); the VALUE carries where the run stands (red = lost money). A run that improved from
+ * −$400,000 to −$153,498 is both, and painting the number green would say it made money. This is the
+ * same split `TradeTable`'s `numTone` already applies to the trade tiles.
+ */
+const moneyValueClass = (v) =>
+  `bt-stat-value bt-stat-value--money${
+    v == null ? '' : Number(v) > 0 ? ' mss-stat--bullish' : Number(v) < 0 ? ' mss-stat--bearish' : ''
+  }`;
+
+/**
  * Capitalise the first letter of a sentence fragment built elsewhere.
  *
  * ⚠️ The auto-accept details are written as mid-sentence clauses ("P&L moved +3.2% against A — under
@@ -499,6 +506,14 @@ const capFirst = (s) => (s ? String(s).charAt(0).toUpperCase() + String(s).slice
 
 export default function BacktestPage({ subject: fixedSubject }) {
   const queryClient = useQueryClient();
+
+  /**
+   * THE APP-WIDE FOCUS (owner direction, 2026-11-04). `usePreferences` is the one preference store the
+   * whole app already reads (localStorage + `PUT /api/preferences`), so "which strategy am I working
+   * on" lives there rather than in a second store. It is read SYNCHRONOUSLY for the initial selection
+   * below, which is why the restore works on this browser without waiting for the server round trip.
+   */
+  const { prefs, set: setPref } = usePreferences();
 
   // ── Subject ──────────────────────────────────────────────────────────────────────────────────
   /**
@@ -520,8 +535,8 @@ export default function BacktestPage({ subject: fixedSubject }) {
   const STEP_RUN = stepNo(steps, 'run');
   const STEP_RESULT = stepNo(steps, 'result');
   const SETTINGS_STEPS = useMemo(() => buildSettingsSteps(steps), [steps]);
-  const [protocolId, setProtocolId] = useState('');
-  const [botId, setBotId] = useState('');
+  const [protocolId, setProtocolId] = useState(() => prefs.currentProtocolId || '');
+  const [botId, setBotId] = useState(() => prefs.currentStrategyId || '');
   const [timeframe, setTimeframe] = useState('1h');
 
   // ── Window ───────────────────────────────────────────────────────────────────────────────────
@@ -605,8 +620,10 @@ export default function BacktestPage({ subject: fixedSubject }) {
   const [overrides, setOverrides] = useState({ minComposite: '', slPct: '', tpPct: '', timeframe: '' });
   const setOverride = (key, value) => setOverrides((prev) => ({ ...prev, [key]: value }));
 
-  /** Which reference panel is showing. The three are consulted, not stepped through — see the tabs. */
-  const [refTab, setRefTab] = useState('current');
+  /**
+   * ⚠️ THE REFERENCE TABS THAT LIVED HERE MOVED TO `/lab/current-strategy` (2026-11-04). The page no
+   * longer owns an A/B panel, so it no longer owns the state that selected one.
+   */
 
   // ── THE A/B BASELINE (2026-10-27) ────────────────────────────────────────────────────────────
   // A is the run the READER ACCEPTED, not "the first run" and not live performance. It is stored in
@@ -618,12 +635,10 @@ export default function BacktestPage({ subject: fixedSubject }) {
 
   const acceptBaseline = (runIdToAccept) => {
     baseline.accept(runIdToAccept);
-    setRefTab('current');
   };
 
   const clearBaseline = () => {
     baseline.clear();
-    setRefTab('current');
   };
 
   /**
@@ -645,36 +660,18 @@ export default function BacktestPage({ subject: fixedSubject }) {
       ).catch(() => null),
     staleTime: 15_000,
   });
-  /** A B run the reader PINNED. 
-ull = follow the latest, which is the default. */
-  const [pickedBId, setPickedBId] = useState(null);
-  useEffect(() => {
-    setPickedBId(null);
-  }, [protocolId]);
+  /**
+   * ⚠️ `pickedBId` / `latestRunId` / `bRunId` / the live-record line were REMOVED 2026-11-04 with the
+   * A/B panels — they existed only to feed `RunPanel`. The pair bar and the two-column comparison are
+   * `/lab/current-strategy` now. `latestRunsQuery` STAYS: `previousRunId` below still uses it to colour
+   * the stat cards against the previous run when no baseline has been accepted.
+   */
 
-  const latestRunId = (() => {
-    const raw = latestRunsQuery.data;
-    if (!raw) return runId || null;
-    const runs = Array.isArray(raw) ? raw : (raw.runs ?? []);
-    return runs[0]?.id ?? runId ?? null;
-  })();
-  /** The B the panels use: the pinned run when there is one, otherwise the latest. */
-  const bRunId = pickedBId ?? latestRunId;
-
-  /** One labelled line of the bot's LIVE record, so A/B comparisons do not erase the only live evidence. */
-  const liveRefQuery = useQuery({
-    queryKey: ['bt-bot-performance'],
-    queryFn: () => apiGet('/api/trading/bot-performance').catch(() => null),
-    enabled: subject === 'strategy' && Boolean(botId),
-    staleTime: 60_000,
-  });
-  const liveReference = (() => {
-    if (subject !== 'strategy' || !botId) return null;
-    const bot = (liveRefQuery.data?.bots ?? []).find((b) => b.botId === botId);
-    if (!bot) return null;
-    const r = bot.realised ?? {};
-    return `${r.samples ?? 0} closed trade(s) · win ${r.winRate == null ? '—' : `${(Number(r.winRate) * 100).toFixed(1)}%`} · expectancy ${r.expectancy ?? '—'} · total ${r.totalPnl ?? '—'} (reliability: ${r.reliability ?? '—'})`;
-  })();
+  /**
+   * ⚠️ THE LIVE-RECORD LINE MOVED WITH THE A/B PANELS (2026-11-04). It was rendered as the `liveReference`
+   * caption on Run A, so with those panels gone it has no reader here. It is shown on
+   * `/lab/current-strategy`, where the comparison still exists.
+   */
 
   /**
    * The step the reader is on. Auto-advances ONCE per step (see the effect below); `activeStep`
@@ -923,6 +920,19 @@ ull = follow the latest, which is the default. */
     if (filteredBots.some((b) => b.id === botId)) return;
     setBotId(filteredBots[0].id);
   }, [filteredBots, botId, subject]);
+
+  /**
+   * ── REMEMBER THE FOCUS (owner direction, 2026-11-04) ───────────────────────────────────────────
+   * *"I think the current strategy can be held across the entire app to help the user focus."*
+   *
+   * ⚠️ IT RUNS AFTER THE TWO CORRECTION EFFECTS ABOVE, and that order is the point: those force the
+   * selection back into the filtered list, so writing here stores what the page is actually USING and
+   * cannot advertise a bot the carousel no longer shows.
+   */
+  useEffect(() => {
+    if (subject === 'strategy' && botId) setPref('currentStrategyId', botId);
+    if (subject === 'protocol' && protocolId) setPref('currentProtocolId', protocolId);
+  }, [subject, botId, protocolId, setPref]);
 
   // A bot's symbol and timeframe are FACTS ABOUT THE BOT, not choices. Deriving them here means the
   // run cannot be assembled from a pairing the bot does not have.
@@ -1364,6 +1374,8 @@ ull = follow the latest, which is the default. */
   const equityData = equityQuery.data;
   const stats = result?.stats;
   const executionUsed = result?.execution;
+  /** TRUE when the run on screen is the one already accepted as A. */
+  const isThisRunBaseline = Boolean(result?.id && baselineRunId && result.id === baselineRunId);
 
   // ── MODES (2026-10-30) ─────────────────────────────────────────────────────────────────────────
   /**
@@ -3275,22 +3287,57 @@ ull = follow the latest, which is the default. */
             cases, which is the defect this page keeps paying for.
           */}
           <div className="bt-stats-grid">
-            <div className={`bt-stat ${verdictClass(comparison?.verdicts?.totalSignals)}`} title={comparison?.label ? `vs ${comparison.label}` : undefined}><div className="bt-stat-value">{stats.totalSignals}</div><div>Entry Signals</div></div>
+            <StatCard
+              toneClass={verdictClass(comparison?.verdicts?.totalSignals)}
+              value={stats.totalSignals}
+              label="Entry Signals"
+              note="Bars where the score cleared the entry gate. An opportunity the engine considered — not necessarily a trade taken."
+            />
             {/* ⚠️ #980 — `stats.winRate` is a SIGNAL rate (profitable entry signals ÷ entry
                 signals). Labelling it "Win Rate" invited reading it as a trade rate, and run
                 `0ddddd` stored 100% here beside 0 winners of 3 trades. The two populations are
                 now labelled as what they are. */}
-            <div className={`bt-stat ${verdictClass(comparison?.verdicts?.winRate)}`}><div className="bt-stat-value">{(stats.winRate * 100).toFixed(0)}%</div><div>Entry Signals Profitable</div></div>
-            <div className={`bt-stat ${verdictClass(comparison?.verdicts?.averageReturn10d)}`}><div className="bt-stat-value">{pctOrDash(stats.averageReturn10d)}</div><div>Avg Return (10d)</div></div>
+            <StatCard
+              toneClass={verdictClass(comparison?.verdicts?.winRate)}
+              value={`${(stats.winRate * 100).toFixed(0)}%`}
+              label="Entry Signals Profitable"
+              note="Of the entry signals, the share whose following days moved in their favour. This is a SIGNAL rate — it does not involve a fill, a stop or a target. Trade Win Rate is the traded version."
+            />
+            <StatCard
+              toneClass={verdictClass(comparison?.verdicts?.averageReturn10d)}
+              value={pctOrDash(stats.averageReturn10d)}
+              label="Avg Return (10d)"
+              note="Mean ten-day forward return after each entry signal. Measures the SIGNAL on its own, with no bracket and no costs."
+            />
             {/* ⚠️ RENAMED 2026-10-30 (#1149 follow-up). These two are the BEST and WORST ten-day
                 FORWARD RETURN of the scored bars — a signal-quality pair. Calling the negative one
                 "Max Drawdown (10d)" put a second, unrelated "Max Drawdown" on the same page as the
                 equity curve's (which read 8,867.70% for run `7f00cfb8` while this tile said −2.87%,
                 from the same column). "Drawdown" now means one thing on this page: the equity path. */}
-            <div className={`bt-stat ${verdictClass(comparison?.verdicts?.maxReturn10d)}`}><div className="bt-stat-value">{pctOrDash(stats.maxReturn10d)}</div><div>Best Return (10d)</div></div>
-            <div className={`bt-stat ${verdictClass(comparison?.verdicts?.maxDrawdown10d)}`}><div className="bt-stat-value">{pctOrDash(stats.maxDrawdown10d)}</div><div>Worst Return (10d)</div></div>
-            <div className={`bt-stat ${verdictClass(comparison?.verdicts?.profitFactor)}`}><div className="bt-stat-value">{stats.profitFactor}</div><div>Profit Factor</div></div>
-            <div className={`bt-stat ${verdictClass(comparison?.verdicts?.sharpeApproximation)}`}><div className="bt-stat-value">{stats.sharpeApproximation}</div><div>Sharpe (approx)</div></div>
+            <StatCard
+              toneClass={verdictClass(comparison?.verdicts?.maxReturn10d)}
+              value={pctOrDash(stats.maxReturn10d)}
+              label="Best Return (10d)"
+              note="The best ten-day forward return among the bars this run scored — a signal-quality figure, not a trade result."
+            />
+            <StatCard
+              toneClass={verdictClass(comparison?.verdicts?.maxDrawdown10d)}
+              value={pctOrDash(stats.maxDrawdown10d)}
+              label="Worst Return (10d)"
+              note="The worst ten-day forward return among the bars this run scored. ⚠️ NOT the equity drawdown — that is a different number on a different panel."
+            />
+            <StatCard
+              toneClass={verdictClass(comparison?.verdicts?.profitFactor)}
+              value={stats.profitFactor}
+              label="Profit Factor"
+              note="Σ gains ÷ Σ losses. Rendered as — when the run had no losing sample: a run with no losses has no ratio, and a huge number here is not a good profit factor."
+            />
+            <StatCard
+              toneClass={verdictClass(comparison?.verdicts?.sharpeApproximation)}
+              value={stats.sharpeApproximation}
+              label="Sharpe (approx)"
+              note="Mean return divided by its variability. Approximate, and only comparable between runs measured on the same window."
+            />
             {/* Bracket trade stats — STRATEGIES ONLY (owner direction, 2026-10-27: *"step … includes
                 financial and trade related stats that need to be removed as they should only be shown
                 on the Backtest Strategies view"*). A protocol run is `scoresOnly`, so every one of
@@ -3298,8 +3345,18 @@ ull = follow the latest, which is the default. */
                 result. On the Strategies page they are the whole point. */}
             {subject === 'strategy' && stats.totalTrades != null && (
               <>
-                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.totalTrades)}`}><div className="bt-stat-value">{stats.totalTrades}</div><div>Bracket Trades</div></div>
-                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.tradeWinRate)}`}><div className="bt-stat-value">{(stats.tradeWinRate * 100).toFixed(0)}%</div><div>Trade Win Rate</div></div>
+                <StatCard
+                  toneClass={verdictClass(comparison?.verdicts?.totalTrades)}
+                  value={stats.totalTrades}
+                  label="Bracket Trades"
+                  note="Fills the stop/target bracket produced. Zero means nothing was entered — the signals did not clear the gate, or the bracket never filled. That is a result, not a missing table."
+                />
+                <StatCard
+                  toneClass={verdictClass(comparison?.verdicts?.tradeWinRate)}
+                  value={`${(stats.tradeWinRate * 100).toFixed(0)}%`}
+                  label="Trade Win Rate"
+                  note="Closed trades that ended with positive P&L ÷ closed trades. The TRADED version of the signal rate above — this one includes the bracket and the costs."
+                />
                 {/*
                   ⚠️ WHY THIS TILE EXISTS (owner question, 2026-10-31): *"I want to trust that it's not
                   just playing about with hardcoded maths … our VIX bot will I assume yes?"*
@@ -3317,26 +3374,21 @@ ull = follow the latest, which is the default. */
                   before either level is reached, so the two legitimately disagree — showing only one
                   makes the other look like a mystery.
                 */}
-                <div
-                  className="bt-stat"
-                  title={result?.bracketNominalSource
-                    ? `Where this came from: ${result.bracketNominalSource}`
+                <StatCard
+                  valueClass="bt-stat-value"
+                  value={result?.bracketStopNominalPct != null
+                    ? `${result.bracketStopNominalPct}% / ${result.bracketTargetNominalPct}%`
+                    : '—'}
+                  label="Stop / Target Set"
+                  sub={result?.bracketStopNominalPct != null
+                    ? (result.bracketNominalSource?.includes('as it stands today')
+                      ? 'bot’s setting today'
+                      : 'the setting this run used')
+                    : 'not recorded on this run'}
+                  note={result?.bracketNominalSource
+                    ? `The stop and target this run carried. Source: ${result.bracketNominalSource}. ⚠️ Stored runs do not keep the level they used, so on an older run this is the bot's setting TODAY and the sub-line says so.`
                     : 'The stop and target this run carried, as configured.'}
-                >
-                  <div className="bt-stat-value">
-                    {result?.bracketStopNominalPct != null
-                      ? `${result.bracketStopNominalPct}% / ${result.bracketTargetNominalPct}%`
-                      : '—'}
-                  </div>
-                  <div>Stop / Target Set</div>
-                  <div className="bt-stat-sub">
-                    {result?.bracketStopNominalPct != null
-                      ? (result.bracketNominalSource?.includes('as it stands today')
-                        ? 'bot’s setting today'
-                        : 'the setting this run used')
-                      : 'not recorded on this run'}
-                  </div>
-                </div>
+                />
                 {/*
                   ── THE TWO NUMBERS THAT ANSWER "WHY DOES THIS LOSE?" (2026-10-31) ────────────────
                   ⚠️ THE SUB-LINE IS THE AUDIT TRAIL, NOT DECORATION. It prints the two measured
@@ -3353,48 +3405,121 @@ ull = follow the latest, which is the default. */
                   REFUSAL (a run with no wins has no solution), not a zero.
                 */}
                 {stats.breakEvenWinRatePct != null && (
-                  <div
-                    className={`bt-stat ${verdictClass(comparison?.verdicts?.breakEvenWinRatePct)}`}
-                    title={`Needed win rate = avg loss ÷ (avg win + avg loss) = ${stats.avgLossPct} ÷ (${stats.avgWinPct} + ${stats.avgLossPct}). Measured from this run's own trades, net of spread, slippage and commission.`}
-                  >
-                    <div className="bt-stat-value">{stats.breakEvenWinRatePct}%</div>
-                    <div>Win Rate Needed</div>
-                    <div className="bt-stat-sub">avg win {stats.avgWinPct}% · avg loss {stats.avgLossPct}%</div>
-                  </div>
+                  <StatCard
+                    toneClass={verdictClass(comparison?.verdicts?.breakEvenWinRatePct)}
+                    value={`${stats.breakEvenWinRatePct}%`}
+                    label="Win Rate Needed"
+                    sub={`avg win ${stats.avgWinPct}% · avg loss ${stats.avgLossPct}%`}
+                    note={`Required win rate = avg loss ÷ (avg win + avg loss) = ${stats.avgLossPct} ÷ (${stats.avgWinPct} + ${stats.avgLossPct}). One division of this run's own measured averages, net of spread, slippage and commission — check it by hand.`}
+                  />
                 )}
                 {stats.breakEvenGapPp != null && (
-                  <div
-                    className={`bt-stat ${stats.clearsBreakEven ? 'is-better' : 'is-worse'}`}
-                    title="Achieved trade win rate minus the rate this run needs, in percentage points. Negative means the run loses by arithmetic on its own measured averages — before any judgement about the entries."
-                  >
-                    <div className="bt-stat-value">{stats.breakEvenGapPp > 0 ? '+' : '−'}{Math.abs(stats.breakEvenGapPp)}pp</div>
-                    <div>Gap to Break-even</div>
-                    <div className="bt-stat-sub">{stats.clearsBreakEven ? 'clears it' : 'short of it'}</div>
-                  </div>
+                  <StatCard
+                    toneClass={stats.clearsBreakEven ? 'is-better' : 'is-worse'}
+                    value={`${stats.breakEvenGapPp > 0 ? '+' : '−'}${Math.abs(stats.breakEvenGapPp)}pp`}
+                    label="Gap to Break-even"
+                    sub={stats.clearsBreakEven ? 'clears it' : 'short of it'}
+                    note="Achieved trade win rate minus the rate this run needs, in percentage points. Negative means the run loses by arithmetic on its own measured averages — before any judgement about the entries."
+                  />
                 )}
                 {stats.breakEvenWinRatePct == null && stats.breakEvenUnavailable && (
-                  <div className="bt-stat is-worse" title="Break-even cannot be computed from this run's trades — the reason is in the sub-line.">
-                    <div className="bt-stat-value">—</div>
-                    <div>Win Rate Needed</div>
-                    <div className="bt-stat-sub">
-                      {stats.breakEvenUnavailable === 'no-wins' && 'no winning trades to average'}
-                      {stats.breakEvenUnavailable === 'no-losses' && 'no losing trades to average'}
-                      {stats.breakEvenUnavailable === 'no-trades' && 'this run took no trades'}
-                    </div>
-                  </div>
+                  <StatCard
+                    toneClass="is-worse"
+                    value="—"
+                    label="Win Rate Needed"
+                    sub={
+                      (stats.breakEvenUnavailable === 'no-wins' && 'no winning trades to average')
+                      || (stats.breakEvenUnavailable === 'no-losses' && 'no losing trades to average')
+                      || (stats.breakEvenUnavailable === 'no-trades' && 'this run took no trades')
+                      || ''
+                    }
+                    note="Break-even cannot be computed from this run's trades. A null requirement is a REFUSAL, not a zero — the sub-line says which sample is missing."
+                  />
                 )}
-                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.avgTradePnl)}`}><div className="bt-stat-value">{pctOrDash(stats.avgTradePnl)}</div><div>Avg Trade PnL</div></div>
-                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.totalPnl)}`}><div className="bt-stat-value">{moneyOrDash(stats.totalPnl)}</div><div>Total PnL</div></div>
-                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.grossPnl)}`}><div className="bt-stat-value">{moneyOrDash(stats.grossPnl)}</div><div>Gross PnL</div></div>
-                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.totalCommission)}`}><div className="bt-stat-value">{moneyOrDash(stats.totalCommission)}</div><div>Total Commission</div></div>
-                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.avgPositionSize)}`}><div className="bt-stat-value">{stats.avgPositionSize != null ? Math.round(stats.avgPositionSize) : '—'}</div><div>Avg Pos Size</div></div>
+                <StatCard
+                  toneClass={verdictClass(comparison?.verdicts?.avgTradePnl)}
+                  value={pctOrDash(stats.avgTradePnl)}
+                  label="Avg Trade PnL"
+                  note="Mean percentage P&L of a closed trade, net of spread, slippage and commission. The comparable figure across different position sizes."
+                />
+                <StatCard
+                  toneClass={verdictClass(comparison?.verdicts?.totalPnl)}
+                  valueClass={moneyValueClass(stats.totalPnl)}
+                  value={moneyOrDash(stats.totalPnl)}
+                  label="Total PnL"
+                  note="Σ currency P&L over closed trades, net of costs. ⚠️ Sizing comes from the run's own position model, which can commit several times the account — read the % tiles for comparability between runs."
+                />
+                <StatCard
+                  toneClass={verdictClass(comparison?.verdicts?.grossPnl)}
+                  valueClass={moneyValueClass(stats.grossPnl)}
+                  value={moneyOrDash(stats.grossPnl)}
+                  label="Gross PnL"
+                  note="The same total before commission is deducted."
+                />
+                <StatCard
+                  toneClass={verdictClass(comparison?.verdicts?.totalCommission)}
+                  valueClass={moneyValueClass(stats.totalCommission)}
+                  value={moneyOrDash(stats.totalCommission)}
+                  label="Total Commission"
+                  note="Commission charged across every trade in this run."
+                />
+                <StatCard
+                  toneClass={verdictClass(comparison?.verdicts?.avgPositionSize)}
+                  value={stats.avgPositionSize != null ? Math.round(stats.avgPositionSize) : '—'}
+                  label="Avg Pos Size"
+                  note="Mean units held per trade. A large figure beside a small account is the sizing warning from #1142, not a good result."
+                />
                 {/* ⚠️ THE WORST SINGLE TRADE, in currency (#1149 follow-up, 2026-10-30). This cell
                     used to read `run.maxDrawdown` — the same column as "Max Drawdown (10d)" — so run
                     `7f00cfb8` showed −2.87 in both, while its actual worst trade lost **$296.19**.
                     One column serving two labels, and only one of the two was true. */}
-                <div className={`bt-stat ${verdictClass(comparison?.verdicts?.maxTradeDrawdown)}`}><div className="bt-stat-value">{moneyOrDash(stats.maxTradeDrawdown)}</div><div>Worst Trade</div></div>
+                <StatCard
+                  toneClass={verdictClass(comparison?.verdicts?.maxTradeDrawdown)}
+                  valueClass={moneyValueClass(stats.maxTradeDrawdown)}
+                  value={moneyOrDash(stats.maxTradeDrawdown)}
+                  label="Worst Trade"
+                  note="The single largest loss, in currency. ⚠️ This read the equity drawdown column until 2026-10-30 — run `7f00cfb8` showed −2.87 in both while its actual worst trade lost $296.19."
+                />
               </>
             )}
+          </div>
+
+          {/*
+            ── ACT ON THE RESULT, UNDER THE CARDS (owner direction, 2026-11-04) ──────────────────
+            *"Add a row of controls starting with [Accept this run as the A baseline] positioned under
+            [div.bt-stats-grid] so the user can quickly accept outcomes based on the cards."*
+
+            ⚠️ WHY IT MOVED HERE. Accepting a run is the decision the whole page exists to support, and
+            it lived only inside the B panel — behind the reference tabs, below the page, on a panel
+            whose heading does not say "this is the run you just made". A reader who had just read the
+            cards had to leave the result to act on it.
+
+            ⚠️ IT ACCEPTS THE RUN ON SCREEN, BY ID, not "the latest run". Those are the same thing
+            immediately after a run and different five minutes later, and the difference is exactly the
+            wrong-reference bug this page has already paid for.
+          */}
+          <div className="bt-accept-bar bt-accept-bar--result">
+            <button
+              type="button"
+              className="bt-panel-btn bt-panel-btn--primary"
+              onClick={() => result?.id && acceptBaseline(result.id)}
+              disabled={!result?.id || isThisRunBaseline}
+              title={isThisRunBaseline ? 'This run is already the accepted baseline.' : undefined}
+            >
+              Accept this run as the A baseline
+            </button>
+            {isThisRunBaseline && (
+              <button type="button" className="bt-panel-btn" onClick={clearBaseline}>
+                Clear the accepted baseline
+              </button>
+            )}
+            <span className="bt-accept-note">
+              {isThisRunBaseline
+                ? <>This run <strong>is</strong> A — the reference every later run of this protocol is measured against.</>
+                : baselineRunId
+                  ? <>Replaces <code>{String(baselineRunId).slice(0, 8)}</code> as A. It does not change the strategy’s own settings, make a copy, or place anything.</>
+                  : <>It becomes <strong>A</strong>, the reference every later run of this protocol is measured against. Stored in the database, so it follows you to another browser.</>}
+            </span>
           </div>
 
           {/*
@@ -3633,6 +3758,19 @@ ull = follow the latest, which is the default. */
             </div>
           )}
 
+          {/* ── PROFIT CAPTURE (2026-11-04) ───────────────────────────────────────────────────────
+              *"the app is recording the price changes, storing the highest amount of profit recognised
+              … update the backtesting pages with the slippage value and the app does the calculation."*
+              Every figure is computed API-side in `score-maths.tradeTotals()`; this only renders it.
+              Kept OFF the Protocols view for the same reason as the stop screen: a scores-only run
+              records no trades, so every tile would read "—". */}
+          {subject === 'strategy' && outputs.trades !== false && result?.tradeTotals && (
+            <div className="bt-chart-section">
+              <h3>Profit capture <span className="bt-measured-bars">· best available vs realised</span></h3>
+              <ProfitCapturePanel totals={result.tradeTotals} />
+            </div>
+          )}
+
           {/* ── STOP SCREEN (2026-10-29) ─────────────────────────────────────────────────────────
               *"if 70% of positions that dropped into the red by X amount then triggered the SL, that
               would tell us that we're losing money because the SL is too distant."* The panel is a
@@ -3696,178 +3834,22 @@ ull = follow the latest, which is the default. */
         )}
         </section>
       </div>
-      {/* ── REFERENCE — deliberately NOT a numbered step ──────────────────────────────────────────
-          (owner direction on steps, 2026-10-26.) The rail numbers a SEQUENCE; reference material is
-          consulted, not sequenced. The settings inventory tells you what you CAN override *before*
-          you run — numbering that would put it in a position that is wrong for every step. It stays
-          outside the steps, always available.
-
-          ⚠️ "COMPLETED RUNS" IS NO LONGER ONE OF THEM (owner direction, 2026-10-31: *"move that to a
-          new page for the area"*). Stored-run review left for `/lab/backtest-runs`; this page keeps
-          only the panels that describe THIS run and the A/B pair.
-
-          ⚠️ WHY TABS AND NOT THREE STACKED PANELS (owner report, 2026-10-22: *"the new page is
-          actually a mess"*). This page had grown to NINE vertically stacked blocks. Everything was
-          present and nothing was findable. One panel at a time is what makes each findable.
-
-          ⚠️ THE CAPTURED-WINDOWS PANEL IS NOT HERE AT ALL (2026-10-22). It moved to
-          `/lab/backtest-data`, the inventory of DATA: a captured period is a named, noted, imported
-          window of bars, and storage management beside a measurement form is the wrong control on
-          the wrong page. This page only CONSUMES periods — the step-2 Window control lists them. */}
-      <nav className="bt-ref-tabs" aria-label="Reference panels">
-        {[
-          { id: 'current', label: 'Run A · accepted baseline', hint: 'The run you accepted as the reference. B is measured against it.' },
-          { id: 'latest', label: 'Run B · latest', hint: 'The most recent stored run, in the same shape as A. Accept it to promote it to A.' },
-          // `runs` was here — moved to /lab/backtest-runs (2026-10-31). Stored-run review is its own
-          // job, not a fifth tab on a measurement form.
-          { id: 'scores', label: 'A vs B differences', hint: 'What changed between the accepted baseline and the latest run — summarised, not every row.' },
-        ].map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={`bt-ref-tab${refTab === t.id ? ' bt-ref-tab--on' : ''}`}
-            aria-current={refTab === t.id ? 'true' : undefined}
-            title={t.hint}
-            onClick={() => setRefTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
-
       {/*
-        ── THE PAIR, ON ONE ROW (owner report, 2026-10-30) ──────────────────────────────────────────
-        *"We have some doubling of information: 'Run A · accepted baseline' and 'A · Accepted baseline —
-        2fd56ab8 accepted' and in between … 'Comparing A against the latest run (7f00cfb8)' … which
-        doesn't tell a human much. I think a more interesting design can exist on one row and include
-        [accepted] [2fd56ab8] and [the select]."*
+        ── THE A/B REFERENCE PANELS MOVED TO THEIR OWN PAGE (owner direction, 2026-11-04) ────────
+        *"I wanted a Current Strategy page added to the Lab and everything I highlighted moved to that
+        new page. Simplifying the Backtest Strategies page a little as right now it has results
+        displayed twice."*
 
-        So: ONE row — which run is A, which run is B, and the control that changes B. What it replaced:
+        So the reference tabs, the A→B pair bar, the two run columns and the A-vs-B differences are no
+        longer rendered here at all — they live at `/lab/current-strategy` (CurrentStrategyPage). This
+        page now shows ONE result: the run you just made. The A/B reading is a standing comparison and
+        belongs beside the strategy, not beneath a measurement form that already printed the same
+        numbers once.
 
-          · a `<label>` sentence "Comparing A against …" AND a `p.bt-panel-note` repeating it — the
-            same words twice, once as a label and once as a caption;
-          · a select whose own option text ran to "the latest run (7f00cfb8) — 7f00cfb8 · VIX 5m ·
-            2026-09-09 → 2026-10-20", i.e. the id twice plus material the facts table already lists.
-
-        ⚠️ THE IDS, NOT THE WORDS. "Accepted baseline" and "Latest run" are on the tabs and are what the
-        role letter already means; what a reader actually needs to fix a pair is the two ids side by side
-        and one control. The "pin it" explanation moved into the select's own `title`/`aria-label`,
-        because it explains the CONTROL rather than the data.
+        What deliberately STAYS here: the accepted-baseline controls under the stat cards (accepting is
+        the decision this page exists to support) and the comparison verdict that colours those cards
+        against A. Only the duplicated PANELS moved.
       */}
-      {(() => {
-        const runs = latestRunsQuery.data?.runs ?? latestRunsQuery.data ?? [];
-        if (!runs.length) return null;
-        return (
-          <div className="bt-pair-bar">
-            <div className="bt-pair-side">
-              <span className="bt-pair-role">A</span>
-              {baselineRunId
-                ? <code className="bt-pair-id">{String(baselineRunId).slice(0, 8)}</code>
-                : <span className="bt-pair-empty">none accepted</span>}
-              {baselineRunId && <span className="dp-badge dp-badge--override">accepted</span>}
-            </div>
-
-            <span className="bt-pair-arrow" aria-hidden="true">→</span>
-
-            <div className="bt-pair-side">
-              <span className="bt-pair-role">B</span>
-              <select
-                className="ff-select bt-pair-select"
-                value={pickedBId ?? ''}
-                aria-label="Which stored run is B in this comparison"
-                title="Leave on Latest to follow the newest run, or pin one run to compare against a pair that does not move under you."
-                onChange={(e) => setPickedBId(e.target.value || null)}
-              >
-                <option value="">Latest · {String(latestRunId ?? '').slice(0, 8)}</option>
-                {runs.slice(0, 20).map((r) => (
-                  /* ⚠️ ID + WINDOW ONLY. The symbol and timeframe are in both runs' facts tables, and
-                     repeating them in every option is what made this control twice as wide as it needed
-                     to be. */
-                  <option key={r.id} value={r.id}>
-                    {r.id.slice(0, 8)} · {r.period}
-                  </option>
-                ))}
-              </select>
-              {pickedBId && (
-                <button
-                  type="button"
-                  className="bt-pair-unpin"
-                  onClick={() => setPickedBId(null)}
-                  title="Go back to following the latest run"
-                >
-                  unpin
-                </button>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
-      {refTab === 'current' && (
-        <Suspense fallback={<p className="pb-none">Loading the accepted baseline…</p>}>
-          <RunPanel
-            role="A"
-            runId={baselineRunId}
-            accepted
-            onClear={baselineRunId ? clearBaseline : null}
-            liveReference={liveReference}
-            showTrades={subject === 'strategy'}
-            emptyHint={
-              baseline.source === 'loading'
-                ? 'Checking the stored baseline…'
-                : baseline.source === 'unreadable'
-                  ? '⚠️ The accepted baseline could not be READ, so this is unknown rather than empty. Retry, or accept a run from Backtesting results (B) to replace it.'
-                  : baseline.source === 'invalid'
-                    ? '⚠️ The stored baseline row could not be parsed. Accept a run from Backtesting results (B) to replace it.'
-                    : subject === 'strategy'
-                      ? 'No baseline accepted yet. Open Backtesting results (B) and accept a run — it becomes A, and every later run is measured against it.'
-                      : 'No baseline accepted yet. Run a backtest, then accept it from Backtesting results (B) — it becomes A.'
-            }
-          />
-        </Suspense>
-      )}
-
-      {refTab === 'latest' && (
-        <Suspense fallback={<p className="pb-none">Loading the most recent run…</p>}>
-          <RunPanel
-            role="B"
-            runId={bRunId}
-            onAccept={bRunId ? () => acceptBaseline(bRunId) : null}
-            showTrades={subject === 'strategy'}
-            emptyHint="No backtest has been stored yet, so there is nothing in B to compare against A."
-          />
-        </Suspense>
-      )}
-
-      {/*
-        ⚠️ THE `runs` TAB WAS MOVED OFF THIS PAGE (owner direction, 2026-10-31) to `/lab/backtest-runs`.
-
-        Owner, 2026-10-31: *"I'm realising this one page is very complex especially with the [Completed
-        runs] added so move that to a new page for the area."* The panel itself is unchanged and
-        `BacktestRunsPanel` is imported there rather than copied, so the #1132 guard that refuses to
-        name a winner across two windows, the baseline pinning, and the delete guard all kept one
-        implementation. What moved is only WHERE it is mounted.
-
-        The tab list below no longer offers `runs`, and `refTab` can no longer hold that value, so the
-        branch that rendered it is deleted rather than left unreachable.
-      */}
-
-      {refTab === 'scores' && (
-        /* ⚠️ THIS TAB USED TO BE "Score detail" (#1143 follow-up, 2026-10-27): *"Score detail doesn't
-           seem to display much but it should probably make differences between the A and B clear so
-           that the user doesn't need to examine every row of data."*
-           It is now the SUMMARY of A → B: how many bars moved, in which direction, and the ten
-           biggest movers — with the unmatched-bar counts stated, because comparing the overlap as if
-           it were the whole window is how a window mismatch becomes a false "no change". */
-        <Suspense fallback={<p className="pb-none">Comparing the two runs…</p>}>
-          {/* ⚠️ THE SETTINGS COME BEFORE THE SCORES IN READING ORDER because they are the CAUSE. A
-              reader who sees "1,204 bars changed" without seeing that the spread moved 0.01% → 0.93%
-              has been given a number with no explanation, which is exactly the state #1141 was filed
-              about. */}
-          <RunSettingsDiff aId={baselineRunId} bId={bRunId} />
-          <RunDiffPanel aId={baselineRunId} bId={bRunId} showTrades={subject === 'strategy'} />
-        </Suspense>
-      )}
 
 
 

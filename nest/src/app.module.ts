@@ -58,6 +58,7 @@ import { DiversificationModule } from './modules/diversification/diversification
 import { ArchitectureModule } from './modules/architecture/architecture.module';
 import { CapabilityModule } from './modules/capability/capability.module';
 import { RoadmapModule } from './modules/roadmap/roadmap.module';
+import { ProgressionModule } from './modules/progression/progression.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
 import { MetricsMiddleware } from './common/middleware/metrics.middleware';
 
@@ -124,6 +125,8 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     ArchitectureModule,
     CapabilityModule,
     RoadmapModule,
+    // #1193 — earned progression level + the active-bot ceiling it decides.
+    ProgressionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

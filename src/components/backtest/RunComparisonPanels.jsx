@@ -27,6 +27,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { pickRepeatPair } from '../../core/backtest-totals.js';
 import InfoNote from '../InfoNote';
 import NoticeBlock from '../NoticeBlock';
+import PageInfoPopover from '../PageInfoPopover';
 import { noticeFromError } from '../../core/notices/from-error.js';
 /**
  * ⚠️ meta-stack-status.css IS IMPORTED FOR ITS .mss-stat-* TILES, not for its page (owner direction
@@ -262,6 +263,19 @@ export function RunPanel({ role, runId, emptyHint, onAccept, onClear, accepted, 
           moved to the top … so it is more prominent"*). It sat between the facts table and the trades —
           i.e. below a screen of numbers — so the one ACTION on the panel was the last thing found. It is
           an `.bt-accept-bar` rather than a bare note so it reads as a control, not a footnote. */}
+      {/* ⚠️ THE ACCEPT BUTTON IS THE FIRST THING IN THE PANEL (owner direction, 2026-10-29: *"needs to be
+          moved to the top … so it is more prominent"*). It is an `.bt-accept-bar` rather than a bare
+          note so it reads as a control, not a footnote.
+
+          ⚠️ ONE ROW OF CONTROLS PER PANEL, AND THE EXPLANATION IS THE ℹ (owner report, 2026-11-04):
+          *"Adjust the contents of [the two accept bars] so they match — they currently knock everything
+          else out of alignment which spoils the side by side comparison setup. Put information in icons
+          like [button.pip-trigger] instead of displaying the text."*
+          The two bars carried DIFFERENT paragraphs — one sentence on A, a three-sentence one on B — so
+          the two columns' first row was 24px tall on one side and 60px on the other, and every fact,
+          table row and trade below it was offset. Same content, different reason, so the heights differed
+          by argument rather than by design. Each bar is now exactly one button plus one icon: identical
+          height by construction, and the reasoning is one click away instead of in the way. */}
       {(onAccept || (role === 'A' && accepted && onClear)) && (
         <div className="bt-accept-bar">
           {onAccept && (
@@ -274,11 +288,22 @@ export function RunPanel({ role, runId, emptyHint, onAccept, onClear, accepted, 
               Clear the accepted baseline
             </button>
           )}
-          <span className="bt-accept-note">
-            {onAccept
-              ? <>The accepted run becomes <strong>A</strong>; the next run of this protocol is measured against it. Stored in the database, so it follows you to another browser. <strong>It does not change the strategy’s own settings</strong> — the bot keeps trading exactly what it trades now, and no copy of the strategy is made.</>
-              : <>Removes the reference — it does not delete the run itself, and it does not touch the strategy.</>}
-          </span>
+          <PageInfoPopover label={onAccept ? 'What accepting this run does' : 'What clearing the baseline does'}>
+            {onAccept ? (
+              <>
+                The accepted run becomes <strong>A</strong>; the next run of this protocol is measured
+                against it. Stored in the database, so it follows you to another browser.
+                <br />
+                <strong>It does not change the strategy’s own settings</strong> — the bot keeps trading
+                exactly what it trades now, and no copy of the strategy is made.
+              </>
+            ) : (
+              <>
+                Removes the reference — it does not delete the run itself, and it does not touch the
+                strategy. The next run you accept becomes A.
+              </>
+            )}
+          </PageInfoPopover>
         </div>
       )}
 

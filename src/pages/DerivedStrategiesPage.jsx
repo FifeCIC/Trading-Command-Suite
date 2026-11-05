@@ -516,6 +516,9 @@ export default function DerivedStrategiesPage() {
       <div className={styles.page} ref={revealRef}>
         <div className={styles.error}>
           <strong>{notice.title}</strong> {notice.message}
+          {/* ⚠️ The CAUSE carries the server's specifics (which route, which status detail). It was
+              dropped here, so a failed load said only that it failed. */}
+          {notice.cause && <span className={styles.errorHint}>{notice.cause}</span>}
           <span className={styles.errorHint}>
             {notice.action ? `${notice.action} ` : ''}The derivation runs on the server, so nothing has
             been changed or deleted.

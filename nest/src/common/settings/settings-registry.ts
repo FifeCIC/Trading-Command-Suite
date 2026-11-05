@@ -609,6 +609,24 @@ export const SETTINGS: SettingDefinition[] = [
       'output would be a behaviour change wearing a tidy-up\'s clothes.',
     userChangeable: true,
   },
+
+  // ── Progression (#1193) ────────────────────────────────────────────────────
+  {
+    key: 'progression.botCapEnabled',
+    type: 'boolean',
+    defaultValue: true,
+    class: 'runtime',
+    owner: 'trading',
+    label: 'Limit active bots by progression level',
+    description:
+      'An install earns a progression level from what it has actually done (closed trades, completed ' +
+      'backtests, days active), and the level decides how many bots may be ACTIVE at once — 1 at ' +
+      'level 1, uncapped at level 5. The restriction exists because the app is new, running many ' +
+      'bots is resource-intensive, and several trading safeguards are still outstanding. ' +
+      '⚠️ Set false ONLY to run without that guardrail: it is a guardrail, not a licence check, and ' +
+      'turning it off does not unlock anything that was ever for sale.',
+    userChangeable: true,
+  },
 ];
 
 /** Fast lookup. Built once at module load; the registry is static by design. */

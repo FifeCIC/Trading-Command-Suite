@@ -77,6 +77,10 @@ export default function StrategyCreatePage() {
   const [useRaritySizing, setUseRaritySizing] = useState(true);
   const [maxSize, setMaxSize] = useState('');
   const [maxPositions, setMaxPositions] = useState(1);
+  // Pyramid / scale-in — an OPTIONAL way to make a bot distinct. 1 = never scale in (the default).
+  // Only meaningful on a HEDGING account; on a netting account a second order MERGES into the
+  // first, so the value is inert rather than wrong. The hint on the field says so.
+  const [maxPyramidTiers, setMaxPyramidTiers] = useState(1);
   const [maxDailyLoss, setMaxDailyLoss] = useState('');
   const [cooldownMinutes, setCooldownMinutes] = useState(5);
   // ── Session policy (#928) ──
@@ -365,6 +369,7 @@ export default function StrategyCreatePage() {
       useRaritySizing,
       maxSize: maxSize ? Number(maxSize) : undefined,
       maxPositions: Number(maxPositions),
+      maxPyramidTiers: Number(maxPyramidTiers) || 1,
       maxDailyLoss: maxDailyLoss ? Number(maxDailyLoss) : undefined,
       cooldownMinutes: Number(cooldownMinutes),
       // #928 — JSON array, or null when ungated. `parseSessionWindow` on the server reads BOTH the
@@ -629,6 +634,23 @@ export default function StrategyCreatePage() {
                     <label className="stratcreate-field">
                       <span>Cooldown (min) <BotRuleStatus field="cooldownMinutes" byField={botRuleFields} /></span>
                       <input className="stratcreate-input" type="number" min="0" max="1440" value={cooldownMinutes} onChange={e => setCooldownMinutes(Number(e.target.value))} />
+                    </label>
+                  </div>
+                  {/* ── Pyramid / scale-in ── */}
+                  {/* Its own row because the hint is the load-bearing part: the mechanism is inert
+                      on a netting account, and a user who sets 3 and sees one merged position has
+                      no way to tell that from a bug. */}
+                  <div className="stratcreate-field-row">
+                    <label className="stratcreate-field">
+                      <span>Max Pyramid Tiers <BotRuleStatus field="maxPyramidTiers" byField={botRuleFields} /></span>
+                      <input className="stratcreate-input" type="number" min="1" max="10" value={maxPyramidTiers} onChange={e => setMaxPyramidTiers(Number(e.target.value))} />
+                      {/* 1 = never scale in — the default, and the only value that cannot surprise. */}
+                      <span className="stratcreate-hint">
+                        Optional. Above 1 this bot may add to <strong>its own</strong> position up to
+                        N tiers; another bot's position on the same symbol is never counted against
+                        it. Only effective on a <strong>hedging</strong> account — on a netting
+                        account a second order merges into the first instead of opening a new ticket.
+                      </span>
                     </label>
                   </div>
                   <label className="stratcreate-field stratcreate-checkbox-field">

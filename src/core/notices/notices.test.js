@@ -269,6 +269,32 @@ test('listNotices() exposes the whole catalogue to tooling', () => {
     }
   });
 
+  test('an ACTIVATION refusal renders its reason, not the generic HTTP-400 text (#905)', () => {
+    // ⚠️ MEASURED 2026-11-04 on /trading/trading-bots. Clicking a bot's toggle showed
+    // "Request failed — the request to the API failed (HTTP 400)" and nothing else, because
+    // `assertCeilingAllowsActivation` threw a bare BadRequestException: the refusal reached the
+    // client with no code, so the adapter fell through to the transport notice and the sentence
+    // naming the ceiling, the bar and the remedy was dropped. The service now throws
+    // TCS-TRADE-024, and this pins BOTH halves — the identity, and that the numbers survive.
+    const detail =
+      'USDCAD Oil Event Bot (usdcad-oil-v1): ceiling 0.0% (raw 0 of 490) over 21 readings; minComposite 10%';
+    const err = Object.assign(new Error(`Request failed with 400: ${detail}`), {
+      status: 400,
+      code: 'TCS-TRADE-024',
+      params: { name: 'USDCAD Oil Event Bot', protocol: 'usdcad-oil-v1', ceiling: '0.0', bar: 10, samples: 21 },
+      detail,
+    });
+
+    const n = noticeFromError(err, 'TCS-SYS-007', { operation: 'change this bot' });
+
+    assert.equal(n.code, 'TCS-TRADE-024', 'the server code must win over the fallback');
+    assert.match(n.message, /USDCAD Oil Event Bot/, 'the bot is named');
+    assert.match(n.message, /0\.0%/, 'the measured ceiling is carried, so the claim is checkable');
+    assert.match(n.message, /10%/, 'the bar it is compared against is carried');
+    assert.doesNotMatch(n.message, /HTTP \d/, 'the transport text must not replace the reason');
+    assert.match(n.cause, /decorative/i, 'the why-it-matters explanation is rendered by NoticeBlock');
+  });
+
   test('a TIMED-OUT order renders UNKNOWN, not a refusal (#866)', () => {
     // Measured 2026-09-17: a manual trade on the VIX card hit a bridge timeout. The adapter said
     // { status: 'UNKNOWN' } — the order was SENT and the response was lost — and the UI rendered

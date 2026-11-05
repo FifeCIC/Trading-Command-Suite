@@ -2035,6 +2035,57 @@ button.nav-active {
 .bt-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
 .bt-stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem; text-align: center; font-size: 0.75rem; color: var(--ink-soft); }
 .bt-stat-value { font-size: 1.3rem; font-weight: 700; color: var(--ink); }
+/* ── A MONEY VALUE MUST NOT BREAK AFTER ITS SIGN (owner report, 2026-11-04) ────────────────────────
+   *"This tile needs the text to be red and smaller so the minus is on the same row as right now its
+   above."* Measured cause: the grid track is `minmax(120px, 1fr)` and `−$153,498.99` at 1.3rem is
+   wider than 120px, so the line wrapped at the first break opportunity — which is immediately after
+   the minus. The sign then sat alone on one line and the number on the next, which reads as a
+   different tile from every neighbour in the grid.
+   `nowrap` alone would overflow and clip a digit (`240,148,29` instead of `−$2,401,482.99`), which is
+   a number rendered WRONG rather than merely tight — so the money variant is also smaller, and the
+   grid is allowed to give it more room. Tabular figures stop the digit widths shuffling between runs. */
+.bt-stat-value { white-space: nowrap; font-variant-numeric: tabular-nums; line-height: 1.15; }
+/* `clamp` rather than one size: the grid track is at least 120px, and a six-figure value at a fixed
+   1.02rem can still exceed it in a narrow panel. Scaling with the viewport keeps the number on ONE
+   line without clipping a digit — the two failures that matter here. */
+.bt-stat-value--money { font-size: clamp(0.8rem, 1.15vw + 0.45rem, 1.05rem); letter-spacing: -0.01em; }
+
+/* ── THE EXPLANATION POPOVER (owner direction, 2026-11-04) ────────────────────────────────────────
+   *"as for the cards - we need a popover explaining them when mouse hovered over for 2 seconds."*
+   The delay lives in `StatCard.jsx`; this is only the box. It is `absolute` inside the tile rather
+   than a native `popover`, because a native popover is placed in the top layer and would detach from
+   the tile the reader is pointing at.
+
+   ⚠️ NOT CLIPPED: no ancestor of `.bt-stats-grid` sets `overflow`, which was checked rather than
+   assumed — a popover that opens downward inside an `overflow: hidden` panel is invisible, and the
+   failure looks like "the feature does nothing".
+   ⚠️ THE EDGE TILES PIN TO THE EDGE. Centring the first tile's popover pushed it off the left of the
+   grid; the last tile's off the right. Both are pinned instead of shifting the whole grid. */
+.bt-stat { position: relative; }
+.bt-stat:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bt-stat-label { color: var(--ink-soft); }
+.bt-stat-sub { font-size: 0.68rem; color: var(--ink-soft); margin-top: 0.1rem; }
+.bt-stat-pop {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(30rem, 80vw);
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  text-align: left;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.28);
+  pointer-events: none;
+}
+.bt-stats-grid > .bt-stat:first-child .bt-stat-pop { left: 0; transform: none; }
+.bt-stats-grid > .bt-stat:last-child .bt-stat-pop { left: auto; right: 0; transform: none; }
 /* .bt-period, .bt-execution-info and the .bt-* legend/notice one-offs are RETIRED 2026-10-30: every annotating sentence on the backtest result is a <InfoNote> now (owner report: *"too much mixed styling when displaying sentences"*). One structure, one type scale, tone on the border only. */
 /* #986 — a run that measured a CAPTURED period says so by name, not only by date range. The date
    range alone does not say why the window mattered, and a captured-window result must never read

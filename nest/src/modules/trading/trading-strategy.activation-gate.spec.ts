@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { HttpException } from '@nestjs/common';
 import { TradingStrategyService } from './trading-strategy.service';
 
 /**
@@ -45,6 +45,24 @@ describe('TradingStrategyService — activation ceiling gate (#905)', () => {
     (svc as any).protocolHealth = {
       measureProtocolCeiling: jest.fn(async () => opts.ceiling ?? null),
     };
+    // #1193 — the active-bot cap gate is a SEPARATE guard that also runs on an activation. It is
+    // stubbed as ENFORCED-BUT-UNCAPPED (`botCap: null`) so these tests keep describing #905's
+    // ceiling refusal and nothing else. The cap has its own spec
+    // (`trading-strategy.bot-cap-gate.spec.ts`); without this stub every test here failed with
+    // `Cannot read properties of undefined (reading 'isEnforcementEnabled')`, which is how the new
+    // dependency was found.
+    (svc as any).progression = {
+      isEnforcementEnabled: jest.fn(async () => ({ enabled: true, source: 'default' })),
+      getView: jest.fn(async () => ({
+        status: 'ok',
+        activeBots: 0,
+        botCap: null,
+        level: { level: 5 },
+        xp: 1000,
+        nextLevel: null,
+        levels: [],
+      })),
+    };
     return { svc, update };
   }
 
@@ -58,9 +76,23 @@ describe('TradingStrategyService — activation ceiling gate (#905)', () => {
 
   it('REFUSES to activate a bot whose protocol can never reach its bar', async () => {
     const { svc, update } = makeService({ strategy: doomedBot, ceiling: doomedCeiling });
-    await expect(svc.toggle('bot-1')).rejects.toBeInstanceOf(BadRequestException);
-    await expect(svc.toggle('bot-1')).rejects.toThrow(/never produced more than 7\.7%/);
-    await expect(svc.toggle('bot-1')).rejects.toThrow(/minComposite is 9%/);
+    // ⚠️ ASSERT THE CODE AND THE DATA, NOT THE SENTENCE. The refusal is now a coded notice
+    // (TCS-TRADE-024) whose wording lives in the client registry; matching the prose here would
+    // re-break on any rewording, and a bare 400 lost the explanation entirely on the UI.
+    const err: any = await svc.toggle('bot-1').catch((e) => e);
+    // A coded notice, not a bare BadRequestException: an HttpException whose status comes from the
+    // server catalogue (400) and whose identity is the code. Both are asserted, because the status
+    // is what the client's transport layer reports and the code is what it renders.
+    expect(err).toBeInstanceOf(HttpException);
+    expect(err.getStatus()).toBe(400);
+    expect(err.code).toBe('TCS-TRADE-024');
+    expect(err.params).toMatchObject({
+      name: 'Gold Swing 1H',
+      protocol: 'xau-speed-1h',
+      ceiling: '7.7',
+      bar: 9,
+      samples: 457,
+    });
     // The refusal must NOT persist the activation.
     expect(update).not.toHaveBeenCalled();
   });
@@ -93,7 +125,7 @@ describe('TradingStrategyService — activation ceiling gate (#905)', () => {
 
   it('refuses an UPDATE that would activate a doomed bot', async () => {
     const { svc, update } = makeService({ strategy: doomedBot, ceiling: doomedCeiling });
-    await expect(svc.update('bot-1', { active: true })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(svc.update('bot-1', { active: true })).rejects.toMatchObject({ code: 'TCS-TRADE-024' });
     expect(update).not.toHaveBeenCalled();
   });
 
@@ -102,7 +134,10 @@ describe('TradingStrategyService — activation ceiling gate (#905)', () => {
       strategy: { ...doomedBot, active: true },
       ceiling: doomedCeiling,
     });
-    await expect(svc.update('bot-1', { minComposite: 20 })).rejects.toThrow(/never produced more than 7\.7%/);
+    await expect(svc.update('bot-1', { minComposite: 20 })).rejects.toMatchObject({
+      code: 'TCS-TRADE-024',
+      params: expect.objectContaining({ ceiling: '7.7', bar: 20 }),
+    });
   });
 
   it('ALLOWS lowering the bar below the ceiling on an active bot — that is the FIX direction', async () => {

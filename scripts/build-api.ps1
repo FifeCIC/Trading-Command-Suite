@@ -77,12 +77,22 @@ function Write-Warn2($msg){ Write-Host "   !!  $msg" -ForegroundColor Yellow }
   without breaking a real start (-SelfTest points it at a dead port).
   Returns $true only when /api/version answers 200 within the budget.
 #>
-function Assert-ApiUp([int]$Port = 3201, [int]$TimeoutSeconds = 60, [System.Diagnostics.Process]$Proc = $null) {
+function Assert-ApiUp([int]$Port = 3201, [int]$TimeoutSeconds = 180, [System.Diagnostics.Process]$Proc = $null) {
+    # ⚠️ 180s, NOT 60s (2026-11-04). MEASURED: after the bootstrap header the API blocks in
+    # `app.listen()` for ~90 SECONDS while its module init hooks run — directive seed, protocol
+    # readiness passes, first scoring pass. On a 60s budget this function printed "API IS DOWN …
+    # the process did not bind the port" and the script exited 1 while /api/version answered
+    # 40 seconds later. A false failure is worse than a slow pass: it sends the reader to logs
+    # that contain no fault, and it teaches them to ignore the red line.
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     $listening = $false
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Seconds 1
-        $listening = [bool](Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
+        # ⚠️ NO `-State Listen` FILTER. On this machine a wildcard IPv6 bind reports an EMPTY State,
+        # so the filtered cmdlet returns nothing for a port that IS listening — which is how the
+        # failure message came to say "Nothing is listening on 3201" about a live API. The verdict
+        # is the HTTP 200 below; this flag only decides which sentence the reader gets.
+        $listening = [bool](Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue)
         try {
             $r = Invoke-WebRequest -Uri "http://localhost:$Port/api/version" -UseBasicParsing -TimeoutSec 3
             if ($r.StatusCode -eq 200) { return $true }
@@ -211,19 +221,41 @@ if (-not (Enter-BuildLock)) {
 }
 Write-Ok "Build lock acquired (PID $PID)."
 
-# ── 1. Find what is listening on 3201 ─────────────────────────────────────────────
+# ── 1. Find what is holding the engine DLL ────────────────────────────────────────
 Write-Step 'Locating the API on port 3201'
 
+# ⚠️ 2026-11-04 — THIS USED TO LOOK FOR A LISTENER ON 3201 AND MISSED A RUNNING API.
+# `Get-NetTCPConnection -State Listen` returns NOTHING for a wildcard IPv6 bind on this
+# machine: the row exists (LocalAddress `::`, OwningProcess set) but its State reads EMPTY,
+# so the state filter drops it. Measured: 32404 was serving :3201 and holding the DLL while
+# this step printed "Nothing listening on 3201 — the engine DLL is already free", the build
+# then failed on EPERM, and the message pointed at a port that WAS in use.
+#
+# The port is the wrong question anyway. What `prisma generate` needs is the PROCESS that has
+# mapped the DLL, so the signature is the identity — exactly what `build-preflight.cjs` uses.
+# The port scan is kept only to warn about a NON-ours process squatting on 3201.
+$apiSignature = 'dist[\\/]src[\\/]main\.js|nest\s+start|nest-cli'
 $apiPids = @()
 try {
-    $conns = Get-NetTCPConnection -LocalPort 3201 -State Listen -ErrorAction SilentlyContinue
-    if ($conns) {
-        $apiPids = $conns | Select-Object -ExpandProperty OwningProcess -Unique | Where-Object { $_ -gt 0 }
-    }
+    $apiPids = @(Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.ProcessId -ne $PID -and
+            $_.CommandLine -and
+            ($_.CommandLine -match $apiSignature)
+        } |
+        Select-Object -ExpandProperty ProcessId)
+} catch { }
+
+# Secondary: anything owning a 3201 row, whatever state it reports. Deduped against the above.
+$portOwners = @()
+try {
+    $portOwners = @(Get-NetTCPConnection -LocalPort 3201 -ErrorAction SilentlyContinue |
+        Where-Object { $_.OwningProcess -gt 0 } |
+        Select-Object -ExpandProperty OwningProcess -Unique)
 } catch { }
 
 if (-not $apiPids -or $apiPids.Count -eq 0) {
-    Write-Ok 'Nothing listening on 3201 — the engine DLL is already free.'
+    Write-Ok 'No API process found — the engine DLL is already free.'
 } else {
     foreach ($procId in $apiPids) {
         # Confirm it is OURS before stopping it. A blind Stop-Process on whatever owns
@@ -236,12 +268,12 @@ if (-not $apiPids -or $apiPids.Count -eq 0) {
         $info = Get-CimInstance Win32_Process -Filter "ProcessId=$procId" -ErrorAction SilentlyContinue
         $cmd  = if ($info) { [string]$info.CommandLine } else { '' }
 
-        $relativeSignature = $cmd -match 'dist[\\/]src[\\/]main\.js' -or $cmd -match 'nest\s+start' -or $cmd -match 'nest-cli'
+        $relativeSignature = $cmd -match $apiSignature
         $absoluteSignature = $cmd -and $cmd.ToLower().Contains($repoRoot.ToLower())
         $isOurs = $relativeSignature -or ($absoluteSignature -and $cmd -match 'node')
 
         if (-not $isOurs) {
-            Write-Warn2 "PID $procId is listening on 3201 but does not look like this repo's API."
+            Write-Warn2 "PID $procId does not look like this repo's API."
             Write-Warn2 "  cmd: $(if ($cmd.Length -gt 140) { $cmd.Substring(0,140) + '...' } else { $cmd })"
             Write-Warn2 '  Refusing to kill it. Resolve manually, then re-run.'
             exit 1
@@ -257,24 +289,29 @@ if (-not $apiPids -or $apiPids.Count -eq 0) {
         }
     }
 
-    # Windows releases the file mapping asynchronously after process exit. Poll rather
-    # than sleeping a fixed amount — a fixed sleep either wastes time or races.
+    # ⚠️ A LEFTOVER LISTENER ON 3201 THAT IS NOT A NODE PROCESS is reported, never killed —
+    # the DLL is free in that case, but the restart would fail to bind, and the reader would
+    # otherwise learn that from a health-check timeout.
+    if ($portOwners) {
+        $leftover = @($portOwners | Where-Object { $apiPids -notcontains $_ })
+        if ($leftover.Count -gt 0) {
+            Write-Warn2 "Port 3201 is still owned by PID(s) $($leftover -join ', ') — not a node API process."
+            Write-Warn2 'The build can proceed, but the API will not be able to bind. Resolve before restarting.'
+        }
+    }
+
+    # Windows releases the file mapping asynchronously after process exit, and THE DLL — not
+    # the port — is what `prisma generate` needs to write. So this poll measures the real
+    # condition instead of a proxy for it.
     $dll = Join-Path $nestDir 'node_modules\.prisma\client\query_engine-windows.dll.node'
     $waited = 0
     while ($waited -lt 15000) {
-        $stillListening = Get-NetTCPConnection -LocalPort 3201 -State Listen -ErrorAction SilentlyContinue
-        if (-not $stillListening) {
-            # Port is free; confirm the DLL is actually renameable before proceeding,
-            # because that (not the port) is what prisma generate needs.
-            try {
-                $probe = "$dll.probe"
-                if (Test-Path $dll) {
-                    Rename-Item -Path $dll -NewName (Split-Path $probe -Leaf) -ErrorAction Stop
-                    Rename-Item -Path $probe -NewName (Split-Path $dll -Leaf) -ErrorAction Stop
-                }
-                break
-            } catch { }
-        }
+        if (-not (Test-Path $dll)) { break }
+        try {
+            Rename-Item -Path $dll -NewName 'query_engine-windows.dll.node.probe' -ErrorAction Stop
+            Rename-Item -Path (Join-Path (Split-Path $dll -Parent) 'query_engine-windows.dll.node.probe') -NewName (Split-Path $dll -Leaf) -ErrorAction Stop
+            break
+        } catch { }
         Start-Sleep -Milliseconds 400
         $waited += 400
     }

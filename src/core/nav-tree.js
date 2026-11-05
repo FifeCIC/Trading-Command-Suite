@@ -287,6 +287,11 @@ export const NAV_TREE = {
       // ⚠️ ADDED 2026-10-26 (owner direction) — the strategies subject was a toggle on the page
       // above; it is now its own route so the two questions can be described and linked separately.
       { id: 'backtest-strategies', label: 'Backtest Strategies', icon: '⬢' },
+      // ⚠️ ADDED 2026-11-04 (owner direction). The A/B reference panels were a second rendering of
+      // results on the strategies page — *"it has results displayed twice"* — so they moved here, to a
+      // page about ONE strategy: the run you accepted (A), the latest run (B), side by side, and what
+      // changed. It is also where the app-wide strategy FOCUS is chosen.
+      { id: 'current-strategy', label: 'Current Strategy', icon: '◎' },
       // ⚠️ `protocol-backtest` RETIRED 2026-10-22 (#1134, owner direction). It was a sibling view
       // from 2026-10-16 because scores and trades are different questions — that is still true, so
       // the question is now the page's SUBJECT TOGGLE (Protocols | Strategies) rather than a second

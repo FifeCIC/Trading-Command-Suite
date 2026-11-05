@@ -303,6 +303,20 @@ const SORT_OPTIONS = [
   { key: 'symbol-asc', label: 'A–Z', fn: (a, b) => (a.symbol || '').localeCompare(b.symbol || '') },
 ];
 
+/**
+ * What a second position on an already-held symbol DOES, per account.
+ *
+ * The bridge reads MT5 `margin_mode` and classifies it; `unknown` is a real state and is kept as
+ * one — both order gates refuse on it, so it must never fall back to a label that reads as
+ * permissive. See `classify_position_model()` in scripts/mt5-bridge/mt5_bridge_v2.py.
+ */
+const POSITION_MODELS = {
+  netting: { label: 'netting — a 2nd order MERGES into the open one' },
+  hedging: { label: 'hedging — a 2nd order opens a separate position' },
+  exchange: { label: 'exchange — the broker decides (MT5 margin_mode 1)' },
+  unknown: { label: 'position model unknown — a 2nd order will be REFUSED' },
+};
+
 export default function PositionsMonitorPage() {
   const [tab, setTab] = useState('cfd');
   const [sourceFilter, setSourceFilter] = useState('all');
@@ -500,6 +514,21 @@ export default function PositionsMonitorPage() {
       <header className="pm-header">
         <h1>Positions Monitor</h1>
         <p>Combined view of all open positions across brokers.</p>
+        {/* ⚠️ NETTING vs HEDGING IS THE ANSWER TO A QUESTION THIS PAGE KEEPS PROVOKING.
+            On a netting account a second order on a symbol the bot already holds MERGES into the
+            existing position (size averaged, entry price rewritten) — so "two buys" appear as ONE
+            row with a bigger volume. On a hedging account the broker opens a genuine second ticket.
+            Without this line the only visible difference is a position count that does not go up,
+            which reads exactly like a lost order.
+            Rendered only when a broker reported, so a failed fan-out does not invent models. */}
+        {mt5Query.data?.brokers?.length > 0 && (
+          <p className="pm-account-models">
+            {mt5Query.data.brokers.map((b) => {
+              const model = POSITION_MODELS[b.positionModel] || POSITION_MODELS.unknown;
+              return `${b.label || `broker ${b.brokerId}`} — ${model.label}`;
+            }).join('  ·  ')}
+          </p>
+        )}
       </header>
 
       {/* Portfolio Summary Banner */}

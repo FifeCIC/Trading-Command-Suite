@@ -34,13 +34,18 @@ export function useSort(rows, initialKey = null, initialDir = 'desc') {
     });
   }, [rows, key, dir]);
 
-  const toggle = (nextKey) => {
+  /**
+   * `firstDir` is the direction a NEW column sorts in on its first click. Default `'desc'`, which
+   * is right for a number ("highest first"); a TEXT column wants `'asc'` ("A first"), so the caller
+   * passes it at the click site. Clicking the active column still just reverses.
+   */
+  const toggle = (nextKey, firstDir = 'desc') => {
     if (nextKey === key) {
       setDir((d) => (d === 'asc' ? 'desc' : 'asc'));
       return;
     }
     setKey(nextKey);
-    setDir('desc');
+    setDir(firstDir);
   };
 
   /** `aria-sort` for the <th>, so a screen reader hears the ordering rather than inferring it. */

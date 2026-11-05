@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 209,
+  "count": 211,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -926,6 +926,14 @@
       "reaches": null
     },
     {
+      "name": "measure-short-legs.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "does the SHORT leg of a pair fire at all, on STORED bars?",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
       "name": "measure-sizing-config.cjs",
       "where": "nest",
       "category": "tool",
@@ -1062,6 +1070,16 @@
       "where": "repo",
       "category": "tool",
       "purpose": "STEP 3d (#1024's untested question).",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "report-rule-inventory.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "every rule between \"a bot has an opinion\" and \"an order is placed\",",
       "selfTest": true,
       "reaches": [
         "npm"

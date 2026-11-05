@@ -375,6 +375,46 @@ export const NOTICES = {
     params: ['model', 'symbol', 'reason'],
     refs: [],
   },
+  // ── Activation refused — the bot could never fire (#905) ──
+  'TCS-TRADE-024': {
+    severity: 'warning',
+    area: 'TRADE',
+    title: 'Bot not activated — its protocol never reaches the bar',
+    message:
+      '\u201c{name}\u201d was left DISABLED. Protocol {protocol} has never produced more than ' +
+      '{ceiling}% of its capacity, and this bot\u2019s minComposite is {bar}%.',
+    cause:
+      'A bot whose bar its protocol has never reached is not a risky bot, it is a DECORATIVE one: ' +
+      'it scores every tick, writes queue entries and skips with a plausible reason, while being ' +
+      'mathematically incapable of trading. The ceiling is the protocol\u2019s all-time maximum ' +
+      'composite as a percentage of its configured capacity, measured over {samples} readings.',
+    action:
+      'Fix the protocol\u2019s capacity \u2014 its directives and weights set the ceiling. A bar at ' +
+      'or below {ceiling}% would also let this bot fire. Deactivating never refuses.',
+    params: ['name', 'protocol', 'ceiling', 'bar', 'samples'],
+    refs: [],
+  },
+
+  'TCS-TRADE-025': {
+    severity: 'warning',
+    area: 'TRADE',
+    title: 'Bot not activated — the active-bot limit for your level',
+    message:
+      '\u201c{name}\u201d was left DISABLED. Progression level {level} allows {cap} active bot(s); ' +
+      '{active} already running.',
+    cause:
+      'The app is new and running many bots at once is resource-intensive, while several trading ' +
+      'safeguards are still outstanding. So a fresh install starts with one active bot, and the ' +
+      'limit lifts as you use the app you have installed — the level is earned from closed trades, ' +
+      'completed backtest runs and days of use, measured from your own record.',
+    action:
+      'Deactivate a bot to free a slot, or reach level {nextLevel} ({nextXp} XP) to allow {nextCap}. ' +
+      'Deactivating is always allowed — this limit never stops you reducing what is running. It is ' +
+      'a guardrail, not a licence: it can be lifted in Settings.',
+    params: ['name', 'level', 'cap', 'active', 'nextLevel', 'nextXp', 'nextCap'],
+    refs: ['#1193'],
+  },
+
   // ── Integrations ─────────────────────────────────────────
   'TCS-INTEG-001': {
     severity: 'critical',

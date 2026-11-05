@@ -757,6 +757,10 @@ export class AutomationLoopService implements OnModuleInit {
       // several accounts counted another account's position as a duplicate: measured 2026-10-07,
       // the A/B pair holding XAUUSD locked all 8 gold bots out of the symbol.
       accountId: (broker as any)?.getAccountIdForSymbol?.(symbol) ?? null,
+      // ⚠️ 2026-11-04 — THIS bot. Without it the policy reads `maxPyramidTiers` from whichever bot
+      // shares the symbol, and it counts another bot's position as a duplicate of this one. The
+      // model lets a hedging account hold two bots on one symbol; netting keeps the old rule.
+      strategyId,
     });
     if (!pyramid.allowed) {
       const first = pyramid.blockers[0];
@@ -788,6 +792,8 @@ export class AutomationLoopService implements OnModuleInit {
       side,
       brokerId,
       protocolId,
+      // The bot, so the scale-in/duplicate checks are resolved for THIS bot rather than by symbol.
+      strategyId,
       marketStatus: computeMarketStatus(freshBars),
     });
     if (!feasibility.feasible) {

@@ -46,13 +46,23 @@ export class DuplicateGuardService {
     brokerId: string,
     protocolId?: string,
     cooldownMinutes?: number,
-    /**
-     * #1079 — the account the INCOMING order will trade on (e.g. '10011309743'). When given,
-     * positions and trades whose own `accountId` is a DIFFERENT non-empty account are not this
-     * account's duplicates. Rows with an empty/null accountId still block — unknown must never
-     * read as "nothing there".
-     */
     accountId?: string | null,
+    /**
+     * The ACCOUNT's position model, from the broker — `netting` | `exchange` | `hedging` | `unknown`.
+     *
+     * ⚠️ ADDED 2026-11-04. This guard blocks when ANY live position exists on symbol+broker+account,
+     * which silently assumed that a second order would MERGE. That is true on a netting account and
+     * false on a hedging one. Measured the same day: broker 2 (MetaQuotes-Demo) reports `netting`,
+     * broker 3 (PepperstoneUK-Demo) reports `hedging`. So the same guard was enforcing a broker rule
+     * on one account and an arbitrary policy on the other — and the refusal text named neither.
+     *
+     * `hedging`  -> an additional position OPENS separately. Allowed here; the OTHER limits still
+     *               apply (per-symbol risk cap, max open positions, portfolio risk, cooldown).
+     * anything else, INCLUDING unknown -> current behaviour. Unknown must never mean "allow": the
+     *               consequence of being wrong is a merge or a reversal on a live account, and this
+     *               file's existing rule is that an unverifiable duplicate check fails CLOSED.
+     */
+    positionModel?: string | null,
   ): Promise<DuplicateCheckResult> {
     const ticker = symbol.toUpperCase();
     const cooldown = cooldownMinutes ?? this.DEFAULT_COOLDOWN_MINUTES;
@@ -96,10 +106,27 @@ export class DuplicateGuardService {
         const live = scoped.filter((p: any) => isLivePosition(p.lastQuotedAt));
         staleIgnoredPositions = scoped.length - live.length;
         existingPositions = live.length;
-        if (existingPositions > 0) {
+        // ⚠️ POSITION MODEL (2026-11-04). On a HEDGING account an extra order on the same symbol
+        // opens its own position, so an existing one is not a duplicate — it is a second trade. The
+        // count is still recorded (and the caller can report it) but it does not block. Everything
+        // else in this file keeps applying, and so do the risk caps downstream.
+        //
+        // Netting / exchange / unknown keep the ORIGINAL behaviour: on netting the broker would
+        // merge or reverse the existing position, which silently rewrites a position another bot
+        // owns, and "unknown" must never read as permission.
+        const hedging = String(positionModel || '').toLowerCase() === 'hedging';
+        if (existingPositions > 0 && !hedging) {
           reasons.push(
             `${existingPositions} open position(s) on ${brokerId.toUpperCase()}` +
-              (accountId ? ` account ${accountId}` : ''),
+              (accountId ? ` account ${accountId}` : '') +
+              ` (account is ${positionModel || 'unknown-model'} — a second order would ${positionModel === 'netting' ? 'MERGE with it' : 'not be checked'})`,
+          );
+        } else if (existingPositions > 0 && hedging) {
+          // Visible, because "we allowed it" is a decision that must not be invisible.
+          this.logger.log(
+            `Duplicate guard: ${ticker} already has ${existingPositions} live position(s) on ` +
+              `${brokerId.toUpperCase()}${accountId ? ` account ${accountId}` : ''} — account model is ` +
+              'hedging, so an additional position is allowed',
           );
         }
         if (staleIgnoredPositions > 0) {

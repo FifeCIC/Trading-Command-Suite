@@ -2340,7 +2340,9 @@ export class BacktestService {
     // from one of them.
     return {
       ...result,
-      tradeTotals: tradeTotals((result as { trades?: TradeLike[] }).trades),
+      // Costs come from THIS run's own request values, so the charge decomposing the gap is the one
+      // that was actually applied — not a default reconstructed from a column.
+      tradeTotals: tradeTotals((result as { trades?: TradeLike[] }).trades, { spread, slippage }),
       id: persistedRunId || result.id,
       newsExclusion,
       newsDatesCount: newsDates?.size ?? 0,
@@ -2529,6 +2531,13 @@ export class BacktestService {
      */
     (result as { tradeTotals?: unknown }).tradeTotals = tradeTotals(
       (result as { trades?: TradeLike[] }).trades,
+      /**
+       * ⚠️ THE STORED COLUMNS, NOT `result.execution`. That object defaults a missing cost to `0.01`
+       * for a legacy run, so reading it here would report a 3% round-trip charge on runs that stored
+       * none — a fabricated number inside a real calculation, which is worse than an absent one.
+       * `null` in either column therefore makes `tradeTotals.costs` null, and the panel says so.
+       */
+      { spread: run.spread, slippage: run.slippage },
     );
 
     return result;

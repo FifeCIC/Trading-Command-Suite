@@ -1035,6 +1035,18 @@ export default function ViewStrategyPage() {
               {bot.active ? 'ACTIVE' : 'INACTIVE'}
             </span>
             <span className={`${styles.chip} ${styles.chipDisplay}`}>{bot.mode}</span>
+            {/* PYRAMID IS AN OPTIONAL MECHANISM, so its ABSENCE is the normal case and must not be
+                a chip — only a bot built with scale-in gets one. `maxPyramidTiers` above 1 is the
+                declaration; the account's position model decides whether it can actually fire,
+                which is why the two are named together in the tooltip. */}
+            {Number(bot.maxPyramidTiers ?? 1) > 1 && (
+              <span
+                className={`${styles.chip} ${styles.chipDisplay}`}
+                title={`This bot may add to its own position up to ${bot.maxPyramidTiers} tiers. The account's position model must be hedging — on netting a second order merges into the first.`}
+              >
+                ⟂ PYRAMID ×{bot.maxPyramidTiers}
+              </span>
+            )}
           </div>
         </div>
 

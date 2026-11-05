@@ -33,6 +33,12 @@ export interface PyramidOpenPosition {
   currentPrice?: number;
   profit?: number;
   unrealizedPnl?: number;
+  /**
+   * ⚠️ ADDED 2026-11-04 — the MT5 MAGIC, i.e. WHICH BOT opened the position (#1018 makes magic the
+   * attribution key). Without it the scale-in policy could only ask "is anything open on this
+   * symbol", which is the wrong question once two bots may hold one symbol on a hedging account.
+   */
+  magic?: number | null;
 }
 
 export interface PyramidBlocker {
@@ -85,6 +91,24 @@ export class PyramidPolicyService {
      * block. Rows with no accountId still block (unknown must never read as "no position").
      */
     accountId?: string | null;
+    /**
+     * The bot that is about to trade. Given, the policy resolves ITS `maxPyramidTiers`/`baseSize`
+     * rather than guessing from the symbol, and — on a hedging account — it only counts positions
+     * that THIS bot opened.
+     *
+     * ⚠️ ADDED 2026-11-04. Two defects made this necessary:
+     *   1. `resolvePolicy()` looked the bot up by SYMBOL (`active: true, symbol`, newest first), so
+     *      with two bots on one symbol it could read the WRONG bot's tier limit — the policy that
+     *      decides scale-in was not the trading bot's policy.
+     *   2. The open-position filter matched symbol + account only, so Bot B was blocked by Bot A's
+     *      position. That is correct on a netting account (a second order would MERGE into A's
+     *      position) and wrong on a hedging one (it opens its own).
+     */
+    strategyId?: string | null;
+    /** The ACCOUNT's position model — only `hedging` allows a second position on one symbol. */
+    positionModel?: string | null;
+    /** The incoming bot's magic; required before another bot's position can be ignored. */
+    incomingMagic?: number | null;
   }): Promise<PyramidDecision> {
     const { symbol, side, brokerId } = params;
     const ticker = symbol.toUpperCase();
@@ -97,6 +121,23 @@ export class PyramidPolicyService {
       // is unknown, and unknown keeps blocking (the conservative direction).
       const rowAccount = (p as { accountId?: string | null }).accountId;
       if (params.accountId && rowAccount && String(rowAccount) !== String(params.accountId)) return false;
+      // ⚠️ PER-BOT SCOPING (2026-11-04). On a HEDGING account another bot's position on the same
+      // symbol is not ours to scale into — it is a different strategy holding the same instrument.
+      // Ignoring it here is what lets several bots share a symbol at all.
+      // Requires ALL THREE: a hedging account, the incoming bot's magic, and a magic on the row.
+      // Any unknown falls through to the original symbol-wide rule, because being wrong the other
+      // way means scaling into a position we do not own.
+      const hedging = String(params.positionModel || '').toLowerCase() === 'hedging';
+      if (hedging && params.incomingMagic != null) {
+        // ⚠️ `!= null` BEFORE Number(). `Number(null)` is 0, which is finite and would compare
+        // unequal to any real magic — so a position with NO magic was silently ignored, i.e.
+        // "unknown" read as "not ours". Caught by the spec, not by reading it.
+        const rawMagic = (p as PyramidOpenPosition).magic;
+        if (rawMagic != null) {
+          const rowMagic = Number(rawMagic);
+          if (Number.isFinite(rowMagic) && rowMagic !== Number(params.incomingMagic)) return false;
+        }
+      }
       return true;
     });
 
@@ -114,7 +155,7 @@ export class PyramidPolicyService {
     }
 
     // ── Resolve the policy knob (one place) ──
-    const { maxTiers, baseSize, source } = await this.resolvePolicy(ticker);
+    const { maxTiers, baseSize, source } = await this.resolvePolicy(ticker, params.strategyId);
 
     // Existing tier count = max(position count, volume ÷ baseSize) — the
     // retired logic; volume-over-base captures averaged entries on stock.
@@ -170,17 +211,30 @@ export class PyramidPolicyService {
   }
 
   /** Resolve the policy knob from the bot strategy, else the #720 default. */
-  async resolvePolicy(symbol: string): Promise<{ maxTiers: number; baseSize: number; source: 'bot' | 'default' }> {
+  async resolvePolicy(symbol: string, strategyId?: string | null): Promise<{ maxTiers: number; baseSize: number; source: 'bot' | 'default'; botName?: string; pyramidEnabled?: boolean }> {
     try {
-      const bot: any = await this.prisma.tradingStrategy.findFirst({
-        where: { active: true, symbol: symbol.toUpperCase() },
-        orderBy: { updatedAt: 'desc' },
-      });
+      // ⚠️ BY ID FIRST (2026-11-04). The lookup used to be by SYMBOL alone
+      // (`active: true, symbol`, newest `updatedAt` first), so with two bots on one symbol it could
+      // read the WRONG bot's `maxPyramidTiers` — the limit that allows or refuses scale-in was not
+      // the trading bot's limit. The symbol lookup is kept as the fallback because the manual path
+      // and older callers do not pass an id.
+      const bot: any = strategyId
+        ? await this.prisma.tradingStrategy.findUnique({ where: { id: strategyId } })
+        : await this.prisma.tradingStrategy.findFirst({
+            where: { active: true, symbol: symbol.toUpperCase() },
+            orderBy: { updatedAt: 'desc' },
+          });
       if (bot) {
+        const maxTiers = Number(bot.maxPyramidTiers ?? 1) || 1;
         return {
-          maxTiers: Number(bot.maxPyramidTiers ?? 1) || 1,
+          maxTiers,
           baseSize: Number(bot.baseSize ?? DEFAULT_BASE_SIZE) || DEFAULT_BASE_SIZE,
           source: 'bot',
+          botName: bot.name,
+          // Pyramid is an OPTIONAL mechanism a bot can be built with — `maxPyramidTiers > 1` is
+          // what turns scale-in on, and it is part of what makes one strategy distinct from
+          // another. Reported so the rule views can show it rather than leave it buried.
+          pyramidEnabled: maxTiers > 1,
         };
       }
     } catch (err) {

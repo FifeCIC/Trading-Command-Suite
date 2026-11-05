@@ -26,9 +26,10 @@ import { DatabaseModule } from '../../database/database.module';
 import { ProvidersModule } from '../providers/providers.module';
 import { AuthModule } from '../auth/auth.module';
 import { ScoringModule } from '../scoring/scoring.module';
+import { ProgressionModule } from '../progression/progression.module';
 
 @Module({
-  imports: [DirectivesModule, DiversificationModule, RiskModule, NotificationsModule, DatabaseModule, ProvidersModule, AuthModule, forwardRef(() => ScoringModule)],
+  imports: [DirectivesModule, DiversificationModule, RiskModule, NotificationsModule, DatabaseModule, ProvidersModule, AuthModule, forwardRef(() => ScoringModule), ProgressionModule],
   controllers: [Mt5TradingController, SessionTrackerController, TradingStrategyController, TradeHistoryController, BrokerConfigController],
   providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopAdjustmentRecorder, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService, PyramidPolicyService, BotPerformanceService, FirstRunSeedService],
   exports: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopAdjustmentRecorder, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService, PyramidPolicyService, BotPerformanceService],

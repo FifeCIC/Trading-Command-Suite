@@ -608,7 +608,6 @@ const VIEW_META = {
       'GET /api/backtest/settings-inventory',
       'GET /api/backtest/periods',
       'GET /api/trading/strategies',
-      'GET /api/trading/bot-performance',
       'GET /api/system/logs/file',
     ],
   },
@@ -626,6 +625,23 @@ const VIEW_META = {
       'GET /api/backtest/runs',
       'POST /api/backtest/runs/compare',
       'DELETE /api/backtest/runs/:runId',
+    ],
+  },
+  // ⚠️ ADDED 2026-11-04 (owner direction). The A/B reference panels left `/lab/backtest-strategies`
+  // — *"it has results displayed twice"* — and became their own page about ONE strategy. It runs
+  // nothing: the API list is stored-run reads plus the baseline settings the panels write.
+  '/lab/current-strategy': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Current Strategy',
+    file: 'src/pages/CurrentStrategyPage.jsx',
+    css: 'src/pages/CurrentStrategyPage.css',
+    api: [
+      'GET /api/trading/strategies',
+      'GET /api/trading/bot-performance',
+      'GET /api/backtest/runs',
+      'GET /api/backtest/results/:runId',
+      'POST /api/backtest/runs/compare',
     ],
   },
   // ⚠️ `'protocol-backtest'` RETIRED 2026-10-22 (#1134). The page was merged into `/lab/backtest` —

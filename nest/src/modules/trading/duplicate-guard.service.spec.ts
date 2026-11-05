@@ -25,6 +25,36 @@ describe('DuplicateGuardService (#745)', () => {
     return { svc, findMany, logger: (svc as any).logger };
   }
 
+  it('⭐ ACCOUNT MODEL (2026-11-04) — on a HEDGING account an existing position does NOT block', async () => {
+    // Measured: broker 3 (PepperstoneUK-Demo) reports `margin_mode = 2` = hedging, where a second
+    // order OPENS its own position. Blocking it was an app policy, never a broker rule.
+    const { svc, logger } = make([{ id: 'p1', quantity: 0.01, lastQuotedAt: LIVE }]);
+    const res = await svc.checkDuplicate('XAUUSD', 'mt5', undefined, undefined, null, 'hedging');
+    expect(res.blocked).toBe(false);
+    // The count is still REPORTED — allowing it must not be silent.
+    expect(res.existingPositions).toBe(1);
+    expect(logger.log).toHaveBeenCalledWith(expect.stringContaining('hedging, so an additional position is allowed'));
+  });
+
+  it('⭐ ACCOUNT MODEL — on a NETTING account it still blocks, and says a merge would happen', async () => {
+    // Measured: broker 2 (MetaQuotes-Demo) reports `margin_mode = 0` = netting, where a second order
+    // MERGES with (or reverses) the existing one. Allowing that would rewrite another bot's position.
+    const { svc } = make([{ id: 'p1', quantity: 0.01, lastQuotedAt: LIVE }]);
+    const res = await svc.checkDuplicate('XAUUSD', 'mt5', undefined, undefined, null, 'netting');
+    expect(res.blocked).toBe(true);
+    expect(String(res.reason)).toContain('MERGE');
+  });
+
+  it('⭐ ACCOUNT MODEL — an UNKNOWN model blocks (unknown is never permission)', async () => {
+    // The consequence of guessing wrong is a merge or reversal on a live account, so the absent
+    // model keeps the original fail-closed behaviour.
+    for (const model of [undefined, null, 'unknown', '', 'exchange']) {
+      const { svc } = make([{ id: 'p1', quantity: 0.01, lastQuotedAt: LIVE }]);
+      const res = await svc.checkDuplicate('XAUUSD', 'mt5', undefined, undefined, null, model as any);
+      expect(res.blocked).toBe(true);
+    }
+  });
+
   it('a LIVE position blocks', async () => {
     const { svc } = make([{ id: 'p1', quantity: 0.01, lastQuotedAt: LIVE }]);
     const res = await svc.checkDuplicate('XAUUSD', 'mt5');

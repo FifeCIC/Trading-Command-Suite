@@ -79,6 +79,42 @@ if ($zombieBridges) {
     Write-Host "    Killed $($zombieBridges.Count) MT5 bridge process(es) by identity" -ForegroundColor DarkGray
 }
 
+# ── KILL STALE FRONTEND / API BY IDENTITY (2026-11-03) ────────────────────────────────────────
+# ⚠️ MEASURED: a Vite started 2026-11-02 12:51 was still serving port 5173 **34 hours later**,
+# across many launches. The port-based kill below could not see it: `netstat -ano` and
+# `Get-NetTCPConnection -State Listen` BOTH returned no LISTENING row for 5173 even though
+# connections were ESTABLISHED on `[::1]:5173` and a new Vite failed with
+# `Error: Port 5173 is already in use` (which `--strictPort` turns into an immediate exit). So the
+# frontend never restarted and every launch served yesterday's build, while the launcher's poll saw
+# a healthy port and said nothing.
+#
+# Same remedy the bridges already use: kill by process identity, not by who currently holds the
+# socket. Restricted to `node.exe` with `vite` in the command line so an unrelated terminal that
+# merely mentions the word is not touched.
+$zombieFrontends = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+        $_.Name -eq 'node.exe' -and $_.CommandLine -match 'vite'
+    })
+foreach ($vp in $zombieFrontends) {
+    try { Stop-Process -Id $vp.ProcessId -Force -ErrorAction Stop } catch {}
+    $null = cmd /c "taskkill /F /PID $($vp.ProcessId) 2>nul"
+}
+if ($zombieFrontends.Count -gt 0) {
+    Write-Host "    Killed $($zombieFrontends.Count) stale Vite process(es) by identity" -ForegroundColor DarkGray
+}
+
+# The API can strand the same way: a `node dist/src/main.js` that the port probe cannot see keeps
+# serving an OLD build, and the version check then reports the previous version.
+$zombieApis = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+        $_.Name -eq 'node.exe' -and $_.CommandLine -match 'dist[/\\]src[/\\]main\.js'
+    })
+foreach ($ap in $zombieApis) {
+    try { Stop-Process -Id $ap.ProcessId -Force -ErrorAction Stop } catch {}
+    $null = cmd /c "taskkill /F /PID $($ap.ProcessId) 2>nul"
+}
+if ($zombieApis.Count -gt 0) {
+    Write-Host "    Killed $($zombieApis.Count) stale API process(es) by identity" -ForegroundColor DarkGray
+}
+
 @(3201) + $bridgePorts + @(5173, 5174) | ForEach-Object {
     # ⚠️ `-State Listen` IS REQUIRED. Measured 2026-09-29 (#1023): without it this loop killed
     # whatever process owned the FIRST connection the cmdlet happened to return — a TIME_WAIT or
@@ -160,6 +196,12 @@ for ($i = 0; $i -lt $activeBrokers.Count; $i++) {
     $bridgeErr = Join-Path $LOG_DIR "console-mt5-${bridgePort}-err.log"
     # #866 — the SUPERVISOR is launched; it spawns the bridge and relaunches it on death.
     $bridgeArgs = "`"$supervisorScript`""
+    # ⚠️ UNBUFFERED PYTHON (2026-11-03). When stdout is a FILE, Python block-buffers it, so
+    # `console-mt5-5000.log` held a single line from the previous day while the -err log had today's
+    # entries. The reader is then sent to a "stdout" file that looks like a process that never
+    # started. This env var is inherited by the supervisor AND the bridge it spawns, which is why it
+    # is set here rather than passed as `-u` to the supervisor only.
+    $env:PYTHONUNBUFFERED = '1'
     $started = Start-Process -FilePath $pythonPath `
         -ArgumentList $bridgeArgs `
         -WorkingDirectory $bridgeCwd `
@@ -295,30 +337,111 @@ if (-not $SkipFrontend) {
 
 $allUp = $false
 $down = @()
+# ── PORT PROBE (2026-11-03) ────────────────────────────────────────────────────────────────────
+# ⚠️ This replaced `Get-NetTCPConnection -State Listen` inside the wait loop. That cmdlet is a WMI
+# query: under the load of four calls every 2 s while the API boots it intermittently returns
+# nothing, and the caller cannot tell "no socket" from "query failed". Measured on a real launch:
+# both bridges reported "ready after 18s/10s — connected to terminal" and then alternated ✓/… in
+# every poll, which reads as a service that keeps dying. A direct TCP connect answers the question
+# that is actually being asked — does something accept a connection on this port — and fails only
+# when nothing does.
+# ⚠️ A LAUNCHED PID IS OFTEN NOT THE PROCESS THAT SERVES THE PORT (2026-11-03).
+# Vite is started as `cmd /c npx vite ...`, so the PID we hold is `cmd`, which exits while the real
+# server runs several levels down (cmd → npx → node → vite). The bridges are the same shape since
+# #866 (supervisor → bridge). A bare `Get-Process -Id $expected` therefore reports "our process has
+# exited — an older service is serving it" over a healthy Vite. Measured: that exact false accusation
+# appeared on a clean launch. So walk the descendant tree one CIM query at a time.
+function Test-ProcessTreeAlive {
+    param([int]$RootPid, [int]$MaxDepth = 6)
+    $all = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Select-Object ProcessId, ParentProcessId)
+    if ($all.Count -eq 0) { return $null }   # cannot judge — never a "yes"
+    $alive = @{}
+    $children = @{}
+    foreach ($proc in $all) {
+        $procId = [int]$proc.ProcessId
+        $alive[$procId] = $true
+        $parent = [int]$proc.ParentProcessId
+        if (-not $children.ContainsKey($parent)) { $children[$parent] = @() }
+        $children[$parent] += $procId
+    }
+    if ($alive.ContainsKey($RootPid)) { return $true }
+    $level = @($RootPid)
+    for ($depth = 0; $depth -lt $MaxDepth; $depth++) {
+        $next = @()
+        foreach ($node in $level) { if ($children.ContainsKey($node)) { $next += $children[$node] } }
+        if ($next.Count -eq 0) { break }
+        foreach ($node in $next) { if ($alive.ContainsKey($node)) { return $true } }
+        $level = $next
+    }
+    return $false
+}
+function Test-PortListening {
+    param([int]$Port, [int]$TimeoutMs = 700)
+    # ⚠️ BOTH ADDRESS FAMILIES (2026-11-03). Vite binds `[::1]:5173` — IPv6 loopback — and there is
+    # NO `127.0.0.1:5173 ... LISTENING` row at all (measured). A probe that only tries IPv4 therefore
+    # reports Vite as DOWN while it is serving the app, and which family gets used can change from
+    # launch to launch — an intermittent false "didn't start" that depends on nothing the reader can
+    # see. Try IPv4 first, then IPv6.
+    foreach ($addr in @('127.0.0.1', '::1')) {
+        $client = New-Object System.Net.Sockets.TcpClient
+        try {
+            $task = $client.ConnectAsync($addr, $Port)
+            if ($task.Wait($TimeoutMs) -and $client.Connected) { return $true }
+        } catch {
+            # try the next address family
+        } finally { $client.Dispose() }
+    }
+    return $false
+}
 # MT5 bridges bind their LISTEN socket only AFTER connecting to the terminal
 # (they call initialize() then start listening last — mt5_bridge_v2.py). On a
 # cold terminal start the first init can fail with an IPC timeout and retry,
 # which can exceed the old fixed 30s window and produce a false "didn't start".
-# So we wait up to 90s, but after the first 30s we ONLY keep waiting while the
-# remaining down services are MT5 bridges (grace). A non-bridge service that is
-# still down after 30s is treated as a real failure and reported immediately.
+# So the wait window is generous rather than fixed at 30s.
+# ⚠️ 2026-11-04 — THE NON-BRIDGE CUT-OFF WAS THE FALSE-FAILURE THE OWNER KEPT SEEING.
+# This loop used to stop waiting after 30s whenever a NON-bridge service was still down, and that
+# is what produced a window reading "Some services didn't start" while the API was booting, the
+# bridges were connected and the app then worked. MEASURED on this machine: the API prints its
+# bootstrap header and then blocks in `app.listen()` for ~90 SECONDS while its module init hooks
+# run (directive seed, 51 protocol readiness passes, first scoring pass) — so at 30s it is never
+# listening, and the old rule broke out at exactly the wrong moment.
+#
+# The port is a PROXY for readiness. The process being alive is the fact that distinguishes
+# "still booting" from "died", so that is what the cut-off now tests:
+#   • non-bridge service whose process tree has EXITED  → real failure, stop immediately
+#   • non-bridge service alive but not listening yet    → keep waiting, say so
+#   • bridge down                                       → unchanged grace (they retry to 90s)
+# The ceiling is raised to 180s to cover a 90s API boot with margin; a service whose process died
+# is still reported within seconds, which is the case the short window was actually protecting.
 $bridgeGraceStart = 15  # iterations (2s each) before bridge-only grace begins
-for ($i = 1; $i -le 45; $i++) {
+for ($i = 1; $i -le 90; $i++) {
     Start-Sleep -Seconds 2
     $up = @()
     $down = @()
     foreach ($svc in $services) {
-        $conn = Get-NetTCPConnection -LocalPort $svc.Port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($conn) { $up += $svc } else { $down += $svc }
+        if (Test-PortListening -Port $svc.Port) { $up += $svc } else { $down += $svc }
     }
     if ($down.Count -eq 0) { $allUp = $true; break }
     if ($i -ge $bridgeGraceStart) {
-        $bridgeDown = @($down | Where-Object { $_.Name -like 'MT5 *' }).Count
-        if ($bridgeDown -lt $down.Count) { break }  # non-bridge failure — stop waiting
+        $dead = @()
+        foreach ($svc in $down) {
+            if ($svc.Name -like 'MT5 *') { continue }
+            $svcPid = $startedPids[$svc.Port]
+            # `Test-ProcessTreeAlive` returns $null when the process table cannot be read. Unknown
+            # is NOT dead — treating it as death would restore the false failure through the back
+            # door, and it would name a service that is booting perfectly well.
+            if ($svcPid -and (Test-ProcessTreeAlive -RootPid $svcPid) -eq $false) { $dead += $svc }
+        }
+        if ($dead.Count -gt 0) { break }  # its process EXITED — that is a real failure
     }
     $status = ($up | ForEach-Object { "$($_.Name) ✓" }) -join '  '
     $waiting = ($down | ForEach-Object { "$($_.Name) …" }) -join '  '
     Write-Host "    [$i] $status  $waiting" -ForegroundColor DarkGray
+    if ($i -eq 20) {
+        Write-Host '         (the API blocks in app.listen() for ~90s on a cold start while it seeds' -ForegroundColor DarkGray
+        Write-Host '          directives and scores its first pass — still booting, not failed)' -ForegroundColor DarkGray
+    }
 }
 
 Write-Host ""
@@ -349,23 +472,30 @@ if ($allUp) {
     # ⚠️ COMPUTED BEFORE THE SUCCESS MESSAGE, not after. Printing "All services running" and then
     # qualifying it two lines later is the defect rather than a caveat on it: the green line is what
     # a reader takes away, and a contradiction underneath reads as noise.
+    # ⚠️ "IS IT OUR PROCESS?" WITHOUT ASKING WHO OWNS THE PORT (2026-11-03).
+    # This used `Get-NetTCPConnection` for the owning PID, then `netstat -ano`. Both are unreliable
+    # here and BOTH produced false accusations on a healthy launch: the cmdlet returned nothing for
+    # all four ports (WMI, flaky under load), and netstat reported PID `0` for the bridges and no
+    # LISTENING row at all for 3201/5173 (Vite binds `[::1]`, and a bridged listener can show PID 0
+    # when the mapping is unavailable). Measured: a red
+    #   "Services are LISTENING, but NOT under the processes this launcher started"
+    # printed over a stack where every port served and /api/health was ok.
+    #
+    # The question actually worth asking is simpler and needs no port→PID mapping: is the process WE
+    # started still alive? Port reachability is already proven above. So an impostor is exactly
+    # "the port answers, but our process has exited" — which is the #1026 case, and nothing else.
     $impostors = @()
     foreach ($port in $startedPids.Keys) {
         $expected = $startedPids[$port]
-        $owner = (Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
-            Select-Object -First 1).OwningProcess
-        if ($owner -and $expected -and $owner -ne $expected) {
-            # ⚠️ #866 — the BRIDGE ports are owned by a GRANDCHILD now. This launcher starts
-            # `bridge_supervisor.py` (that pid is in $startedPids) and the supervisor starts the
-            # bridge, so the LISTEN owner is the supervisor's child. One parent lookup settles it —
-            # and only when the expected pid did not match directly, so the check still catches a
-            # genuinely stale process answering the port (#1026).
-            $parent = (Get-CimInstance Win32_Process -Filter "ProcessId=$owner" -ErrorAction SilentlyContinue).ParentProcessId
-            if ($parent -ne $expected) {
-                $impostors += "port $port is owned by PID $owner, but we started PID $expected"
-            }
-        } elseif (-not $owner -and $expected) {
-            $impostors += "port $port has no LISTEN owner, but we started PID $expected"
+        if (-not $expected) { continue }
+        $treeAlive = Test-ProcessTreeAlive -RootPid $expected
+        if ($treeAlive -eq $true) { continue }
+        if ($treeAlive -eq $null) {
+            Write-Host "    (could not read the process table — ownership of port $port not verified)" -ForegroundColor DarkGray
+            continue
+        }
+        if (Test-PortListening -Port $port) {
+            $impostors += "port $port answers, but the process we started (PID $expected) and all its children have exited — an older service is serving it"
         }
     }
 
@@ -407,16 +537,90 @@ if ($allUp) {
         Write-Host "  API health: http://localhost:3201/api/health" -ForegroundColor DarkGray
     }
 } else {
-    Write-Host "  Some services didn't start:" -ForegroundColor Red
+    # ⚠️ RE-CHECK BEFORE BLAMING (2026-11-03). The wait loop stops early for a NON-bridge reason (a
+    # slow API or Vite) and then reported EVERY still-down service — bridges included — as "didn't
+    # start". That is what the owner saw: a window full of "didn't start … check
+    # console-mt5-5000-err.log" naming two bridges that were listening and connected to live
+    # accounts. The file it pointed at held entries from eleven hours earlier, so it read as a
+    # crash. Now a service is only called failed if nothing accepts a connection NOW, and a bridge
+    # that is up but not connected says exactly that, with the remedy.
+    $stillDown = @()
     foreach ($svc in $down) {
-        $logHint = if ($svc.ErrLog) { "$($svc.ErrLog)  (stdout: $($svc.Log))" } else { $svc.Log }
-        Write-Host "    $($svc.Name) on port $($svc.Port) — check $logHint" -ForegroundColor Red
+        if (-not (Test-PortListening -Port $svc.Port)) { $stillDown += $svc; continue }
+        if ($svc.Name -like 'MT5 *') {
+            $conn = $null; $acct = $null
+            try {
+                $h = Invoke-RestMethod "http://localhost:$($svc.Port)/health" -TimeoutSec 6 -ErrorAction Stop
+                $conn = [bool]$h.connected; $acct = $h.account
+            } catch { $conn = $null }
+            if ($conn -eq $false) {
+                Write-Host "    $($svc.Name) port $($svc.Port) is LISTENING but NOT connected to MT5" -ForegroundColor Yellow
+                Write-Host "      Remedy: POST http://127.0.0.1:$($svc.Port)/reconnect" -ForegroundColor Yellow
+            } else {
+                $suffix = if ($acct) { " — account $acct" } else { '' }
+                Write-Host "    $($svc.Name) port $($svc.Port) is up and connected (slow to satisfy the poll, not failed)$suffix" -ForegroundColor DarkGray
+            }
+        } else {
+            Write-Host "    $($svc.Name) port $($svc.Port) came up after the wait window" -ForegroundColor DarkGray
+        }
+    }
+    if ($stillDown.Count -gt 0) {
+        Write-Host "  Some services didn't start (nothing accepts a connection on the port):" -ForegroundColor Red
+        foreach ($svc in $stillDown) {
+            $logHint = if ($svc.ErrLog) { "$($svc.ErrLog)  (stdout: $($svc.Log))" } else { $svc.Log }
+            Write-Host "    $($svc.Name) on port $($svc.Port) — check $logHint" -ForegroundColor Red
+        }
     }
     # Show NestJS error log inline if it failed
-    if ($down | Where-Object { $_.Name -eq 'NestJS API' }) {
+    if ($stillDown | Where-Object { $_.Name -eq 'NestJS API' }) {
         Write-Host "`n  ── NestJS error log (last 30 lines) ──" -ForegroundColor DarkGray
         Get-Content $nestErr -Tail 30 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
         Write-Host "  ───────────────────────────────────" -ForegroundColor DarkGray
     }
 }
+
+# ── EXIT CODE (2026-11-03) ────────────────────────────────────────────────────────────────────
+# ⚠️ This script used to ALWAYS exit 0: the only `exit 1` was an early guard, so a run that ended
+# with "Some services didn't start" still returned success. The desktop .bat that wraps it then
+# printed "All services should be online now" and opened the app on top of a failed startup. A
+# caller cannot report the truth if it is told everything is fine.
+#
+# Re-probed here rather than threading a flag through the branches above: this uses the same
+# predicate they use (a port that accepts a connection, and a bridge that says connected), so it
+# cannot contradict what was just printed.
+$exitOk = $true
+$exitReasons = @()
+foreach ($svc in $services) {
+    if (-not (Test-PortListening -Port $svc.Port)) {
+        $exitOk = $false
+        $exitReasons += "$($svc.Name) is not accepting a connection on port $($svc.Port)"
+    }
+}
+# A listening bridge is not a WORKING bridge (#765): confirm the terminal link itself.
+for ($i = 0; $i -lt $activeBrokers.Count; $i++) {
+    $bridgePort = 5000 + $i
+    $brokerId = $activeBrokers[$i]
+    try {
+        $h = Invoke-RestMethod "http://localhost:$bridgePort/health" -TimeoutSec 6 -ErrorAction Stop
+        if (-not [bool]$h.connected) {
+            $exitOk = $false
+            $exitReasons += "MT5 #$brokerId (:${bridgePort}) is listening but NOT connected to its terminal"
+        }
+    } catch {
+        $exitOk = $false
+        $exitReasons += "MT5 #$brokerId (:${bridgePort}) did not answer /health"
+    }
+}
+if (-not $SkipFrontend) {
+    try { Invoke-RestMethod "http://localhost:3201/api/health" -TimeoutSec 10 -ErrorAction Stop | Out-Null }
+    catch {
+        $exitOk = $false
+        $exitReasons += 'the API port answers but /api/health did not'
+    }
+}
+
 Write-Host ""
+if ($exitOk) { exit 0 }
+Write-Host "  EXIT 1 — startup incomplete:" -ForegroundColor Red
+foreach ($r in $exitReasons) { Write-Host "    $r" -ForegroundColor Red }
+exit 1

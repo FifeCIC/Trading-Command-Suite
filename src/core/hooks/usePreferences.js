@@ -10,6 +10,22 @@ const API = '/api/preferences';
 const DEFAULTS = {
   defaultSignalSymbols: '',
   defaultProtocol: '',
+  /**
+   * ── THE FOCUSED STRATEGY (owner direction, 2026-11-04) ────────────────────────────────────────
+   * *"I think the current strategy can be held across the entire app to help the user focus. There may
+   * already be a value for that and it can be used where applicable."*
+   *
+   * ⚠️ THERE WAS NO SUCH VALUE — checked in `global_setting` (nothing matching focus/current/active)
+   * and in this DEFAULTS list. The closest existing concept was the accepted backtest baseline, which
+   * is scoped to a PROTOCOL and answers "which RUN is the reference", not "which bot am I working on".
+   * So the focus is added here, in the ONE preference store the whole app already reads (localStorage
+   * + `PUT /api/preferences`), rather than as a new parallel store.
+   *
+   * Written by the Backtest Lab when a bot or protocol is selected. Nothing else reads it yet — that
+   * is declared, not implied: see the follow-up in the handoff.
+   */
+  currentStrategyId: '',
+  currentProtocolId: '',
   riskMaxDrawdown: 25,
   riskMaxPositions: 5,
   riskMaxPerSymbol: 25,

@@ -40,9 +40,111 @@
 
 .page { padding: 1.5rem 2rem; max-width: var(--page-max-width, 1400px); margin: 0 auto; }
 
-.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; }
+/* The page title is hidden app-wide (`index.css` → `.main-stage h1`), so the header now carries
+   only the CONTROL BAR. It is a column, not the old title-left / chips-right row: the bar owns the
+   full width, which is what lets a search field sit beside six filter chips without either wrapping
+   into an unreadable stack. */
+.header { margin-bottom: var(--space-md); }
 .header h1 { margin: 0; font-size: 1.5rem; }
-.subtitle { margin: 4px 0 0; font-size: 0.85rem; color: var(--ink-soft); }
+
+/* ── Control bar ────────────────────────────────────────────────────────────────────────────────
+   Modelled on `.lad-toolbar` (ladder.css) — ONE panel row holding every control for the table.
+   Values copied from it (panel surface, `1px solid var(--line)`, 10px radius, `0.5rem 0.65rem`
+   padding) rather than chosen, so the two toolbars read as the same control on both pages. */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  padding: 0.5rem 0.65rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+/* ⚠️ `margin-left: auto`, not `justify-content: space-between` on `.toolbar`. `space-between` would
+   push the gap between SEARCH and the chips as well; the auto margin puts all the slack in one
+   place, so the controls stay grouped on the left and ℹ sits alone at the row's end. */
+.toolbarInfo { margin-left: auto; display: inline-flex; align-items: center; }
+
+/* ── Search ─────────────────────────────────────────────────────────────────────────────────────
+   `position: relative` so the clear button can be absolutely placed inside the field — the native
+   `::-webkit-search-cancel-button` is hidden below because it would sit under our own ×. */
+.search {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 1 300px;
+  min-width: 190px;
+}
+.searchIcon { color: var(--ink-soft); font-size: 0.9rem; line-height: 1; }
+
+/* ⚠️ `.search .searchInput`, NOT `.searchInput`. `index.css` sets `input[type="search"] {
+   min-height: 44px }` at (0,1,1) — a bare class is (0,1,0) and LOSES, so the 30px this bar needs
+   would silently become a 44px field that breaks the row's alignment. The extra `.search` takes it
+   to (0,2,0) and wins regardless of stylesheet order. */
+.search .searchInput {
+  width: 100%;
+  min-height: 30px;
+  padding: 0 1.7rem 0 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.8rem;
+}
+.search .searchInput::placeholder { color: var(--ink-soft); }
+.search .searchInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.search .searchInput::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+
+.searchClear {
+  position: absolute; right: 0.3rem; top: 50%; transform: translateY(-50%);
+  border: none; background: transparent; color: var(--ink-soft);
+  font-size: 1rem; line-height: 1; padding: 0 0.2rem; cursor: pointer;
+  min-width: 24px; min-height: 24px;
+}
+.searchClear:hover { color: var(--ink); }
+
+/* ── Sortable header buttons ───────────────────────────────────────────────────────────────────
+   ⚠️ Every reset below is load-bearing: `index.css` gives `button` a panel background, a border,
+   `0.6rem 0.9rem` padding, `44px` min-height and a 10px radius. Left alone, each header would
+   render as a full-height button and the table head would triple in height. `.sortBtn` is a class,
+   so it outranks the bare `button` selector and the resets land. */
+.sortBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  /* ⚠️ 24×24, not 0. This is the WCAG 2.2 AA target-size floor (2.5.8) and the same floor the
+     Backtest Lab's canonical `.bt-sort` inherits from `index.css`. Resetting it to 0 made the hit
+     area a 15px-tall strip of glyph — easy to miss with a mouse and unusable on touch. */
+  min-width: 24px;
+  min-height: 24px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sortBtn:hover { color: var(--ink); }
+.sortBtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.sortOn { color: var(--accent); }
+.sortArrow { font-size: 0.6rem; line-height: 1; opacity: 0.8; }
+
+/* Paragraphs inside the ℹ popover. `.pip-content` supplies the size and colour; these only need
+   the spacing reset that `index.css`'s global `p { margin: 0.5rem 0 }` would otherwise impose. */
+.popoverLine { margin: 0 0 0.45rem; font-size: inherit; color: inherit; }
+.popoverLine:last-child { margin-bottom: 0; }
 
 .filterBar { display: flex; gap: 4px; flex-wrap: wrap; }
 .filterChip {
@@ -124,13 +226,12 @@
 
 .toggleRow { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.72rem; }
 
-/* A kill-switch failure. Colour on the BORDER, text stays `--ink`: the semantic tones are tuned for
-   a dark background and var(--color-loss) as body text fails AA on a light panel. */
+/* Spacing wrapper ONLY — the block's chrome (border, severity tint, Why/Fix labels) belongs to
+   NoticeBlock (components/notice-block.css), which is theme-aware. This used to draw a left-bar
+   notice of its own, which is both a second notice style and the reason the refusal's cause was
+   never rendered here. */
 .toggleError {
-  margin-bottom: 0.75rem; padding: 0.5rem 0.8rem;
-  font-size: 0.78rem; color: var(--ink);
-  background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--danger);
-  border-radius: 8px;
+  margin-bottom: 0.75rem;
 }
 
 /* Hand-off to the per-bot truth view (#864). */
@@ -177,23 +278,73 @@
   align-items: start;
 }
 
-.tablePane { overflow-x: auto; }.table tbody tr { background: var(--panel); }
+/* ── The table itself ────────────────────────────────────────────────────────────────────────────
+   ⚠️ THIS BLOCK WAS MISSING and the page rendered as browser defaults — measured 2026-11-04 with
+   `getComputedStyle` on the live page: `border-collapse: separate`, `th`/`td` padding `1px`,
+   `font-size: 15.2px` (inherited), and a natural width of 598px inside a 567px pane. Every cell was
+   unpadded, headers had no rule beneath them, and nothing separated one row from the next.
+
+   ⚠️ WHY IT WENT MISSING, and the trap for the next reader: `src/core/tables.css` declares exactly
+   this vocabulary against the generic `.table` class — but a CSS MODULE HASHES THAT NAME
+   (`_table_73ysv_359`), so the global rules can never match here. That isolation is the whole
+   reason this file became a module (see the header), and restating the vocabulary is its price.
+   The numbers below are COPIED from `tables.css` (0.8rem body, `0.45rem 0.65rem` cells, `0.7rem`
+   uppercase headers) rather than chosen, so this table matches every other one in the app.
+
+   ⚠️ `.table td` is (0,1,1) — one class plus one ELEMENT — which outranks a bare `.tdMuted`
+   (0,1,0) no matter the order. That is why the cell modifiers below are scoped to `.table`: without
+   it, adding a base `td` rule silently strips `.tdMuted`, `.tdRank` and `.tdNum` of their colour and
+   alignment. Nothing errors; the columns just quietly stop being muted or right-aligned. */
+.tablePane { overflow-x: auto; }
+
+.table { width: 100%; border-collapse: collapse; font-size: 0.8rem; color: var(--ink); }
+
+.table th {
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.7rem;
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  background: transparent;
+}
+
+/* `border-bottom` only — never a full grid. Tabular figures so digits line up down the column,
+   which is what makes a changing number readable. */
+.table td {
+  padding: 0.45rem 0.65rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The container's edge is the boundary — the last row needs no rule of its own. */
+.table tbody tr:last-child td { border-bottom: none; }
+
+.table tbody tr { background: var(--panel); }
 
 .row { cursor: pointer; }
+/* ⚠️ `:hover` is (0,2,0) and already beats `.table tbody tr` (0,1,2) on specificity — but a bare
+   `.rowSelected` (0,1,0) does NOT, so the tint below only lands because the selector is scoped.
+   Measured before the fix: selecting a row showed the outline and stayed `--panel` underneath. */
 .row:hover { background: var(--line); }
 
 /* The selected row is marked by OUTLINE + BORDER, not by colour alone — the same reason the mode
    switch on the bot page carries `aria-pressed`. */
-.rowSelected {
+.table tbody tr.rowSelected {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   outline: 1px solid var(--accent);
   outline-offset: -1px;
 }
 
 .thRank { width: 2.5rem; }
-.tdRank { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-.thNum, .tdNum { text-align: right; font-variant-numeric: tabular-nums; }
-.tdMuted { color: var(--ink-soft); }
+.table .tdRank { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.table .thNum, .table .tdNum { text-align: right; font-variant-numeric: tabular-nums; }
+.table .tdMuted { color: var(--ink-soft); }
 
 /* ── Paired bot: per-leg results (#1185) ─────────────────────────────────────────────────────────
    A compact stack so a two-leg bot fits one table cell: one line per leg, then the combined total.

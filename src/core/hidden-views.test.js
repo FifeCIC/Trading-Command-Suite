@@ -146,9 +146,30 @@ test('hiddenRoutesFrom is the store-facing alias and returns routes', () => {
 // ── EXPERIENCE LEVEL: the third reason a view is absent ────────────────────────────────────────
 
 test('a beginner loses the views the matrix marks beginner:false', () => {
-  const tree = { scoring: [{ id: 'live-ordering-stack' }, { id: 'symbols-ladder' }] };
+  // ⚠️ The fixture must name views that ARE still beginner:false. It used `live-ordering-stack`
+  // until 2026-11-04, when the Ladder was made visible at every level — the test then failed for the
+  // right reason, and this is the same assertion against a view that is still gated.
+  const tree = { scoring: [{ id: 'scoring-activity-logs' }, { id: 'symbols-ladder' }] };
   const out = filterByExperience(tree, 'beginner');
   assert.deepEqual(out.scoring.map((v) => v.id), ['symbols-ladder']);
+});
+
+test('the areas an owner navigates by are never hidden by an experience level', () => {
+  // ⚠️ REGRESSION, 2026-11-04. `live-ordering-stack` was the ONLY entry in the Scoring rail carrying a
+  // gate — its three siblings are undeclared and therefore visible — so the page that defines the
+  // area was the one non-experts could not reach. `backtest-data` was the same story in Lab, against
+  // its own two siblings' stated rule that an entry point to the results is never hidden. The owner
+  // reported both as "missing from menus". These two must be reachable at every level.
+  const mustAlwaysShow = new Set(['live-ordering-stack', 'backtest-data']);
+  const tree = getNavStructure();
+  for (const level of ['beginner', 'experienced', 'expert']) {
+    const visible = new Set(
+      Object.values(filterByExperience(tree, level)).flat().map((v) => v.id),
+    );
+    for (const id of mustAlwaysShow) {
+      assert.ok(visible.has(id), `${id} is hidden from the nav at level "${level}"`);
+    }
+  }
 });
 
 test('an expert loses nothing, and gets the SAME object back', () => {
@@ -179,7 +200,7 @@ test('the LEVEL filter does not empty any real area', () => {
 });
 
 test('the two filters compose: withheld AND too-advanced both disappear', () => {
-  const tree = { scoring: [{ id: 'live-ordering-stack' }, { id: 'symbols-ladder' }] };
+  const tree = { scoring: [{ id: 'scoring-activity-logs' }, { id: 'symbols-ladder' }] };
   const out = filterByExperience(filterHiddenViews(tree, new Set(['/scoring/symbols-ladder'])), 'beginner');
   assert.deepEqual(out.scoring ?? [], []);
 });

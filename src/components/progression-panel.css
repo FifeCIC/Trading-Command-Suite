@@ -1,0 +1,176 @@
+/* ProgressionPanel (#1193) — the earned level and the active-bot ceiling.
+ *
+ * ⚠️ EVERY COLOUR IS A TOKEN. `validate-css-literals.cjs` fails the build on a literal colour, and
+ * the reason is not tidiness: a literal tuned against the dark theme is simply wrong on the light
+ * one, and this panel is read by a first-time operator who has never seen either.
+ *
+ * Prefix `prg-` is file-anchored: `progression-panel.css` owns it and nothing else may use it.
+ */
+
+.prg-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+  background: var(--color-panel, var(--panel));
+  border: 1px solid var(--color-border, var(--line));
+  border-radius: var(--radius-lg);
+}
+
+.prg-panel--muted {
+  opacity: 0.8;
+}
+
+.prg-panel--warn {
+  border-color: var(--notice-warning-border);
+  background: var(--notice-warning-bg);
+}
+
+.prg-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-sm);
+}
+
+.prg-title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-dim);
+  text-transform: uppercase;
+}
+
+.prg-level {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+}
+
+.prg-why {
+  margin: 0;
+  max-width: 72ch;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.prg-meter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.prg-bar {
+  height: 8px;
+  width: 100%;
+  max-width: 520px;
+  background: var(--color-input-bg, var(--line));
+  border: 1px solid var(--color-border, var(--line));
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.prg-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width var(--vt-new-duration, 200ms) ease-out;
+}
+
+.prg-line {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.prg-cap {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--ink);
+}
+
+.prg-cap--reached {
+  color: var(--color-warning);
+}
+
+.prg-sources {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.prg-sources > summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: var(--weight-bold);
+}
+
+.prg-table {
+  width: 100%;
+  max-width: 560px;
+  margin-top: var(--space-sm);
+  border-collapse: collapse;
+}
+
+.prg-table th,
+.prg-table td {
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 1px solid var(--color-border, var(--line));
+  text-align: left;
+}
+
+.prg-table thead th {
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+.prg-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.prg-capped {
+  font-size: var(--text-xs);
+  color: var(--color-warning);
+}
+
+.prg-caption {
+  caption-side: top;
+  text-align: left;
+  font-size: var(--text-xs);
+  color: var(--color-text-dim);
+  padding-bottom: var(--space-xs);
+}
+
+.prg-detail {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-dim);
+}
+
+.prg-retry {
+  align-self: flex-start;
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.prg-retry:hover,
+.prg-retry:focus-visible {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prg-bar-fill {
+    transition: none;
+  }
+}

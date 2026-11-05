@@ -367,6 +367,122 @@ describe('tradeTotals — hold time', () => {
 });
 
 /**
+ * tradeTotals — profit capture (2026-11-04).
+ *
+ * Owner question: *"storing the highest amount of profit recognised within its processing. If you
+ * total that up for all backtesting positions opened what does it show?"*
+ *
+ * canary: change `t.spansGap === true` to `false` in the accumulator and the "gap-crossing" case
+ * fails, because the average jumps from 1.05 to the average of the gap-crossing trade as well. Change
+ * the `typeof` guard in `roundTripCostPct` to a `== null` check and the null-cost case fails, because
+ * `Number(null)` is 0 and a free round trip is reported.
+ */
+describe('tradeTotals — profit capture', () => {
+  it('counts measured, unmeasured, gap-excluded and usable as four separate populations', () => {
+    const t = tradeTotals([
+      { pnlPct: 1, maxFavourablePct: 2, maxAdversePct: 1 },
+      { pnlPct: 1, maxFavourablePct: 40, maxAdversePct: 5, spansGap: true },
+      { pnlPct: 1, maxFavourablePct: null, maxAdversePct: null },
+    ]);
+    expect(t.excursion.measured).toBe(2);
+    expect(t.excursion.unmeasured).toBe(1);
+    expect(t.excursion.excludedGap).toBe(1);
+    expect(t.excursion.usable).toBe(1);
+  });
+
+  it('excludes a gap-crossing trade from the average instead of letting it dominate', () => {
+    const t = tradeTotals([
+      { pnlPct: -0.76, maxFavourablePct: 1.05, maxAdversePct: 1.23 },
+      { pnlPct: 3400, maxFavourablePct: 227755.57, maxAdversePct: 900, spansGap: true },
+    ]);
+    // NOT ~113,878 — the trade held across the hole is counted, not averaged.
+    expect(t.excursion.avgFavourablePct).toBe(1.05);
+    expect(t.excursion.avgRealisedPct).toBe(-0.76);
+    expect(t.excursion.uncapturedPct).toBeCloseTo(1.81, 4);
+  });
+
+  it('treats a NULL gap flag as usable, because the stored rows show the clean population\'s shape', () => {
+    const t = tradeTotals([{ pnlPct: 0.5, maxFavourablePct: 2, spansGap: null }]);
+    expect(t.excursion.usable).toBe(1);
+    expect(t.excursion.excludedGap).toBe(0);
+  });
+
+  it('a genuinely measured 0.0 excursion is a value, not an absence', () => {
+    const t = tradeTotals([{ pnlPct: -1, maxFavourablePct: 0, maxAdversePct: 1.5 }]);
+    expect(t.excursion.measured).toBe(1);
+    expect(t.excursion.avgFavourablePct).toBe(0);
+    // Nothing was available to capture, so a rate would be a division by zero dressed as a result.
+    expect(t.excursion.captureRatePct).toBeNull();
+  });
+
+  it('reports a NEGATIVE capture rate rather than clamping it to zero', () => {
+    const t = tradeTotals([{ pnlPct: -0.76, maxFavourablePct: 1.05, maxAdversePct: 1.2 }]);
+    expect(t.excursion.captureRatePct).toBeCloseTo(-72.38, 1);
+  });
+
+  it('splits the uncaptured gap into the configured charge and exit timing', () => {
+    const t = tradeTotals(
+      [{ pnlPct: -1, maxFavourablePct: 2, maxAdversePct: 1 }],
+      { spread: 0.0002, slippage: 0.0004 },
+    );
+    // (0.0002 + 2 × 0.0004) × 100 = 0.1%
+    expect(t.costs.roundTripPct).toBeCloseTo(0.1, 6);
+    expect(t.costs.timingPct).toBeCloseTo(2.9, 4); // 3.0pp gap − 0.1% charge
+  });
+
+  it('costs are NULL when a run stored no spread or slippage — never zero', () => {
+    const t = tradeTotals([{ pnlPct: 1, maxFavourablePct: 2 }], { spread: null, slippage: null });
+    expect(t.costs).toBeNull();
+    expect(tradeTotals([{ pnlPct: 1, maxFavourablePct: 2 }]).costs).toBeNull();
+  });
+
+  it('a run with no trades still answers with an empty excursion block, not a missing one', () => {
+    const t = tradeTotals([]);
+    expect(t.excursion.usable).toBe(0);
+    expect(t.excursion.avgFavourablePct).toBeNull();
+  });
+
+  /**
+   * The MONEY pair (owner, 2026-11-04): *"money values telling me the theoretic trading outcome if we
+   * took profit at the highest value of each position as recorded."*
+   *
+   * canary: drop the `- commissionSafe` term and the commission case fails; accept a missing
+   * `positionSize` as 0 and the "excluded, not zeroed" case fails.
+   */
+  it('values the theoretical exit at each trade\'s own best price, in currency', () => {
+    const t = tradeTotals([
+      // 2% of a 100.00 entry on 10 units = 20.00 gross, no commission
+      { pnl: 5, pnlPct: 0.5, maxFavourablePct: 2, entryPrice: 100, positionSize: 10, commission: 0 },
+      // 5% of a 50.00 entry on 4 units = 10.00 gross, less 1.50 commission = 8.50
+      { pnl: -2, pnlPct: -1, maxFavourablePct: 5, entryPrice: 50, positionSize: 4, commission: 1.5 },
+    ]);
+    expect(t.excursion.moneyTrades).toBe(2);
+    expect(t.excursion.theoreticalPnl).toBeCloseTo(28.5, 4);
+    expect(t.excursion.realisedPnl).toBeCloseTo(3, 4);
+    expect(t.excursion.leftOnTablePnl).toBeCloseTo(25.5, 4);
+  });
+
+  it('leaves a trade WITHOUT a recorded size out of the money figures instead of counting it as zero', () => {
+    const t = tradeTotals([
+      { pnl: 5, pnlPct: 0.5, maxFavourablePct: 2, entryPrice: 100, positionSize: 10 },
+      { pnl: 9, pnlPct: 9, maxFavourablePct: 30, entryPrice: 100, positionSize: null },
+    ]);
+    expect(t.excursion.usable).toBe(2); // both still measured on the percentage side
+    expect(t.excursion.moneyTrades).toBe(1);
+    expect(t.excursion.theoreticalPnl).toBeCloseTo(20, 4); // 30% trade contributes nothing
+    expect(t.excursion.realisedPnl).toBeCloseTo(5, 4);
+  });
+
+  it('a gap-crossing trade is excluded from the money figures too', () => {
+    const t = tradeTotals([
+      { pnl: 1, pnlPct: 1, maxFavourablePct: 2, entryPrice: 100, positionSize: 10, spansGap: true },
+    ]);
+    expect(t.excursion.moneyTrades).toBe(0);
+    expect(t.excursion.theoreticalPnl).toBeNull();
+  });
+});
+
+/**
  * stopSweep — the "is the stop too distant?" screen.
  *
  * canary: drop `winnersCut` (count every stopped trade as a saving) and the "a tighter stop also kills
