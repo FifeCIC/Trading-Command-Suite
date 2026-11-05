@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **567** backend source files (specs excluded). Two access paths, because one
+Scanned **568** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**567** source files · **3113** declarations · **383** ratio sites · **1651** nodes · **170** unreferenced
+**568** source files · **3118** declarations · **383** ratio sites · **1654** nodes · **170** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -1064,9 +1064,9 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/trading/trade-history.controller.ts:859 median`
 - `nest/src/modules/trading/trade-history.controller.ts:865 r2`
 - `nest/src/modules/trading/trade-recorder.service.ts:187 reject`
-- `nest/src/modules/trading/trading-strategy.service.ts:1266 shape`
-- `nest/src/modules/trading/trading-strategy.service.ts:2649 evaluateAllActive`
-- `nest/src/modules/trading/trading-strategy.service.ts:286 num`
+- `nest/src/modules/trading/trading-strategy.service.ts:1304 shape`
+- `nest/src/modules/trading/trading-strategy.service.ts:2780 evaluateAllActive`
+- `nest/src/modules/trading/trading-strategy.service.ts:296 num`
 - `nest/src/modules/trend/trend-read.math.ts:173 round1`
 - `nest/src/modules/trend/trend-read.math.ts:174 round3`
 - `nest/src/modules/trend/trend-read.math.ts:175 round5`

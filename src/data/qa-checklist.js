@@ -8143,6 +8143,19 @@ const QA_CHECKLIST = [
         priority: 'high',
         versionNote: '2026-11-04 - batch #48 (no issue number declared; live proof is REVIEW-QUEUE R57) — pyramid is PER BOT: open positions are filtered by account and then by the trading bot\'s own `magic`, but ONLY when the account reports `hedging`; an unknown model or a missing magic falls back to the conservative symbol-wide rule, and `resolvePolicy` looks the bot up by ID first so it cannot read another bot\'s `maxPyramidTiers`. The duplicate guard takes the same model as a 6th parameter and names it ("MERGE") in the refusal, because on a netting account a second order merges size and entry price instead of opening a ticket. ⚠️ Extends nothing — the earlier pyramid tests cover the scoring-strategy dropdown and the payload, not the account model.',
       },
+
+  // ── handoff batch #49 (2026-11-05) ─────────────────────────────
+      {
+        id: 'qa-risk-025',
+        area: 'Risk — portfolio cap',
+        system: 'assessGlobalRiskLimits() + Mt5SymbolRouter.resolveForOrder() + Mt5TradingService.getAccountBook()',
+        name: 'A routed account is judged on its own book, and an unreadable one is refused by name',
+        procedure: '`GET /api/providers/mt5/routes/GER40` — expect `route.brokerId` 3, `explicit: true`, `mt5: true`; then `GET /api/trading/mt5/positions/managed` and note each `brokers[]` row\'s `equity` and position count. With the PRIMARY account over the cap, let an index bot route a GER40 order and read `decision_log` for that symbol; repeat for an UNROUTED symbol such as GBPUSD. Unit half: `npm --prefix nest run test -- assess-global-risk-limits`.',
+        expected: 'GER40 no longer refuses with `Portfolio at risk … exceeds risk.maxPortfolioRisk` — the cap is judged on account 3\'s own positions and equity, and any refusal on that account names it (`… on account 3 (the account this order routes to)`). GBPUSD, which has no `symbol_route` row, still refuses on the PRIMARY book. If account 3 cannot be read the order is refused with `account 3 … could not be read` — never silently judged on the primary. Spec: **18 passed**, 5 of them the routed-book cases (routed+empty allowed · unrouted still refused · unreadable refused by name · no usable equity refused · no router = old behaviour). Measured 2026-11-05: 90 portfolio-cap refusals across 6 symbols in 30 minutes → 1 (GBPUSD, unrouted and correctly still blocked), and account 3 executed its first order.',
+        category: 'Guard',
+        priority: 'high',
+        versionNote: '2026-11-05 - batch #49 (no issue number declared; the cap itself is #900) — `resolveBookScope()` resolves the order\'s account through the canonical router and reads that account\'s `/positions` + `/account` (both required; half a book is not a book). An UNKNOWN route (no row, a `brokerId: 0` binance row, or no router) keeps the previous primary book exactly; a known-but-unreadable one is REFUSED by name rather than substituted. ⚠️ Drawdown / `peakEquity` and the #899 per-symbol capital sum stay PRIMARY-scoped deliberately (#848 — a fabricated peak once blocked 707 decisions).',
+      },
     ];
 
 export default QA_CHECKLIST;

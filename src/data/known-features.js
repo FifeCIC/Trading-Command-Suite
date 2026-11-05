@@ -950,4 +950,24 @@ export const KNOWN_FEATURES = {
   //    Verified against the tree 2026-11-04, not taken from the handoffs: `positionModel` is on
   //    `Mt5Account`, stamped on every managed-position row and mapped by the adapter.
     'Per-bot pyramid (scale-in) with account-aware position model': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'trading', devCompletion: 'partial' },
+
+  // ── batch #49 (2026-11-05) — 1 capability from 1 handoff (full). Theme: the portfolio-at-risk cap
+  //    judged the PRIMARY account's book for EVERY order, so a routed, funded and EMPTY second
+  //    account was refused on another account's positions; the cap now follows the order's route.
+  //    This EXTENDS the #900 cap family and REPLACES no row above — 'Risk Cap Registry',
+  //    'Risk cap control on the dashboard' and 'Manual-trade portfolio risk gate' all stand, and
+  //    this row owns only WHICH BOOK the cap measures.
+  //    `uiSurfaces: 1` is a real surface, not a blank: the refusal text names the account and
+  //    `decision_log` renders it (see `BlockedSignalsPage`).
+  //    `devCompletion: 'complete'` because the #900 gate now measures the book it is about to add
+  //    to. ⚠️ The items the handoff lists as DELIBERATELY UNCHANGED are separate decisions, not
+  //    this row's remainder, and they are NOT gaps: drawdown / `peakEquity` (#848) and the #899
+  //    per-symbol capital sum stay primary-scoped, and `POST /api/trading/mt5/order` still takes
+  //    no account parameter, so a manual second position on a hedging account is unreachable.
+  //    VERIFIED AGAINST THE TREE 2026-11-05, not taken from the handoff: `resolveBookScope()` and
+  //    `Mt5TradingService.getAccountBook()` exist as described; `Mt5SymbolRouter` is exported by
+  //    `ProvidersModule`, which `TradingModule` imports, so the `@Optional()` injection RESOLVES
+  //    in production instead of always taking the primary fallback; and
+  //    `assess-global-risk-limits.spec.ts` holds 18 tests, 5 of them the routed-book cases.
+    'Per-account portfolio-at-risk cap': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
 };
