@@ -1298,6 +1298,7 @@ CREATE TABLE `portfolio_snapshot_position` (
 CREATE TABLE `trading_strategy` (
     `id` VARCHAR(36) NOT NULL,
     `name` VARCHAR(200) NOT NULL,
+    `slug` VARCHAR(120) NULL,
     `description` TEXT NULL,
     `version` VARCHAR(20) NOT NULL DEFAULT '1.0.0',
     `protocolId` VARCHAR(36) NULL,
@@ -1342,6 +1343,7 @@ CREATE TABLE `trading_strategy` (
     `theory` TEXT NULL,
     `theoryKind` VARCHAR(20) NULL,
 
+    UNIQUE INDEX `trading_strategy_slug_key`(`slug`),
     UNIQUE INDEX `trading_strategy_magic_key`(`magic`),
     INDEX `trading_strategy_scoringStrategyId_idx`(`scoringStrategyId`),
     PRIMARY KEY (`id`)

@@ -17,7 +17,7 @@
  *
  * ⚠️ MEASURED 2026-10-02 — THE INSTANCE IN THE ISSUE IS ALREADY FIXED, AND THE SET IS EMPTY
  * -----------------------------------------------------------------------------------------
- * `US SPY Speed` trades `US500` on protocol `spy-speed-v1`. `symbol_protocol_assignment` now holds
+ * `US SPY Speed` trades `US500` on protocol `spy-speed-v1-long`. `symbol_protocol_assignment` now holds
  * BOTH `SPY` and `US500` for that protocol, a watchlist is linked by FK carrying `US500`, and
  * `decision_log` shows `US500` scored **31× in 7 days** alongside `SPY`'s 40. So the protocol DOES
  * score the bot's symbol today, and `0 of 39` active bots fail this rule.
@@ -145,34 +145,34 @@ function selfTest() {
     if (got !== want) { console.error(`❌ self-test: ${label} — expected ${want}, got ${got}`); failed++; }
   };
 
-  const proto = [{ id: 'uuid-1', slug: 'spy-speed-v1' }];
+  const proto = [{ id: 'uuid-1', slug: 'spy-speed-v1-long' }];
 
   // 1. THE #970 INSTANCE — protocol declares SPY only, the bot trades US500.
   let r = evaluate(
-    [{ id: 'b1', name: 'US SPY Speed', symbol: 'US500', protocolId: 'spy-speed-v1' }],
-    proto, [{ protocolId: 'spy-speed-v1', symbol: 'SPY' }], [],
+    [{ id: 'b1', name: 'US SPY Speed', symbol: 'US500', protocolId: 'spy-speed-v1-long' }],
+    proto, [{ protocolId: 'spy-speed-v1-long', symbol: 'SPY' }], [],
   );
   check('a protocol that never declares the bot symbol must FAIL', r.failures.length, 1);
 
   // 2. Its inverse — the same setup with US500 declared as well (today's real state) must PASS.
   r = evaluate(
-    [{ id: 'b1', name: 'US SPY Speed', symbol: 'US500', protocolId: 'spy-speed-v1' }],
-    proto, [{ protocolId: 'spy-speed-v1', symbol: 'SPY' }, { protocolId: 'spy-speed-v1', symbol: 'US500' }], [],
+    [{ id: 'b1', name: 'US SPY Speed', symbol: 'US500', protocolId: 'spy-speed-v1-long' }],
+    proto, [{ protocolId: 'spy-speed-v1-long', symbol: 'SPY' }, { protocolId: 'spy-speed-v1-long', symbol: 'US500' }], [],
   );
   check('declaring both tickers must PASS', r.failures.length, 0);
 
   // 3. Config keyed by UUID while the bot carries the slug must still resolve (#801).
   r = evaluate(
-    [{ id: 'b1', name: 'B', symbol: 'US500', protocolId: 'spy-speed-v1' }],
+    [{ id: 'b1', name: 'B', symbol: 'US500', protocolId: 'spy-speed-v1-long' }],
     proto, [{ protocolId: 'uuid-1', symbol: 'US500' }], [],
   );
   check('slug bot vs UUID config must resolve, not fail', r.failures.length, 0);
 
   // 4. A linked watchlist is a declared set too.
   r = evaluate(
-    [{ id: 'b1', name: 'B', symbol: 'XAUUSD', protocolId: 'gold-macro-v1' }],
-    [{ id: 'uuid-2', slug: 'gold-macro-v1' }],
-    [], [{ protocolId: 'gold-macro-v1', symbols: '["XAUUSD"]' }],
+    [{ id: 'b1', name: 'B', symbol: 'XAUUSD', protocolId: 'gold-macro-v1-long' }],
+    [{ id: 'uuid-2', slug: 'gold-macro-v1-long' }],
+    [], [{ protocolId: 'gold-macro-v1-long', symbols: '["XAUUSD"]' }],
   );
   check('a watchlist-declared symbol must PASS', r.failures.length, 0);
 

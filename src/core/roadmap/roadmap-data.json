@@ -2031,7 +2031,7 @@
     },
     {
       "number": 138,
-      "title": "signals-workbench: Signal Generation System",
+      "title": "signals-workbench-long: Signal Generation System",
       "state": "closed",
       "labels": [
         "enhancement",

@@ -1,5 +1,5 @@
 {
-  "protocolId": "forex-session-v1",
+  "protocolId": "forex-session-v1-long",
   "symbols": [
     "AUDUSD",
     "EURUSD",

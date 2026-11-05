@@ -84,7 +84,7 @@ export interface SeedProtocol {
 
 export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
   "xau-speed-v1-long": {
-    "name": "Gold Speed Scalp V1",
+    "name": "Gold Speed Scalp V1 (Long)",
     "description": "Sub-minute gold (XAUUSD) scalping protocol. Gold is the ultimate fear gauge — volatile during CPI, FOMC, NFP, geopolitics. Tight spreads, massive liquidity. Reacts to USD strength and real rates.",
     "directionMode": "LONG_ONLY",
     "tradingStyle": "Tick Scalp",
@@ -149,7 +149,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
     ]
   },
   "momentum-stock-v1-long": {
-    "name": "Momentum Stocks V1",
+    "name": "Momentum Stocks V1 (Long)",
     "description": "Group protocol for stocks with 100%+ annual gains and continued high expectations. Trend-following bias — winners keep winning until they don't. Higher sentiment weight than index protocols — these stocks are driven by narrative.",
     "directionMode": "LONG_ONLY",
     "tradingStyle": "Day Trade / Swing",
@@ -211,7 +211,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
     ]
   },
   "forex-session-v1-long": {
-    "name": "Forex Session V1",
+    "name": "Forex Session V1 (Long)",
     "description": "Forex scoring protocol — session-based mean reversion with trend following. Works across EURUSD, GBPUSD, USDJPY, USDCAD, EURGBP.",
     "directionMode": "LONG_ONLY",
     "tradingStyle": "Session / Mean Reversion",
@@ -330,6 +330,26 @@ const SHORT_LEG_SUBSTITUTION: Record<string, string | null> = {
   'volume-surge': null,
 };
 
+/**
+ * `slug-long` → `slug-short`, `Name (Long)` → `Name (Short)`.
+ *
+ * ⚠️ The pair shares a BASE and the direction token is the last token. Appending naively would
+ * produce `xau-speed-v1-long-short` and `Gold Speed Scalp V1 (Long) (Short)` — measured 2026-11-05,
+ * when the database had already been renamed to `<base>-long` / `<base>-short` and the seed was
+ * still generating the naive form. The two disagreed, so `strategy-pair-integrity.spec.ts` could no
+ * longer resolve three bot legs and the seed's own `name`/`slug` would have converged the database
+ * back to the old shape on the next re-seed.
+ */
+const DIRECTION_TOKEN = /\s*\((?:Long|Short)\)\s*$/;
+
+function shortSlugFor(slug: string): string {
+  return slug.endsWith('-long') ? `${slug.slice(0, -'-long'.length)}-short` : `${slug}-short`;
+}
+
+function shortNameFor(name: string): string {
+  return `${name.replace(DIRECTION_TOKEN, '')} (Short)`;
+}
+
 for (const slug of [...Object.keys(PROTOCOL_SEED_DATA)]) {
   const base = PROTOCOL_SEED_DATA[slug];
   if (!base || base.directionMode === 'SHORT_ONLY') continue; // idempotent: never `-short-short`
@@ -352,9 +372,9 @@ for (const slug of [...Object.keys(PROTOCOL_SEED_DATA)]) {
     return next;
   });
 
-  PROTOCOL_SEED_DATA[`${slug}-short`] = {
+  PROTOCOL_SEED_DATA[shortSlugFor(slug)] = {
     ...base,
-    name: `${base.name} (Short)`,
+    name: shortNameFor(base.name),
     description:
       `SHORT leg of ${base.name}. Same groups, weights and multipliers; bullish directives are ` +
       `substituted or dropped because a SHORT_ONLY protocol may not contain one (#1185).`,

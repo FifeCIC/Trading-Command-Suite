@@ -24,7 +24,7 @@
  * `runAbTest` read `getBars(sym, '5m', …)` while every other scoring path resolves the cadence
  * through the canonical `selectBaseTimeframe(protocol.recommendedTimeframe)` (#908) — the
  * envelope, the protocol runner, consensus, and the main loop. Measured 2026-09-23, XAUUSD, same
- * protocol (`xau-speed-m15`), same second:
+ * protocol (`xau-speed-m15-long`), same second:
  *
  *     real pipeline (15m bars) : composite 94, signal BUY  -> bot EXECUTED (ticket 152671245422)
  *     A/B runner   ( 5m bars) : composite 15, signal HOLD -> SKIP — no order, ever

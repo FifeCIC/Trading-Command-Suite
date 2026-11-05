@@ -39,7 +39,7 @@
  *   THIN-PROTOCOL    an active protocol the whole symbol rests on, built from 1–2 directives.
  *
  * ⚠️ A CORRECTION MADE HERE, AND WHY IT MATTERS (2026-11-02). The first version of this tool had a
- * single NO-DIRECTION class based on the 4-hour window. Running it on `xau-speed-m15` produced a
+ * single NO-DIRECTION class based on the 4-hour window. Running it on `xau-speed-m15-long` produced a
  * false positive: it reported "85 snapshots, 0 directional" as a fault, and on investigation the
  * protocol had emitted **24 STRONG_BUY in 24h** — the window simply caught a quiet stretch. Eight
  * further directives looked "never directional" in 300 ticks and only THREE of them are
@@ -172,7 +172,7 @@ function classifyProtocol(p) {
   }
   if (rows >= 20 && directional === 0 && !feedDead) {
     // ⚠️ Deliberately NOT a finding. Kept as a computed value so the report can say so out loud.
-    // Measured 2026-11-02: `xau-speed-m15` tripped this on a 4h window with 0 of 85 directional,
+    // Measured 2026-11-02: `xau-speed-m15-long` tripped this on a 4h window with 0 of 85 directional,
     // and had emitted 24 STRONG_BUY in 24h. A quiet window is not a fault; the long-horizon
     // class below is what can carry this claim.
     void directional;
@@ -337,7 +337,7 @@ function splitWatchlistSymbols(raw) {
  *
  * ⚠️ `STRONG_BUY` / `STRONG_SELL` are SEPARATE values, not prefixes of `BUY` / `SELL`. Measured
  * 2026-11-02 in this very file: the first version counted `IN ('BUY','SELL')` and therefore
- * reported `xau-speed-m15` as "0 directional in 24h" when it had emitted **24 STRONG_BUY**. The
+ * reported `xau-speed-m15-long` as "0 directional in 24h" when it had emitted **24 STRONG_BUY**. The
  * tool accused a healthy protocol of never signalling, on a string-comparison bug.
  *
  * This is the SAME class the pipeline once shipped (`'STRONG_SELL'.startsWith('SELL') === false`

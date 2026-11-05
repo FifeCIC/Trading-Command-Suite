@@ -60,7 +60,7 @@ const SCRUB = {
   outsideKeepList: [
     'ftse-speed-v1-long', 'dax-speed-v1-long', 'cac-speed-v1-long', 'china-speed-v1-long', 'dow-speed-v1-long',
     'leverage-v2-long',            // scores 73 leverage symbols every run; no bot
-    'pandemic-v1', 'earnings-momentum-v1-long',
+    'earnings-momentum-v1-long',
     'doge-speed-v1-long', 'tsla-speed-v1-long',   // momentum-stock-v1-long already owns TSLA
     'oil-supply-v1-long',          // 0 symbols; oil-speed-v1-long is the wired one
   ],

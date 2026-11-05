@@ -72,7 +72,7 @@ const RULES = [
     protects: 'only trade inside the declared market session',
     match: /session window|outside (the |its )?session|not in (its )?session/i,
     // ⚠️ NARROWED 2026-11-04 after the self-test caught it: `/session/i` matched the PROTOCOL NAME
-    // `forex-session-v1`, so every OBSERVED row was counted as a session refusal. A rule must not
+    // `forex-session-v1-long`, so every OBSERVED row was counted as a session refusal. A rule must not
     // fire because a name contains a word.
   },
   {
@@ -119,10 +119,10 @@ function selfTest() {
   ok('cap-not-evaluable classifies', classifyReason('Cannot evaluate the per-symbol cap for USTEC: quote cannot price this order') === 'per-symbol-cap-unpriceable');
   ok('pacing classifies', classifyReason('[QueueBot] pacing — next trade in 10m') === 'pacing-cooldown');
   ok('slot limit classifies', classifyReason('Max open positions (20) reached') === 'max-open-positions');
-  ok('an OBSERVED row (no refusal) is NOT a rule firing', classifyReason('forex-session-v1: composite=59 signal=BUY') === null);
-  // ⚠️ THE CANARY THAT CAUGHT A REAL BUG: a protocol NAMED `forex-session-v1` must not look like a
+  ok('an OBSERVED row (no refusal) is NOT a rule firing', classifyReason('forex-session-v1-long: composite=59 signal=BUY') === null);
+  // ⚠️ THE CANARY THAT CAUGHT A REAL BUG: a protocol NAMED `forex-session-v1-long` must not look like a
   // session refusal. `/session/i` did exactly that, and the self-test above is what found it.
-  ok('a protocol NAME containing "session" is not a session refusal', classifyReason('probe-1dir-v1: composite=60 signal=STRONG_BUY') === null);
+  ok('a protocol NAME containing "session" is not a session refusal', classifyReason('probe-1dir-v1-long: composite=60 signal=STRONG_BUY') === null);
   ok('empty reason is not a firing', classifyReason('') === null && classifyReason(null) === null);
   // ⚠️ CANARY — the patterns must not be so wide that every message matches. If this ever reports a
   // key, the classifier has started claiming rules fired when they did not.

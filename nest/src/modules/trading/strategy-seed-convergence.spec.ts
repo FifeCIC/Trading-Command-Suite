@@ -101,6 +101,11 @@ function harness(opts?: {
 const MATCHING_ROW = {
   id: 'bot-1',
   name: SEEDED.name,
+  // ⚠️ `slug` is converged since the bot-naming standard added the column, so a row that "already
+  // matches" must carry it. The seeder DERIVES it (`botSlug(s.name)`), it is not declared in the
+  // seed entry — without this the seeder writes a slug-only update and the convergence tests read
+  // a false drift.
+  slug: 'gold-swing-1h-bot',
   symbol: SEEDED.symbol,
   protocolId: SEEDED.protocolId,
   brokerId: SEEDED.brokerId,

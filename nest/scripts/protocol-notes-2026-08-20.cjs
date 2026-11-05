@@ -15,13 +15,13 @@ const { PrismaClient } = require('@prisma/client');
   }
 
   const updates = [
-    ['eurusd-macro-v1', 0,
+    ['eurusd-macro-v1-long', 0,
       'Parked 2026-08-20 — macro framework pending development. No symbols/watchlist configured yet; will re-enable when assigned.'],
-    ['usdjpy-risk-v1', 0,
+    ['usdjpy-risk-v1-long', 0,
       'Parked 2026-08-20 — risk model pending development. No symbols/watchlist configured yet; will re-enable when assigned.'],
-    ['gbpusd-news-v1', 0,
+    ['gbpusd-news-v1-long', 0,
       'Parked 2026-08-20 — news ingestion not yet wired into scoring. No symbols/watchlist configured yet; will re-enable when assigned.'],
-    ['signals-workbench', 1,
+    ['signals-workbench-long', 1,
       'Sandbox protocol for signal testing — intentionally not wired to live symbols.'],
   ];
 

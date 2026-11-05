@@ -1,4 +1,4 @@
 {
-  "protocolId": "ftse-speed-v1",
+  "protocolId": "ftse-speed-v1-long",
   "symbols": ["UK100"]
 }

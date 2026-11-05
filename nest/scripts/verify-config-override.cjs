@@ -14,26 +14,26 @@ async function j(method, path, body) {
 
 (async () => {
   // 1. Set a large override.
-  await j('PATCH', '/api/scoring/protocols/xau-speed-v1/directive-config', {
+  await j('PATCH', '/api/scoring/protocols/xau-speed-v1-long/directive-config', {
     directiveId: 'speed-momentum', config: { maxScore: 500 },
   });
 
   // 2. Score path — check the directive's maxScore in the breakout.
-  const score = await j('GET', '/api/scoring/gated/XAUUSD?protocol=xau-speed-v1');
+  const score = await j('GET', '/api/scoring/gated/XAUUSD?protocol=xau-speed-v1-long');
   const smBreakout = (score.breakouts?.technical ?? []).find(b => b.directiveId === 'speed-momentum');
   console.log('scoring: speed-momentum maxScore =', smBreakout?.maxScore, smBreakout?.maxScore === 500 ? 'PASS' : 'FAIL');
 
   // 3. Registry path — check the protocol total + directive maxScore.
   const reg = await j('GET', '/api/scoring/gated/protocols');
-  const proto = reg.protocols?.find(p => p.id === 'xau-speed-v1');
+  const proto = reg.protocols?.find(p => p.id === 'xau-speed-v1-long');
   const smDir = proto?.groups?.flatMap(g => g.directives).find(d => d.id === 'speed-momentum');
   console.log('registry: speed-momentum maxScore =', smDir?.maxScore, smDir?.maxScore === 500 ? 'PASS' : 'FAIL');
-  console.log('registry: xau-speed-v1 total maxScore =', proto?.maxScore);
+  console.log('registry: xau-speed-v1-long total maxScore =', proto?.maxScore);
 
   // 4. Reset.
-  await j('DELETE', '/api/scoring/protocols/xau-speed-v1/directive-config/speed-momentum');
+  await j('DELETE', '/api/scoring/protocols/xau-speed-v1-long/directive-config/speed-momentum');
   const regAfter = await j('GET', '/api/scoring/gated/protocols');
-  const protoAfter = regAfter.protocols?.find(p => p.id === 'xau-speed-v1');
+  const protoAfter = regAfter.protocols?.find(p => p.id === 'xau-speed-v1-long');
   const smAfter = protoAfter?.groups?.flatMap(g => g.directives).find(d => d.id === 'speed-momentum');
   console.log('after reset: speed-momentum maxScore =', smAfter?.maxScore, smAfter?.maxScore === 120 ? 'PASS' : 'FAIL');
 })();

@@ -113,8 +113,13 @@ export interface BotRule {
  * ⚠️ And `magic` was added because the guard FAILED the build the moment the column existed — which
  * is the guard working correctly: a new column cannot arrive undeclared, and the choice between "a
  * real rule someone must own" and "not behavioural" has to be made deliberately, not by omission.
+ *
+ * `slug` (2026-11-05) is NON-BEHAVIOURAL for the same reason as `magic`, and the guard failed the
+ * build the moment it existed — again correctly. It is the stable, machine-readable handle for a bot
+ * (`gold-swing-1h-bot`): derived from `name` by `botSlug()`, used for references and URLs, and read
+ * by NO trade path. A rename therefore changes attribution text but can never change a trade.
  */
-export const NON_BEHAVIOURAL_COLUMNS = ['id', 'createdAt', 'updatedAt', 'duplicatedFromId', 'magic'] as const;
+export const NON_BEHAVIOURAL_COLUMNS = ['id', 'createdAt', 'updatedAt', 'duplicatedFromId', 'magic', 'slug'] as const;
 
 export const BOT_RULES: BotRule[] = [
   // ── identity ───────────────────────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 {
-  "protocolId": "vix-short-v1",
+  "protocolId": "vix-spike-v1-short",
   "symbols": [
     "VIX"
   ]

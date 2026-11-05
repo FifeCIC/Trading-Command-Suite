@@ -1,8 +1,8 @@
--- #764 (part 2) — Wire the 10 INACTIVE hint-dependent protocols onto watchlist FKs.
+-- #764 (part 2) — Wire the INACTIVE hint-dependent protocols onto watchlist FKs (10 originally, 9 since 2026-11-05).
 --
 -- WHY THIS IS PART OF THE SAME JOB
 -- --------------------------------
--- After part 1, no ACTIVE protocol depends on the hint tables. But 10 INACTIVE protocols
+-- After part 1, no ACTIVE protocol depends on the hint tables. But the INACTIVE protocols
 -- still resolve only by guessing:
 --
 --   btc-speed-v1          BTC
@@ -13,8 +13,10 @@
 --   dxy-sensitivity-v1    7 FX pairs
 --   earnings-momentum-v1  12 momentum stocks
 --   momentum-stock-v1     12 momentum stocks
---   pandemic-v1           14 pandemic stocks
 --   leverage-v2           79 leveraged / inverse ETFs
+--
+-- ⚠️ A health-outbreak protocol was one of the ten and is REMOVED (2026-11-05, owner instruction):
+-- the protocol no longer exists, so its `…-index` watchlist was removed too.
 --
 -- Leaving them on the guess path means the next person to activate one gets a protocol that
 -- resolves to nothing the moment the hints are removed — silently, which is the entire bug
@@ -59,8 +61,6 @@ SELECT UUID(), t.wl_name, CAST(t.symbols AS JSON), NULL, NOW(3), NOW(3), p.id, '
            '["ASTS","AVGO","COIN","HOOD","MARA","MSTR","NVDA","PLTR","RIOT","RKLB","SOFI","TSLA"]'
     UNION ALL SELECT 'momentum-stock-v1', 'momentum-stock-index',
            '["ASTS","AVGO","COIN","HOOD","MARA","MSTR","NVDA","PLTR","RIOT","RKLB","SOFI","TSLA"]'
-    UNION ALL SELECT 'pandemic-v1', 'pandemic-index',
-           '["BAH","BNTX","CODX","CVS","DHR","EBS","ECL","HOLX","MRK","MRNA","PFE","SNGX","TDOC","UNH"]'
   ) t
   JOIN protocol p ON p.slug = t.slug
  WHERE NOT EXISTS (SELECT 1 FROM (SELECT * FROM watchlist) w WHERE w.name = t.wl_name);
@@ -76,14 +76,14 @@ SELECT UUID(), 'leverage-v2-index', lv.symbols, NULL, NOW(3), NOW(3), p.id, 'sys
    AND NOT EXISTS (SELECT 1 FROM (SELECT * FROM watchlist) w WHERE w.name = 'leverage-v2-index')
  LIMIT 1;
 
--- 4) Verify: all 10 must show linked_by_fk = 1.
+-- 4) Verify: all 9 must show linked_by_fk = 1.
 SELECT p.slug, p.active, w.name AS watchlist, JSON_LENGTH(w.symbols) AS n_symbols,
        (w.protocolId = p.id) AS linked_by_fk
   FROM protocol p
   LEFT JOIN watchlist w ON w.protocolId = p.id
  WHERE p.slug IN (
    'btc-speed-v1','doge-speed-v1','tsla-speed-v1','oil-supply-v1','usdcad-oil-v1',
-   'dxy-sensitivity-v1','earnings-momentum-v1','momentum-stock-v1','pandemic-v1','leverage-v2'
+   'dxy-sensitivity-v1','earnings-momentum-v1','momentum-stock-v1','leverage-v2'
  )
    AND w.name IS NOT NULL
  ORDER BY p.slug;

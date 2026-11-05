@@ -695,14 +695,14 @@ async function readinessEvidenceCheck() {
 // Nothing throws: the 0 folds silently into an additive composite, which is the
 // repo's signature defect (plausible number, no error).
 //
-// MEASURED 2026-09-27, `btc-speed-v1` — the worked case this mode exists for:
+// MEASURED 2026-09-27, `btc-speed-v1-long` — the worked case this mode exists for:
 //   • 4 of its 13 directives starved on 246 of 247 ticks (99.6%) for 24h+
 //   • 3,504 fresh 5m bars sat in `marketbar` — the DATA was never the problem
 //   • the window is `resolveCadence()`'s `required[tf] ?? required['1d'] ?? 100`
 //   • `??` is a FALL-THROUGH where that function's own docstring means a MAXIMUM
 //   • 74 of 108 directives declare their real requirement under the GENERIC key
 //     `'1d'`; ONE directive declaring `'15m'` suppressed the fall-through and
-//     starved every larger one. `btc-speed-v1.recommendedTimeframe = '15m–1d'`
+//     starved every larger one. `btc-speed-v1-long.recommendedTimeframe = '15m–1d'`
 //     → `selectBaseTimeframe` → `'15m'` → `required['15m'] = 20` → window 20.
 //
 // ⚠️ DELIBERATELY CAUSE-AGNOSTIC, for the reason that makes a symptom guard

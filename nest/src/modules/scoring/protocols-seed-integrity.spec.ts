@@ -154,3 +154,51 @@ describe('protocol seed — installation is supported by installed directive dat
     expect(problems).toEqual([]);
   });
 });
+
+/**
+ * NAMING STANDARD (owner direction, 2026-11-05). A protocol's slug and name must SAY what direction
+ * it trades, because a pair is two protocols that differ only in that — and before this, four
+ * protocols could not be told apart from their names at all.
+ *
+ * ⚠️ The pair shares a BASE: `<base>-long` / `<base>-short`, `Name (Long)` / `Name (Short)`. The
+ * direction token is the LAST token in both. Naive appending produced `…-long-short` and
+ * `… (Long) (Short)` in the seed while the database already held the base form, so the seeder would
+ * have converged the database back to the naive shape on the next re-seed — silently, because `name`
+ * and `slug` are both converged columns.
+ *
+ * ⚠️ CANARY: change one slug to `-lng` or one name to drop its `(Long)` and this must fail naming it.
+ */
+describe('protocol seed — every slug and name declares its direction', () => {
+  const entries = Object.entries(PROTOCOL_SEED_DATA);
+
+  it('the seed has protocols to check (an empty scan must FAIL, not pass)', () => {
+    expect(entries.length).toBeGreaterThan(0);
+  });
+
+  it('every slug ends -long or -short, and that token agrees with directionMode', () => {
+    const problems = entries
+      .filter(([slug, p]) => {
+        const wantsShort = p.directionMode === 'SHORT_ONLY';
+        return slug.endsWith('-short') !== wantsShort;
+      })
+      .map(([slug, p]) => `${slug} is ${p.directionMode} but its slug does not say so`);
+    expect(problems).toEqual([]);
+  });
+
+  it('every name ends "(Long)" or "(Short)", and that token agrees with directionMode', () => {
+    const problems = entries
+      .filter(([, p]) => {
+        const wantsShort = p.directionMode === 'SHORT_ONLY';
+        return p.name.endsWith('(Short)') !== wantsShort || !/\((?:Long|Short)\)$/.test(p.name);
+      })
+      .map(([slug, p]) => `${slug}: name "${p.name}" does not match ${p.directionMode}`);
+    expect(problems).toEqual([]);
+  });
+
+  it('a derived short leg is the base name with the direction swapped, never doubled', () => {
+    const problems = entries
+      .filter(([, p]) => p.name.includes('(Long) (Short)') || p.name.includes('(Short) (Short)'))
+      .map(([slug, p]) => `${slug}: "${p.name}" carries the direction twice`);
+    expect(problems).toEqual([]);
+  });
+});

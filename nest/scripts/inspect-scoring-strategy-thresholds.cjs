@@ -19,10 +19,10 @@ const prisma = new PrismaClient();
 
 /** The seeded targets, mirroring scoring-strategy-seed.ts after the 2026-09-15 rescale. */
 const SEEDED = {
-  'xau-speed-v1': 9,
-  'forex-session-v1': 8,
-  'btc-speed-v1': 10,
-  'oil-speed-v1': 9,
+  'xau-speed-v1-long': 9,
+  'forex-session-v1-long': 8,
+  'btc-speed-v1-long': 10,
+  'oil-speed-v1-long': 9,
 };
 
 /** Old → new: old ÷ ~6.3, rounded, used only when there is no seeded target. */

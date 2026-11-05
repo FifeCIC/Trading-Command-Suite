@@ -10,7 +10,7 @@
  * protocol's denominator — plausible numbers, no error.
  *
  * Two live instances, both found by this rule:
- *   · `sp500-regime` refused below 200 bars and declared NOTHING, so `vix-spike-v1` and `vix-short-v1`
+ *   · `sp500-regime` refused below 200 bars and declared NOTHING, so `vix-spike-v1-long` and `vix-spike-v1-short`
  *     reported `Insufficient data: need 200 bars, have 72 — unmeasured` on every pass — for a gate
  *     their own seed calls MANDATORY. Fixed at source 2026-11-02.
  *   · `multi-timeframe-trend` declared 20 while its trend test needs EMA(50) — so the EMA test never

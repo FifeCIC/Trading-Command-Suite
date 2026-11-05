@@ -4,7 +4,7 @@
  *
  * #939. `PROTOCOL_SEED_DATA` contains a key whose value is a raw UUID:
  *
- *     "060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d": { "name": "Conviction Dip Accumulation", ... }
+ *     "conviction-dip-accumulation-long": { "name": "Conviction Dip Accumulation", ... }
  *
  * The seeder upserts by that key — `protocol.upsert({ where: { slug } })` — so the UUID becomes the
  * row's `slug`. That is the `slug-or-UUID` ambiguity (#800) sitting in the durable artefact: every
@@ -154,32 +154,32 @@ function selfTest() {
 
   // ── Direction 2: it must NOT fire on the correct forms ──
   check('a plain slug passes', classifySeedKeys(['gold-scalp-v1']).offenders.length, 0);
-  check('a slug with digits passes', classifySeedKeys(['hourly-3dir-v1']).offenders.length, 0);
+  check('a slug with digits passes', classifySeedKeys(['hourly-3dir-v1-long']).offenders.length, 0);
   check('an EMPTY key list is not an error', classifySeedKeys([]).offenders.length, 0);
 
   // ── Direction 3: the baseline mechanism, proven with a SYNTHETIC entry ──
   // ⚠️ The real BASELINE is empty since 2026-11-02 (the seeded placeholder it excused is no longer
   // shipped), so the mechanism is exercised with a fabricated baseline. Deleting these cases would
   // leave the anti-rot half untested the moment someone adds a real entry back.
-  const SYNTH = { '060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d': 'self-test only' };
+  const SYNTH = { 'conviction-dip-accumulation-long': 'self-test only' };
   check(
     'a BASELINED UUID passes',
-    classifySeedKeys(['060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d'], SYNTH).offenders.length,
+    classifySeedKeys(['conviction-dip-accumulation-long'], SYNTH).offenders.length,
     0,
   );
   check(
     'an UNBASELINED UUID is an offender',
-    classifySeedKeys(['060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d']).offenders.length,
+    classifySeedKeys(['conviction-dip-accumulation-long']).offenders.length,
     1,
   );
   check(
     'a baselined key that is GONE is reported (the allowance cannot rot)',
     classifySeedKeys(['gold-scalp-v1'], SYNTH).staleBaseline,
-    ['060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d'],
+    ['conviction-dip-accumulation-long'],
   );
   check(
     'a baselined key that is PRESENT is not stale',
-    classifySeedKeys(['060ed261-4a8c-46a4-aa9c-9de0ba7ddb8d', 'gold-scalp-v1'], SYNTH).staleBaseline,
+    classifySeedKeys(['conviction-dip-accumulation-long', 'gold-scalp-v1'], SYNTH).staleBaseline,
     [],
   );
 
@@ -192,7 +192,7 @@ function selfTest() {
   // deliberate content change into a failed guard. A named key proves the parser reads the real file
   // whatever the file's size.
   const keys = readSeedKeys();
-  const readOk = keys.length >= 1 && keys.includes('xau-speed-v1');
+  const readOk = keys.length >= 1 && keys.includes('xau-speed-v1-long');
   if (!readOk) failed++;
   console.log(
     `[self-test] ${readOk ? 'PASS' : 'FAIL'}  readSeedKeys parses the real seed` +

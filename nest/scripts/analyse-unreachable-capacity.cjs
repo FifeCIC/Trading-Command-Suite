@@ -61,7 +61,7 @@ async function main() {
   //
   // ⚠️ The scorer already drops capacity the protocol's `directionMode` forbids, via
   // `classifyDirectiveInclusion` at protocol-gating.service.ts L539, BEFORE accumulating.
-  // Verified: `gold-macro-v1` is LONG_ONLY, non-gate capacity 935, live
+  // Verified: `gold-macro-v1-long` is LONG_ONLY, non-gate capacity 935, live
   // `configuredSignalMax` 795 = 935 - 140 (`rsi-overbought`). A denominator that ignores
   // direction mode over-counts by exactly that and makes the problem look worse than it is.
   //

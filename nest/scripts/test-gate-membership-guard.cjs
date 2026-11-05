@@ -119,7 +119,7 @@ const realSeed = fs.readFileSync(SEED_ABS, 'utf8');
       }
     ]
   },
-  "xau-speed-v1": {`;
+  "xau-speed-v1-long": {`;
 
   // Fall back to a generic injection if the anchor above ever moves.
   let broken = realSeed;
@@ -133,7 +133,7 @@ const realSeed = fs.readFileSync(SEED_ABS, 'utf8');
       }
     ]
   },
-  "xau-speed-v1": {`,
+  "xau-speed-v1-long": {`,
     );
   } else {
     // Generic: inject a known `pattern` directive into the FIRST risk gate found.

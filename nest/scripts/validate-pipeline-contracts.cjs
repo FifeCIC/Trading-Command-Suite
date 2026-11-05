@@ -408,7 +408,7 @@ const CANARIES = [
     // The reader-side tolerance for the duplicate write. If this helper is removed the
     // Ladder silently reverts to reading whichever of the two rows is newer.
     markers: ['collapseDuplicateWrites'],
-    hint: 'getRuns() must collapse the per-tick duplicate (symbol, protocol, minute) rows and keep the one carrying the gating breakdown. Two services both create a Score row per tick; the signals-workbench row is newer but thin (8 keys, no rawMax/marketStatus), so reading rows[0] loses the denominator and the market status.',
+    hint: 'getRuns() must collapse the per-tick duplicate (symbol, protocol, minute) rows and keep the one carrying the gating breakdown. Two services both create a Score row per tick; the signals-workbench-long row is newer but thin (8 keys, no rawMax/marketStatus), so reading rows[0] loses the denominator and the market status.',
   },
   {
     id: 'INV-ADAPTIVE-TARGET-MONOTONIC',
@@ -602,7 +602,7 @@ const MTF_SCORING_SCOPE = [
  *       direction taken from the SIGN of `accelerating`. Measured: 1,125 `bullish`
  *       readings averaged 30.9 with a MINIMUM of exactly 30; 630 `bearish` averaged
  *       29.7 with a MAXIMUM of exactly 30 — 94% of 1,755 readings sat inside a
- *       fabricated 27–50 band. On `forex-session-v1`, 97% of readings came from that
+ *       fabricated 27–50 band. On `forex-session-v1-long`, 97% of readings came from that
  *       branch and 275 cleared the 65 gate: the app was trading on invented conviction.
  *   (b) `liquidity-check` returned `score: 0` when its stale-data guard tripped, which
  *       `RiskGatingEngine` turned into `severity = 1.0` and a HARD GATE — zeroing the

@@ -13,8 +13,8 @@
  * `session-open-effect` returns bullish/bearish (pre-open trend analysis,
  * `maxScore: 60`, `directionBias: 'neutral'`). It was placed in the `risk` group of
  * 14 protocols. In 10 of those it ALSO sits in `technical` with a lower sortOrder,
- * so the duplicate guard silently saved it; in 4 (`spy-day-v1`, `qqq-day-v1`,
- * `mtf-conservative-v1`, `mt5-technical-core-v1` — plus `forex-session-v1` where the
+ * so the duplicate guard silently saved it; in 4 (`spy-day-v1-long`, `qqq-day-v1-long`,
+ * `mtf-conservative-v1-long`, `mt5-technical-core-v1-long` — plus `forex-session-v1-long` where the
  * technical copy exists) the risk placement was the ONLY thing that mattered and the
  * signal was lost entirely.
  *
@@ -190,7 +190,7 @@ let result = out.join('\n');
 // ⚠️ THE FIRST VERSION OF THIS SCRIPT WROTE A SYNTAX ERROR.
 // ---------------------------------------------------------
 // Shape A (a first entry with a trailing comma) removed the comma from the NEXT line,
-// on the assumption the removed entry was followed by another. In `forex-session-v1`
+// on the assumption the removed entry was followed by another. In `forex-session-v1-long`
 // the risk array was:
 //
 //     "directiveIds": [

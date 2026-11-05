@@ -73,7 +73,8 @@ const SEED_FILE = path.join(NEST_ROOT, 'src', 'modules', 'scoring', 'protocols-s
  *
  * ⚠️ MIN_SEED_SLUGS lowered 40 → 3 on 2026-11-02, WITH the measurement: the packaging split reduced
  * `protocols-seed-data.ts` from 48 entries to the three the app ships
- * (`xau-speed-v1`, `momentum-stock-v1`, `forex-session-v1`). The floor is a PARSE guard, so it is
+ * (`xau-speed-v1-long`, `momentum-stock-v1-long`, `forex-session-v1-long`). The floor is a PARSE
+ * guard, so it is
  * paired with `PACKAGED_SLUGS` below — a floor alone would pass on a file that parsed to the wrong
  * three, and a count alone cannot tell "deliberately small" from "regexes stopped matching".
  */
@@ -81,8 +82,15 @@ const MIN_ENTRIES = 8;
 const MIN_SEED_SLUGS = 3;
 const MIN_LINKS = 3;
 
-/** The slugs the public package ships. Named, so a mis-parse cannot look like a small seed. */
-const PACKAGED_SLUGS = ['xau-speed-v1', 'momentum-stock-v1', 'forex-session-v1'];
+/**
+ * The slugs the public package ships. Named, so a mis-parse cannot look like a small seed.
+ *
+ * ⚠️ These are SLUGS, and the bot/protocol naming standard (owner direction, 2026-11-05) makes the
+ * direction token the LAST token of a protocol slug. When `xau-speed-v1-long` became
+ * `xau-speed-v1-long` this list was the one place that still named the old three, and the build
+ * failed here rather than in the app — which is the guard working. Keep it in step with the seed.
+ */
+const PACKAGED_SLUGS = ['xau-speed-v1-long', 'momentum-stock-v1-long', 'forex-session-v1-long'];
 
 const failures = [];
 function fail(message, hint) {
@@ -152,7 +160,7 @@ function scan(librarySrc, seedSrc) {
     );
   }
 
-  // The seed is an object keyed by slug:  "xau-speed-v1": { ... }
+  // The seed is an object keyed by slug:  "xau-speed-v1-long": { ... }
   const seedSlugs = new Set(
     [...seedSrc.matchAll(/^\s*"([a-z0-9][a-z0-9-]*)":\s*\{/gm)].map((m) => m[1]),
   );

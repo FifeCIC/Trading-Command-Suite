@@ -5,14 +5,14 @@ const p = new PrismaClient();
 
   try {
     const assign = await p.$queryRawUnsafe(
-      "SELECT * FROM symbol_protocol_assignment WHERE protocolId='vix-spike-v1' LIMIT 20"
+      "SELECT * FROM symbol_protocol_assignment WHERE protocolId='vix-spike-v1-long' LIMIT 20"
     );
     console.log('assignments:', JSON.stringify(assign));
   } catch (e) { console.log('assign err:', e.message); }
 
   try {
     const wl = await p.$queryRawUnsafe(
-      "SELECT id, name, protocolId, JSON_LENGTH(symbols) n, LEFT(JSON_UNQUOTE(symbols), 300) syms FROM watchlist WHERE protocolId='vix-spike-v1' LIMIT 10"
+      "SELECT id, name, protocolId, JSON_LENGTH(symbols) n, LEFT(JSON_UNQUOTE(symbols), 300) syms FROM watchlist WHERE protocolId='vix-spike-v1-long' LIMIT 10"
     );
     console.log('watchlists:', JSON.stringify(wl));
   } catch (e) { console.log('wl err:', e.message); }

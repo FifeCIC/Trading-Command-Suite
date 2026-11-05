@@ -57,8 +57,8 @@ async function main() {
 
   // The FX family: 14 bots, 14 markets, 14 strategies. It must NOT be 1 (the old blended-rating
   // bug) and must NOT be fewer than the number of markets.
-  const fx = res.strategies.filter((s) => s.protocolIds.includes('forex-session-v1'));
-  check('forex-session-v1 strategies (= 14 markets)', fx.length, 14);
+  const fx = res.strategies.filter((s) => s.protocolIds.includes('forex-session-v1-long'));
+  check('forex-session-v1-long strategies (= 14 markets)', fx.length, 14);
 
   // Every strategy is exactly ONE bot on ONE market, unless a duplicate is flagged.
   check('every strategy has exactly one bot', res.strategies.every((s) => s.botCount === 1), true);
@@ -172,8 +172,8 @@ async function main() {
   // The old rating machinery treated one `scoring_strategy` row as one MetaStack, so all 13 FX bots
   // sharing `auto-forex-session-v1` produced ONE blended rating. Under the owner's rule each market
   // is its own strategy. This dump shows what actually distinguishes them.
-  console.log('\n=== forex-session-v1 detail (all one bot, one market) ===');
-  const fxAll = res.strategies.filter((s) => s.protocolIds.includes('forex-session-v1'));
+  console.log('\n=== forex-session-v1-long detail (all one bot, one market) ===');
+  const fxAll = res.strategies.filter((s) => s.protocolIds.includes('forex-session-v1-long'));
   for (const s of fxAll) {
     console.log(
       `  ${String(s.symbols[0]).padEnd(7)} sess=${String(s.treatment.sessionWindow ?? 'ungated').padEnd(8)} ` +

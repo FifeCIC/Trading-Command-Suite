@@ -74,14 +74,14 @@ if (process.argv.includes('--self-test')) {
 
   t('a scored pair the authority omits is an ORPHAN', () =>
     findOrphans(
-      [{ symbol: 'XAUUSD', protocolId: 'gold-macro-v1' }],
-      authority({ XAUUSD: ['xau-speed-1h'] }),
+      [{ symbol: 'XAUUSD', protocolId: 'gold-macro-v1-long' }],
+      authority({ XAUUSD: ['xau-speed-1h-long'] }),
     ).length === 1);
 
   t('a scored pair the authority lists is NOT an orphan', () =>
     findOrphans(
-      [{ symbol: 'XAUUSD', protocolId: 'xau-speed-1h' }],
-      authority({ XAUUSD: ['xau-speed-1h'] }),
+      [{ symbol: 'XAUUSD', protocolId: 'xau-speed-1h-long' }],
+      authority({ XAUUSD: ['xau-speed-1h-long'] }),
     ).length === 0);
 
   t('a symbol with no authority answer at all is an ORPHAN', () =>
@@ -99,8 +99,8 @@ if (process.argv.includes('--self-test')) {
 
   t('a pair is not an orphan just because OTHER symbols omit it', () =>
     findOrphans(
-      [{ symbol: 'USDCAD', protocolId: 'forex-session-v1' }],
-      authority({ USDCAD: ['forex-session-v1'], XAUUSD: [] }),
+      [{ symbol: 'USDCAD', protocolId: 'forex-session-v1-long' }],
+      authority({ USDCAD: ['forex-session-v1-long'], XAUUSD: [] }),
     ).length === 0);
 
   // ⚠️ The harness is SHARED (#1032). The trailing line is kept because it states WHAT was proven

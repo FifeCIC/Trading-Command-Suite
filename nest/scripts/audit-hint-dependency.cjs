@@ -259,7 +259,7 @@ if (process.argv.includes('--self-test')) {
     //         "✅ No ACTIVE protocol depends on the hint tables" directly beneath it.
     // WHY THAT WAS WRONG: the sentence is TRUE and REASSURING while the protocol resolves to
     //         zero symbols and cannot score at all. Measured 2026-10-25: 1 ACTIVE protocol
-    //         (`eurusd-macro-v1`) was in exactly that state and this script exited 0. A green
+    //         (`eurusd-macro-v1-long`) was in exactly that state and this script exited 0. A green
     //         line over a protocol that cannot run is the "plausible output, no error" shape.
     // A sandbox opt-out is honoured (the same regex contract-probe.cjs uses), because a guard
     // that fires on a DECLARED exception gets allowlisted, and an allowlisted guard is worse
@@ -300,7 +300,7 @@ if (process.argv.includes('--self-test')) {
     }
     // ⚠️ INACTIVE + UNRESOLVED is reported, NOT gated. Measured 2026-10-25: 15 of them. They cost
     // nothing while inactive, but each one becomes an instant no-symbols protocol if someone
-    // activates it — which is exactly how `eurusd-macro-v1` was found. Wiring them is a data
+    // activates it — which is exactly how `eurusd-macro-v1-long` was found. Wiring them is a data
     // decision (which symbols should this protocol trade?), not a repair, so it is surfaced here
     // for a human and not turned into a build failure.
     const inactiveUnresolved = rows.filter((r) => !r.active && r.verdict === 'UNRESOLVED' && !isDeclaredUnwired(r.note));

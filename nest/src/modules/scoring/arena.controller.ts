@@ -117,8 +117,11 @@ export class ArenaController {
     {
       id: 'volatility',
       name: 'Volatility & Crisis',
-      description: 'VIX spike mean reversion and pandemic/health crisis protocols. Defensive positioning.',
-      protocolIds: ['vix-spike-v1-long', 'pandemic-v1'],
+      // ⚠️ A health-outbreak protocol was listed here and REMOVED 2026-11-05 at the owner's
+      // instruction (the protocol no longer exists, so the id resolved to nothing). Do not add
+      // one back into this category.
+      description: 'VIX spike mean reversion. Defensive positioning.',
+      protocolIds: ['vix-spike-v1-long'],
       category: 'indices',
     },
     {

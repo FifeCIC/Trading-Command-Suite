@@ -51,7 +51,8 @@ describe('protocol focus ranks (#1187)', () => {
   it('a SHORT leg carries its PARENT rank — a pair must not straddle two positions in the list', () => {
     expect(shorts.length).toBeGreaterThan(0);
     for (const [slug, p] of shorts) {
-      const parentSlug = slug.replace(/-short$/, '');
+      // The pair shares a base, so the parent of `<base>-short` is `<base>-long`, not `<base>`.
+      const parentSlug = slug.replace(/-short$/, '-long');
       const parent = PROTOCOL_SEED_DATA[parentSlug];
       // A short leg is derived from a protocol that is in the seed, so the parent must exist.
       expect(`${slug} -> parent ${parentSlug}: ${parent ? 'present' : 'MISSING'}`).toBe(

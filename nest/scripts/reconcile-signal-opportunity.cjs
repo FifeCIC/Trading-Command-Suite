@@ -21,7 +21,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const SLUGS = process.argv.slice(2).filter((a) => !a.startsWith('--'));
-const TARGETS = SLUGS.length ? SLUGS : ['forex-session-v1'];
+const TARGETS = SLUGS.length ? SLUGS : ['forex-session-v1-long'];
 
 /**
  * ⚠️ The scorer decides the gate with `config.isRiskGate === true`

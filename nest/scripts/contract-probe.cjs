@@ -629,7 +629,7 @@ async function main() {
       // cadence-mixing at all. Measured 2026-09-11: it reported
       // "5 cadences resolved: 15m, 5m, 1d, 1h, 1m" for AUDUSD as a FAILURE, but that is
       // CORRECT BEHAVIOUR — AUDUSD legitimately feeds per-timeframe protocols
-      // (`xau-speed-m5` / `-m15` / `-1h` / `-4h` / `1d`), the design settled by the #751
+      // (`xau-speed-m5-long` / `-m15` / `-1h` / `-4h` / `1d`), the design settled by the #751
       // arena-cadence decision. Grouping by SYMBOL means one symbol feeding several
       // per-timeframe protocols looks like a mixed-cadence array.
       //
@@ -976,7 +976,7 @@ async function main() {
       // Every ACTIVE protocol must reach at least one symbol through an FK or a link —
       // never through the (now empty) hint tables.
       //
-      // EXCEPTION: a SANDBOX protocol is deliberately unwired. `signals-workbench` says so
+      // EXCEPTION: a SANDBOX protocol is deliberately unwired. `signals-workbench-long` says so
       // in its own `note` ("Sandbox protocol for signal testing — intentionally not wired
       // to live symbols"). Flagging that as a fault would be a false positive, and a guard
       // that cries wolf gets suppressed — which loses the real detections. So the opt-out
@@ -1164,7 +1164,7 @@ async function main() {
       const dbTotal = [...dbBySlug.values()].reduce((a, b) => a + b, 0);
 
       // Compare only protocols present on BOTH sides. A protocol in the DB but not
-      // the seed is a different (and legitimate) situation — e.g. `signals-workbench`,
+      // the seed is a different (and legitimate) situation — e.g. `signals-workbench-long`,
       // a workbench protocol populated by SignalEnvelopeService, deliberately unseeded.
       const drift = [];
       for (const [slug, dbCount] of dbBySlug) {
@@ -1354,7 +1354,7 @@ async function main() {
       try {
         const rows = await prisma.$queryRawUnsafe(
           `SELECT adaptiveTargetSamples AS s, adaptiveTargetMax AS m
-             FROM protocol WHERE slug = 'forex-session-v1'`,
+             FROM protocol WHERE slug = 'forex-session-v1-long'`,
         );
         beforeCounters = {
           samples: Number(rows?.[0]?.s ?? 0),
@@ -1370,7 +1370,7 @@ async function main() {
       try {
         res = await request('POST', `${API}/api/backtest/run`, {
           symbol: 'USDJPY',
-          protocolId: 'forex-session-v1',
+          protocolId: 'forex-session-v1-long',
           timeframe: '1h',
           directionMode: 'long',
           newsExclusion: 'none',
@@ -1390,7 +1390,7 @@ async function main() {
         if (res.status !== 200 && res.status !== 201) {
           record(INV, NAME, true,
             `skipped — HTTP ${res.status} from the run (the arm needs USDJPY 1h bars and the ` +
-            `forex-session-v1 protocol; this is a DATA state, not a performance result)`, true);
+            `forex-session-v1-long protocol; this is a DATA state, not a performance result)`, true);
         } else {
           let bars = 0;
           let parsedBody = null;
@@ -1460,7 +1460,7 @@ async function main() {
             // comparison is against a floor rather than an exact zero. Stated, not hidden.
             const NOISE_FLOOR = 20;
             const SYM = 'USDJPY';
-            const PROTO = 'forex-session-v1';
+            const PROTO = 'forex-session-v1-long';
             const pairCounts = async (since) => {
               const snap = await prisma.$queryRawUnsafe(
                 `SELECT COUNT(*) AS n FROM score_snapshot

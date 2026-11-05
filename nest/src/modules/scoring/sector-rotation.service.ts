@@ -15,7 +15,7 @@ const SECTOR_ETFS = [
   { etf: 'XLK', name: 'Technology', protocols: ['spy-speed-v1-long', 'momentum-stock-v1-long', 'qqq-speed-v1-long', 'leverage-v2-long'] as string[] },
   { etf: 'XLF', name: 'Financials', protocols: ['spy-speed-v1-long', 'momentum-stock-v1-long', 'forex-session-v1-long'] as string[] },
   { etf: 'XLE', name: 'Energy', protocols: ['oil-speed-v1-long', 'oil-supply-v1-long'] as string[] },
-  { etf: 'XLV', name: 'Healthcare', protocols: ['spy-speed-v1-long', 'pandemic-v1'] as string[] },
+  { etf: 'XLV', name: 'Healthcare', protocols: ['spy-speed-v1-long'] as string[] },
   { etf: 'XLY', name: 'Consumer Disc.', protocols: ['spy-speed-v1-long', 'momentum-stock-v1-long'] as string[] },
   { etf: 'XLP', name: 'Consumer Staples', protocols: ['spy-speed-v1-long', 'spy-day-v1-long'] as string[] },
   { etf: 'XLI', name: 'Industrials', protocols: ['dow-speed-v1-long', 'spy-speed-v1-long'] as string[] },

@@ -7,7 +7,7 @@
  * --------------------
  * The first version of `remove-risk-group-directive.cjs` wrote a syntax error into the
  * protocol seed and reported success (see the abort note in that script: the
- * `forex-session-v1` risk array became `"liquidity-check" "spy-qqq-relative-strength"`).
+ * `forex-session-v1-long` risk array became `"liquidity-check" "spy-qqq-relative-strength"`).
  *
  * A guard that has never been observed to fail is not a guard — it is a hope. This test
  * proves the parse-check fires by feeding it a deliberately malformed seed and asserting

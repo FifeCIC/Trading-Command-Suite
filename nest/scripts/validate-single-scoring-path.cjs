@@ -2,7 +2,7 @@
 /**
  * validate-single-scoring-path.cjs — #803: ONE scoring path, and `active = 0` is a kill switch.
  * ============================================================================================
- * WHY THIS EXISTS (measured 2026-10-09). `usdcad-oil-v1` and `oil-supply-v1` — both
+ * WHY THIS EXISTS (measured 2026-10-09). `usdcad-oil-v1-long` and `oil-supply-v1-long` — both
  * `active = 0`, one with no bot and no symbol assignment — were writing score rows every few
  * minutes. Two code facts allowed it, and this validator pins both against re-introduction:
  *

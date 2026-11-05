@@ -1113,7 +1113,7 @@ value that doesn't lose purchasing power. The 10-year Treasury yield
 is the cleanest daily proxy for real rate expectations.
 
 **3. Safe-Haven Demand (VIX / Geopolitical) — 20% weight**
-When fear spikes — financial crisis, war, pandemic — capital floods
+When fear spikes — financial crisis or war — capital floods
 into gold regardless of DXY or yields. This is the "VIX bid." It is
 the hardest driver to time but the most profitable when caught.
 Sustained VIX above 25 historically precedes gold rallies of 5-15%.

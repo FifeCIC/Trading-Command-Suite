@@ -52,7 +52,7 @@ const CANDIDATE_DEFAULT = [
   'gap-scanner-v1-long', 'hourly-3dir-v1-long', 'eurusd-macro-v1-long', 'gbpusd-news-v1-long',
   'commodity-pairs-v1-long',
   'ftse-speed-v1-long', 'dax-speed-v1-long', 'cac-speed-v1-long', 'china-speed-v1-long', 'dow-speed-v1-long',
-  'leverage-v2-long', 'pandemic-v1', 'earnings-momentum-v1-long', 'doge-speed-v1-long',
+  'leverage-v2-long', 'earnings-momentum-v1-long', 'doge-speed-v1-long',
   'tsla-speed-v1-long', 'btc-scalp-v1-long', 'oil-supply-v1-long',
 ];
 

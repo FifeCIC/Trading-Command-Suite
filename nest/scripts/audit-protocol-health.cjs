@@ -359,7 +359,7 @@ function selfTest() {
   ok('DIRECTIONAL_SQL covers all four labels', DIRECTIONAL_SQL === "('BUY','SELL','STRONG_BUY','STRONG_SELL')");
 
   // --compare interpolates protocol slugs into SQL, so escaping must be right.
-  ok('sqlString quotes a slug', sqlString('mt5-technical-short') === "'mt5-technical-short'");
+  ok('sqlString quotes a slug', sqlString('mt5-technical-core-v1-short') === "'mt5-technical-core-v1-short'");
   ok("sqlString escapes an embedded quote", sqlString("a'b") === "'a''b'");
 
   console.log(bad === 0

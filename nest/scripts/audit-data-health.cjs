@@ -239,7 +239,7 @@ async function checkStaleness(windowHours = 48) {
  * compares) — decide whether the bot has cleared its bar in the window.
  *
  * ⚠️ WHY TWO SOURCES, and why the snapshot can only VETO a failure (measured 2026-10-08, #999):
- * `score` ROTATES. Measured: for `xau-speed-m15` the table held ~2 days while this check asked
+ * `score` ROTATES. Measured: for `xau-speed-m15-long` the table held ~2 days while this check asked
  * for 7 — max 77 raw = 8.46% — so the audit reported `Gold Day-Trade M15` (bar 10%) as
  * "CANNOT FIRE". The signal path told a different, checkable story: `score_snapshot` max
  * `signalPct` 15.16% in the same 7 days, and `decision_log` shows the bot QUALIFYING every
@@ -397,7 +397,7 @@ async function checkThresholdReachability(windowDays = 7) {
  * Measured 2026-09-15: 4 of 26 bots carried a UUID. All 4 resolved to real protocols, so
  * nothing errored, but any join of `score.strategyId = trading_strategy.protocolId` returned
  * NOTHING for them. The thresholds endpoint reported CAC/DAX/FTSE as `no-data` when
- * `dax-speed-v1` had produced **170 scores** — a false negative that reads as "a quiet
+ * `dax-speed-v1-long` had produced **170 scores** — a false negative that reads as "a quiet
  * protocol" rather than "a broken key". After normalising, 13 bots with data became **16**.
  *
  * That is the same class as #733 and #821: a plausible-looking result with no error.

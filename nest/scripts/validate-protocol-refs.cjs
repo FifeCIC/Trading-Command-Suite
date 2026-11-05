@@ -8,9 +8,9 @@
  * `trading_strategy.protocolId` accepts **either a protocol slug or a protocol uuid** — the column is
  * `varchar(36)`, which is exactly a uuid's width, so both forms fit and nothing rejects either. A
  * lookup that assumes one form then sees the other rows as **non-existent**: `WHERE protocolId =
- * 'cac-speed-v1'` returned 0 bots while the bot was there under its uuid. Wrong answer, no error.
+ * 'cac-speed-v1-long'` returned 0 bots while the bot was there under its uuid. Wrong answer, no error.
  *
- * Measured 2026-09-11 in the issue: 14 `forex-session-v1` bots on slug, 4 other protocols on uuid.
+ * Measured 2026-09-11 in the issue: 14 `forex-session-v1-long` bots on slug, 4 other protocols on uuid.
  * Measured again 2026-10-28 for this guard (see `--report`):
  *
  *     trading_strategy    40 rows   slug 40   uuid 0   unresolved 0   ✅ clean
@@ -55,7 +55,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 //            (it holds protocol uuids, and its readers expect that).
 // WHY:       measured 2026-10-28 (#800) — `trading_strategy.protocolId` is varchar(36), exactly a
 //            uuid's width, so both forms fitted and nothing rejected either. `WHERE protocolId =
-//            'cac-speed-v1'` returned 0 bots while the bot existed under its uuid: wrong answer, no
+//            'cac-speed-v1-long'` returned 0 bots while the bot existed under its uuid: wrong answer, no
 //            error. Slug is what every canonical table already uses, it is what `protocol.slug` is
 //            unique on, and it is the only form a human can read in this column.
 // INSTEAD OF: resolving both forms at every call site. Two accepted forms everywhere is the ambiguity
@@ -65,6 +65,48 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // REGISTER:  docs/SETTLED-DECISIONS.md row 95
 // GUARD:     this file — `npm run validate:protocol-refs`, plus `--self-test` for both directions.
 const CANONICAL_TABLES = ['trading_strategy', 'strategy_protocol', 'backtestrun', 'backtest_experiment'];
+
+/**
+ * CURATED LISTS IN CODE that name protocols by literal — checked against the SAME `protocol` table.
+ *
+ * ⚠️ WHY THIS SECOND HALF EXISTS (2026-11-05). The four canonical tables above were clean while
+ * `arena.controller.ts` still offered `pandemic-v1` in the Arena's "Volatility & Crisis" category and
+ * `sector-rotation.service.ts` still mapped XLV to it — a protocol that had already been removed. Every
+ * gate was green: a DB row cannot be dangling if there is no row, and nothing compared a CODE literal
+ * to the table. The UI therefore advertised a category containing one protocol that no longer existed,
+ * and clicking through resolved to nothing. Wrong answer, no error — the exact signature this file is
+ * for, in the half it was not looking at.
+ *
+ * ⚠️ NARROW BY DESIGN. Only lists that a human curates (a category, a sector map) are scanned — not
+ * every string in the tree. A broad sweep over 568 files would fire on fixtures, comments and test
+ * data, get allowlisted, and cover nothing. Adding a file here is a deliberate act.
+ */
+const CODE_LITERAL_FILES = [
+  'nest/src/modules/scoring/arena.controller.ts',
+  'nest/src/modules/scoring/sector-rotation.service.ts',
+];
+
+/** The shape a protocol slug takes: kebab-case ending in a `-v<N>` version segment. */
+const SLUG_LITERAL_RE = /'([a-z0-9][a-z0-9-]*?-v\d+(?:-[a-z0-9]+)*)'/g;
+
+/**
+ * Pure: which literals in these sources name no protocol. Both directions are canaried in `--self-test`,
+ * including the case that matters most — an EMPTY source list must be reported, never read as a pass.
+ */
+function classifyCodeLiterals(sources, protocols) {
+  const known = new Set(protocols.map((p) => p.slug));
+  const dangling = [];
+  let scanned = 0;
+  for (const { file, text } of sources) {
+    SLUG_LITERAL_RE.lastIndex = 0;
+    let m;
+    while ((m = SLUG_LITERAL_RE.exec(text))) {
+      scanned += 1;
+      if (!known.has(m[1])) dangling.push({ file, slug: m[1] });
+    }
+  }
+  return { scanned, dangling };
+}
 
 /**
  * HISTORICAL rows that name no protocol, baselined with a reason — the same ratchet shape as
@@ -177,8 +219,8 @@ function classifyRefs(rowsByTable, protocols) {
 // ── Self-test: the classifier must fail AND pass, or it is a decoration. ────────────────────────
 function selfTest() {
   const protocols = [
-    { id: 'd6386512-acfc-11f1-951d-9c6b00b28963', slug: 'cac-speed-v1' },
-    { id: 'aaaa1111-acfc-11f1-951d-9c6b00b28963', slug: 'xau-speed-v1' },
+    { id: 'd6386512-acfc-11f1-951d-9c6b00b28963', slug: 'cac-speed-v1-long' },
+    { id: 'aaaa1111-acfc-11f1-951d-9c6b00b28963', slug: 'xau-speed-v1-long' },
   ];
   let failures = 0;
   const check = (label, actual, expected) => {
@@ -189,7 +231,7 @@ function selfTest() {
 
   // 1. A clean slug set passes.
   const clean = classifyRefs(
-    { trading_strategy: [{ protocolId: 'cac-speed-v1' }, { protocolId: 'xau-speed-v1' }] },
+    { trading_strategy: [{ protocolId: 'cac-speed-v1-long' }, { protocolId: 'xau-speed-v1-long' }] },
     protocols,
   );
   check('slug-form bots PASS', clean.failures.length, 0);
@@ -203,7 +245,7 @@ function selfTest() {
   check('…and the reason names the form', uuidBot.failures[0].rows[0].why, 'uuid-form (resolves only as protocol.id)');
 
   // 3. A slug naming no protocol also FAILS (a rename that was not migrated).
-  const ghost = classifyRefs({ strategy_protocol: [{ protocolId: 'xau-speed-v1-copy' }] }, protocols);
+  const ghost = classifyRefs({ strategy_protocol: [{ protocolId: 'xau-speed-v1-copy-long' }] }, protocols);
   check('ghost slug FAILS', ghost.failures.length, 1);
   check('…and says so', ghost.failures[0].rows[0].why, 'names no protocol at all');
 
@@ -231,6 +273,25 @@ function selfTest() {
   // 9. …and the allowance going STALE fails, so it cannot rot into a permanent permission.
   const stale = classifyRefs({ backtestrun: [] }, protocols);
   check('a stale allowance FAILS', stale.staleAllowances.length, 1);
+
+  // 10. A curated CODE list naming a real protocol passes…
+  const codeOk = classifyCodeLiterals(
+    [{ file: 'x.ts', text: "protocolIds: ['cac-speed-v1-long', 'xau-speed-v1-long']" }],
+    protocols,
+  );
+  check('code literals that resolve PASS', codeOk.dangling.length, 0);
+  check('…and both are counted', codeOk.scanned, 2);
+
+  // 11. …and THE CITED DEFECT: a literal naming no protocol FAILS, naming the file.
+  const codeBad = classifyCodeLiterals(
+    [{ file: 'arena.controller.ts', text: "protocolIds: ['cac-speed-v1-long', 'gone-v1']" }],
+    protocols,
+  );
+  check('a dangling code literal FAILS', codeBad.dangling.length, 1);
+  check('…and names the slug + file', `${codeBad.dangling[0].slug} @ ${codeBad.dangling[0].file}`, 'gone-v1 @ arena.controller.ts');
+
+  // 12. An EMPTY source list is zero scanned — main() must treat that as cannot-check, not OK.
+  check('empty source list scans nothing', classifyCodeLiterals([], protocols).scanned, 0);
 
   console.log(failures === 0 ? '\n[self-test] ✅ PASS\n' : `\n[self-test] ❌ ${failures} case(s) failed\n`);
   return failures === 0 ? 0 : 1;
@@ -289,6 +350,24 @@ async function main() {
 
   const { tables, failures, staleAllowances } = classifyRefs(rowsByTable, protocols);
 
+  // ── Curated CODE literals, against the same `protocol` table (see CODE_LITERAL_FILES) ──────────
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const REPO_ROOT = path.resolve(__dirname, '..', '..');
+  let codeResults = { scanned: 0, dangling: [] };
+  try {
+    const sources = CODE_LITERAL_FILES.map((file) => ({
+      file,
+      text: fs.readFileSync(path.join(REPO_ROOT, file), 'utf8'),
+    }));
+    codeResults = classifyCodeLiterals(sources, protocols);
+  } catch (err) {
+    // ⚠️ ERROR, never pass. A guard that cannot read its input reports OK forever.
+    console.error(`\n❌ Cannot read a curated code list: ${String(err.message).split('\n')[0]}`);
+    console.error('   It did NOT pass — it could not run.\n');
+    return 1;
+  }
+
   console.log('\n[protocol-refs] canonical form is SLUG (decided 2026-10-28, #800)');
   for (const table of CANONICAL_TABLES) {
     const s = tables[table];
@@ -318,7 +397,24 @@ async function main() {
   }
 
   if (failures.length === 0 && staleAllowances.length === 0) {
-    console.log('\n✅ OK — every canonical table names protocols by slug, and every name resolves\n');
+    if (codeResults.scanned === 0) {
+      console.error('   ❌ curated code lists yielded ZERO protocol literals — the scanner cannot read its');
+      console.error('      input, which reads identically to "nothing dangling". Not a pass.\n');
+      return 1;
+    }
+    const codeMark = codeResults.dangling.length === 0 ? '✅' : '❌';
+    console.log(
+      `   ${codeMark} curated code lists     ${codeResults.scanned} protocol literal(s) in ${CODE_LITERAL_FILES.length} file(s)`,
+    );
+    if (codeResults.dangling.length > 0) {
+      console.error('\n❌ A CURATED LIST IN CODE NAMES A PROTOCOL THAT DOES NOT EXIST —');
+      console.error('   the UI offers it and every lookup resolves to nothing (wrong answer, no error):\n');
+      for (const d of codeResults.dangling) console.error(`   • ${d.slug} — ${d.file}`);
+      console.error('');
+      return 1;
+    }
+    console.log('\n✅ OK — every canonical table names protocols by slug, every name resolves,');
+    console.log('   and every curated code list names a protocol that exists\n');
     return 0;
   }
   if (failures.length === 0) return 1;
