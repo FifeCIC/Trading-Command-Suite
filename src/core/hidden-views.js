@@ -1,4 +1,6 @@
 /**
+ * © 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite
+ *
  * hidden-views.js — the owner's "hide now" verdicts, applied to navigation.
  * ========================================================================
  * ⚠️ WHY THIS EXISTS. The Page Walkthrough (`/development/ui-review`) recorded `hide: true` on five

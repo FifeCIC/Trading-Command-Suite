@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 /**
+ * © 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite
+ *
  * commit-only.cjs — commit EXACTLY the files you name, in a working tree eight agents share.
  * ================================================================================
  * Not a build gate and deliberately not wired into `prebuild`: this is a COMMIT-time tool, and

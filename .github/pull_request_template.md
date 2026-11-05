@@ -1,3 +1,5 @@
+<!-- Trading Command Suite — © 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite -->
+
 ## What changed
 
 <!-- One or two sentences. The diff shows the how; this says the why. -->

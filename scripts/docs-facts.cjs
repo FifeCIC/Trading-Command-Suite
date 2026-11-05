@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 /**
+ * © 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite
+ *
  * docs-facts.cjs — GENERATE the volatile facts so no document has to remember them.
  *
  * WHY THIS EXISTS

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 /**
+ * © 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite
+ *
  * validate-site-links.cjs — the public site has no build step, so nothing catches a broken link.
  * ================================================================================================
  *

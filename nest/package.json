@@ -2,9 +2,11 @@
   "name": "nest",
   "version": "0.153.0",
   "description": "",
-  "author": "",
+  "author": "Ryan Bayne (https://ryanbayne.uk)",
   "private": true,
   "license": "AGPL-3.0",
+  "homepage": "https://fifecic.github.io/Trading-Command-Suite/",
+  "repository": { "type": "git", "url": "https://github.com/FifeCIC/Trading-Command-Suite.git" },
   "//overrides": "Security pins for TRANSITIVE packages, 2026-11-03. proxy-addr 2.0.7 -> 2.0.8 (IP spoofing via IPv4-mapped IPv6; comes in through express 5) and handlebars 4.7.9 -> 4.7.10 (two JS-injection advisories; comes in through ts-jest, so it is a DEV-only exposure — still patched, because an alert left open reads as an unmanaged project). ⚠️ An override, not `npm audit fix`: that rewrote the whole lockfile (126 package versions, incl. jest 30.4->30.5) which is an unreviewed dependency upgrade. Remove an entry once the parent requires the patched version itself.",
   "overrides": {
     "handlebars": "4.7.10",

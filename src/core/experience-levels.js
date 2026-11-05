@@ -1,4 +1,6 @@
 /**
+ * © 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite
+ *
  * Experience Level Matrix
  * =======================
  * Defines what's visible/available at each experience level.

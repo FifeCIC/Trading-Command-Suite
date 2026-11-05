@@ -1,4 +1,6 @@
 /**
+ * © 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite
+ *
  * Score Display — the canonical "output establishment" layer.
  * ============================================================
  * ONE function decides what a score row MEANS for the UI, so pages stop

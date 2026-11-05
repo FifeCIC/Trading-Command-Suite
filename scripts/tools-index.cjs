@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 /**
+ * © 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite
+ *
  * tools-index.cjs — GENERATE the index of this repo's own tooling, so no capability is
  * discoverable only by accident.
  *

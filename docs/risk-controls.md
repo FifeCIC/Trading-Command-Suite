@@ -1,5 +1,8 @@
 # Risk Controls — How It Works
 
+> Part of **Trading Command Suite** — © 2026 Ryan Bayne / FifeCIC · AGPL-3.0 ·
+> [github.com/FifeCIC/Trading-Command-Suite](https://github.com/FifeCIC/Trading-Command-Suite)
+
 **Status:** active
 **Category:** C — reference / contract
 **Created:** 2026-07-02
