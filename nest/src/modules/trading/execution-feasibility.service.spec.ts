@@ -242,3 +242,112 @@ describe('ExecutionFeasibilityService — route integrity (#914)', () => {
     expect(keysOf(res.blockers)).not.toContain('route-unverified');
   });
 });
+
+/**
+ * WHICH ACCOUNT'S POSITION MODEL? (2026-11-05)
+ *
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * THE DEFECT
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * `accountPositionModel()` was keyed by the ADAPTER id (`'mt5'`) and answered from
+ * `adapter.getAccount()`, which reads the DEFAULT bridge. So every order was judged with the
+ * PRIMARY account's model.
+ *
+ * MEASURED LIVE: GER40 routes to account 3 (PepperstoneUK-Demo, `hedging`), but the policy was
+ * told `netting`. `pyramid-policy` therefore applied its symbol-wide rule and refused a second
+ * position, and the decision log repeated
+ *   `Duplicate blocked for GER40: 1 open position(s) on MT5. Close existing or wait for cooldown.`
+ * every two minutes from 14:08 to 14:28 while a DIFFERENT bot held the position. The per-bot
+ * scoping never ran, and two bots could not hold one symbol — the exact capability the change was
+ * written for.
+ *
+ * ⚠️ The cache key carried the same defect: a single `'mt5'` key meant the primary's `netting`
+ * would be reused for the hedged account for a minute at a time.
+ */
+describe('ExecutionFeasibilityService — the position model belongs to the ROUTED account (2026-11-05)', () => {
+  /** One adapter whose answer depends on WHICH account it is asked about. */
+  function makeBrokerAware() {
+    const calls: Array<number | undefined> = [];
+    const adapter = {
+      id: 'mt5',
+      getSymbols: async () => new Set(['GER40']),
+      getSymbolTradability: async () => new Map([
+        ['GER40', { tradeMode: 4, volumeMin: 0.1, volumeMax: null }],
+      ]),
+      // The bridge's own answer is per account; this mirrors it.
+      getAccount: async (brokerId?: number) => {
+        calls.push(brokerId);
+        return { positionModel: brokerId === 3 ? 'hedging' : 'netting', currency: 'GBP' };
+      },
+    };
+    return { adapter: adapter as any, calls };
+  }
+
+  function make(adapter: any, route: Record<string, unknown>) {
+    const prisma = { trade: { findFirst: async () => null } } as any;
+    const adapterFactory = { create: () => adapter } as any;
+    const seen: any[] = [];
+    const pyramidPolicy = {
+      evaluate: async (p: any) => { seen.push(p); return { blockers: [], hasOpenPosition: false }; },
+    } as any;
+    const symbolRouter = {
+      resolve: () => route,
+      resolveForOrder: () => route,
+      canTradeOn: () => undefined,
+      brokerIds: () => [2, 3],
+      getBrokerId: () => route.brokerId,
+      getBrokerSymbol: (s: string) => s.toUpperCase(),
+    } as any;
+    const service = new ExecutionFeasibilityService(
+      prisma, adapterFactory, { checkDuplicate: async () => ({ blocked: false }) } as any,
+      { checkPreTrade: async () => ({ blocked: false }) } as any, pyramidPolicy, symbolRouter,
+    );
+    return { service, seen };
+  }
+
+  const ROUTE_3 = { brokerId: 3, url: 'http://localhost:5001', brokerSymbol: 'GER40', explicit: true, mt5: true, provider: 'mt5' };
+  const ROUTE_2 = { brokerId: 2, url: 'http://localhost:5000', brokerSymbol: 'GER40', explicit: false, mt5: true, provider: null };
+
+  it('⭐ asks the ROUTED account for its model, and hands HEDGING to the scale-in policy', async () => {
+    const { adapter, calls } = makeBrokerAware();
+    const { service, seen } = make(adapter, ROUTE_3);
+
+    await service.assess({ symbol: 'GER40', side: 'BUY', brokerId: 'mt5', size: 0.1 });
+
+    expect(calls).toContain(3);                       // asked account 3, not the default
+    expect(seen[0].positionModel).toBe('hedging');     // and used ITS model
+  });
+
+  it('CONTROL — an order on the primary is still judged NETTING (the previous answer, for the right account)', async () => {
+    const { adapter, calls } = makeBrokerAware();
+    const { service, seen } = make(adapter, ROUTE_2);
+
+    await service.assess({ symbol: 'GER40', side: 'BUY', brokerId: 'mt5', size: 0.1 });
+
+    expect(calls).toContain(2);
+    expect(seen[0].positionModel).toBe('netting');
+  });
+
+  it('the cache is PER ACCOUNT — one account\'s model must not answer for another', async () => {
+    const { adapter, calls } = makeBrokerAware();
+    // A router that flips accounts between the two calls, as two envelopes on different routes do.
+    let account = 3;
+    const prisma = { trade: { findFirst: async () => null } } as any;
+    const seen: any[] = [];
+    const route = () => (account === 3 ? ROUTE_3 : ROUTE_2);
+    const service = new ExecutionFeasibilityService(
+      prisma, { create: () => adapter } as any, { checkDuplicate: async () => ({ blocked: false }) } as any,
+      { checkPreTrade: async () => ({ blocked: false }) } as any,
+      { evaluate: async (p: any) => { seen.push(p); return { blockers: [], hasOpenPosition: false }; } } as any,
+      { resolve: () => route(), resolveForOrder: () => route(), canTradeOn: () => undefined, brokerIds: () => [2, 3], getBrokerId: () => route().brokerId, getBrokerSymbol: (s: string) => s } as any,
+    );
+
+    await service.assess({ symbol: 'GER40', side: 'BUY', brokerId: 'mt5', size: 0.1 });
+    account = 2;
+    await service.assess({ symbol: 'GER40', side: 'BUY', brokerId: 'mt5', size: 0.1 });
+
+    expect(seen[0].positionModel).toBe('hedging');
+    expect(seen[1].positionModel).toBe('netting');   // NOT the cached 'hedging'
+    expect(calls).toEqual([3, 2]);
+  });
+});

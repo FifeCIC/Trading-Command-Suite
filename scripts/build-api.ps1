@@ -444,7 +444,12 @@ if (-not $apiProc) {
 Write-Ok "API starting in the background (node dist/src/main.js, PID $($apiProc.Id))."
 
 # The post-restart assertion (#933): a REAL request must answer, or the script fails LOUDLY.
-$healthy = Assert-ApiUp -Port 3201 -TimeoutSeconds 60 -Proc $apiProc
+# ⚠️ 180s, not 60s (2026-11-05). MEASURED: the API blocks in `app.listen()` for ~90-120s while its
+# module-init hooks run (directive seed, 51 protocol readiness passes, first scoring pass — Tick #1
+# alone was measured at 86.8s). At 60s this printed "API IS DOWN … the process did not bind the
+# port" and exited 1 while /api/version answered 30 seconds later. The explicit value here is the
+# one that actually applies; the function default only covers callers that omit it.
+$healthy = Assert-ApiUp -Port 3201 -TimeoutSeconds 180 -Proc $apiProc
 
 # ⚠️ DROPS OUR REFERENCE ONLY. The API is a separate process and is NOT stopped by this.
 $apiProc.Dispose()

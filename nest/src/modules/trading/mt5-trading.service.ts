@@ -233,6 +233,63 @@ price, `price` came back `0`, and the per-symbol cap refused:
     return this.positionsFrom(this.bridgeUrl);
   }
 
+  /**
+   * getAccountBook() — the OPEN POSITIONS and the EQUITY of ONE account, by bridge index.
+   *
+   * ⚠️ WHY THIS EXISTS (2026-11-05). `assessGlobalRiskLimits()` judged every order against the
+   * PRIMARY account's book, because `getPrimaryPositions()` and `getAccount()` are both primary
+   * reads. MEASURED: a GER40 order routed to account 3 (PepperstoneUK-Demo, 0 positions, 969.40
+   * equity) was refused with "Portfolio at risk 20.2% exceeds 20%" — and every line of that 20.2%
+   * was an account-2 position (XAUUSD 66.12 + GBPJPY 8.44 + USDCHF 7.27 + EURGBP 7.18 + NZDJPY
+   * 41.49 GBP against 644.95 equity). The order was being judged on a book it would not join.
+   *
+   * That is the same defect family as #1079 — one provider id (`mt5`) spanning several accounts —
+   * where the duplicate checks were fixed by scoping to the routed account. This is the read half.
+   *
+   * Returns `null` when the account cannot be read. The caller must NOT read that as "no
+   * positions": an unreadable book is an UNKNOWN book, and the #900 gate refuses on unknown.
+   */
+  async getAccountBook(brokerId: number): Promise<{
+    brokerId: number;
+    positions: Mt5Position[];
+    equity: number | null;
+    balance: number | null;
+    currency: string | null;
+    positionModel: string | null;
+  } | null> {
+    let url: string;
+    try {
+      url = this.mt5Connection.getUrl(brokerId);
+    } catch {
+      return null;   // not a registered bridge — the caller falls back, naming the account
+    }
+    try {
+      const [acctRes, posRes] = await Promise.all([
+        fetch(`${url}/account`, { signal: AbortSignal.timeout(8_000) }),
+        fetch(`${url}/positions`, { signal: AbortSignal.timeout(8_000) }),
+      ]);
+      // ⚠️ BOTH ARE REQUIRED. Half a book is not a book: a readable equity with unreadable
+      // positions would under-report the risk to zero, which is the "plausible number, no error"
+      // shape this repo keeps re-finding.
+      if (!acctRes.ok || !posRes.ok) return null;
+      const acct: any = await acctRes.json().catch(() => null);
+      const posData: any = await posRes.json().catch(() => null);
+      if (!acct || posData === null) return null;
+      const rows = Array.isArray(posData) ? posData : posData?.positions;
+      if (!Array.isArray(rows)) return null;
+      return {
+        brokerId,
+        positions: rows.map((p: any) => this.mapPosition(p)),
+        equity: acct.equity != null ? Number(acct.equity) : null,
+        balance: acct.balance != null ? Number(acct.balance) : null,
+        currency: acct.currency != null ? String(acct.currency) : null,
+        positionModel: acct.positionModel != null ? String(acct.positionModel) : null,
+      };
+    } catch {
+      return null;
+    }
+  }
+
   /** The ONE position row mapper. Shared so a field added for one caller exists for all. */
   private mapPosition(p: any): Mt5Position {
     return {

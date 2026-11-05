@@ -64,7 +64,7 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
    */
   const acct = (o: Record<string, unknown>) => ({ leverage: 100, currency: 'GBP', ...o });
 
-  function build(mt5: Record<string, any>) {
+  function build(mt5: Record<string, any>, symbolRouter?: any) {
     const notificationService = {
       notifyDrawdown: jest.fn().mockResolvedValue(undefined),
     } as any;
@@ -152,6 +152,10 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
       notificationService,
       {} as any, // protocolGating     — untouched by this method
       settings,  // SettingsResolverService — risk caps resolve from here
+      undefined, // protocolHealth      — untouched by this method
+      undefined, // protocolDb          — untouched by this method
+      undefined, // progression         — untouched by this method
+      symbolRouter, // Mt5SymbolRouter  — decides WHICH account's book the #900 cap judges
     );
   }
 
@@ -573,5 +577,153 @@ describe('money reasons carry no assumed currency (#1086)', () => {
       expect(l).not.toMatch(/[$£€¥]\$\{/);
       expect(l).toContain('[account currency]');
     }
+  });
+});
+
+/**
+ * WHICH ACCOUNT'S BOOK does the #900 portfolio-at-risk cap judge? (2026-11-05)
+ *
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * THE DEFECT THIS FILE CLOSES
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ *
+ * `assessGlobalRiskLimits()` read `getPrimaryPositions()` and `getAccount()` — both primary — and
+ * applied that ratio to EVERY order. Measured live: a GER40 order routed to account 3 (PepperstoneUK
+ * Demo, **0 positions**, 969.40 equity) was refused every 2 minutes with
+ *
+ *   Portfolio at risk 20.2% exceeds risk.maxPortfolioRisk 20% — #152861831047 XAUUSD ... ;
+ *   #152862548963 NZDJPY ... ; #152861958088 GBPJPY ; #152862304193 USDCHF ; #152862389965 EURGBP
+ *
+ * Every one of those five positions belongs to account 2. The order was judged on a book it would
+ * never join, and the consequence was that ALL eight index bots routed to account 3 were dark.
+ *
+ * The same family as #1079 (one provider id spans several accounts) where the duplicate checks were
+ * scoped to the routed account. This is the read half of it.
+ *
+ * ⚠️ The three directions are all tested, because "allowed" alone would pass for a gate that never
+ * runs: routed-and-empty must be ALLOWED, routed-and-unreadable must be REFUSED BY NAME, and
+ * unrouted must keep exactly the old behaviour.
+ */
+describe('assessGlobalRiskLimits — the #900 cap judges the ROUTED account (2026-11-05)', () => {
+  const SYMBOL = 'GER40';
+
+  /** Account 2's book: one gold position whose stop is ~£65 away per 0.1 lot. */
+  const PRIMARY_BOOK = [{
+    ticket: 1, symbol: 'XAUUSD', type: 'buy', volume: 1, price_open: 4300,
+    price_current: 4346.06, sl: 4000, tp: 0, profit: 0, comment: '', time: 0,
+    currencyProfit: 'GBP', contractSize: 100,
+  }];
+
+  const acct = (o: Record<string, unknown> = {}) => ({ leverage: 100, currency: 'GBP', equity: 1000, balance: 1000, margin: 100, ...o });
+
+  function build(mt5: Record<string, any>, symbolRouter?: any) {
+    const notificationService = { notifyDrawdown: jest.fn().mockResolvedValue(undefined) } as any;
+    const riskService = new RiskService(notificationService);
+    const prisma = { trade: { findMany: jest.fn().mockRejectedValue(new Error('not under test')) } } as any;
+    const settings = {
+      get: jest.fn(async (key: string) => ({
+        'risk.maxPositionSize': 1.0,
+        'risk.maxOpenPositions': 20,
+        'risk.maxDailyLoss': 100,
+        'risk.maxPerSymbol': 0.25,
+        'risk.maxDrawdown': 0.25,
+        'risk.maxPortfolioRisk': 0.15,
+        'risk.requireBrokerStopLoss': true,
+      } as Record<string, unknown>)[key]),
+    } as any;
+
+    // GER40 is an index CFD: no currency in its name and the bridge does not report one, so the
+    // estimator must fall back to the account currency (the documented route, #1002 era).
+    mt5.getSymbolInfo = mt5.getSymbolInfo ?? jest.fn(async () => ({ name: SYMBOL, digits: 2, contractSize: 1, volumeMin: 0.01, volumeMax: 100 }));
+    mt5.getQuote = mt5.getQuote ?? jest.fn(async (s: string) => {
+      const fx = ({ GBPUSD: 1.33838, GBPJPY: 209.768 } as Record<string, number>)[s];
+      if (fx != null) return { bid: fx, ask: fx, last: fx };
+      return s === SYMBOL ? { bid: 24000, ask: 24001, last: 24000 } : null;
+    });
+    mt5.getAllPositions = mt5.getAllPositions ?? (() => mt5.getPositions());
+    mt5.getPrimaryPositions = mt5.getPrimaryPositions ?? (() => mt5.getPositions());
+
+    return new TradingStrategyService(
+      prisma, mt5 as any, {} as any, riskService, notificationService, {} as any,
+      settings, undefined, undefined, undefined, symbolRouter,
+    );
+  }
+
+  it('⭐ a routed account with an EMPTY book is allowed, even though the primary book is over the cap', async () => {
+    const mt5 = {
+      getPositions: jest.fn().mockResolvedValue(PRIMARY_BOOK),
+      getAccount: jest.fn().mockResolvedValue(acct()),
+      // Account 3: funded, nothing open.
+      getAccountBook: jest.fn().mockResolvedValue({ brokerId: 3, positions: [], equity: 969.4, balance: 969.4, currency: 'GBP', positionModel: 'hedging' }),
+    };
+    const svc = build(mt5, { resolveForOrder: () => ({ brokerId: 3, mt5: true, explicit: true, url: 'http://localhost:5001', brokerSymbol: 'GER40' }) });
+
+    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL);
+
+    expect(result.allowed).toBe(true);
+    expect(mt5.getAccountBook).toHaveBeenCalledWith(3);
+  });
+
+  it('CONTROL — the same order is refused when it is NOT routed to that account (unrouted keeps the old behaviour)', async () => {
+    // Without this half, a gate that stopped measuring the book entirely would pass the test above.
+    const mt5 = {
+      getPositions: jest.fn().mockResolvedValue(PRIMARY_BOOK),
+      getAccount: jest.fn().mockResolvedValue(acct()),
+      getAccountBook: jest.fn(),
+    };
+    // brokerId 0 / mt5:false is the crypto route shape (#914) — not a bridge, so no book to read.
+    const svc = build(mt5, { resolveForOrder: () => ({ brokerId: 0, mt5: false, explicit: true, url: null, brokerSymbol: 'BTC' }) });
+
+    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL);
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Portfolio at risk');
+    expect(mt5.getAccountBook).not.toHaveBeenCalled();
+  });
+
+  it('a routed account whose book cannot be read is REFUSED BY NAME — never swapped for the primary', async () => {
+    const mt5 = {
+      getPositions: jest.fn().mockResolvedValue([]),   // primary looks CLEAN — that is the trap
+      getAccount: jest.fn().mockResolvedValue(acct()),
+      getAccountBook: jest.fn().mockResolvedValue(null),
+    };
+    const svc = build(mt5, { resolveForOrder: () => ({ brokerId: 3, mt5: true, explicit: true, url: 'http://localhost:5001', brokerSymbol: 'GER40' }) });
+
+    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL);
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('account 3');
+    expect(result.reason).toContain('could not be read');
+    // The primary book was fine — so a silent fallback would have ALLOWED this. It must not.
+    expect(result.reason).not.toContain('Portfolio at risk');
+  });
+
+  it('a routed account with no usable equity is refused rather than dividing by an invented value', async () => {
+    const mt5 = {
+      getPositions: jest.fn().mockResolvedValue([]),
+      getAccount: jest.fn().mockResolvedValue(acct()),
+      getAccountBook: jest.fn().mockResolvedValue({ brokerId: 3, positions: [], equity: null, balance: null, currency: 'GBP', positionModel: 'hedging' }),
+    };
+    const svc = build(mt5, { resolveForOrder: () => ({ brokerId: 3, mt5: true, explicit: true, url: 'http://localhost:5001', brokerSymbol: 'GER40' }) });
+
+    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL);
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('no usable equity');
+  });
+
+  it('no router available → primary behaviour, so every existing caller is unchanged', async () => {
+    const mt5 = {
+      getPositions: jest.fn().mockResolvedValue(PRIMARY_BOOK),
+      getAccount: jest.fn().mockResolvedValue(acct()),
+      getAccountBook: jest.fn(),
+    };
+    const svc = build(mt5);   // no router, exactly as the 15 pre-existing tests build it
+
+    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL);
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('Portfolio at risk');
+    expect(mt5.getAccountBook).not.toHaveBeenCalled();
   });
 });

@@ -79,13 +79,26 @@ export class ExecutionFeasibilityService {
    */
   private positionModelCache = new Map<string, { at: number; model: string | null }>();
 
-  private async accountPositionModel(brokerId: string, adapter: any): Promise<string | null> {
-    const key = String(brokerId || '');
+  /**
+   * ⚠️ KEYED BY ROUTED BROKER, AND ASKED OF THE ROUTED BROKER (2026-11-05).
+   *
+   * This used to be keyed by the ADAPTER id (`'mt5'`) and answered from `adapter.getAccount()`,
+   * which reads the DEFAULT bridge. So `positionModel` was always the PRIMARY account's — measured
+   * live: GER40 routes to account 3 (`hedging`) and was judged with account 2's `netting`, so
+   * `pyramid-policy` treated the account as netting and refused a second position. That refusal
+   * ("Duplicate blocked for GER40: 1 open position(s)") IS what the decision log showed every two
+   * minutes from 14:08 to 14:28, and it is why the per-bot pyramid scoping never engaged.
+   *
+   * A cache key shared by two accounts is the same defect one layer down — netting on the primary
+   * would have been cached and reused for the hedged account for a minute at a time.
+   */
+  private async accountPositionModel(routedBrokerId: number | null | undefined, adapter: any): Promise<string | null> {
+    const key = routedBrokerId != null ? `broker:${routedBrokerId}` : 'primary';
     const hit = this.positionModelCache.get(key);
     if (hit && Date.now() - hit.at < 60_000) return hit.model;
     let model: string | null = null;
     try {
-      const acct = await adapter?.getAccount?.();
+      const acct = await adapter?.getAccount?.(routedBrokerId ?? undefined);
       const raw = acct && (acct as any).positionModel;
       if (typeof raw === 'string' && raw.length > 0) model = raw;
     } catch { model = null; }
@@ -274,9 +287,11 @@ export class ExecutionFeasibilityService {
       } catch { /* unknown — the policy falls back to its symbol-wide rule */ }
     }
     if (positionModel == null) {
-      // Asked once per broker and cached for a minute: this runs per envelope in the generation
-      // phase, and a bridge round-trip per envelope is how #1000 (a blocked /health) happened.
-      positionModel = await this.accountPositionModel(brokerId, adapter);
+      // Asked once per ROUTED broker and cached for a minute: this runs per envelope in the
+      // generation phase, and a bridge round-trip per envelope is how #1000 (a blocked /health)
+      // happened. ⚠️ `routedBrokerId`, not the adapter id — the model belongs to the account the
+      // order joins (2026-11-05, see accountPositionModel).
+      positionModel = await this.accountPositionModel(routedBrokerId, adapter);
     }
 
     const pyramid = await this.pyramidPolicy.evaluate({

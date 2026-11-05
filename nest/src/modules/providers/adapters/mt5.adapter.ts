@@ -1118,8 +1118,19 @@ export class Mt5Adapter implements IProviderAdapter {
     };
   }
 
-  async getAccount(): Promise<BrokerAccount | null> {
-    const data = await this.bridgeGet<any>('/account');
+  /**
+   * getAccount() — the account reading.
+   *
+   * ⚠️ `brokerId` (2026-11-05) — WHICH ACCOUNT, not just "the account". One provider id (`mt5`)
+   * spans several accounts, and this method used to read the DEFAULT bridge only. Its
+   * `positionModel` therefore always described the primary account: MEASURED, a GER40 order routed
+   * to account 3 (`hedging`) was judged with account 2's `netting`, so the scale-in policy saw a
+   * netting account, refused a second position and blocked every index bot. The caller that knows
+   * the route passes it; every existing caller keeps the default and its old behaviour.
+   */
+  async getAccount(brokerId?: number): Promise<BrokerAccount | null> {
+    const route = brokerId != null ? (this.symbolRouter?.routeForBroker(brokerId) ?? undefined) : undefined;
+    const data = await this.bridgeGet<any>('/account', route);
     if (!data) return null;
 
     return {

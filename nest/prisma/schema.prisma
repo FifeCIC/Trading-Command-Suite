@@ -1660,6 +1660,16 @@ model PortfolioSnapshotPosition {
 model TradingStrategy {
   id            String   @id @default(uuid()) @db.VarChar(36)
   name          String   @db.VarChar(200)
+  // Stable, human-readable identifier for a BOT (owner direction, 2026-11-05).
+  //
+  // BOTS HAD NO SLUG UNTIL THIS COLUMN — measured: only `protocol` and `sources` carried a `slug`,
+  // so a bot could be addressed only by UUID and its NAME was the only searchable thing. The rule is
+  // enforced at write time: the slug ends `-bot` and the name ends `Bot`, which is what lets a bot be
+  // told apart from a protocol in a list or a search result.
+  //
+  // Nullable only because rows predating the backfill could not have one; every existing row was
+  // filled on 2026-11-05 and `slug_not_ending_bot = 0` was verified afterwards.
+  slug          String?  @unique @db.VarChar(120)
   description   String?  @db.Text
   version       String   @default("1.0.0") @db.VarChar(20)  // Semver for A/B tracking (#295)
   // Canonical since 2026-08-27 (scoring-strategy retirement): the loop reads

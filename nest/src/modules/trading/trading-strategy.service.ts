@@ -14,9 +14,14 @@
  *   OUTPUT: trade placed via broker adapter, recorded to Trade table
  *   NEVER:  computes directive scores, applies risk gates, or decides direction
  */
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Mt5TradingService } from './mt5-trading.service';
+// The CANONICAL order-route resolver. Injected so the portfolio-at-risk gate judges the account
+// the order will actually join, rather than whichever account happens to be the primary (#1079's
+// scoping lesson, applied to the #900 cap). Optional: a caller that has no router keeps the
+// previous primary-only behaviour rather than failing to construct.
+import { Mt5SymbolRouter } from '../providers/mt5/mt5-symbol-router.service';
 import { ConditionDetectorService } from '../directives/condition-detector.service';
 // ⚠️ SINGLE SOURCE for the bot strength bar. Do NOT reintroduce a literal here.
 //
@@ -65,6 +70,7 @@ import { MarketBar } from '../directives/interfaces/directive.interface';
 // `["london"]`) meaning the same gate. Do not hand-roll a second parser — it would drift from the
 // one the engine enforces with.
 import { parseSessionWindow, serialiseSessionWindow } from './session-window';
+import { normaliseBotName, botSlug } from './bot-slug';
 // #1085 — the quote-freshness refusal: a stale quote must not size an order (see the file header).
 import { checkQuoteFreshness } from '../../common/trading/quote-freshness';
 // ⚠️ #849 (2026-09-17): the three risk caps below were `process.env.MT5_MAX_*`. They are now declared
@@ -223,6 +229,10 @@ export class TradingStrategyService {
   // #1193 — the active-bot ceiling. Injected rather than re-derived here so ONE definition of
   // "how many bots may run" exists, shared with the surface that explains it.
   private readonly progression: ProgressionService,
+  // 2026-11-05 — which account an order will join (see resolveBookScope). `@Optional()` on
+  // purpose: every existing positional construction (specs included) keeps working and simply
+  // gets the previous primary-only behaviour, which is the documented fallback.
+  @Optional() private readonly symbolRouter?: Mt5SymbolRouter,
   ) {}
 
   // ── CRUD ──────────────────────────────────────────────
@@ -661,6 +671,26 @@ export class TradingStrategyService {
   //            then flipping `CANONICAL_TABLES` in the guard.
   // REGISTER:  docs/SETTLED-DECISIONS.md row 95
   // GUARD:     nest/scripts/validate-protocol-refs.cjs (npm run validate:protocol-refs)
+  /**
+   * A slug for a bot that is guaranteed unique, derived from its name.
+   *
+   * ⚠️ QUERIED, not assumed. Two bots may legitimately share a core name (`Gold Short M15 Bot` on a
+   * symbol that already has one), and the unique index would then reject the insert — turning a
+   * naming rule into a failed write. A numeric suffix keeps the rule AND the write.
+   */
+  private async allocateSlug(name: string): Promise<string> {
+    const base = botSlug(name);
+    for (let n = 2; n < 50; n += 1) {
+      const candidate = n === 2 ? base : `${base}-${n}`;
+      const taken = await (this.prisma as any).tradingStrategy.findUnique({
+        where: { slug: candidate },
+        select: { id: true },
+      });
+      if (!taken) return candidate;
+    }
+    return `${base}-${Date.now()}`;
+  }
+
   async create(data: {
     name: string;
     protocolId: string;
@@ -758,9 +788,17 @@ export class TradingStrategyService {
       );
     }
 
+    // ⚠️ THE NAME AND SLUG ARE DERIVED, NOT TRUSTED (owner direction, 2026-11-05). A caller that
+    // sends `"gold scalp"` gets `"gold scalp Bot"` / `"gold-scalp-bot"`, so the rule cannot be
+    // bypassed by the one write path that forgot it — the same class of defect as a mapping that
+    // drops a column, one layer earlier.
+    const botName = normaliseBotName(data.name);
+    const botSlugValue = await this.allocateSlug(botName);
+
     return this.prisma.tradingStrategy.create({
       data: {
-        name: data.name,
+        name: botName,
+        slug: botSlugValue,
         description: data.description ?? null,
         protocolId: data.protocolId,
         shortProtocolId: data.shortProtocolId ?? null,
@@ -2481,9 +2519,25 @@ export class TradingStrategyService {
         // question as maxDrawdown (peak-to-current on realised+unrealised equity), which a book
         // of losing positions can sail under indefinitely having never breached the peak.
         //
+        // ⚠️ WHICH BOOK — SCOPED TO THE ROUTED ACCOUNT (2026-11-05).
+        // This block used to read the PRIMARY account's positions and equity for EVERY order,
+        // because `getPrimaryPositions()` and `getAccount()` are both primary reads. MEASURED: a
+        // GER40 order routed to account 3 (0 positions, 969.40 equity) was refused with
+        // "Portfolio at risk 20.2% exceeds 20%", and every line of that 20.2% was an account-2
+        // position (XAUUSD 66.12 + NZDJPY 41.49 + GBPJPY 8.44 + USDCHF 7.27 + EURGBP 7.18 GBP
+        // against 644.95 equity). The order was judged on a book it would never join — which is
+        // why every index bot routed to account 3 was dark. Same defect family as #1079, where
+        // the duplicate checks were scoped to the routed account.
+        //
         // ⚠️ FAIL CLOSED. An unmeasurable position makes the TOTAL unknowable, and an
-        // unknowable total must never read as "under the cap" (the #865/#848 lesson).
-        const bookRisk = await this.assessBookAtRisk(positions, account);
+        // unknowable total must never read as "under the cap" (the #865/#848 lesson). A routed
+        // account whose book cannot be read is REFUSED by name, not silently swapped for the
+        // primary's — that swap is the defect above.
+        const bookScope = await this.resolveBookScope(symbol, positions, portfolioValue, account);
+        if (bookScope.ok === false) {
+          return { allowed: false, reason: bookScope.reason };
+        }
+        const bookRisk = await this.assessBookAtRisk(bookScope.positions, bookScope.account);
         if (bookRisk.available === false) {
           return {
             allowed: false,
@@ -2492,11 +2546,11 @@ export class TradingStrategyService {
               'trading without it (risk.maxPortfolioRisk, #900)',
           };
         }
-        const bookFraction = portfolioValue > 0 ? bookRisk.atRisk / portfolioValue : 0;
+        const bookFraction = bookScope.portfolioValue > 0 ? bookRisk.atRisk / bookScope.portfolioValue : 0;
         this.logger.debug(
-          `book at risk ${bookRisk.atRisk.toFixed(2)} ${account?.currency ?? ''} ` +
-            `(${(bookFraction * 100).toFixed(1)}% of ${portfolioValue.toFixed(2)}) vs cap ` +
-            `${(riskProfile.maxPortfolioRisk * 100)}% — ${bookRisk.detail}`,
+          `book at risk ${bookRisk.atRisk.toFixed(2)} ${bookScope.account?.currency ?? ''} ` +
+            `(${(bookFraction * 100).toFixed(1)}% of ${bookScope.portfolioValue.toFixed(2)}) vs cap ` +
+            `${(riskProfile.maxPortfolioRisk * 100)}% — ${bookRisk.detail} [account ${bookScope.brokerId ?? 'primary'}]`,
         );
         if (bookFraction > riskProfile.maxPortfolioRisk) {
           return {
@@ -2504,7 +2558,8 @@ export class TradingStrategyService {
             reason:
               `Portfolio at risk ${(bookFraction * 100).toFixed(1)}% exceeds risk.maxPortfolioRisk ` +
               `${(riskProfile.maxPortfolioRisk * 100)}% — ${bookRisk.detail}. ` +
-              'Measured as the loss if every broker stop filled (#900).',
+              `Measured as the loss if every broker stop filled (#900)` +
+              (bookScope.brokerId != null ? `, on account ${bookScope.brokerId} (the account this order routes to).` : '.'),
           };
         }
       }
@@ -2536,6 +2591,82 @@ export class TradingStrategyService {
    * One caveat, stated because it is a claim the code cannot make: this measures the loss IF THE
    * STOP FILLS, at the STOP's price. Slippage, gaps and weekend jumps can exceed it.
    */
+  /**
+   * resolveBookScope() — WHICH account's book the #900 portfolio-at-risk cap judges.
+   *
+   * ================================================================================
+   * WHAT:  returns the positions + portfolio value of the account this order will trade on,
+   *        resolved through the canonical order router (`Mt5SymbolRouter.resolveForOrder`).
+   * WHY:   the cap asks "is the book I am about to ADD TO safe?". Reading the primary account for
+   *        an order routed elsewhere answers a question nobody asked, and it ANSWERS IT BADLY — a
+   *        funded second account with an empty book was refused because the first account held
+   *        five losing-ish FX/gold positions (measured 2026-11-05, see the call site).
+   * HOW:   routed MT5 account known → that account's own positions and equity. No route, a
+   *        non-MT5 route (the `brokerId: 0` binance rows), or no router available → the PRIMARY
+   *        book, exactly as before this change. Route known but unreadable → REFUSE, named.
+   *
+   * ⚠️ FAIL CLOSED, AND NEVER SILENTLY SUBSTITUTE. Falling back to the primary after a failed read
+   * of the routed account would restore the very defect this exists to remove, and it would look
+   * like a normal refusal about risk that the order does not carry.
+   */
+  private async resolveBookScope(
+    symbol: string,
+    primaryPositions: any[],
+    primaryValue: number,
+    primaryAccount: { currency?: string } | null,
+  ): Promise<
+    | { ok: true; positions: any[]; portfolioValue: number; account: { currency?: string } | null; brokerId: number | null }
+    | { ok: false; reason: string }
+  > {
+    const primary = {
+      ok: true as const,
+      positions: primaryPositions,
+      portfolioValue: primaryValue,
+      account: primaryAccount,
+      brokerId: null as number | null,
+    };
+
+    let routedBrokerId: number | null = null;
+    try {
+      const route = this.symbolRouter?.resolveForOrder(symbol);
+      // `mt5 === false` is the crypto/binance case (#914): brokerId 0 is NOT a bridge, and
+      // asking it for a book would refuse every crypto order.
+      if (route && route.mt5 && Number(route.brokerId) > 0) routedBrokerId = Number(route.brokerId);
+    } catch {
+      // A route we cannot resolve is an unknown route — keep the previous behaviour rather than
+      // invent a scope.
+      return primary;
+    }
+    if (routedBrokerId === null) return primary;
+
+    const book = await this.mt5.getAccountBook(routedBrokerId).catch(() => null);
+    if (!book) {
+      return {
+        ok: false,
+        reason:
+          `Cannot evaluate portfolio-at-risk for ${symbol}: account ${routedBrokerId} (the account ` +
+          'this order routes to) could not be read — refusing rather than judging it against a ' +
+          'different account\'s book (risk.maxPortfolioRisk, #900)',
+      };
+    }
+    const value = book.equity ?? book.balance ?? null;
+    if (value === null || !(value > 0)) {
+      return {
+        ok: false,
+        reason:
+          `Cannot evaluate portfolio-at-risk for ${symbol}: account ${routedBrokerId} reported no ` +
+          'usable equity — refusing rather than trading without the cap (#900)',
+      };
+    }
+    return {
+      ok: true,
+      positions: book.positions,
+      portfolioValue: value,
+      account: { currency: book.currency ?? undefined },
+      brokerId: routedBrokerId,
+    };
+  }
+
   private async assessBookAtRisk(
     positions: Array<{
       ticket?: number;
@@ -2859,6 +2990,17 @@ export class TradingStrategyService {
           baseSize: s.baseSize,
           slPct: s.slPct,
           tpPct: s.tpPct,
+          /**
+           * ⚠️ THE SLUG IS CONVERGED (owner direction, 2026-11-05) so a re-seed REPAIRS a bot whose
+           * slug is missing or malformed — the same reasoning as `magic` below: an update that omits
+           * a field cannot repair it, so the fleet would stay half-named forever.
+           *
+           * ⚠️ The NAME is deliberately NOT converged here. The lookup above matches on
+           * `{ name, symbol }`, so renaming a row mid-seed would make the NEXT run fail to find it
+           * and create a duplicate bot. Every seed name already ends "Bot", so there is nothing to
+           * repair; a future rename belongs in a migration, not in a converging seeder.
+           */
+          slug: botSlug(s.name),
           // #1018 — CONVERGED, not insert-only. An `update` that omits this cannot repair a row
           // whose magic was never assigned, so a re-seed would leave the fleet half-attributable.
           ...(s.magic != null ? { magic: s.magic } : {}),
@@ -3088,7 +3230,11 @@ export class TradingStrategyService {
       try {
         const createdBot = await (this.prisma as any).tradingStrategy.create({
           data: {
-            name: s.name,
+            // ⚠️ SEEDED BOTS GET THE SAME SHAPE AS API-CREATED ONES (owner direction, 2026-11-05):
+            // name ends "Bot", slug ends "-bot", derived by ONE helper so the two write paths cannot
+            // disagree about what a bot is called.
+            name: normaliseBotName(s.name),
+            slug: botSlug(s.name),
             symbol: s.symbol,
             protocolId: s.protocolId,
             brokerId: s.brokerId,
