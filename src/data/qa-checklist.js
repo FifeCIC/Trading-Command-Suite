@@ -256,12 +256,13 @@ const QA_CHECKLIST = [
     id: 'qa-back-001',
     area: 'Backtesting',
     system: 'Backtest Service',
-    name: 'Walk-forward optimization works',
-    procedure: 'POST /api/backtest/walk-forward { symbol: "XAUUSD", trainDays: 365, testDays: 180 }',
-    expected: 'Returns train + test results with optimizedParams. Out-of-sample win rate computed.',
+    name: 'Walk-forward records both windows and derives a survival verdict',
+    procedure: 'POST /api/backtest/walk-forward { symbol: "GER40", protocolId: "dax-speed-v1-long", trainDays: 365, testDays: 180 }, then GET /api/backtest/walk-forward-survivors',
+    expected:
+      'The response carries `verdict` (survived / decayed / overfit / insufficient-data / sample-unknown) with `retention` and a note naming both win rates. Two runs are recorded in a fresh backtest experiment — iteration 1 = TRAIN, iteration 2 = TEST, both with the SAME slPct/tpPct — and the survivors list shows the run ranked by OUT-of-sample with the in-sample figure beside it. Below 30 trades per side the verdict is insufficient-data, not a rank (#1201).',
     category: 'Feature',
     priority: 'high',
-    versionNote: 'Grid search SL/TP optimization',
+    versionNote: 'Grid search SL/TP optimization + survival verdict (#1201)',
   },
   {
     id: 'qa-back-002',

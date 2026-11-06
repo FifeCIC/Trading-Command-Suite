@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
+import { feedUnavailable } from '../core/api/feed-state.js';
 import { normaliseAlert } from '../core/alerts';
 import { formatDuration, timeAgo } from '../core/format-utils';
 import { decisionScore } from '../core/decision-score';
@@ -199,7 +200,7 @@ export default function TradeJournalPage() {
   // ── DB-first: the app's own reconciled trade history ──
   const historyQuery = useQuery({
     queryKey: ['journal-trade-history'],
-    queryFn: () => apiGet('/api/trading/trade-history?limit=500').catch(() => ({ trades: [] })),
+    queryFn: () => apiGet('/api/trading/trade-history?limit=500'),
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
@@ -234,7 +235,7 @@ export default function TradeJournalPage() {
 
   const eventsQuery = useQuery({
     queryKey: ['journal-activity-events'],
-    queryFn: () => apiGet('/api/automation/events?limit=100').catch(() => ({ events: [] })),
+    queryFn: () => apiGet('/api/automation/events?limit=100'),
     refetchInterval: 5000,
   });
   const loopQuery = useQuery({
@@ -263,7 +264,7 @@ export default function TradeJournalPage() {
   const navigate = useNavigate();
   const alertsQuery = useQuery({
     queryKey: ['journal-alerts'],
-    queryFn: () => apiGet('/api/alerts/active').catch(() => []),
+    queryFn: () => apiGet('/api/alerts/active'),
     staleTime: 10_000,
     refetchInterval: 30_000,
   });
@@ -448,7 +449,12 @@ export default function TradeJournalPage() {
       {(view === 'trades' || view === 'all') && (
       <div className="tj-entries">
         {historyQuery.isLoading && <p>Loading trades from the audit trail...</p>}
-        {!historyQuery.isLoading && entries.length === 0 && (
+        {/* ⚠️ BEFORE the empty state (#782): "No trades recorded yet" is a claim about the user's
+            audit trail, and a failed read must not make it. */}
+        {!historyQuery.isLoading && feedUnavailable(historyQuery) && (
+          <div className="tj-empty"><p>⚠️ The trade history could not be read — this is <strong>not</strong> an empty journal. <button type="button" className="tj-retry" onClick={() => historyQuery.refetch()}>retry</button></p></div>
+        )}
+        {!historyQuery.isLoading && !feedUnavailable(historyQuery) && entries.length === 0 && (
           <div className="tj-empty"><p>No trades recorded yet. The automation loop records every position it sees — open a position (via Signals, the bot, or directly in MT5) and it will appear here.</p></div>
         )}
         {entries.map((entry) => {
@@ -530,7 +536,12 @@ export default function TradeJournalPage() {
       {(view === 'activity' || view === 'all') && (
         <div className="tj-entries">
           {eventsQuery.isLoading && <p>Loading activity...</p>}
-          {!eventsQuery.isLoading && activity.length === 0 && (
+          {!eventsQuery.isLoading && feedUnavailable(eventsQuery) && (
+            <div className="tj-empty">
+              <p>⚠️ The activity log could not be read — this is <strong>not</strong> "no activity". <button type="button" className="tj-retry" onClick={() => eventsQuery.refetch()}>retry</button></p>
+            </div>
+          )}
+          {!eventsQuery.isLoading && !feedUnavailable(eventsQuery) && activity.length === 0 && (
             <div className="tj-empty">
               <p>{events.length === 0 ? 'No activity logged yet.' : 'No activity matches the current filter.'}</p>
             </div>
@@ -545,7 +556,10 @@ export default function TradeJournalPage() {
       {(view === 'alerts' || view === 'all') && (
         <div className="tj-entries">
           {alertsQuery.isLoading && <p>Loading alerts...</p>}
-          {!alertsQuery.isLoading && alerts.length === 0 && (
+          {!alertsQuery.isLoading && feedUnavailable(alertsQuery) && (
+            <div className="tj-empty"><p>⚠️ Alerts could not be read — this does <strong>not</strong> mean there are none. <button type="button" className="tj-retry" onClick={() => alertsQuery.refetch()}>retry</button></p></div>
+          )}
+          {!alertsQuery.isLoading && !feedUnavailable(alertsQuery) && alerts.length === 0 && (
             <div className="tj-empty"><p>No active alerts.</p></div>
           )}
           {alerts.map((alert) => (

@@ -53,6 +53,34 @@ function toUtcDefaults(sql) {
   return { sql: out, count: n };
 }
 
+/**
+ * Make every generated table InnoDB, explicitly (#613).
+ *
+ * ⚠️ WHY THIS IS NOT COSMETIC. Prisma's `migrate diff` emits `CREATE TABLE` with **no `ENGINE`
+ * clause at all**, so a fresh install gets the SERVER default — and this machine's default is
+ * **MyISAM** (measured 2026-11-06: `SELECT @@default_storage_engine` → `MyISAM`). That is how the
+ * database reached 102 MyISAM tables: nothing ever asked for InnoDB, so a reinstall silently
+ * reverted every conversion.
+ *
+ * Measured consequence of leaving it implicit: `macrosnapshot` corrupted **twice**, and a crashed
+ * MyISAM table cannot be read at all while the scoring path keeps producing plausible numbers
+ * (its `.catch` only logs a warn). MyISAM also cannot hold a foreign key, so the whole referential
+ * layer (#1042) was impossible by construction.
+ *
+ * The collation is pinned to the schema's own majority rather than left to the server, for the same
+ * reason `validate-collation-consistency.cjs` demands it of every CREATE TABLE: a server default
+ * that varies by MySQL major version is not a schema.
+ */
+function toInnoDb(sql) {
+  let n = 0;
+  const out = sql.replace(/^(CREATE TABLE[\s\S]*?)(\s*;)$/gm, (m, body, semi) => {
+    if (/ENGINE\s*=/i.test(body)) return m;
+    n += 1;
+    return `${body} ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci${semi}`;
+  });
+  return { sql: out, count: n };
+}
+
 function header(createCount, utcCount) {
   return `-- schema-init.sql — the FULL application schema, GENERATED from prisma/schema.prisma.
 -- =====================================================================================================
@@ -105,8 +133,19 @@ function generate() {
     console.error('❌ `prisma migrate diff` produced no CREATE TABLE statements — refusing to write.');
     process.exit(1);
   }
-  const { sql, count } = toUtcDefaults(raw);
+  const { sql: utcSql, count } = toUtcDefaults(raw);
+  // ⚠️ AFTER the UTC rewrite, not before: `toInnoDb` anchors on the trailing `;` of each statement,
+  // and running it first would leave the engine clause attached to a statement the UTC pass then
+  // re-scanned. Order matters here only because both transforms edit the same text.
+  const { sql, count: engineCount } = toInnoDb(utcSql);
   const createCount = (sql.match(/CREATE TABLE/gi) || []).length;
+  if (engineCount !== createCount) {
+    console.error(
+      `❌ ENGINE rewrite covered ${engineCount} of ${createCount} CREATE TABLE statements — refusing to write a ` +
+      'partial conversion. A fresh install would differ from the live database and nothing would say so.',
+    );
+    process.exit(1);
+  }
   return header(createCount, count) + sql;
 }
 

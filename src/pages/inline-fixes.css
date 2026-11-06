@@ -117,3 +117,9 @@
   font-style: italic; z-index: 1;
   pointer-events: none; user-select: none;
 }
+/* Inline variant — same text and tick, no absolute placement. Used when the badge belongs in a
+   heading row rather than floating over the content area. */
+.last-updated--inline {
+  position: static;
+  font-style: normal;
+}

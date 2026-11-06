@@ -29,7 +29,7 @@ export default function PatternScannerPage() {
 
   const candlesQuery = useQuery({
     queryKey: ['candles', symbol, timeframe],
-    queryFn: () => apiGet(`/api/market-data/candles/${symbol}?timeframe=${timeframe}`),
+    queryFn: () => apiGet(`/api/market-data/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}`),
     retry: 1,
     staleTime: 60_000,
   });

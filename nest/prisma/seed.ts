@@ -179,6 +179,31 @@ async function main() {
   }
   console.log(`  ✓ ${globalSettings.length} global settings seeded (buy=65, hold=40).`);
 
+  // ── Manual-trade defaults (#836) ────────────────────────────────────
+  //
+  // ⚠️ INSERT-ONLY, unlike the two thresholds above. Those are shipped thresholds the app owns; the
+  // manual-trade defaults are edited by the OPERATOR in Settings, so they are STATE, not config —
+  // exactly the reasoning that keeps `protocol.active` out of its seeder. A convergent write here
+  // would revert the operator's chosen size on every reinstall, which is the same defect in the
+  // opposite direction from the one this fixes.
+  //
+  // What this DOES fix: before 2026-11-06 these four keys had no seed at all, so a reinstall silently
+  // dropped back to `DEFAULT_MANUAL_TRADE` — 0.01 lots, unplaceable on every index whose broker floor
+  // is 0.1. The values below are `DEFAULT_MANUAL_TRADE`; keep them in step with it.
+  const manualTradeDefaults = [
+    { key: 'signals.manualTrade.size', value: '0.01' },
+    { key: 'signals.manualTrade.slPct', value: '2' },
+    { key: 'signals.manualTrade.tpPct', value: '4' },
+    { key: 'signals.manualTrade.maxPyramidTiers', value: '1' },
+  ];
+  for (const setting of manualTradeDefaults) {
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO global_setting (\`key\`, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE \`key\` = \`key\``,
+      setting.key, setting.value,
+    );
+  }
+  console.log(`  ✓ ${manualTradeDefaults.length} manual-trade defaults present (insert-only — an operator's edit is never overwritten).`);
+
   // ── App Settings (operational defaults) ─────────────────────────────
   console.log('\nSeeding app settings…');
   const appDefaults = {

@@ -1,0 +1,35 @@
+{
+  "__comment": [
+    "Declared -copy protocols (#1201). A slug containing '-copy' is a MATHS-CHANGE copy — the mechanism",
+    "the maths-change rule prescribes — and it must say which comparison it serves.",
+    "Market/role variants (dax-speed-v1-long, xau-speed-m15-long, vix-spike-v1-short, …) are derived",
+    "from a template but are NOT copies of a maths change; they are out of this guard's scope on purpose.",
+    "`serves` = an ab_test id, or null when the test is over — then `reason` (>=20 chars) is required.",
+    "`active` = what the protocol's `active` column SHOULD be. A mismatch in either direction fails.",
+    "__abTestIds is injected at run time from the database; do not write it here."
+  ],
+  "xau-speed-v1-copy-long": {
+    "serves": null,
+    "active": false,
+    "reason": "Created for the #929 tradeThreshold weighting comparison. That run (b50727ee) was cancelled 2026-10-07 after 11 v 6 closed trades, so the copy can never produce a verdict. Deactivated 2026-11-06 (#1201) and retained as evidence; its bot 'Gold Speed Copy Bot' (magic 234186) was deactivated the same day for the same reason."
+  },
+  "__orphanScoreHistory": {
+    "__why": [
+      "A deleted protocol leaves its score_snapshot rows behind: `score_snapshot.protocolId` is a SLUG",
+      "with no foreign key, so the rows outlive the row they describe.",
+      "MEASURED 2026-11-06: 10,889 rows across slugs matching '-copy' with no protocol row. 10,887 of",
+      "them are the four deleted xau-speed-*-copy protocols and are FROZEN — last snappedAt",
+      "2026-10-14T08:59Z, so nothing has written to them since the deletion.",
+      "⚠️ The other two are NOT frozen: `xau-speed-v1-copy` received a row on 2026-11-05, one day",
+      "before this audit existed. Something still names a protocol that does not exist. That is why",
+      "this is a tracked declaration rather than a one-off explanation — the class is still alive.",
+      "DECISION: KEEP, do not delete. They are the only surviving record of what those copies scored —",
+      "the comparison that never reported (#1201).",
+      "A NEW undeclared orphan slug above 100 rows fails the audit, so the class is closed at the top."
+    ],
+    "xau-speed-4h-copy": 3315,
+    "xau-speed-1h-copy": 2988,
+    "xau-speed-m15-copy": 2406,
+    "xau-speed-m5-copy": 2178
+  }
+}

@@ -1,9 +1,9 @@
 {
   "note": "Frozen hardcoded-hex debt for scripts/validate-css-literals.cjs. Keys are `file::#literal` with the OCCURRENCE COUNT as the value — counts, not a bare list, so removing one literal and adding a different one in the same file (a swap) is still caught. These are PRE-EXISTING findings: reported, not fatal. A count may only ever go DOWN. Target is an EMPTY entries object. Regenerate with `node scripts/validate-css-literals.cjs --update-baseline`.",
-  "generatedAt": "2026-10-27",
-  "fileCount": 61,
-  "count": 179,
-  "total": 258,
+  "generatedAt": "2026-11-06",
+  "fileCount": 60,
+  "count": 178,
+  "total": 257,
   "entries": {
     "src/components/StrategyBuilder/strategy-wizard.css::#818cf8": 1,
     "src/components/api-offline-banner.css::#4f7fe0": 1,
@@ -60,7 +60,6 @@
     "src/pages/data-management.css::#a5b4fc": 1,
     "src/pages/database-tables.css::#9a6400": 1,
     "src/pages/database-tables.css::#ff004020": 1,
-    "src/pages/decision-trail.css::#94a3b8": 1,
     "src/pages/decoder.css::#0d9495": 1,
     "src/pages/directives-manager.css::#8b5cf6": 2,
     "src/pages/earnings-calendar.css::#04151a": 1,

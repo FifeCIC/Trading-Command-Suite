@@ -80,3 +80,122 @@
 .ob-reactivate { border-color: rgba(59,130,246,0.3); color: var(--notice-info-text); }
 .ob-delete-btn { margin-left: auto; padding: 5px 12px; border: 1px solid rgba(239,68,68,0.2); border-radius: 5px; background: none; color: var(--color-loss); font-size: 0.72rem; cursor: pointer; }
 .ob-delete-btn:hover { background: rgba(239,68,68,0.06); }
+
+/* ── Objective review status (#1201, owner 2026-11-06) ──────────────────────────────────────────
+ *
+ * "You could use the Goals page as a way to remind us to check results." Sits ABOVE the list so an
+ * overdue promise is the first thing on the page.
+ *
+ * ⚠️ State is carried by a GLYPH plus the action's own word, never by colour alone (ui-standards).
+ * The pills are supplementary; the row text says what is wrong and what closes it.
+ */
+
+.ob-review {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.ob-review-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ob-review-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-dim);
+}
+
+.ob-review-counts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ob-review-pill {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.ob-review-overdue {
+  color: var(--color-loss);
+  border-color: var(--color-loss);
+}
+
+.ob-review-no-date {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.ob-review-clear {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--color-profit);
+}
+
+.ob-review-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ob-review-row {
+  display: grid;
+  grid-template-columns: 118px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.ob-review-action {
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-text-dim);
+  white-space: nowrap;
+}
+
+.ob-review-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ob-review-name {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--color-text-dim);
+}
+
+.ob-review-facts {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ob-review-step {
+  font-size: 0.77rem;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 720px) {
+  .ob-review-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -27,6 +27,17 @@ export type NotificationDetailLevel = 'simple' | 'detailed' | 'advanced';
 export const DETAIL_LEVELS: readonly NotificationDetailLevel[] = ['simple', 'detailed', 'advanced'];
 export type NotificationEvent =
   | 'entry-signal'
+  /**
+   * A SIGNAL SUGGESTION — the app recommending an entry, before any bot acts and with no bot
+   * required. Added 2026-11-06 at the owner's direction:
+   * *"my framing of signal is based on the Signals area which is suggestion to enter so any sharing
+   * would happen before a bots action and without a bot attached to create a full strategy."*
+   *
+   * ⚠️ THIS IS NOT `entry-signal`. That fires only when a bot actually PLACES AN ORDER, which is
+   * after the decision and impossible without a bot. Publishing it would have shared executions
+   * while calling them suggestions — two different claims in one word.
+   */
+  | 'signal-suggestion'
   | 'drawdown-warning'
   | 'daily-limit'
   | 'daily-summary'
@@ -113,6 +124,10 @@ const ALERT_EVENT_MAP: Record<
 
 const DEFAULT_PREFERENCES: NotificationPreference[] = [
   { event: 'entry-signal', channels: ['windows', 'telegram', 'discord'], enabled: true, priority: 'high' },
+  // A suggestion to enter, generated from scoring alone — no bot, no order. Discord is the only
+  // channel because the public feed is its reason for existing; the ration and the ±$1 rule that
+  // govern publishing live in the Discord channel, not here.
+  { event: 'signal-suggestion', channels: ['discord'], enabled: true, priority: 'normal' },
   { event: 'drawdown-warning', channels: ['windows', 'telegram'], enabled: true, priority: 'critical' },
   { event: 'daily-limit', channels: ['email', 'discord'], enabled: true, priority: 'critical' },
   { event: 'daily-summary', channels: ['email'], enabled: true, priority: 'low' },

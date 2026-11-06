@@ -2133,7 +2133,7 @@ button.nav-active {
   padding: 0.6rem 0.75rem;
   margin-bottom: 0.85rem;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--accent);
+
   border-radius: 6px;
   background: var(--panel);
 }
@@ -2217,7 +2217,7 @@ button.nav-active {
   margin: 0.75rem 0 0;
   padding: 0.5rem 0.7rem;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--ink-soft);
+
   border-radius: 5px;
   font-size: 0.72rem;
   line-height: 1.45;
@@ -2229,7 +2229,7 @@ button.nav-active {
   margin-top: 0.75rem;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--accent);
+
   border-radius: 5px;
   font-size: 0.74rem;
   color: var(--ink);
@@ -2258,7 +2258,7 @@ button.nav-active {
   margin: 0;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--danger);
+
   border-radius: 5px;
   font-size: 0.76rem;
   line-height: 1.5;
@@ -2310,8 +2310,8 @@ button.nav-active {
   font-size: 0.74rem;
   line-height: 1.45;
 }
-.dp-ok { border: 1px solid var(--line); border-left: 3px solid var(--accent); color: var(--ink); }
-.dp-warn { border: 1px solid var(--line); border-left: 3px solid var(--ink-soft); color: var(--ink); }
+.dp-ok { border: 1px solid var(--line);  color: var(--ink); }
+.dp-warn { border: 1px solid var(--line);  color: var(--ink); }
 .dp-error { border: 1px solid var(--danger); color: var(--ink); }
 
 /* ── Directive parameters & instances (#1165, 2026-11-01) ─────────────────────────────────────── */

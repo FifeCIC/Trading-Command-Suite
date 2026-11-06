@@ -35,6 +35,7 @@
  *   defaultWidgets — widget ids seeded on first visit
  *   title          — optional heading
  *   editable       — set false for a locked/read-only board
+ *   toolbarPosition — `'inline'` (default) or `'top-row'` — see the prop's comment
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Responsive, verticalCompactor } from 'react-grid-layout';
@@ -43,6 +44,7 @@ import { GridBackground } from 'react-grid-layout/extras';
 // affordance. We override its greys/red placeholder in widget-board.css.
 import 'react-grid-layout/css/styles.css';
 import { usePersistentState } from '../hooks/usePersistentState';
+import { TopRowSlotContent } from '../core/top-row-slot';
 import { getWidget, getWidgets } from '../core/widget-registry';
 import {
   COLS,
@@ -134,6 +136,19 @@ export default function WidgetBoard({
   defaultWidgets = [],
   title,
   editable = true,
+  /**
+   * `toolbarPosition` — where the board's control row renders.
+   *
+   * ⚠️ ADDED 2026-11-06 (owner, Page Walkthrough): *"`<div.wb-toolbar>` … and `<button.pip-trigger>`
+   * … should be on one row."* Measured on /dashboard/dashboard: the ℹ sat alone in the shell's
+   * `.main-top-row` at y=222 and the toolbar was a SECOND thin bar at y=343, so the page opened with
+   * two near-empty bands stacked on top of each other.
+   *
+   * `'top-row'` lifts the toolbar into the shell row through `TopRowSlot` — the sanctioned mechanism
+   * for a page putting content beside the breadcrumbs (SymbolsLadderPage already does it) — so the
+   * controls and the ℹ share one line. Default `'inline'` keeps every other board unchanged.
+   */
+  toolbarPosition = 'inline',
 }) {
   // One versioned document per board (= per screen) plus a saved search of the
   // grid overlay. Persistence itself lives in src/core/board-store.js so the
@@ -438,57 +453,65 @@ export default function WidgetBoard({
 
   return (
     <div className="wb">
-      <div className="wb-toolbar">
-        {editable && (
-          <button
-            type="button"
-            className={`wb-btn ${libraryOpen ? 'wb-btn--ghost' : 'wb-btn--primary'}`}
-            aria-expanded={libraryOpen}
-            onClick={() => setLibraryOpen((open) => !open)}
-          >
-            {libraryOpen ? 'Close library' : '+ Add widget'}
-          </button>
-        )}
-        {title && <span className="wb-title">{title}</span>}
-        <span className="wb-count">
-          {items.length} widget{items.length === 1 ? '' : 's'}
-        </span>
-        <span className="wb-spacer" />
-        {editable && (
-          <button
-            type="button"
-            className={`wb-btn ${gridPinned ? 'wb-btn--on' : 'wb-btn--ghost'}`}
-            aria-pressed={gridPinned}
-            title="Keep the grid visible while arranging"
-            onClick={() => setGridPinned((on) => !on)}
-          >
-            ▦ Grid
-          </button>
-        )}
-        {editable && items.length > 0 && (
-          <>
-            <button
-              type="button"
-              className="wb-btn wb-btn--ghost"
-              onClick={fillWidth}
-              title="Re-pack the widgets you have so they span the full grid width. Moves tiles; removes nothing."
-            >
-              Fill width
-            </button>
-            <button
-              type="button"
-              className="wb-btn wb-btn--ghost"
-              onClick={resetLayout}
-              title="Restore the default widget set for this board — this REPLACES the widgets you have added."
-            >
-              Reset
-            </button>
-            <button type="button" className="wb-btn wb-btn--ghost" onClick={clearBoard}>
-              Clear
-            </button>
-          </>
-        )}
-      </div>
+      {(() => {
+        const toolbar = (
+          <div className={`wb-toolbar${toolbarPosition === 'top-row' ? ' wb-toolbar--top-row' : ''}`}>
+            {editable && (
+              <button
+                type="button"
+                className={`wb-btn ${libraryOpen ? 'wb-btn--ghost' : 'wb-btn--primary'}`}
+                aria-expanded={libraryOpen}
+                onClick={() => setLibraryOpen((open) => !open)}
+              >
+                {libraryOpen ? 'Close library' : '+ Add widget'}
+              </button>
+            )}
+            {title && <span className="wb-title">{title}</span>}
+            <span className="wb-count">
+              {items.length} widget{items.length === 1 ? '' : 's'}
+            </span>
+            <span className="wb-spacer" />
+            {editable && (
+              <button
+                type="button"
+                className={`wb-btn ${gridPinned ? 'wb-btn--on' : 'wb-btn--ghost'}`}
+                aria-pressed={gridPinned}
+                title="Keep the grid visible while arranging"
+                onClick={() => setGridPinned((on) => !on)}
+              >
+                ▦ Grid
+              </button>
+            )}
+            {editable && items.length > 0 && (
+              <>
+                <button
+                  type="button"
+                  className="wb-btn wb-btn--ghost"
+                  onClick={fillWidth}
+                  title="Re-pack the widgets you have so they span the full grid width. Moves tiles; removes nothing."
+                >
+                  Fill width
+                </button>
+                <button
+                  type="button"
+                  className="wb-btn wb-btn--ghost"
+                  onClick={resetLayout}
+                  title="Restore the default widget set for this board — this REPLACES the widgets you have added."
+                >
+                  Reset
+                </button>
+                <button type="button" className="wb-btn wb-btn--ghost" onClick={clearBoard}>
+                  Clear
+                </button>
+              </>
+            )}
+          </div>
+        );
+        // ⚠️ `TopRowSlotContent` renders NOTHING itself — it registers the node with the shell, which
+        // then renders it in `.main-top-row` beside the ℹ. So the toolbar must NOT also be returned
+        // inline, or the page would show two identical control rows.
+        return toolbarPosition === 'top-row' ? <TopRowSlotContent>{toolbar}</TopRowSlotContent> : toolbar;
+      })()}
 
       {editable && libraryOpen && <WidgetLibrary layout={items} onAdd={addWidget} />}
 

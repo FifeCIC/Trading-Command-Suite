@@ -1,4 +1,4 @@
-import { createThemeTokens } from '../tokens';
+import { createThemeTokens } from '../tokens.js';
 
 // Bloomberg Terminal inspired — pure black with neon green accents.
 const TERMINAL_PALETTE = {

@@ -21,6 +21,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { feedUnavailable } from '../core/api/feed-state.js';
 
 export function useSymbolLookups() {
   const posQuery = useQuery({
@@ -37,7 +38,10 @@ export function useSymbolLookups() {
 
   const metaQuery = useQuery({
     queryKey: ['all-symbols-meta'],
-    queryFn: () => apiGet('/api/symbols').catch(() => ({ symbols: [] })),
+    // ⚠️ NO `.catch(() => ({ symbols: [] }))` (#782 / INV-NO-EMPTY-SWALLOW) — a missing meta row
+    // renders as an ABSENT COLUMN rather than an error, which is the quiet wrong answer the docblock
+    // above already warns about.
+    queryFn: () => apiGet('/api/symbols'),
     staleTime: 120_000,
   });
   const symbolMeta = useMemo(() => {
@@ -47,5 +51,13 @@ export function useSymbolLookups() {
     return m;
   }, [metaQuery.data]);
 
-  return { positionBySymbol, symbolMeta };
+  return {
+    positionBySymbol,
+    symbolMeta,
+    // ⚠️ An absent column is a claim (#782). Callers that render per-symbol metadata must test this
+    // before treating a missing row as a fact about the symbol.
+    isError: feedUnavailable(posQuery) || feedUnavailable(metaQuery),
+    isLoading: posQuery.isLoading || metaQuery.isLoading,
+    retry: () => { posQuery.refetch(); metaQuery.refetch(); },
+  };
 }

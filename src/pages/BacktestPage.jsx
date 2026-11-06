@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ReplayPlayer from '../components/backtest/replay/ReplayPlayer';
 import InfoNote from '../components/InfoNote';
 import { apiGet, apiPost } from '../core/api/client';
+import { feedUnavailable } from '../core/api/feed-state.js';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import ProtocolCarousel from '../components/ProtocolCarousel';
@@ -253,7 +254,7 @@ const OUTPUT_OPTIONS = [
  * ⚠️ HOW THIS LIST WAS MEASURED, so the next reader can re-measure it:
  *   · every `nest/src/modules/directives/implementations/*.directive.ts` was scanned for
  *     `this.prisma.` or `fetch(` — exactly five matched: crypto-fear-greed (fetch),
- *     dilution-impact / earnings-momentum / insider-activity / social-buzz (prisma).
+ *     dilution-impact / earnings-momentum / insider-activity (prisma).
  *   · `news-catalyst` does not appear in that scan because it reads `input.news`, which nothing
  *     supplies — its own docblock says "INERT UNTIL A PRODUCER EXISTS".
  *
@@ -283,11 +284,6 @@ const EXTERNAL_SOURCES = {
     name: 'Insider filings',
     honest: true,
     note: 'Reads insider transactions within a window ending at the evaluated bar — no future filings leak in.',
-  },
-  'social-buzz': {
-    name: 'Social buzz',
-    honest: true,
-    note: 'Counts mentions in the 24 hours before the evaluated bar. ⚠️ Historical coverage depends on what the mention table actually holds for that period; an empty table reads as “no buzz”, not as “not measured”.',
   },
   'dilution-impact': {
     name: 'Dilution / share count',
@@ -726,9 +722,13 @@ export default function BacktestPage({ subject: fixedSubject }) {
 
   const protocolsQuery = useQuery({
     queryKey: ['pb-protocols'],
-    queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })),
+    // ⚠️ NO `.catch(() => ({ protocols: [] }))` (#782 / INV-NO-EMPTY-SWALLOW). The carousel's empty
+    // message is "No protocols match these filters." — a claim about the FILTER, shown when in fact
+    // the registry was never read. `protocolsUnread` selects a different message.
+    queryFn: () => apiGet('/api/scoring/gated/protocols'),
     staleTime: 60_000,
   });
+  const protocolsUnread = feedUnavailable(protocolsQuery);
   const protocols = useMemo(
     () => protocolsQuery.data?.protocols ?? [],
     [protocolsQuery.data],
@@ -2200,9 +2200,11 @@ export default function BacktestPage({ subject: fixedSubject }) {
             onChange={setProtocolId}
             label="Protocol"
             emptyMessage={
-              query.trim()
-                ? `No protocol matches “${query.trim()}”. Clear the search to see all ${protocols.length}.`
-                : 'No protocols match these filters.'
+              protocolsUnread
+                ? '⚠️ The protocol list could not be read — this is not a filter with no matches.'
+                : query.trim()
+                  ? `No protocol matches “${query.trim()}”. Clear the search to see all ${protocols.length}.`
+                  : 'No protocols match these filters.'
             }
           />
         ) : (

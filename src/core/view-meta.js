@@ -521,6 +521,24 @@ const VIEW_META = {
     css: 'src/pages/t212-portfolio.css',
     api: [],
   },
+  // Accounts area — added 2026-11-06 (owner direction). `review: 'pending'` because the owner has not
+  // walked either page yet; flipping it to `approved` is the walkthrough's verdict, not the author's.
+  '/trading212/brokers': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Brokers',
+    file: 'src/pages/BrokersPage.jsx',
+    css: 'src/pages/brokers.module.css',
+    api: ['GET /api/providers/mt5/accounts', 'GET /api/broker-symbols/summary'],
+  },
+  '/trading212/vendors': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Vendors',
+    file: 'src/pages/VendorsPage.jsx',
+    css: 'src/pages/vendors.module.css',
+    api: ['GET /api/providers/health', 'GET /api/providers/mt5/accounts'],
+  },
   '/trading212/t212-isa': {
     tier: 'free',
     review: 'approved',
@@ -615,6 +633,14 @@ const VIEW_META = {
   // (owner direction — the strategies page had eleven steps and four tabs). It reads and compares
   // stored runs and nothing else, so its API list is deliberately short: `runs`, `runs/compare` and
   // the per-run delete. It does NOT run a backtest and must not be given the run endpoints.
+  '/lab/walk-forward-survivors': {
+    tier: 'free',
+    review: 'pending',
+    label: 'Walk-Forward Survivors',
+    file: 'src/pages/WalkForwardSurvivorsPage.jsx',
+    css: 'src/pages/walk-forward-survivors.css',
+    api: ['GET /api/backtest/walk-forward-survivors'],
+  },
   '/lab/backtest-runs': {
     tier: 'premium',
     review: 'pending',

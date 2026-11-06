@@ -27,6 +27,8 @@ import { AutomationController } from './automation.controller';
 import { StopGuardianController } from './stop-guardian.controller';
 import { EventRiskController } from './timeline.controller';
 import { AbTestController } from './ab-test.controller';
+import { ExperimentReviewService } from './experiment-review.service';
+import { ExperimentReviewController } from './experiment-review.controller';
 
 /**
  * AutomationModule is @Global() (2026-08-23).
@@ -43,7 +45,7 @@ import { AbTestController } from './ab-test.controller';
 @Global()
 @Module({
   imports: [DirectivesModule, CalibrationModule, ScoringModule, ProvidersModule, TradingModule, DiversificationModule, MarketDataModule, SymbolsModule, CalendarModule, AuthModule, SignalsModule, NotificationsModule],
-  controllers: [AutomationController, StopGuardianController, EventRiskController, AbTestController, JobQueueController],
+  controllers: [AutomationController, StopGuardianController, EventRiskController, AbTestController, JobQueueController, ExperimentReviewController],
   providers: [
     SymbolDataCacheService,
     ProtocolRunnerService,
@@ -56,6 +58,7 @@ import { AbTestController } from './ab-test.controller';
     StopGuardianService,
     PositionTimeStopService,
     AuditLogService,
+    ExperimentReviewService,
   ],
   exports: [
     SymbolDataCacheService,
@@ -69,6 +72,7 @@ import { AbTestController } from './ab-test.controller';
     StopGuardianService,
     PositionTimeStopService,
     AuditLogService,
+    ExperimentReviewService,
   ],
 })
 export class AutomationModule {}

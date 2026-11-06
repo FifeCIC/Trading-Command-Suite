@@ -32,6 +32,7 @@
  * drop-in when the multi-screen cockpit needs it.
  */
 import { getWidget } from './widget-registry';
+import { BOARD_RETIRED } from './board-defaults.js';
 
 export const BOARD_VERSION = 3;
 
@@ -139,11 +140,24 @@ function createBoard(defaultWidgets = []) {
  * existing boards would otherwise never see them, and shipping them by changing
  * `defaultWidgets` only affects brand-new boards. `seeded` records what has been
  * offered, so a widget the user deliberately removed is NOT re-added.
+ *
+ * ⚠️ "NOT ALREADY PLACED" IS A SEPARATE TEST FROM "NOT ALREADY OFFERED" (added 2026-11-06).
+ * `seeded` lists only the defaults the seeder has handed out; a widget the user added BY HAND from the
+ * library lives in `items` and never in `seeded`. So a default added later is appended even when the
+ * board already shows that widget, and the user gets two tiles and has to work out which is "theirs".
+ * A duplicate is worse than a missing default — it reads as a board bug rather than a seeding one.
+ *
+ * ⚠️ THIS WAS ADDED AS A GUARD, NOT AS A FIX — say so rather than implying an incident. Measured
+ * 2026-11-06 on /dashboard/dashboard when `system-health` became a default: the board went 14 → 15
+ * items and the stored document contains **one** System Status, so the append was correct on that
+ * board because it genuinely had none. The duplicate was never observed; the condition that would
+ * produce it (hand-placed widget + later default) is what this line closes.
  */
 export function applyNewDefaults(board, defaultWidgets = []) {
   const offered = Array.isArray(board.seeded) ? board.seeded : [];
   const wanted = (defaultWidgets || []).filter((id) => !!getWidget(id));
-  const additions = wanted.filter((id) => !offered.includes(id));
+  const placed = new Set((board.items || []).map((it) => it.widgetId));
+  const additions = wanted.filter((id) => !offered.includes(id) && !placed.has(id));
 
   if (!additions.length) {
     const nextOffered = [...new Set([...offered, ...wanted])];
@@ -197,6 +211,35 @@ const safeParse = (raw) => {
 };
 
 /**
+ * applyRetired(board, retiredWidgets) — remove a default that the owner has since RETIRED, once.
+ *
+ * WHY THIS EXISTS BESIDE applyNewDefaults: changing `BOARD_DEFAULTS` only affects a brand-new board.
+ * A widget the owner asked to hide is already sitting in his stored board, so hiding it needs a
+ * one-time REMOVAL — and it has to be one-time, because the widget stays in the library and he may
+ * add it back by hand. `retired` records what has been removed; a widget re-added later is not
+ * removed again.
+ *
+ * Measured 2026-11-06: the dashboard board held 15 items, of which `diversification` (a two-line
+ * "Mode: OFF / no duplicates" panel) and `automation` (a duplicate of the loop state now shown inside
+ * System Status) were the two the owner asked to hide.
+ */
+export function applyRetired(board, retiredWidgets = []) {
+  const done = Array.isArray(board.retired) ? board.retired : [];
+  const wanted = (retiredWidgets || []).filter((id) => !done.includes(id));
+  if (!wanted.length) return board;
+
+  const dropUids = new Set(
+    (board.items || []).filter((it) => wanted.includes(it.widgetId)).map((it) => it.uid),
+  );
+  const items = (board.items || []).filter((it) => !dropUids.has(it.uid));
+  const layouts = { ...board.layouts };
+  for (const [bp, list] of Object.entries(layouts)) {
+    if (Array.isArray(list)) layouts[bp] = list.filter((l) => !dropUids.has(l.i));
+  }
+  return { ...board, items, layouts, retired: [...new Set([...done, ...wanted])] };
+}
+
+/**
  * loadBoard(boardId, defaultWidgets) — read the stored board, migrating the
  * retired split keys on the way through. Synchronous because the current
  * backend is localStorage; the component only ever calls this once per mount.
@@ -205,7 +248,7 @@ export function loadBoard(boardId, defaultWidgets = []) {
   if (typeof localStorage === 'undefined') return createBoard(defaultWidgets);
 
   const current = migrate(safeParse(localStorage.getItem(`tcs:view-state:${boardStorageKey(boardId)}`)));
-  if (current) return applyNewDefaults(current, defaultWidgets);
+  if (current) return applyRetired(applyNewDefaults(current, defaultWidgets), BOARD_RETIRED[boardId] || []);
 
   // ── Legacy migration (pre-v2 split keys) ──
   const legacyItems = safeParse(localStorage.getItem(`tcs:view-state:widgets:${boardId}`));
@@ -224,7 +267,7 @@ export function loadBoard(boardId, defaultWidgets = []) {
         localStorage.removeItem(`tcs:view-state:widgets:${boardId}`);
         localStorage.removeItem(`tcs:view-state:widgets-layout:${boardId}`);
       } catch { /* noop */ }
-      return applyNewDefaults(board, defaultWidgets);
+      return applyRetired(applyNewDefaults(board, defaultWidgets), BOARD_RETIRED[boardId] || []);
     }
   }
 

@@ -31,6 +31,7 @@ import { useScrollReveal } from '../hooks/useScrollReveal';
 import { useSymbolLookups } from '../hooks/useSymbolLookups';
 import { useScoreDisplay } from '../hooks/useScoreDisplay';
 import { useCardCopy } from '../hooks/useCardCopy';
+import { planSelection, protocolPanelState } from '../core/ladder-selection.js';
 import './ladder.css';
 
 const DIRECTION_OPTIONS = [
@@ -220,6 +221,15 @@ export default function LadderPage() {
   // The active selection set is the current direction's own bucket.
   const selectedIds = selectedByDir[direction] || [];
 
+  // ⚠️ The three-way state is decided by a TESTED function, not by an inline `.length === 0` check
+  // (#782). `ladder-selection.test.js` asserts that a failed fetch is never reported as empty, and
+  // that "not loaded yet" is reported as neither empty nor an error.
+  const panelState = protocolPanelState({
+    isError,
+    loaded,
+    applicableCount: applicableProtocols.length,
+  });
+
   // ── Seed (once) or prune the CURRENT direction's selection. ──
   //
   // ⚠️ THE ORDER OF THESE GUARDS *IS* THE FIX — do not reorder or "simplify" them.
@@ -241,27 +251,29 @@ export default function LadderPage() {
   // Other directions' buckets are never touched, so BOTH → LONG → BOTH restores each
   // view's own selection.
   useEffect(() => {
-    if (!loaded) return;
-    if (applicableProtocols.length === 0) return;
+    // ⚠️ THE DECISION LIVES IN `core/ladder-selection.js`, NOT HERE (#782). It was two missing
+    // guards inside this effect, and a guard that only exists inside an effect cannot be tested
+    // without a browser and a failing API — so it drifted back once already. The rules are now a
+    // table `ladder-selection.test.js` walks; this effect only applies the result.
+    const plan = planSelection({
+      loaded,
+      applicableIds: applicableProtocols.map((p) => p.id),
+      current: selectedByDir[direction] || [],
+      alreadySeeded: selectedByDir.seeded?.[direction] === true,
+    });
 
-    const applicableIds = applicableProtocols.map((p) => p.id);
-    const applicableIdSet = new Set(applicableIds);
-    const alreadySeeded = selectedByDir.seeded?.[direction] === true;
-
-    if (!alreadySeeded) {
+    if (plan.action === 'seed') {
       setSelectedByDir((prev) => ({
         ...prev,
-        [direction]: applicableIds,
+        [direction]: plan.ids,
         seeded: { ...(prev.seeded || {}), [direction]: true },
       }));
-      return;
+    } else if (plan.action === 'prune' || plan.action === 'migrate') {
+      // `migrate` writes the RENAMED ids only — no id is dropped. Without it a pre-rename selection
+      // stays pre-rename in storage and would prune to nothing on the next load (#782 follow-up).
+      setSelectedByDir((prev) => ({ ...prev, [direction]: plan.ids }));
     }
-
-    const cur = selectedByDir[direction] || [];
-    const kept = cur.filter((id) => applicableIdSet.has(id));
-    if (kept.length !== cur.length) {
-      setSelectedByDir((prev) => ({ ...prev, [direction]: kept }));
-    }
+    // `none` writes nothing — that is the fix, not an omission.
   }, [direction, applicableProtocols, selectedByDir, setSelectedByDir, loaded]);
 
   const selectedProtocols = applicableProtocols.filter((p) => selectedIds.includes(p.id));
@@ -447,13 +459,16 @@ export default function LadderPage() {
           <h2 className="lad-proto-title">
             {direction === 'all' ? 'Active Protocols' : 'Applicable Protocols'}
           </h2>
-          {isError && applicableProtocols.length === 0 ? (
+          {panelState === 'error' ? (
             /*
               ⚠️ A FAILED REQUEST MUST NOT BE REPORTED AS AN EMPTY REGISTRY (#782 defect 1).
               "No active protocols." is a confident claim about the registry; when the fetch failed the
               honest statement is about the REQUEST. The old code could only ever say the first, because
               `useProtocolData` converted the failure into `{ protocols: [] }` and react-query recorded a
               success — so `isError` was never true here.
+
+              ⚠️ The three-way choice is `protocolPanelState()` from `core/ladder-selection.js`, so
+              `ladder-selection.test.js` asserts THIS branch rather than a copy of it.
             */
             <p className="lad-proto-empty">
               ⚠️ Could not load protocols — the request failed
@@ -463,8 +478,12 @@ export default function LadderPage() {
                 Retry
               </button>
             </p>
-          ) : applicableProtocols.length === 0 ? (
+          ) : panelState === 'empty' ? (
             <p className="lad-proto-empty">No {direction === 'all' ? 'active' : 'applicable'} protocols.</p>
+          ) : panelState === 'loading' ? (
+            /* ⚠️ NEITHER "empty" NOR "error" is knowable yet, so say neither. The old code fell
+               straight to the empty copy here because it only tested `.length === 0`. */
+            <p className="lad-proto-empty">Loading protocols…</p>
           ) : (
             <ul className="lad-proto-list">
               {applicableProtocols.map((p) => (

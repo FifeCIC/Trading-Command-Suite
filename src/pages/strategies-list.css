@@ -65,7 +65,7 @@
 .sl-toggle-error {
   margin-bottom: 0.75rem; padding: 0.5rem 0.8rem;
   font-size: 0.78rem; color: var(--ink);
-  background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--danger);
+  background: var(--panel); border: 1px solid var(--line); 
   border-radius: 8px;
 }
 

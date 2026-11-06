@@ -89,6 +89,10 @@ export default function StrategyCreatePage() {
   // exit half would have been unpaired on the only surface that creates a bot.
   const [sessionTags, setSessionTags] = useState([]);
   const [exitBeforeUtc, setExitBeforeUtc] = useState('');
+  // Money take-profit (2026-11-06). EMPTY means "no money target" — the column is NULL and the
+  // mechanism never acts. Set it and the guardian closes the position when unrealised P&L reaches
+  // this amount in the ACCOUNT currency, which is the only way to express "five pounds" exactly.
+  const [takeProfitAmount, setTakeProfitAmount] = useState('');
   const [hotStockEnabled, setHotStockEnabled] = useState(false);
   const [hotStockAllocation, setHotStockAllocation] = useState('');
   const [hotStockDetectionMode, setHotStockDetectionMode] = useState('');
@@ -101,16 +105,20 @@ export default function StrategyCreatePage() {
   const [msg, setMsg] = useState('');
 
   // ── Data ──
-  const { data: protocols = [], isLoading: protoLoading } = useQuery({
+  // ⚠️ NO `.catch()` FALLBACKS ON THESE THREE (#782 / INV-NO-EMPTY-SWALLOW). Each feeds a REQUIRED
+  // select on a create form. A swallowed failure produced "no protocols" / "no watchlists" /
+  // "no brokers" — read by the user as a statement about THEIR data, and unfixable because there was
+  // nothing to retry.
+  const { data: protocols = [], isLoading: protoLoading, isError: protoError, refetch: refetchProtocols } = useQuery({
     queryKey: ['create-protocols'],
-    queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })),
+    queryFn: () => apiGet('/api/scoring/gated/protocols'),
     staleTime: 60_000,
   });
   const protoList = protocols?.protocols || protocols || [];
 
-  const { data: watchlists = [] } = useQuery({
+  const { data: watchlists = [], isError: wlError, refetch: refetchWatchlists } = useQuery({
     queryKey: ['create-watchlists'],
-    queryFn: () => apiGet('/api/watchlists').catch(() => ({ watchlists: [] })),
+    queryFn: () => apiGet('/api/watchlists'),
     staleTime: 30_000,
   });
   // ⚠️ THE FIELDS ARE `id` AND `label` — THERE IS NO `name` (measured 2026-10-09, #1098).
@@ -130,9 +138,9 @@ export default function StrategyCreatePage() {
   }, [watchlists]);
 
   // Broker configs — from API
-  const { data: brokerData } = useQuery({
+  const { data: brokerData, isError: brokerError, refetch: refetchBrokers } = useQuery({
     queryKey: ['broker-configs'],
-    queryFn: () => apiGet('/api/brokers').catch(() => ({ brokers: [] })),
+    queryFn: () => apiGet('/api/brokers'),
     staleTime: 300_000,
   });
   const brokerMap = useMemo(() => {
@@ -370,6 +378,7 @@ export default function StrategyCreatePage() {
       maxSize: maxSize ? Number(maxSize) : undefined,
       maxPositions: Number(maxPositions),
       maxPyramidTiers: Number(maxPyramidTiers) || 1,
+      takeProfitAmount: takeProfitAmount ? Number(takeProfitAmount) : undefined,
       maxDailyLoss: maxDailyLoss ? Number(maxDailyLoss) : undefined,
       cooldownMinutes: Number(cooldownMinutes),
       // #928 — JSON array, or null when ungated. `parseSessionWindow` on the server reads BOTH the
@@ -399,6 +408,27 @@ export default function StrategyCreatePage() {
         </h1>
         </div>
       </motion.header>
+
+      {/* ⚠️ A picker that cannot load must say so (#782). "No watchlists" on a CREATE form reads as a
+          statement about the user's own data — the one thing they know is wrong. */}
+      {(protoError || wlError || brokerError) && (
+        <p className="stratcreate-feed-error" role="alert">
+          ⚠️ Could not load {[
+            protoError && 'protocols',
+            wlError && 'watchlists',
+            brokerError && 'broker configs',
+          ].filter(Boolean).join(', ')} — the pickers below are incomplete, not empty.{' '}
+          <button
+            type="button"
+            className="stratcreate-retry"
+            onClick={() => {
+              if (protoError) refetchProtocols();
+              if (wlError) refetchWatchlists();
+              if (brokerError) refetchBrokers();
+            }}
+          >retry</button>
+        </p>
+      )}
 
       {/* Tabs */}
       <div className="stratcreate-tabs">
@@ -650,6 +680,16 @@ export default function StrategyCreatePage() {
                         N tiers; another bot's position on the same symbol is never counted against
                         it. Only effective on a <strong>hedging</strong> account — on a netting
                         account a second order merges into the first instead of opening a new ticket.
+                      </span>
+                    </label>
+                    <label className="stratcreate-field">
+                      <span>Take-profit target <BotRuleStatus field="takeProfitAmount" byField={botRuleFields} /></span>
+                      <input className="stratcreate-input" type="number" step="0.01" min="0" placeholder="empty = no money target" value={takeProfitAmount} onChange={e => setTakeProfitAmount(e.target.value)} />
+                      {/* The one field that expresses "five pounds" exactly — a % TP drifts with price. */}
+                      <span className="stratcreate-hint">
+                        Optional, in the <strong>account currency</strong>. The position is CLOSED when
+                        its live P&amp;L reaches this amount, so it stays the same money at any price
+                        level. Empty means the mechanism never acts.
                       </span>
                     </label>
                   </div>

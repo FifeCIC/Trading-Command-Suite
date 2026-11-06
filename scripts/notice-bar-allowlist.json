@@ -1,0 +1,4 @@
+{
+  "_comment": "Exceptions for validate-no-notice-bar.cjs. An entry is for a rule that draws a thick left edge for a reason that is NOT notice chrome. Silencing a real notice bar here is the same defect as allowlisting any other guard — add the reason, not the selector alone.",
+  "exceptions": []
+}

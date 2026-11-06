@@ -76,7 +76,7 @@
 /* Signal cards */
 .msd-signal {
   padding: 10px 12px; border-radius: 6px; margin-bottom: 5px;
-  border-left: 4px solid transparent;
+
 }
 .msd-signal-strong-up { background: rgba(34,197,94,0.08); border-color: var(--color-profit); }
 .msd-signal-up { background: rgba(34,197,94,0.04); border-left-color: rgba(34,197,94,0.45); }

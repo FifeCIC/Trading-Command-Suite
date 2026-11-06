@@ -128,12 +128,16 @@ import ScheduledJobsPage from '../pages/ScheduledJobsPage.jsx';
 import Mt5StatusPage from '../pages/Mt5StatusPage.jsx';
 import T212PortfolioPage from '../pages/T212PortfolioPage.jsx';
 import T212ISAPage from '../pages/T212ISAPage.jsx';
+// Accounts area — added 2026-11-06 (owner direction): the venues/accounts, and the data vendors.
+import BrokersPage from '../pages/BrokersPage.jsx';
+import VendorsPage from '../pages/VendorsPage.jsx';
 
 // ── Data ──
 import DataAreaLandingPage from '../pages/DataAreaLandingPage.jsx';
 import DatabaseTablesPage from '../pages/DatabaseTablesPage.jsx';
 import BacktestDataPage from '../pages/BacktestDataPage.jsx';
 import BacktestRunsPage from '../pages/BacktestRunsPage.jsx';
+import WalkForwardSurvivorsPage from '../pages/WalkForwardSurvivorsPage.jsx';
 import CurrentStrategyPage from '../pages/CurrentStrategyPage.jsx';
 import DataStatusPage from '../pages/DataStatusPage.jsx';
 import DataElementsPage from '../pages/DataElementsPage.jsx';
@@ -262,6 +266,9 @@ export const VIEW_COMPONENTS = {
   'order-testing': OrderTestingPage,
   't212-portfolio': T212PortfolioPage,
   't212-isa': T212ISAPage,
+  // Accounts area — 2026-11-06. `brokers` = venues + their accounts; `vendors` = sources of data.
+  'brokers': BrokersPage,
+  'vendors': VendorsPage,
   'portfolio-overview': PortfolioPage,
   'portfolio-events': PortfolioEventsPage,
   'trade-history': TradeHistoryPage,
@@ -328,6 +335,7 @@ export const VIEW_COMPONENTS = {
   'database-tables': DatabaseTablesPage,
   'backtest-data': BacktestDataPage,
   'backtest-runs': BacktestRunsPage,
+  'walk-forward-survivors': WalkForwardSurvivorsPage,
   'data-status': DataStatusPage,
   'data-elements': DataElementsPage,
   'decoder': DecoderPage,

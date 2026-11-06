@@ -96,18 +96,30 @@ export default function MarketContextPage() {
   });
 
   // Portfolio positions for session strength + checklist verification
+  // ⚠️ NO `.catch()` FALLBACKS ON EITHER QUERY (#782 / INV-NO-EMPTY-SWALLOW). Both feed derived
+  // counts the page presents as facts about right now: `positions` drives the session-strength and
+  // checklist panels, `recentRuns` drives the breadth/session scoring. A swallowed failure made an
+  // outage indistinguishable from "flat book, no scores" — on a page whose panels are labelled
+  // "right now", which is exactly what makes the wrong answer believable.
   const portfolioQuery = useQuery({
     queryKey: ['portfolio-for-market-context'],
-    queryFn: () => apiGet('/api/portfolio?source=mt5').catch(() => ({ positions: [] })),
+    queryFn: () => apiGet('/api/portfolio?source=mt5'),
     refetchInterval: 60_000,
   });
 
   // Scoring data for session strength
   const scoresQuery = useQuery({
     queryKey: ['scoring-for-market-context'],
-    queryFn: () => apiGet('/api/scoring/runs?limit=5').catch(() => ({ runs: [] })),
+    queryFn: () => apiGet('/api/scoring/runs?limit=5'),
     refetchInterval: 120_000,
   });
+
+  const positionsUnavailable = portfolioQuery.isError;
+  const scoresUnavailable = scoresQuery.isError;
+  const retryFeeds = () => {
+    if (portfolioQuery.isError) portfolioQuery.refetch();
+    if (scoresQuery.isError) scoresQuery.refetch();
+  };
 
   const day = data?.currentDay;
   const rawSessions = data?.sessions || [];
@@ -205,6 +217,16 @@ export default function MarketContextPage() {
       </header>
 
       {isError && <ApiOfflineBanner />}
+
+      {/* A failed FEED is not an offline API (#782). The panels below derive session strength and
+          breadth from these two, so their failure must be named rather than rendered as zero. */}
+      {(positionsUnavailable || scoresUnavailable) && (
+        <Notice level="warning">
+          ⚠️ {positionsUnavailable ? 'Portfolio positions' : 'Scoring runs'} could not be loaded — the
+          session panels below are based on an incomplete picture, not on a flat book.{' '}
+          <button type="button" className="mc-retry" onClick={retryFeeds}>retry</button>
+        </Notice>
+      )}
 
       {/* ── Pre-flight status ── */}
       <Notice level={preflightOk ? 'success' : 'warning'}>

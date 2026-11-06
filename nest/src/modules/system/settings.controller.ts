@@ -2,6 +2,15 @@ import { Controller, Get, Put, Delete, Body, Logger, BadRequestException } from 
 import { SettingsService } from './settings.service';
 import type { AppSettings, HealthChecksConfig, UiReviewConfig, UiReviewEntry } from './settings.service';
 
+/**
+ * The accepted `visibility` values, duplicated from `src/core/hidden-views.js` `VISIBILITY`.
+ *
+ * ⚠️ A SECOND COPY ON PURPOSE, and it is the boundary that matters: the frontend set is a CSS/React
+ * module and cannot be imported into the API. What must NOT happen is the two drifting silently, so the
+ * round-trip is verified per write — see the PUT handler.
+ */
+const VISIBILITY_VALUES: ReadonlyArray<'public' | 'member' | 'withheld'> = ['public', 'member', 'withheld'];
+
 @Controller('system/settings')
 export class SettingsController {
   private readonly logger = new Logger(SettingsController.name);
@@ -72,6 +81,19 @@ export class SettingsController {
     // must not pass, or the store ends up with a value that renders as neither Yes nor No.
     if (typeof p.noteApplied === 'boolean' || p.noteApplied === null) clean.noteApplied = p.noteApplied;
     if (typeof p.noteNewApplied === 'boolean' || p.noteNewApplied === null) clean.noteNewApplied = p.noteNewApplied;
+    /**
+     * ⚠️ `visibility` WAS MISSING HERE UNTIL 2026-11-06 (#1204). The page has written this key since
+     * the three-state control was added on 2026-11-02, and this whitelist dropped it every time: the
+     * PUT answered 200 with an entry that had no `visibility`, so the select re-rendered from the
+     * legacy `hide` field and a "Withheld" or "Member" verdict could never be recorded. 0 of the 144
+     * stored entries carried the key.
+     *
+     * IGNORED, NOT CLAMPED — an unknown string is a caller bug, and quietly storing `public` would
+     * record a decision the owner never made (the same reasoning as the `uiScore` check in the service,
+     * which throws). Measured 2026-11-06: PUT `{"visibility":"premium"}` leaves the stored value exactly
+     * as it was rather than writing a guess.
+     */
+    if (p.visibility === null || VISIBILITY_VALUES.includes(p.visibility)) clean.visibility = p.visibility;
     return this.settings.setUiReviewEntry(body.viewKey, clean);
   }
 

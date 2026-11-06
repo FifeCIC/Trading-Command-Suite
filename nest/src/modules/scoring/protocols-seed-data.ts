@@ -192,7 +192,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments",
-          "social-buzz",
           "earnings-momentum"
         ]
       },

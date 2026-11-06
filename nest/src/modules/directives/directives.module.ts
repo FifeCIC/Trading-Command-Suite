@@ -98,7 +98,6 @@ import { SessionOpenEffectDirective } from './implementations/session-open-effec
 import { BudgetGateDirective } from './implementations/budget-gate.directive';
 import { LiquidityCheckDirective } from './implementations/liquidity-check.directive';
 import { EarningsMomentumDirective } from './implementations/earnings-momentum.directive';
-import { SocialBuzzDirective } from './implementations/social-buzz.directive';
 import { InsiderActivityDirective } from './implementations/insider-activity.directive';
 import { DilutionImpactDirective } from './implementations/dilution-impact.directive';
 import { RolloverRiskDirective } from './implementations/rollover-risk.directive';
@@ -445,7 +444,6 @@ import { WeekendGapBiasDirective } from './implementations/weekend-gap-bias.dire
     LiquidityCheckDirective,
     // Q304 — Fundamental / Sentiment (Finnhub free tier)
     EarningsMomentumDirective,
-    SocialBuzzDirective,
     InsiderActivityDirective,
     DilutionImpactDirective,
     RolloverRiskDirective,
@@ -609,7 +607,6 @@ export class DirectivesModule implements OnModuleInit {
     private readonly liquidityCheck: LiquidityCheckDirective,
     // Q304 — Fundamental / Sentiment (Finnhub)
     private readonly earningsMomentum: EarningsMomentumDirective,
-    private readonly socialBuzz: SocialBuzzDirective,
     private readonly insiderActivity: InsiderActivityDirective,
     private readonly dilutionImpact: DilutionImpactDirective,
     private readonly rolloverRisk: RolloverRiskDirective,
@@ -811,7 +808,6 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.liquidityCheck);
     // Q304 — Fundamental / Sentiment
     this.directivesService.register(this.earningsMomentum);
-    this.directivesService.register(this.socialBuzz);
     this.directivesService.register(this.insiderActivity);
     this.directivesService.register(this.dilutionImpact);
     this.directivesService.register(this.rolloverRisk);

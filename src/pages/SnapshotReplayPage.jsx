@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { createChart, CandlestickSeries } from 'lightweight-charts';
 import { apiGet, apiPost } from '../core/api/client';
+import { feedUnavailable } from '../core/api/feed-state.js';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
@@ -80,10 +81,14 @@ export default function SnapshotReplayPage() {
   // ── Protocols for canonical scoring (each replay scores the selected set) ──
   const protocolsQuery = useQuery({
     queryKey: ['replay-protocols'],
-    queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })),
+    // ⚠️ NO `.catch(() => ({ protocols: [] }))` (#782 / INV-NO-EMPTY-SWALLOW). An empty list renders a
+    // protocol selector with no chips AND disables Run — the page then says "no protocols" when the
+    // truth is "the request failed".
+    queryFn: () => apiGet('/api/scoring/gated/protocols'),
     staleTime: 60_000,
   });
   const protocols = protocolsQuery.data?.protocols || [];
+  const protocolsUnread = feedUnavailable(protocolsQuery);
 
   // ── Run replay ──
   const replayMutation = useMutation({
@@ -325,6 +330,12 @@ export default function SnapshotReplayPage() {
       {/* ── Protocol selection (canonical scoring set) ── */}
       <div className="sr-protocol-select">
         <span className="sr-protocol-select-label">Protocols:</span>
+        {protocolsUnread && (
+          <span className="sr-proto-chip" role="alert" title="The protocol list could not be read — this is not an empty registry">
+            ⚠️ protocol list unread —{' '}
+            <button type="button" className="sr-proto-retry" onClick={() => protocolsQuery.refetch()}>retry</button>
+          </span>
+        )}
         {protocols.map((p) => {
           const checked = selectedProtocols.includes(p.id);
           return (

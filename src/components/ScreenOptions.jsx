@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
+import { noticeFromError } from '../core/notices/from-error.js';
 import { usePreferences } from '../core/hooks/usePreferences';
 import { AVAILABLE_LOCALES } from '../core/notices/apply-locale';
 import { VIEW_EXPLANATIONS } from '../core/view-explanations';
@@ -483,6 +484,12 @@ export default function ScreenOptions({ activeView, area, onSettingsChange, isOp
   var [infoOpen, setInfoOpen] = useState(false);
   var [glossaryOpen, setGlossaryOpen] = useState(false);
   var [dismissed, setDismissed] = useState(new Set());
+  /**
+   * `accountsError` — a failed account/category toggle (#1204-adjacent report, 2026-11-06).
+   * Kept separate from the query state: a WRITE failure must not look like a failed READ, and the
+   * checkbox the user just moved has to be explained rather than silently snapping back.
+   */
+  var [accountsError, setAccountsError] = useState(null);
   var viewExplanation = activeView ? VIEW_EXPLANATIONS[activeView] : null;
 
   // ── Notification data ──
@@ -522,10 +529,36 @@ export default function ScreenOptions({ activeView, area, onSettingsChange, isOp
     refetchInterval: 60_000,
   });
   var portfolioAccounts = accountsQuery.data || { categories: [], grandTotal: null };
+
+  /**
+   * togglePortfolioAccount — flip one account/category, then re-read what the SERVER actually stored.
+   *
+   * ⚠️ TWO DEFECTS FIXED HERE (2026-11-06, reported by the primary agent from code-read):
+   *   1. THE REFETCH WAS A RACE. `apiPost(...)` was not awaited and `refetch()` was called on the very
+   *      next line, so the GET almost certainly read the PRE-toggle state — the checkbox snapped back
+   *      and only corrected on the next 60s poll. It now refetches in `.finally()`, which runs after
+   *      the POST settles either way, so the reload always sees a completed write.
+   *   2. THE FAILURE WAS DISCARDED by `.catch(function () {})`. Combined with the endpoint answering
+   *      `201 Created` for a refusal, a rejected toggle left NO trace anywhere — no message, no state
+   *      change, no log. The catch is now a real error surface; the API was fixed in the same change
+   *      to answer 400/404 instead of a 201 with `success:false`.
+   *
+   * ⚠️ `tcs:accounts-changed` fires only on SUCCESS. It tells other mounted panels to re-read the
+   * portfolio, and announcing a change that did not happen is the same false-success shape.
+   */
   var togglePortfolioAccount = useCallback(function (id, enabled) {
-    apiPost('/api/portfolio/accounts/' + id, { enabled: enabled }).catch(function () {});
-    accountsQuery.refetch();
-    try { window.dispatchEvent(new CustomEvent('tcs:accounts-changed')); } catch (e) {}
+    setAccountsError(null);
+    return apiPost('/api/portfolio/accounts/' + id, { enabled: enabled })
+      .then(function () {
+        try { window.dispatchEvent(new CustomEvent('tcs:accounts-changed')); } catch (e) {}
+      })
+      .catch(function (err) {
+        setAccountsError(noticeFromError(err, 'TCS-SYS-007', { operation: 'change this account selection' }));
+      })
+      .finally(function () {
+        // Either way the truth is on the server — re-read it rather than assuming the write landed.
+        accountsQuery.refetch();
+      });
   }, [accountsQuery]);
 
   // ── Trading layer switch (Trading area pages) ──
@@ -980,7 +1013,12 @@ export default function ScreenOptions({ activeView, area, onSettingsChange, isOp
                           )}
                           {section.type === 'accounts' && (
                             <div className="so-accounts">
-                              {(portfolioAccounts.categories || []).map(function (cat) {
+                              {accountsError && (
+                                <p className="so-accounts-error" role="alert">
+                                  <strong>{accountsError.title}</strong> {accountsError.message}
+                                  {accountsError.action ? ` ${accountsError.action}` : ''}
+                                </p>
+                              )}                              {(portfolioAccounts.categories || []).map(function (cat) {
                                 return (
                                   <div key={cat.id} className="so-accounts-cat">
                                     <label className="ff-checkbox-label so-accounts-cat-head">

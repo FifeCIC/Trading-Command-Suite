@@ -62,3 +62,21 @@
 .lc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .lc-btn-start { background: var(--risk-normal); border-color: transparent; color: #fff; }
 .lc-btn-stop { background: var(--risk-high); border-color: transparent; color: #fff; }
+
+/* ── Embedded in the System Status widget (2026-11-06) ──────────────────────────────────────────
+   The strip's own panel chrome is dropped — the widget card already supplies a border, a radius and
+   a background, so keeping them would draw a box inside a box (measured on the Dashboard: two nested
+   borders 8px apart). A bottom rule replaces the outer border, which is what separates the loop block
+   from the health facts underneath it. `justify-content: flex-start` because centred chips read as a
+   separate panel rather than the widget's first row. */
+.lc-strip--embedded {
+  justify-content: flex-start;
+  max-width: none;
+  margin: 0 0 0.55rem;
+  padding: 0 0 0.5rem;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  font-size: 0.72rem;
+}

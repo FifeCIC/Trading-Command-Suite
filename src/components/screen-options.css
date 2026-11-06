@@ -273,6 +273,19 @@
   flex-direction: column;
   gap: 8px;
 }
+
+/* A failed account toggle. Colour on the BORDER, text stays `--ink`: the semantic tones fail AA as
+   body text. `role="alert"` is on the element itself, so this only has to be visible. */
+.so-accounts-error {
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.75rem;
+  color: var(--ink, #e5e7eb);
+  background: var(--panel);
+  border: 1px solid var(--line, #374151);
+
+  border-radius: 6px;
+}
 .so-accounts-cat {
   display: flex;
   flex-direction: column;

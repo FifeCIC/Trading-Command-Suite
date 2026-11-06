@@ -164,6 +164,36 @@ for (const file of files) {
   const creates = extractCreateStatements(code);
   createStatements += creates.length;
   for (const stmt of creates) {
+    // ── 1b. EVERY CREATE TABLE must name its ENGINE (#613, added 2026-11-06) ─────────
+    //
+    // ⚠️ WHY THIS IS A BUILD GATE AND NOT A CONVENTION. Prisma's `migrate diff` emits `CREATE TABLE`
+    // with NO `ENGINE` clause, so a fresh install inherits the SERVER default — and this machine's
+    // default is **MyISAM** (measured: `SELECT @@default_storage_engine` → `MyISAM`). That is how the
+    // database reached **102 MyISAM tables of 136**: nothing ever asked for InnoDB, so a reinstall
+    // silently reverted every conversion.
+    //
+    // The cost was measured, not theoretical: `macrosnapshot` corrupted TWICE on MyISAM while the
+    // scoring path kept producing plausible numbers (its `.catch` only logs a warn), and MyISAM
+    // cannot hold a foreign key at all, so the whole referential layer (#1042) was impossible.
+    //
+    // A table with no ENGINE clause is therefore not "unspecified" — it is MyISAM on this server.
+    //
+    // ⚠️ SCOPE: `.sql` FILES ONLY. Measured 2026-11-06 on the first run of this check: it fired on
+    // five `.cjs`/`.ts` files that BUILD a CREATE statement as a string (`init-schema.cjs`,
+    // `gen-schema-init.cjs`, `validate-raw-managed-ddl.cjs`) or create a TEMPORARY probe table
+    // (`probe-timezone-roundtrip.cjs`, `fix-local-time-defaults.cjs`). None of those is shipped DDL,
+    // and a guard that fires on the tools that generate DDL gets allowlisted — which is worse than
+    // no guard. Narrow beats broad; the exemption is by FILE TYPE, never by filename.
+    if (rel.endsWith('.sql') && !/ENGINE\s*=/i.test(stmt)) {
+      violations.push({
+        rel,
+        why:
+          'CREATE TABLE declares NO ENGINE — it inherits the server default, which is MyISAM here, ' +
+          'so a reinstall recreates this table on the engine that cannot recover from a crash and ' +
+          `cannot hold a foreign key. Add:  ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=${MAJORITY}`,
+      });
+      continue;
+    }
     // Only statements that are actually InnoDB tables carry a collation to check.
     if (!/ENGINE\s*=\s*InnoDB/i.test(stmt)) continue;
     innodbStatements += 1;

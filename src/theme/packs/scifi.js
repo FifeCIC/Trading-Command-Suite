@@ -1,4 +1,4 @@
-import { createThemeTokens } from '../tokens';
+import { createThemeTokens } from '../tokens.js';
 
 const SCIFI_LIGHT = {
   bg: '#0f1b2e',

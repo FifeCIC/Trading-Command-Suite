@@ -1,9 +1,13 @@
 import { Controller, Get, Post, Body } from '@nestjs/common';
-import { StopGuardianService } from './stop-guardian.service';
+import { StopGuardianService, DEFAULT_TICK_INTERVAL_MS } from './stop-guardian.service';
+import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 
 @Controller('automation/stop-guardian')
 export class StopGuardianController {
-  constructor(private readonly guardian: StopGuardianService) {}
+  constructor(
+    private readonly guardian: StopGuardianService,
+    private readonly settings: SettingsResolverService,
+  ) {}
 
   /** GET /api/automation/stop-guardian/status */
   @Get('status')
@@ -29,10 +33,18 @@ export class StopGuardianController {
     return this.guardian.runNow();
   }
 
-  /** POST /api/automation/stop-guardian/interval */
+  /**
+   * POST /api/automation/stop-guardian/interval — change the cadence, PERSISTED.
+   *
+   * ⚠️ 2026-11-06 — THIS USED TO SET `state.tickIntervalMs` ONLY, so the value was lost on restart
+   * and the setting that now drives the cadence would have silently overwritten it on the next tick.
+   * It writes through `SettingsResolverService.set()`, which validates against the registry, and
+   * then applies it immediately; the guardian re-reads it every tick anyway, so the two agree.
+   */
   @Post('interval')
-  setInterval(@Body() body: { ms: number }) {
-    this.guardian.state.tickIntervalMs = body.ms;
-    return { intervalMs: this.guardian.state.tickIntervalMs };
+  async setInterval(@Body() body: { ms: number }) {
+    const written = await this.settings.set('automation.guardianTickIntervalMs', body?.ms);
+    const applied = await this.guardian.syncIntervalFromSettings();
+    return { intervalMs: applied, persisted: true, defaultValue: DEFAULT_TICK_INTERVAL_MS, setting: written?.key ?? 'automation.guardianTickIntervalMs' };
   }
 }

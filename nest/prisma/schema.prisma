@@ -1823,6 +1823,21 @@ model TradingStrategy {
   simTslActivationPct Float?
   simTslDistancePct   Float?
 
+  /// MONEY TAKE-PROFIT (2026-11-06) — close the position once its unrealised P&L reaches this
+  /// amount, in the ACCOUNT CURRENCY of the bridge that holds it (GBP on both demo accounts here).
+  ///
+  /// ⚠️ NULL IS THE CONTRACT, and it is the default: no existing bot changes behaviour, so nothing
+  /// needs an A/B copy to ship the column. A value > 0 opts ONE bot in.
+  ///
+  /// WHY A MONEY TARGET AND NOT A PERCENTAGE. `tpPct` is a fixed distance from entry, so the money it
+  /// captures DRIFTS with the price level: 0.23% on GER40 at 25,701 is 59 points = GBP 4.93, but at
+  /// 30,000 the same 0.23% is 69 points = GBP 5.75. A "five pound strategy" needs the target to stay
+  /// five pounds, which a percentage cannot express.
+  ///
+  /// ⚠️ It is evaluated by StopGuardianService on the same 10 s pass that re-derives the trailing
+  /// stop, and every unreadable input REFUSES with a reason rather than closing on a guess.
+  takeProfitAmount   Float?
+
   /// #995 — the UP-move exhaustion OBSERVER. ⚠️ Default OFF is the CONTRACT, not a
   /// convenience: no existing bot changes behaviour, so nothing here needs an A/B copy.
   /// ⚠️ NULL `exhaustionDecelPct` means "not configured", never "arm at 0%" — the observer

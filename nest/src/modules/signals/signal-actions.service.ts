@@ -11,7 +11,7 @@ import { ExecutionFeasibilityService } from '../trading/execution-feasibility.se
 // did not honour: measured 2026-09-21, 0.1 lots of gold — 23.6× the account balance — reached
 // broker.placeOrder() with all six portfolio caps unasked.
 import { TradingStrategyService } from '../trading/trading-strategy.service';
-import { ManualTradeDefaultsService } from './manual-trade-defaults.service';
+import { ManualTradeDefaultsService, resolveTradeSize } from './manual-trade-defaults.service';
 import { ManualTradeDto } from './dto/manual-trade.dto';
 import { SignalPlanDto } from './dto/signal-plan.dto';
 
@@ -177,21 +177,57 @@ export class SignalActionsService {
     // discovering it after the click (measured: US500's floor is 0.1 lots on both bridges
     // while the manual default is 0.01).
     const defaults = await this.tradeDefaults.getDefaults();
-    const quantity = body.size ?? defaults.size;
+    const requestedSize = body.size ?? defaults.size;
+    const sizeSource = body.size !== undefined ? 'caller' as const : 'setting' as const;
     const slPct = body.slPct ?? defaults.slPct;
     const tpPct = body.tpPct ?? defaults.tpPct;
 
     // #723 — the SAME feasibility assessment that annotated the signal at
     // generation time, re-run as the authoritative execution check (state can
     // change between generation and click). One library, two phases.
-    const feas = await this.feasibility.assess({
+    let feas = await this.feasibility.assess({
       symbol: ticker,
       side: body.side,
       brokerId,
       protocolId: protocol,
       marketStatus: marketStatus as any,
-      size: quantity,
+      size: requestedSize,
     });
+
+    // ── #835 — RESOLVE THE SIZE PER INSTRUMENT, THEN RE-CHECK ────────────────────────────────
+    //
+    // The broker's volume floor is per BROKER × INSTRUMENT (measured 2026-09-15: every index
+    // 0.1 lots, FX/metals 0.01), so ONE global manual size cannot be right: at 0.01 no index
+    // trade can fill, and at 0.1 every FX trade is 10× the intended risk. Both were observed live.
+    //
+    // So when — and only when — the assessment reports `size-below-minimum`, the size is raised to
+    // the floor THAT BLOCKER measured and the assessment is re-run. Three properties this keeps:
+    //
+    //   · the floor is never re-derived here; it is read from the blocker's `params`, so this path
+    //     and `ExecutionFeasibilityService` cannot disagree about the minimum (#835's own hazard);
+    //   · an unknown floor changes nothing — no `params.floor`, no raise, and the original blocker
+    //     stands, because "we could not ask the broker" is not evidence the size is wrong;
+    //   · the raise is reported back, so the operator sees the number that will be placed rather
+    //     than a silently different one.
+    const sizeBlocker = feas.blockers.find((b) => b.key === 'size-below-minimum');
+    let sizeResolution = resolveTradeSize(requestedSize, sizeBlocker?.params?.floor, sizeSource);
+    if (sizeResolution.raised) {
+      this.logger.log(
+        `#835 size raised for ${ticker}: ${sizeResolution.requested} → ${sizeResolution.placed} lots ` +
+        `(broker ${sizeBlocker?.params?.broker ?? '?'} floor ${sizeResolution.floor})`,
+      );
+      feas = await this.feasibility.assess({
+        symbol: ticker,
+        side: body.side,
+        brokerId,
+        protocolId: protocol,
+        marketStatus: marketStatus as any,
+        size: sizeResolution.placed,
+      });
+    }
+    // Everything downstream places `sizeResolution.placed`, never `requestedSize`.
+    const quantity = sizeResolution.placed;
+
     if (!feas.feasible) {
       // #826 Phase 1 — raise the CODE, not just a sentence.
       //
@@ -358,6 +394,10 @@ export class SignalActionsService {
       orderId: result.ticket ?? null,
       price: result.price ?? entryPrice,
       quantity,
+      // #835 — WHY THIS SIZE. `placed` is always `quantity`; the other three exist so the card can
+      // answer "why is this 0.1?" where the trade is placed. `raised` is the only field that says a
+      // NUMBER CHANGED under the operator, and it can only be true because a broker floor said so.
+      sizeResolution,
       sl: sl ?? null,
       tp: tp ?? null,
       status: 'open',

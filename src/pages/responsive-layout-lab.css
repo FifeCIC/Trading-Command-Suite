@@ -214,7 +214,11 @@
 
 /* Mobile: ≤480px */
 @media (max-width: 480px) {
-  .rll-card-grid { grid-template-columns: 1fr; }15rem; }
+  /* ⚠️ THIS LINE WAS `{ grid-template-columns: 1fr; }15rem; }` — a botched edit that closed the
+     media query early, so every rule below it (device buttons, column settings, the content-width
+     demos) applied at EVERY width and the trailing `}` was discarded. Invalid CSS, no error: the
+     mobile overrides were silently global. Repaired 2026-11-06. */
+  .rll-card-grid { grid-template-columns: 1fr; }
   .rll-device-btn { font-size: 0.62rem; padding: 0.2rem 0.4rem; }
   .rll-device-size { display: none; }
   .rll-col-settings { flex-direction: column; align-items: flex-start; gap: 0.15rem; }
@@ -225,3 +229,63 @@
   .rll-fixed-panel { max-width: 100%; }
   .rll-fill-bar { flex-direction: column; align-items: flex-start; }
 }
+
+/* ── Fluid vs stepped sizing (2026-11-06) ────────────────────────────────────────────────────────
+   The owner's report, verbatim: *"There's a lack of fluidity in many elements such as
+   <div class="t212p-summary-grid"> ... there's plenty room in some of the cards for them to shrink
+   when I open the Dev Tools sidebar or resize the screen."*
+   Measured on /trading212/t212-portfolio at 1600 → 640px: tile width went 148 → 147 → 162 → 178 →
+   205 → 141. It GREW as the window narrowed, then snapped smaller. The cause is
+   `repeat(auto-fill, minmax(140px, 1fr))`: the track can never go below 140px, so narrowing the
+   window drops a whole column and the survivors jump wider. Two demos below make the difference
+   visible side by side — the stepped one jumps, the fluid one shrinks smoothly. */
+.rll-fluid-section { margin-top: 1.25rem; }
+.rll-fluid-demos { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+
+.rll-fluid-demo {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+  background: var(--panel);
+}
+
+.rll-fluid-demo-label { font-size: 0.74rem; font-weight: 700; color: var(--ink); margin-bottom: 0.45rem; }
+
+/* A row of small figures — the same content in both demos, so only the LAYOUT differs. */
+.rll-tiles { display: grid; gap: 0.4rem; }
+.rll-tiles--stepped { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+
+/* The fluid row decides its column count at declared widths instead of letting the browser drop a
+   column wherever the 140px floor stops fitting. The container is the demo body, so this answers to
+   ITS width — not the window's — which is the point being demonstrated. */
+.rll-fluid-body { container-type: inline-size; }
+.rll-tiles--fluid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@container (min-width: 340px) { .rll-tiles--fluid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container (min-width: 520px) { .rll-tiles--fluid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@container (min-width: 720px) { .rll-tiles--fluid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+
+.rll-tile {
+  background: var(--bg-elev, var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  /* A grid track is what sizes this tile; `min-width: 0` is what lets it shrink below its content
+     width instead of forcing the track wider. */
+  min-width: 0;
+}
+.rll-tile-label {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rll-tile-value { font-size: 0.85rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Live width readout so the reader can see the frame they are judging. */
+.rll-fluid-readout { font-size: 0.68rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }

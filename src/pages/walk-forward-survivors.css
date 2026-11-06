@@ -1,0 +1,153 @@
+/**
+ * walk-forward-survivors.css — the survival list (#1201).
+ *
+ * ⚠️ THEMED TOKENS ONLY. An undefined custom property is silently dropped at runtime and the element
+ * falls back to inherited styling, so a wrong name is invisible in the browser and only
+ * `node scripts/validate-css-tokens.cjs` catches it.
+ *
+ * ⚠️ State is carried by a GLYPH plus the verdict's own word — never colour alone (ui-standards).
+ * The tint on a row is supplementary.
+ */
+
+.wfs-page {
+  padding: 24px 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.wfs-header {
+  margin-bottom: 16px;
+}
+
+.wfs-title {
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.wfs-lede {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  max-width: 78ch;
+}
+
+.wfs-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.wfs-pill {
+  font-size: 0.74rem;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.wfs-survived {
+  color: var(--risk-normal);
+  border-color: var(--risk-normal);
+}
+
+.wfs-overfit {
+  color: var(--risk-elevated);
+  border-color: var(--risk-elevated);
+}
+
+.wfs-stamp {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  margin-left: auto;
+}
+
+.wfs-table-wrap {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-x: auto;
+  background: var(--bg-elev);
+}
+
+.wfs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.wfs-caption {
+  caption-side: top;
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.wfs-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-strong);
+  white-space: nowrap;
+}
+
+.wfs-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink);
+  vertical-align: top;
+}
+
+.wfs-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The ranking column, given the weight the question deserves. */
+.wfs-oos {
+  font-weight: 600;
+}
+
+.wfs-symbol {
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+.wfs-window {
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.wfs-verdict {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.wfs-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--ink-soft);
+  white-space: normal;
+  max-width: 52ch;
+}
+
+@media (max-width: 720px) {
+  .wfs-page {
+    padding: 16px;
+  }
+  .wfs-stamp {
+    margin-left: 0;
+  }
+}

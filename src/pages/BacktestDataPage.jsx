@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { feedUnavailable } from '../core/api/feed-state.js';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import BacktestPeriodsPanel from '../components/backtest/BacktestPeriodsPanel';
 import './trading-platforms.css';
@@ -50,14 +51,18 @@ export default function BacktestDataPage() {
   });
 
   // Active recordings
+  // ⚠️ NO `.catch(() => ({ recordings: [] }))` (#782 / INV-NO-EMPTY-SWALLOW). An empty list renders
+  // every symbol's record button as OFF — so a failed poll would invite the user to "start" a
+  // recording that is already running server-side.
   const activeRec = useQuery({
     queryKey: ['bt-active-recordings'],
-    queryFn: () => apiGet('/api/speed/record/active').catch(() => ({ recordings: [] })),
+    queryFn: () => apiGet('/api/speed/record/active'),
     refetchInterval: 5000,
     staleTime: 2000,
   });
   const recordings = activeRec.data?.recordings ?? [];
   const recordingTickers = new Set(recordings.map((r) => r.ticker));
+  const recordingsUnread = feedUnavailable(activeRec);
 
   const toggleRecording = async (ticker) => {
     const isRec = recordingTickers.has(ticker.toUpperCase());
@@ -220,7 +225,13 @@ export default function BacktestDataPage() {
                     <td className="btd-center">{s.backtestRuns || '—'}</td>
                     <td className="tp-mono btd-cell-mono">{s.lastBacktest || '—'}</td>
                     <td>
-                      {recordingTickers.has(s.ticker) ? (
+                      {/* ⚠️ When the recording poll failed we do not know which are running (#782),
+                          so the control says so rather than offering a start/stop based on a guess. */}
+                      {recordingsUnread ? (
+                        <span className="tp-chip tp-chip--warn" title="The active-recording poll failed — this is unknown, not stopped">
+                          ⏺ ?
+                        </span>
+                      ) : recordingTickers.has(s.ticker) ? (
                         <button className="tp-chip tp-chip--warn btd-rec-btn" onClick={() => toggleRecording(s.ticker)} title={`⏺ Recording ${recordings.find(r => r.ticker === s.ticker)?.barCount ?? 0} 5s bars — click to stop`}>
                           ⏺ {recordings.find(r => r.ticker === s.ticker)?.barCount ?? 0}
                         </button>

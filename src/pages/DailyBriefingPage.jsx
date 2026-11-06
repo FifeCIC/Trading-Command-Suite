@@ -59,9 +59,13 @@ export default function DailyBriefingPage() {
   const diag = diagQuery.data || {};
   const mt5Connected = diag.connected === true;
 
+  // ⚠️ THE THREE BRIEFING FEEDS DO NOT SWALLOW (#782 / INV-NO-EMPTY-SWALLOW). A briefing is read as a
+  // statement of fact — "0 open positions", "no movers", "no watchlists" — and a swallowed failure
+  // states all three with total confidence. `mt5Connected` still gates the positions query, so an
+  // offline bridge remains a legitimate empty (isError false).
   const posQuery = useQuery({
     queryKey: ['briefing-positions'],
-    queryFn: () => apiGet('/api/providers/mt5/positions').catch(() => ({ positions: [] })),
+    queryFn: () => apiGet('/api/providers/mt5/positions'),
     refetchInterval: 60_000,
     enabled: mt5Connected,
   });
@@ -73,7 +77,7 @@ export default function DailyBriefingPage() {
   // ── Top movers ──
   const rankedQuery = useQuery({
     queryKey: ['briefing-ranked'],
-    queryFn: () => apiGet('/api/scoring/ranked?limit=10').catch(() => ({ ranked: [] })),
+    queryFn: () => apiGet('/api/scoring/ranked?limit=10'),
     refetchInterval: 60_000,
   });
   const ranked = rankedQuery.data?.ranked || [];
@@ -81,10 +85,21 @@ export default function DailyBriefingPage() {
   // ── Watchlists ──
   const wlQuery = useQuery({
     queryKey: ['briefing-watchlists'],
-    queryFn: () => apiGet('/api/watchlists').catch(() => []),
+    queryFn: () => apiGet('/api/watchlists'),
     staleTime: 120_000,
   });
   const watchlists = Array.isArray(wlQuery.data) ? wlQuery.data : [];
+
+  const failedFeeds = [
+    posQuery.isError && 'open positions',
+    rankedQuery.isError && 'top movers',
+    wlQuery.isError && 'watchlists',
+  ].filter(Boolean);
+  const retryFeeds = () => {
+    if (posQuery.isError) posQuery.refetch();
+    if (rankedQuery.isError) rankedQuery.refetch();
+    if (wlQuery.isError) wlQuery.refetch();
+  };
 
   // ── Invested symbols set ──
   const investedSymbols = useMemo(() => {
@@ -158,6 +173,14 @@ export default function DailyBriefingPage() {
           >🌙 Evening</button>
         </div>
       </header>
+
+      {/* ── Failed feeds (#782) — a briefing that silently omits a feed reads as a quiet day ── */}
+      {failedFeeds.length > 0 && (
+        <p className="db-feed-warning" role="alert">
+          ⚠️ Could not load {failedFeeds.join(', ')} — the sections below are <strong>incomplete</strong>,
+          not empty. <button type="button" className="db-retry" onClick={retryFeeds}>retry</button>
+        </p>
+      )}
 
       {/* ── Portfolio Snapshot (both modes) ── */}
       <section className="db-snapshot-grid">

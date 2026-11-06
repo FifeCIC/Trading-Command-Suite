@@ -274,7 +274,7 @@
 }
 .sdl-directive.bullish { border-color: var(--color-profit); }
 .sdl-directive.bearish { border-color: var(--color-loss); }
-.sdl-directive.neutral { border-left: 3px solid var(--border); }
+.sdl-directive.neutral {  }
 .sdl-dir-name {
   flex: 1;
   white-space: nowrap;

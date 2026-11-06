@@ -46,12 +46,11 @@ export const PROTOCOL_PRESETS: ProtocolPreset[] = [
     id: 'swing-long',
     name: 'Swing / Long-Term',
     description:
-      'EMA structure, Hurst exponent, earnings momentum, social buzz — weeks to months. Best for position trades.',
+      'EMA structure, Hurst exponent, earnings momentum — weeks to months. Best for position trades.',
     directives: [
       'ema-structure',
       'hurst-regime',
       'earnings-momentum',
-      'social-buzz',
     ],
   },
 ];

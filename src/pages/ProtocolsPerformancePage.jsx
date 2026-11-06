@@ -5,6 +5,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
+import { feedUnavailable } from '../core/api/feed-state.js';
 import { fetchScoringThresholds } from '../core/api/signals';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -17,15 +18,36 @@ export default function ProtocolsPerformancePage() {
   const [sortBy, setSortBy] = useState('score');
   const [protocolFilter, setProtocolFilter] = useState('all');
 
-  const { data: protocolsData } = useQuery({
-    queryKey: ['perf-protocols'], queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })), staleTime: 60_000,
+  // ⚠️ NO `.catch(() => ({ protocols: [] }))` / `.catch(() => [])` ON THESE THREE (#782) — the catch
+  // turned a failed request into the shape of a successful empty one, so the table rendered "0
+  // entries" and a P&L column of em-dashes as though the registry and the strategies had nothing in
+  // them. Measured: a 502 during an API restart is enough. The error gate below is what makes the
+  // difference visible.
+  //
+  // ⚠️ `feedUnavailable`, not `.isError` — during react-query's RETRY WAIT `isError` is still false and
+  // `data` is undefined, so an `isError`-only check leaves the fabricated "0 entries" on screen.
+  const protocolsQuery = useQuery({
+    queryKey: ['perf-protocols'], queryFn: () => apiGet('/api/scoring/gated/protocols'), staleTime: 60_000,
   });
-  const { data: runsData, isLoading: rLoading } = useQuery({
-    queryKey: ['perf-runs'], queryFn: () => apiGet('/api/scoring/runs?limit=200&groupBy=protocol').catch(() => ({ runs: [] })), staleTime: 10_000, refetchInterval: 30_000,
+  const runsQuery = useQuery({
+    queryKey: ['perf-runs'], queryFn: () => apiGet('/api/scoring/runs?limit=200&groupBy=protocol'), staleTime: 10_000, refetchInterval: 30_000,
   });
-  const { data: stratsData } = useQuery({
-    queryKey: ['perf-strats'], queryFn: () => apiGet('/api/trading/strategies/with-ratios').catch(() => []), staleTime: 15_000, refetchInterval: 30_000,
+  const stratsQuery = useQuery({
+    queryKey: ['perf-strats'], queryFn: () => apiGet('/api/trading/strategies/with-ratios'), staleTime: 15_000, refetchInterval: 30_000,
   });
+  const protocolsData = protocolsQuery.data;
+  const runsData = runsQuery.data;
+  const stratsData = stratsQuery.data;
+  const rLoading = runsQuery.isLoading;
+  // Any one of the three failing makes the table untrustworthy, so they share one gate.
+  const loadError = feedUnavailable(protocolsQuery) || feedUnavailable(runsQuery) || feedUnavailable(stratsQuery);
+  const loadErrorDetail = feedUnavailable(protocolsQuery) ? 'protocols'
+    : feedUnavailable(runsQuery) ? 'scores' : 'strategies';
+  const retryAll = () => {
+    if (protocolsQuery.isError || feedUnavailable(protocolsQuery)) protocolsQuery.refetch();
+    if (runsQuery.isError || feedUnavailable(runsQuery)) runsQuery.refetch();
+    if (stratsQuery.isError || feedUnavailable(stratsQuery)) stratsQuery.refetch();
+  };
 
   // Live classification bars (#847). `vm.pct` is percent-of-CAPACITY — rawComposite / rawMax, the
   // CONFIGURED denominator. Measured 2026-09-20: BTC = 58/1295 = 4.5, so on the legacy 65/40
@@ -100,9 +122,15 @@ export default function ProtocolsPerformancePage() {
       <div className="pl-toolbar">
         <label className="pl-filter">Sort:<select value={sortBy} onChange={e => setSortBy(e.target.value)}><option value="score">Score ▼</option><option value="pnl">P&amp;L ▼</option><option value="alpha">A→Z</option></select></label>
         <label className="pl-filter">Protocol:<select value={protocolFilter} onChange={e => setProtocolFilter(e.target.value)}><option value="all">All</option>{ids.filter(n => n !== 'all').map(id => <option key={id} value={id}>{protoMap[id] || id}</option>)}</select></label>
-        <span className="pl-count">{entries.length} entries</span>
+        <span className="pl-count">{loadError ? '— entries' : `${entries.length} entries`}</span>
       </div>
-      {rLoading ? <LoadingSkeleton variant="card" count={5} /> : (
+      {loadError ? (
+        <p className="pl-notice">
+          ⚠️ Could not load {loadErrorDetail} — the request failed, so{' '}
+          {rLoading ? 'this table is incomplete' : 'an empty table here would be wrong'}.{' '}
+          <button type="button" onClick={retryAll}>Retry</button>
+        </p>
+      ) : rLoading ? <LoadingSkeleton variant="card" count={5} /> : (
         <div className="pl-table-wrap"><table className="pl-table"><thead><tr><th>#</th><th>Symbol</th><th>Score</th><th>Signal</th><th>Protocol</th><th>P&amp;L</th><th>Ratio</th></tr></thead><tbody>
           {entries.map((e, i) => (<tr key={`${e.protocolId}:${e.ticker}`}><td className="pl-rank">{i + 1}</td><td className="pl-symbol">{e.ticker}</td><td><span className={standingClass(thresholdGeometry(e.vm.pct, scale).standing)}>{e.vm.pct != null ? `${e.vm.pct}%` : (e.score ?? '—')}</span></td><td>{e.vm.signal ? <span className={`pl-badge pl-badge-${String(e.vm.signal).replace('STRONG_', '').toLowerCase()}`}>{e.vm.signal}</span> : '—'}</td><td className="pl-muted">{e.protocolName}</td><td className={pnlClass(e.pnl)}>{pnlSign(e.pnl)}</td><td className="pl-muted">{e.ratio != null ? e.ratio.toFixed(2) : '—'}</td></tr>))}
         </tbody></table></div>

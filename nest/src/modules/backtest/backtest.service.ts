@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 // #965 item 1 — the sample bar is shared with the live snapshot trial's verdict rather than
 // re-declared here. See the module header for the measurement that produced it.
 import { assessSamples, MIN_SAMPLES_FOR_VERDICT } from '../../common/trading/verdict-bar';
+import { assessOverfit, OverfitAssessment } from '../../common/trading/overfit-verdict';
 import { DirectivesService } from '../directives/directives.service';
 import { DirectiveInput, DirectiveResult, MarketBar } from '../directives/interfaces/directive.interface';
 import { ProtocolDbService } from '../scoring/protocol-db.service';
@@ -2188,6 +2189,7 @@ export class BacktestService {
     let persistedRunId: string | null = null;
     try {
       const symbolRow = await this.prisma.symbol.findUnique({ where: { ticker: symbol.toUpperCase() } });
+      this.logger.log(`[persist-probe] symbol=` + JSON.stringify(symbol) + ` row=` + (symbolRow ? 'yes' : 'NO') + ` totalDays=` + totalDays + ` trades=` + trades.length);
       if (symbolRow) {
         const run = await this.prisma.backtestRun.create({
           data: {
@@ -4518,24 +4520,55 @@ export class BacktestService {
     protocolId?: string;
     slRange?: { min: number; max: number; step: number };
     tpRange?: { min: number; max: number; step: number };
-  }): Promise<{ train: BacktestResult; test: BacktestResult; optimizedParams: { slPct: number; tpPct: number }; outOfSampleWinRate: number | null }> {
+  }): Promise<{
+    train: BacktestResult;
+    test: BacktestResult;
+    optimizedParams: { slPct: number; tpPct: number };
+    outOfSampleWinRate: number | null;
+    verdict: OverfitAssessment;
+    experimentId: string;
+  }> {
     const { symbol, trainDays = 730, testDays = 365, protocolId, slRange = { min: 1, max: 5, step: 1 }, tpRange = { min: 1, max: 10, step: 2 } } = params;
     this.logger.log(`Walk-forward: ${symbol} train=${trainDays}d test=${testDays}d`);
 
-    // Step 1: Optimize on training period
+    // Step 1: Optimise on the training window.
     const opt = await this.optimize({ symbol, days: trainDays, protocolId, slRange, tpRange });
-    const bestParams = opt.params[0]; // highest win rate
 
-    // Step 2: Run on test period with optimized params
-    const testResult = await this.run({
-      symbol,
-      days: testDays,
-      protocolId,
-      slPct: bestParams.slPct,
-      tpPct: bestParams.tpPct,
+    // ⚠️ FIXED 2026-11-06 (#1201): this used to read `optimizedParams` from `opt.params[0]` (best WIN
+    // RATE) while `train` was `opt.best` (best TOTAL P&L). Those are two different runs whenever the
+    // grid disagrees, so the "in-sample" figure could belong to a configuration the test window never
+    // used — and the whole verdict is a comparison OF THE SAME CONFIGURATION across two windows.
+    //
+    // The tuning objective is therefore WIN RATE, stated: the verdict measures how much of a win rate
+    // survives, so selecting on P&L and then judging retention of win rate would compare two
+    // different things. Train is re-run with those params so both windows describe one configuration.
+    const bestParams = opt.params[0];
+    if (!bestParams) {
+      throw new Error(`Walk-forward produced no candidate on ${symbol} — nothing to validate.`);
+    }
+
+    // Both windows are RECORDED (not just returned): a fresh experiment per call, so the iteration
+    // numbers are deterministic — 1 = train, 2 = test. Nothing else reads that convention, and it is
+    // written into the experiment's `goal` so the next reader does not have to infer it.
+    const experiment = await this.createExperiment({
+      protocolId: protocolId || '_unscoped',
+      label: `Walk-forward ${symbol}`,
+      windowLabel: `train ${trainDays}d → test ${testDays}d`,
+      goal: 'iteration 1 = TRAIN window, iteration 2 = TEST window; both run with the SAME slPct/tpPct. '
+        + 'The verdict rule lives in nest/src/common/trading/overfit-verdict.ts and is derived on read, never stored.',
+      createdBy: 'walk-forward',
     });
 
-    const trainResult = opt.best;
+    const trainResult = await this.run({
+      symbol, days: trainDays, protocolId,
+      slPct: bestParams.slPct, tpPct: bestParams.tpPct,
+      experimentId: experiment.id,
+    });
+    const testResult = await this.run({
+      symbol, days: testDays, protocolId,
+      slPct: bestParams.slPct, tpPct: bestParams.tpPct,
+      experimentId: experiment.id,
+    });
 
     return {
       train: trainResult,
@@ -4545,6 +4578,93 @@ export class BacktestService {
       // fallback that used to sit here served the SIGNAL rate under a name reading "win rate",
       // which is the exact conflation this issue exists to remove.
       outOfSampleWinRate: testResult.stats.tradeWinRate ?? null,
+      verdict: assessOverfit({
+        inSampleWinRate: trainResult.stats.tradeWinRate ?? null,
+        outOfSampleWinRate: testResult.stats.tradeWinRate ?? null,
+        inSampleTrades: trainResult.stats.totalTrades ?? null,
+        outOfSampleTrades: testResult.stats.totalTrades ?? null,
+        label: symbol,
+      }),
+      experimentId: experiment.id,
     };
+  }
+
+  /**
+   * walkForwardSurvivors() — the list the issue asked for: **ranked by OUT-of-sample**, with the
+   * in-sample figure beside it so the gap is visible without arithmetic.
+   *
+   * ⚠️ RANKED BY OOS WINDOW, NEVER BY THE TUNED FIGURE. A leaderboard sorted by in-sample performance
+   * is a leaderboard of the best window-fitters, which is the opposite of the question.
+   *
+   * ⚠️ Every row carries its VERDICT and its sample. Most rows today read `insufficient-data` because
+   * a 730-day train window produces 22–24 trades against a 30-per-side bar — that is the honest
+   * answer and it is printed rather than hidden behind a rank.
+   */
+  async walkForwardSurvivors(): Promise<{
+    rows: Array<{
+      experimentId: string;
+      symbol: string;
+      window: string | null;
+      createdAt: string;
+      inSampleWinRate: number | null;
+      outOfSampleWinRate: number | null;
+      inSampleTrades: number | null;
+      outOfSampleTrades: number | null;
+      verdict: string;
+      retention: number | null;
+      note: string;
+    }>;
+    summary: Record<string, number>;
+    computedAt: string;
+  }> {
+    const experiments = await this.prisma.backtestExperiment.findMany({
+      where: { label: { startsWith: 'Walk-forward ' } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: {
+        runs: {
+          orderBy: { iteration: 'asc' },
+          select: {
+            iteration: true, winRate: true, totalTrades: true,
+            startDate: true, endDate: true,
+            symbol: { select: { ticker: true } },
+          },
+        },
+      },
+    });
+
+    const rows = [];
+    for (const e of experiments) {
+      const train = e.runs.find((r) => r.iteration === 1);
+      const test = e.runs.find((r) => r.iteration === 2);
+      const symbol = String((test as any)?.symbol?.ticker ?? (train as any)?.symbol?.ticker ?? '');
+      const v = assessOverfit({
+        inSampleWinRate: train?.winRate ?? null,
+        outOfSampleWinRate: test?.winRate ?? null,
+        inSampleTrades: train?.totalTrades ?? null,
+        outOfSampleTrades: test?.totalTrades ?? null,
+        label: symbol,
+      });
+      rows.push({
+        experimentId: e.id,
+        symbol,
+        window: e.windowLabel ?? null,
+        createdAt: e.createdAt.toISOString(),
+        inSampleWinRate: v.inSampleWinRate,
+        outOfSampleWinRate: v.outOfSampleWinRate,
+        inSampleTrades: train?.totalTrades ?? null,
+        outOfSampleTrades: test?.totalTrades ?? null,
+        verdict: v.verdict,
+        retention: v.retention,
+        note: v.note,
+      });
+    }
+
+    // Out-of-sample first; NULLs LAST — an unrankable row is not a row with a rate of zero.
+    rows.sort((a, b) => (b.outOfSampleWinRate ?? -1) - (a.outOfSampleWinRate ?? -1));
+
+    const summary: Record<string, number> = {};
+    for (const r of rows) summary[r.verdict] = (summary[r.verdict] ?? 0) + 1;
+    return { rows, summary, computedAt: new Date().toISOString() };
   }
 }

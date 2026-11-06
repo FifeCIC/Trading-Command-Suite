@@ -98,7 +98,23 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
   {
     id: 'sentiment',
     name: 'Sentiment & Fundamentals',
-    description: 'Analyst consensus, news, earnings, social',
+    // ── DECISION (2026-11-06, owner direction) ──
+    // WHAT:      `social-buzz` is REMOVED from this group, from every protocol, from the seed and
+    //            from the preset, and its directive class is DELETED. Social media is out of scoring.
+    // WHY:       It could never score — `socialmention` has held 0 rows since the table was created —
+    //            so it was pure denominator: 7 protocols carried it at maxScore 70-100 and their
+    //            `maxPossibleScore` included that capacity while the numerator could not reach it.
+    //            Owner: *"downgrade the importance of social media activity being part of scoring
+    //            process or any consideration."* Repairing it would mean wiring a social provider
+    //            the owner does not want, so removal is the fix, not a repair.
+    // INSTEAD OF: Fixing the feeder so the directive could score (what #912 asked for).
+    // REVERSE BY: Restoring `social-buzz.directive.ts`, its registration in `directives.module.ts`,
+    //            this group's list, and the 7 `protocol_directive_entry` rows. All four, or the
+    //            directive is inert capacity again.
+    // REGISTER:  docs/SETTLED-DECISIONS.md row 149
+    // GUARD:     validate-directive-id-references.cjs fails the build on a protocol naming an
+    //            unregistered directive; ⚠️ nothing fails if one is re-added by hand — recorded 🟡.
+    description: 'Analyst consensus, news, earnings',
     weight: 0.35,
     isRiskGate: false,
     minMultiplier: 1.0,
@@ -108,7 +124,7 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
       // (input.earningsDate) is not wired, so it can only return a constant
       // mock score. Kept as alpha + rehomed to the screener in #648.
       'analyst-adjustments',
-      'earnings-momentum', 'social-buzz', 'insider-activity',
+      'earnings-momentum', 'insider-activity',
       // Gold macro driver — DXY, real yields, VIX correlation for XAUUSD/XAGUSD:
       'gold-macro-correlation',
     ],
@@ -155,7 +171,7 @@ export const SHORT_DIRECTIVE_GROUPS: DirectiveGroup[] = [
       // NOTE (#626): 'earnings-proximity' intentionally removed (constant mock,
       // alpha; rehomed to the screener in #648).
       'analyst-adjustments',
-      'earnings-momentum', 'social-buzz',
+      'earnings-momentum',
     ],
   },
   {
@@ -218,7 +234,7 @@ export const BTC_SPEED_GROUPS: DirectiveGroup[] = [
     isRiskGate: false,
     minMultiplier: 1.0,
     maxMultiplier: 1.0,
-    directiveIds: ['crypto-fear-greed', 'social-buzz'],
+    directiveIds: ['crypto-fear-greed'],
     directiveMaxScores: { 'crypto-fear-greed': 60 },
   },
   {

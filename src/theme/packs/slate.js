@@ -1,4 +1,4 @@
-import { createThemeTokens } from '../tokens';
+import { createThemeTokens } from '../tokens.js';
 
 const SLATE_LIGHT = {
   bg: '#f1f5f9',

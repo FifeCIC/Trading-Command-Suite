@@ -374,7 +374,7 @@
 /* A run whose trades crossed bar-series holes. Amber, not red: the prices are real, the DURATIONS are
    not. It must be visible without competing with a genuine error. */
 .bt-gap-warning {
-  border-left: 3px solid var(--notice-warning-text, var(--ink-soft));
+
   padding-left: 0.5rem;
   color: var(--ink-soft);
 }

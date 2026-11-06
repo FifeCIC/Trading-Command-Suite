@@ -1,4 +1,4 @@
-import { createThemeTokens } from '../tokens';
+import { createThemeTokens } from '../tokens.js';
 
 // Deep void — pure black with neon purple accents.
 const VOID_PALETTE = {

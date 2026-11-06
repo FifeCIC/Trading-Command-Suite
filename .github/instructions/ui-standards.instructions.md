@@ -164,6 +164,33 @@ wrapped onto its own line is missed too. Writing one declaration per line avoids
 
 All trading-view pages MUST use `max-width: var(--page-max-width)` (default `1400px` for dashboards, `1200px` for forms).
 
+### Fluid vs stepped sizing — figures that must survive a narrow pane
+
+> **Measured 2026-11-06** after the owner reported *"a lack of fluidity … there's plenty room in some
+> of the cards for them to shrink when I open the Dev Tools sidebar or resize the screen."*
+
+A row of figures (stat tiles, KPI cards) has three possible sizing strategies. Two of them look
+correct in code review and neither behaves fluidly:
+
+| Strategy | Behaviour | Verdict |
+|---|---|---|
+| `repeat(auto-fill, minmax(140px, 1fr))` | The BROWSER drops a column wherever the 140px floor stops fitting, so tiles **jump wider** at an arbitrary width, by a different amount each time | ❌ measured 148 → 147 → **162 → 178 → 205** → 141 as the window narrowed |
+| `display: flex` + `flex: 1 1 140px` (+ a growth filler to stop the last lone tile stretching) | Wraps at the **same** items-per-row thresholds, so it inherits the identical jump, and the filler makes the last row narrower than the first | ❌ measured 140 → 156 → 148 → 161 → 147 → 163 → … |
+| Declared column counts, keyed to the **container** | The count is a design decision at declared widths; between them every `1fr` tile shrinks continuously, and a lone last tile keeps its column width | ✅ use this |
+
+```css
+.wrap { container-type: inline-size; }                    /* the CONTAINER, not the viewport */
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+@container (min-width: 400px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container (min-width: 540px) { .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@container (min-width: 700px) { .tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+```
+
+⚠️ **No strategy removes the jump entirely** — a discrete column count must jump when it changes. The
+difference is whether the jump happens at a width you chose. Never describe a layout as "fluid" without
+measuring the tile width at several widths; both rejected strategies above were written by someone who
+was sure they worked. Live comparison: **`/appearance/responsive-layout-lab` → Fluid vs Stepped Sizing**.
+
 ---
 
 ## 📐 Approved Design Patterns

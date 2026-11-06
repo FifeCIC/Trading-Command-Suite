@@ -12,6 +12,16 @@ import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { DirectivesService } from '../directives/directives.service';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { NotificationService } from '../notifications/notifications.service';
+// The guardian's cadence is a SETTING, not a constructor literal (2026-11-06). Optional on
+// purpose: every existing positional construction (three specs reach this class) keeps working and
+// simply falls back to `DEFAULT_TICK_INTERVAL_MS`.
+import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
+import { PrismaService } from '../../database/prisma.service';
+import { CLOSE_REASONS } from '../../common/trading/close-reason';
+// The ONE canonical parser for "which strategy did this close belong to" (#949). A local split of
+// the broker comment would be a second implementation of the rule that caused 184/186 ungroupable
+// trades — and `validate-close-attribution.cjs` fails the build on exactly that.
+import { resolveStrategyForClose } from '../providers/mt5-comment.util';
 // ⚠️ #review-2026-09-30 — this read `StopGuardianService AS StopAdjustmentRecorder` because TWO
 // classes shared the name `StopGuardianService` (this one guards; that one records). The alias WAS
 // the correct name, written down as a workaround for the collision. `trading/stop-guardian.service.ts`
@@ -248,7 +258,9 @@ export type GuardedPositionOutcome =
   | 'distance-refused'
   | 'below-threshold'
   | 'no-recommendation'
-  | 'at-target';
+  | 'at-target'
+  /** The MONEY take-profit reached its target and the position was CLOSED (2026-11-06). */
+  | 'take-profit-amount';
 
 export interface StopAdjustment {
   timestamp: string;
@@ -423,6 +435,23 @@ export function trailDistanceFor(atrValue: number, declaredDistance: number): nu
  * exactly that reason.
  */
 const BRIDGE_DEFAULT_MAGIC = 234000;
+
+/**
+ * DEFAULT_TICK_INTERVAL_MS — how often the guardian re-derives every trailing stop.
+ *
+ * ⚠️ 10 s, raised from 30 s on 2026-11-06 at the owner's direction (#1199). The value is a
+ * SETTING (`automation.guardianTickIntervalMs`) and `syncIntervalFromSettings()` re-reads it at the
+ * top of every tick; this constant is the fallback for a spec or a boot before the first read.
+ *
+ * The measurement that made this safe: the pass cost is FIXED at ~105–145 ms and the loop is
+ * sequential (`scheduleNext()` is only armed after a pass completes), so passing more often cannot
+ * pile work up. 30 s → 144 ms/pass (0.5 % duty); 10 s → 103 ms (1.0 %); 5 s → 105 ms (2.1 %);
+ * 2 s → 105 ms (5.3 %).
+ */
+export const DEFAULT_TICK_INTERVAL_MS = 10_000;
+const MIN_TICK_INTERVAL_MS = 2_000;
+const MAX_TICK_INTERVAL_MS = 300_000;
+const TICK_INTERVAL_SETTING = 'automation.guardianTickIntervalMs';
 
 /**
  * resolvePositionOwner() — WHICH BOT OPENED THIS POSITION (#1018).
@@ -696,9 +725,25 @@ export const GUARDIAN_RULES: GuardianRule[] = [
     enforcement: 'live', value: '15 min after a broker refusal',
     detail: 'Armed ONLY by the broker\u2019s own refusal \u2014 a closed market is never predicted.' },
 
+  // ── MONEY take-profit (2026-11-06) ───────────────────────────────────────────────────────────
+  // ⚠️ `live`, unlike the sim-TSL above: this one CLOSES the position. Declared here because
+  // `validate-rule-enforcement.cjs` fails the build when `bot-rules.ts` claims this service as the
+  // enforcer of a column no mechanism in this list names — the omission that once made this list
+  // silent about a mechanism the guardian ran every tick.
+  { id: 'money-take-profit', label: 'Money take-profit', kind: 'rule', scope: 'per-bot',
+    fields: ['takeProfitAmount'],
+    enforcement: 'live', value: 'per-bot: takeProfitAmount (account currency) — default NULL = never act',
+    detail:
+      'Closes the position once its unrealised P&L reaches the bot\'s target, stamped ' +
+      '`system:take-profit` on the trade and `TCS:take-profit` on the broker deal. Evaluated BEFORE ' +
+      'the bar load, so a degraded feed cannot stop a position above its target from closing.',
+    caveat:
+      '⚠️ Money, not a percentage, because a percentage target is a fixed DISTANCE and the money it ' +
+      'captures drifts with the price level. An unreadable P&L REFUSES; a refused close retries at ' +
+      'most once a minute.' },
+
   // ── the FIRST per-bot exit control (was: the gap) ────────────────────────────────────────
-  { id: 'simulated-tsl', label: 'Simulated TSL (decision point)', kind: 'rule', scope: 'per-bot',
-    fields: ['simTslEnabled', 'simTslActivationPct', 'simTslDistancePct'],
+  { id: 'simulated-tsl', label: 'Simulated TSL (decision point)', kind: 'rule', scope: 'per-bot',    fields: ['simTslEnabled', 'simTslActivationPct', 'simTslDistancePct'],
     enforcement: 'display-only', value: 'per-bot: simTslActivationPct / simTslDistancePct — default OFF',
     detail:
       'A second, tighter threshold NOT sent to the broker. Touching it is a DECISION MOMENT \u2014 ' +
@@ -770,7 +815,11 @@ export class StopGuardianService {
 
   state: GuardianState = {
     enabled: false,
-    tickIntervalMs: 30_000,
+    // ⚠️ 10 s since 2026-11-06 (owner decision, #1199). The pass cost is FIXED (~105–145 ms) and the
+    // loop is sequential, so a faster cadence costs bridge reads, not CPU — measured at 2 s it still
+    // finishes in 105 ms. The DB setting `automation.guardianTickIntervalMs` overrides this and is
+    // re-read at the top of every tick, so a change lands within one cycle without a restart.
+    tickIntervalMs: DEFAULT_TICK_INTERVAL_MS,
     tickCount: 0,
     lastTickAt: null,
     nextTickAt: null,
@@ -917,6 +966,22 @@ export class StopGuardianService {
   private readonly simTslLastMomentAt = new Map<number, number>();
   private readonly SIM_TSL_MOMENT_COOLDOWN_MS = 60_000;
 
+  /**
+   * Money take-profit bookkeeping (2026-11-06).
+   *
+   * `moneyTargetAttemptAt` is the retry throttle — ticket → last attempt. Without it a refused close
+   * (market shut, position already gone) is re-sent every 10 s and fills the log with the broker's
+   * own `HTTP 400`.
+   *
+   * `recentMoneyTargetCloses` is the in-memory record served through `/status`. The DURABLE record is
+   * `trade.closeReason = 'system:take-profit'`; this exists so "did it fire today?" is answerable
+   * without a query.
+   */
+  private readonly moneyTargetAttemptAt = new Map<number, number>();
+  readonly recentMoneyTargetCloses: Array<{
+    timestamp: string; ticket: number; symbol: string; profit: number; target: number;
+  }> = [];
+
   // ── UP-move exhaustion observer (#995) — see `observeExhaustion()` ─────────────────────
   //
   // ⚠️ WHY THE COOLDOWN IS REQUIRED, NOT AN OPTIMISATION (same reason as sim-TSL's): `tick()`
@@ -945,6 +1010,18 @@ export class StopGuardianService {
      * the CANONICAL log — see the warning in `tick()`.
      */
     private readonly syslog?: SystemLogService,
+    /**
+     * Settings access for the cadence. Optional so the three specs that construct this class
+     * positionally keep working; when absent the guardian uses `DEFAULT_TICK_INTERVAL_MS`.
+     */
+    private readonly settings?: SettingsResolverService,
+    /**
+     * Only used to stamp `system:take-profit` onto the trade row when the money target closes a
+     * position — the same durable write the time-stop makes. Optional so positional construction in
+     * the specs is unchanged; without it the close still happens and the broker deal still carries
+     * `TCS:take-profit`, but the trade row keeps whatever the sync derives.
+     */
+    private readonly prisma?: PrismaService,
   ) {
     // #1030 — nothing is resolved here any more. Addressing is per-POSITION (see the field
     // comment above): a URL captured in the constructor cannot know which account holds a
@@ -973,6 +1050,144 @@ export class StopGuardianService {
     return { stopped: true, message: 'Stop Guardian stopped' };
   }
 
+  /**
+   * maybeCloseAtMoneyTarget() — the per-bot MONEY take-profit (`takeProfitAmount`).
+   *
+   * ================================================================================
+   * WHAT:  once a position's unrealised P&L reaches this bot's `takeProfitAmount` (ACCOUNT currency
+   *        of the bridge holding it), CLOSE IT through that bridge, stamped `TCS:take-profit`.
+   * WHY:   `tpPct` is a distance from entry, so the money it captures drifts with the price level —
+   *        0.23% on GER40 at 25,701 is GBP 4.93; at 30,000 the same 0.23% is GBP 5.75. The owner's
+   *        "five pound strategy" needs the target to STAY five pounds, which a percentage cannot say.
+   * WHERE: called BEFORE the bar load, on purpose. The decision needs a live P&L and nothing else,
+   *        so it must still fire when bars are short — the condition under which the rest of the
+   *        pass `continue`s and a target would otherwise never be checked.
+   *
+   * ⚠️ FAIL CLOSED, ALWAYS. Every unknown refuses and NAMES the missing input:
+   *   - target absent/0/negative → NULL (never act; this is the default for 68 of 69 bots)
+   *   - P&L unreadable (`Number(pos.profit)` not finite) → refuse, never treat as 0
+   *   - a close the bridge refuses → logged with the broker's own error, not retried in a storm
+   *
+   * ⚠️ ONE ATTEMPT PER TICKET PER MINUTE. A refused close (market shut, already gone) would
+   * otherwise be re-sent every 10 s; the broker answers `HTTP 400` and the log fills up.
+   */
+  private async maybeCloseAtMoneyTarget(
+    pos: Mt5RawPosition,
+    strat: any,
+    ownerVia: GuardedPosition['ownerVia'],
+  ): Promise<'closed' | 'refused' | null> {
+    const target = Number(strat?.takeProfitAmount);
+    // NULL / 0 is "no opinion", not "close at breakeven". The column defaults to NULL, so this
+    // guard is what keeps 68 bots inert.
+    if (!Number.isFinite(target) || target <= 0) return null;
+
+    const pnl = Number((pos as any).profit);
+    if (!Number.isFinite(pnl)) {
+      this.logger.warn(
+        `Money target SKIPPED for ${pos.symbol}#${pos.ticket}: P&L unreadable — refusing to close on a guess`,
+      );
+      return null;
+    }
+    if (pnl < target) return null;
+
+    const last = this.moneyTargetAttemptAt.get(pos.ticket) ?? 0;
+    if (Date.now() - last < 60_000) return null;
+    this.moneyTargetAttemptAt.set(pos.ticket, Date.now());
+
+    const result: any = await (this.mt5Connection as any)
+      .closePosition(pos.ticket, pos.brokerId, 'take-profit')
+      .catch((err: Error) => ({ ok: false, error: err.message }));
+
+    if (result?.ok === false) {
+      this.logger.warn(
+        `Money target close REFUSED for ${pos.symbol}#${pos.ticket} at ${pnl.toFixed(2)} ` +
+          `(target ${target.toFixed(2)}): ${result?.error ?? 'unknown'} — will retry at most once a minute`,
+      );
+      this.syslog?.warn(
+        'StopGuardianService',
+        `Take-profit close refused: ${pos.symbol}#${pos.ticket} ${pnl.toFixed(2)} / ${target.toFixed(2)} — ${result?.error ?? 'unknown'}`,
+        'trading',
+      );
+      return 'refused';
+    }
+
+    // Durably record WHY **and WHAT**, exactly as the time-stop does — the in-memory line dies with
+    // the process, the trade row does not. `updateMany` so it is a no-op when the sync has not
+    // created the row yet.
+    //
+    // ⚠️ THE STRATEGY IS NOT OPTIONAL HERE (validate-close-attribution.cjs). A close that records
+    // WHY but not WHAT leaves the trade ungroupable on Strategy Comparison / bot rating (#949), and
+    // that gate fails the build. It goes through the ONE canonical parser, not a local split.
+    // ⚠️ A BOOKKEEPING LOOKUP MUST NOT ABORT THE TICK — the position is ALREADY CLOSED at this
+    // point, so throwing here leaves a real close with no recorded reason and an errored guardian
+    // pass. MEASURED 2026-11-06: with `findFirst` absent the `.catch()` below never ran, because a
+    // MISSING FUNCTION throws synchronously — `.catch` only covers a rejected promise. The tick then
+    // died with `this.prisma?.trade.findFirst is not a function`, after the close, and the trade row
+    // kept its old reason. Optional-call plus try/catch is the only form that survives both a
+    // missing method and a failing query.
+    let existing: { strategy?: string | null; brokerComment?: string | null } | null = null;
+    try {
+      existing = await this.prisma?.trade?.findFirst?.({
+        where: { brokerTicket: String(pos.ticket), status: 'open' },
+        select: { strategy: true, brokerComment: true },
+      }) ?? null;
+    } catch {
+      existing = null;
+    }
+    const strategy = resolveStrategyForClose(
+      existing?.strategy,
+      existing?.brokerComment ?? (pos as any).comment,
+    );
+    try {
+      await this.prisma?.trade?.updateMany?.({
+        where: { brokerTicket: String(pos.ticket), status: 'open' },
+        data: {
+          closeReason: CLOSE_REASONS.SYSTEM_TAKE_PROFIT,
+          ...(strategy ? { strategy } : {}),
+        },
+      });
+    } catch {
+      /* the position is closed either way; a failed record is logged by the pass, not thrown */
+    }
+
+    this.logger.log(
+      `MONEY TARGET HIT — closed ${pos.symbol}#${pos.ticket} at ${pnl.toFixed(2)} ` +
+        `(target ${target.toFixed(2)}, ownerVia ${ownerVia})`,
+    );
+    this.syslog?.log(
+      'StopGuardianService',
+      'trade',
+      `Take-profit closed ${pos.symbol}#${pos.ticket}: ${pnl.toFixed(2)} reached target ${target.toFixed(2)}`,
+      'trading',
+    );
+    this.notifications?.send({
+      // `position-closed` is the existing event for "a position ended"; a new event name would have
+      // to be added to the NotificationEvent union AND to every channel that switches on it, which
+      // is a wider change than this mechanism needs. The TITLE carries the distinction.
+      event: 'position-closed',
+      title: `Take-profit ${pos.symbol}`,
+      body: `Closed #${pos.ticket} at ${pnl.toFixed(2)} — target ${target.toFixed(2)}`,
+      symbol: pos.symbol,
+      // ⚠️ `metadata.pnl` IS LOAD-BEARING (2026-11-06). The Discord feed decides WHICH channel a
+      // close goes to — wins or losses — from this number, and drops anything under the owner's
+      // minimum. Without it a take-profit could only be published as "unknown outcome", which the
+      // feed refuses. The value is already in scope here; omitting it would have made the feed
+      // silently blind to every stop-guardian close.
+      metadata: { pnl, exitPrice: target, closeReason: 'take-profit' },
+    }).catch(() => {});
+
+    this.recentMoneyTargetCloses.unshift({
+      timestamp: new Date().toISOString(),
+      ticket: pos.ticket,
+      symbol: pos.symbol,
+      profit: pnl,
+      target,
+    });
+    if (this.recentMoneyTargetCloses.length > 20) this.recentMoneyTargetCloses.length = 20;
+
+    return 'closed';
+  }
+
   private scheduleNext() {
     if (!this.state.enabled) return;
     this.timer = setTimeout(() => {
@@ -980,6 +1195,43 @@ export class StopGuardianService {
         this.logger.error(`Guardian tick failed: ${(err as Error).message}`),
       );
     }, this.state.tickIntervalMs);
+  }
+
+  /**
+   * syncIntervalFromSettings() — APPLY the declared cadence BEFORE the pass that uses it.
+   *
+   * ⚠️ WHY THIS IS NOT IN `start()`. `start()` is synchronous and republishes the HTTP response, so
+   * it cannot await a settings read; resolving the cadence here means a changed value takes effect
+   * within ONE cycle and needs no restart, which matters because the loop may run for days.
+   *
+   * ⚠️ FAIL SOFT, AND SAY SO. An unreadable or out-of-range value keeps the CURRENT interval rather
+   * than snapping to a default: snapping would silently 3× the cadence of a running guardian on a
+   * transient DB blip, which is a behaviour change nobody asked for. Genuine changes are logged.
+   */
+  async syncIntervalFromSettings(): Promise<number> {
+    if (!this.settings) return this.state.tickIntervalMs;
+    let raw: number;
+    try {
+      raw = await this.settings.get<number>(TICK_INTERVAL_SETTING);
+    } catch (err) {
+      this.logger.warn(
+        `Guardian cadence not read (${(err as Error).message}) — keeping ${this.state.tickIntervalMs}ms`,
+      );
+      return this.state.tickIntervalMs;
+    }
+    const next = Number(raw);
+    if (!Number.isFinite(next) || next < MIN_TICK_INTERVAL_MS || next > MAX_TICK_INTERVAL_MS) {
+      this.logger.warn(
+        `Guardian cadence ${String(raw)} is outside ${MIN_TICK_INTERVAL_MS}–${MAX_TICK_INTERVAL_MS}ms ` +
+          `— keeping ${this.state.tickIntervalMs}ms`,
+      );
+      return this.state.tickIntervalMs;
+    }
+    if (next !== this.state.tickIntervalMs) {
+      this.logger.log(`Guardian cadence ${this.state.tickIntervalMs}ms → ${next}ms (setting)`);
+      this.state.tickIntervalMs = next;
+    }
+    return this.state.tickIntervalMs;
   }
 
   // ── Bridge Helpers ────────────────────────────────────
@@ -1077,6 +1329,9 @@ export class StopGuardianService {
   async tick() {
     if (!this.state.enabled || this.ticking) return [];
     this.ticking = true;
+    // Cadence first: the value decides when THIS pass re-arms the timer, so reading it after the
+    // work would apply a change one cycle late for no reason.
+    await this.syncIntervalFromSettings().catch(() => undefined);
     const tickStart = Date.now();
     this.state.tickCount++;
     this.state.lastTickAt = new Date().toISOString();
@@ -1253,6 +1508,16 @@ export class StopGuardianService {
         // #936 — observe the per-bot simulated TSL BEFORE the bar/directive work, so it runs even
         // when bars are short and the rest of the tick skips this position. It records only.
         this.observeSimulatedTsl(pos, strat);
+
+        // ── MONEY TAKE-PROFIT (2026-11-06) ─────────────────────────────────────────────────────
+        // Also BEFORE the bar load, and for a stronger reason: the check needs only a live P&L, so
+        // placing it after `bars.length < 14` would make the target silent exactly when the feed is
+        // degraded — a position sitting at +£6 would stay open because a bar fetch failed.
+        const targetOutcome = await this.maybeCloseAtMoneyTarget(pos, strat, ownerVia);
+        if (targetOutcome === 'closed') {
+          guarded.push(this.makeGuarded(pos, strat, side, pos.sl ?? null, 100, true, ownerVia, 'take-profit-amount'));
+          continue;
+        }
 
         // 4. Load bars — from the bridge that holds the POSITION (#1030)
         const bars = await this.loadBars(strat.symbol, pos.brokerId);

@@ -55,6 +55,15 @@ export const NAV_TREE = {
     label: 'Accounts',
     views: [
       { id: 't212-portfolio', label: 'Portfolio', icon: '🏦' },
+      // ── ADDED 2026-11-06 (owner direction) ──
+      // "Brokers" = the venues and the ACCOUNTS on them (money, connection, live/demo).
+      // "Vendors" = every source of DATA, and that includes the brokers: "the aim will be to list
+      // sources of data basically". They live in Accounts because both are about what the app is
+      // connected to, not about a trading decision.
+      // ⚠️ `brokers` is NOT a replacement for `/status/broker-catalogue`: that page answers "what can
+      // a broker TRADE" (symbol classes and coverage), this one answers "what accounts do I hold".
+      { id: 'brokers', label: 'Brokers', icon: '🏛' },
+      { id: 'vendors', label: 'Vendors', icon: '🔌' },
       // ⚠️ HIDDEN 2026-10-02 (owner: hide now) — "We need a system of displaying each registered
       // account on its own page", so the ISA page waits for that rework instead of being deleted.
       // ⚠️ `order-testing` MOVED to the Status area (see the Status block).
@@ -308,6 +317,10 @@ export const NAV_TREE = {
   // Stored runs are their own job — review what the engine kept, select 2–4, find what changed — so
   // they get their own page rather than a fifth tab on a measurement form.
   { id: 'backtest-runs', label: 'Completed Runs', icon: '⧉' },
+  // #1201 — the survival list. Placed beside Completed Runs because it IS a review of what the
+  // engine kept: a walk-forward run records two windows (train iteration 1, test iteration 2),
+  // and this view ranks them by OUT-of-sample with the in-sample figure beside it.
+  { id: 'walk-forward-survivors', label: 'Walk-Forward Survivors', icon: '🎯' },
       { id: 'snapshots', label: 'Snapshots', icon: '🔬' },
       { id: 'snapshot-replay', label: 'Snapshot Replay', icon: '⏮' },
       // ── Charts & data inspection ──

@@ -6,10 +6,16 @@
  * and directional bias to support split-second trading decisions.
  *
  * Theory: docs/theories/multi-timeframe-speed-trading.md
+ *
+ * ⚠️ `protocolId` IS REQUIRED, AND THAT IS THE POINT (#867, 2026-11-06). This component used to
+ * hardcode `protocolId: 'btc-scalp-v1-long'` with `symbol` defaulting to `'BTCUSD'`, so any caller
+ * that mounted it for another symbol silently got BTC's protocol scores under a different heading.
+ * A component may not choose a strategy: the caller declares it, and without one the panel says so
+ * rather than guessing. Silence here would be the repo's signature defect — plausible output, no error.
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { apiGet } from '../core/api/client';
+import { apiGet, apiPost } from '../core/api/client';
 import NoticeBlock from './NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import './speed-decision-panel.css';
@@ -41,15 +47,31 @@ function LevelRow({ label, price, distance, side }) {
   );
 }
 
-export default function SpeedDecisionPanel({ symbol = 'BTCUSD', compact = false }) {
+/**
+ * @param {string}  symbol      Instrument used for the price/S-R bars fetch.
+ * @param {string=} scoreSymbol Instrument the SCORE is fetched for. Defaults to `symbol`, and exists
+ *                              because the scored ticker can differ from the charted one — measured
+ *                              2026-11-06: `btc-scalp-v1-long` scores `BTC` (13,668 rows, minutes
+ *                              old) while `BTCUSD` has 5 rows and none since 2026-09-10.
+ * @param {string}  protocolId  REQUIRED. Which protocol's decision this panel shows.
+ */
+export default function SpeedDecisionPanel({ symbol = 'BTCUSD', scoreSymbol, protocolId, compact = false }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const tickerForScore = scoreSymbol ?? symbol;
 
   const fetchData = useCallback(async () => {
+    if (!protocolId) { setData(null); setError(null); return; }
     try {
-      // Fetch gated batch score which now includes multi-timeframe + micro-S/R directives
-      const result = await apiGet('/api/scoring/gated/batch', {
-        params: { tickers: symbol, protocolId: 'btc-scalp-v1-long' },
+      // ⚠️ POST, and a BODY — three separate faults here until 2026-11-06:
+      //   1. `apiGet` on `@Post('batch')`  → 404 on every poll;
+      //   2. `params` put the arguments in a QUERY STRING, but the handler reads `@Body()`;
+      //   3. `tickers` must be `string[]` — a bare string made the handler return `[]` anyway.
+      // So the panel was dead three ways over, and `.catch` upstream hid it. Route declared in
+      // `protocol-gating.controller.ts` as `@Post('batch')` body `{ tickers: string[], protocolId? }`.
+      const result = await apiPost('/api/scoring/gated/batch', {
+        tickers: [tickerForScore],
+        protocolId,
       });
       // Also fetch recent bars for the panel's own S/R display
       const barsRes = await apiGet(`/api/trading/mt5/candles`, {
@@ -57,14 +79,16 @@ export default function SpeedDecisionPanel({ symbol = 'BTCUSD', compact = false 
       }).catch(() => null);
 
       setData({
-        score: result?.results?.[0] ?? null,
+        // ⚠️ The handler returns `GatedScore[]` — an ARRAY, not `{ results: [] }`. Reading
+        // `result?.results?.[0]` produced `undefined` even once the verb was right.
+        score: Array.isArray(result) ? (result[0] ?? null) : null,
         bars: barsRes?.bars ?? [],
       });
       setError(null);
     } catch (err) {
       setError(noticeFromError(err));
     }
-  }, [symbol]);
+  }, [symbol, tickerForScore, protocolId]);
 
   useEffect(() => {
     fetchData();
@@ -72,7 +96,21 @@ export default function SpeedDecisionPanel({ symbol = 'BTCUSD', compact = false 
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  if (error) {
+    // A MISSING PROTOCOL IS NOT AN ERROR AND NOT AN EMPTY RESULT — it is "cannot judge". Saying so
+    // keeps the three states distinct: no protocol (this block), a failed fetch (next block), and a
+    // protocol that legitimately scored nothing (the normal render with `composite === null`).
+    if (!protocolId) {
+      return (
+        <div className="sdp-panel sdp-panel--error">
+          <span className="sdp-error-icon">⚠</span>
+          <span>
+            No protocol supplied — this panel shows one protocol&apos;s decision, so it will not guess.
+          </span>
+        </div>
+      );
+    }
+
+    if (error) {
     return (
       <div className="sdp-panel sdp-panel--error">
         <span className="sdp-error-icon">⚠</span>
@@ -117,8 +155,16 @@ export default function SpeedDecisionPanel({ symbol = 'BTCUSD', compact = false 
   const composite = score?.composite ?? null;
 
   // ── Trend dots (extracted from scoring results) ──────
-  // The multi-timeframe-trend directive reason string contains "1D: bullish | 1H: bearish | 15M: neutral"
-  const trendReason = score?.directiveReasons?.['multi-timeframe-trend'] ?? '';
+  // The multi-timeframe-trend directive's reason reads "… 1D: bearish (weak) | 1H: bearish (strong)
+  // | 15M: bullish (strong)".
+  // ⚠️ This used to read `score.directiveReasons['multi-timeframe-trend']` — a field that DOES NOT
+  // EXIST on `GatedScore`. So all three dots were permanently `neutral`, which reads as "the market
+  // is neutral" when the truth was "not measured" — the collapse of "fine" and "cannot judge" that
+  // this repo treats as a defect. Measured 2026-11-06: the reason lives in
+  // `breakouts.technical[]`, on the entry whose `directiveId` is `multi-timeframe-trend`.
+  const trendEntry = (score?.breakouts?.technical ?? [])
+    .find((b) => b.directiveId === 'multi-timeframe-trend');
+  const trendReason = trendEntry?.reason ?? '';
   const dayTrend = trendReason.match(/1D:\s*(\w+)/)?.[1] ?? 'neutral';
   const hourTrend = trendReason.match(/1H:\s*(\w+)/)?.[1] ?? 'neutral';
   const min15Trend = trendReason.match(/15M:\s*(\w+)/)?.[1] ?? 'neutral';
@@ -135,7 +181,12 @@ export default function SpeedDecisionPanel({ symbol = 'BTCUSD', compact = false 
     <div className={`sdp-panel ${compact ? 'sdp-panel--compact' : ''}`}>
       {/* ── Header: Symbol + Price ────────────────────── */}
       <div className="sdp-header">
-        <span className="sdp-symbol">{symbol}</span>
+        {/* ⚠️ The SCORED ticker, not the charted one. Showing `BTCUSD` above a score computed for
+            `BTC` is a label that disagrees with its number — the defect class this repo keeps
+            re-finding. Measured 2026-11-06: this panel scores `btc-scalp-v1-long`, which is scored
+            on `BTC`; `BTCUSD` has no scoring rows since 2026-09-10. The charted ticker is kept in
+            the tooltip so the difference is discoverable rather than hidden. */}
+        <span className="sdp-symbol" title={tickerForScore !== symbol ? `Score for ${tickerForScore}; chart for ${symbol}` : undefined}>{tickerForScore}</span>
         {currentPrice && (
           <span className="sdp-price">{currentPrice.toFixed(symbol === 'BTCUSD' ? 1 : 5)}</span>
         )}

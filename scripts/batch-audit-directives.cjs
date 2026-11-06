@@ -51,7 +51,6 @@ const AUDIT = [
   ['session-open-effect.directive.ts', 100, 100, 'pattern', 'neutral', '1.0.0', '1.1.0'],
   ['session-timing-filter.directive.ts', 100, 100, 'structural', 'neutral', '1.0.0', '1.1.0'],
   ['sigma-score.directive.ts', 100, 100, 'oscillator', 'neutral', '1.0.0', '1.1.0'],
-  ['social-buzz.directive.ts', 100, 100, 'structural', 'neutral', '1.0.0', '1.1.0'],
   ['speed-momentum.directive.ts', 120, 120, 'oscillator', 'neutral', '1.0.0', '1.1.0'],
   ['three-soldiers-pattern.directive.ts', 100, 100, 'pattern', 'bullish', '1.0.0', '1.1.0'],
   ['volatility-envelope.directive.ts', 100, 100, 'oscillator', 'neutral', '1.0.0', '1.1.0'],

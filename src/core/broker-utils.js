@@ -16,7 +16,11 @@ import { apiGet } from './api/client';
 export function useBrokers() {
   const query = useQuery({
     queryKey: ['shared-brokers'],
-    queryFn: () => apiGet('/api/brokers').catch(() => ({ brokers: [] })),
+    // ⚠️ NO `.catch(() => ({ brokers: [] }))` (#782 / INV-NO-EMPTY-SWALLOW). It made a failed
+    // broker request look like "this install has no brokers", which every capability check then
+    // treats as "nothing is tradeable". The hook already spreads the query, so `isError` reaches
+    // every consumer with no shape change.
+    queryFn: () => apiGet('/api/brokers'),
     staleTime: 300_000, // 5 min — broker config rarely changes
   });
   const brokers = useMemo(() => query.data?.brokers || [], [query.data]);

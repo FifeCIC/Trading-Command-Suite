@@ -304,9 +304,13 @@ export default function StrategiesListPage() {
   }, [strategies]);
 
   // ── Portfolio cross-ref ──
-  const { data: positions = [] } = useQuery({
+  // ⚠️ NO `.catch(() => ({ positions: [] }))` (#782 / INV-NO-EMPTY-SWALLOW). This counts holdings per
+  // symbol; a swallowed failure showed every strategy as unheld.
+  const {
+    data: positions = [], isError: positionsError, refetch: refetchPositions,
+  } = useQuery({
     queryKey: ['strategies-list-positions'],
-    queryFn: () => apiGet('/api/portfolio?source=mt5').catch(() => ({ positions: [] })),
+    queryFn: () => apiGet('/api/portfolio?source=mt5'),
     refetchInterval: 60_000,
   });
 
@@ -508,6 +512,17 @@ export default function StrategiesListPage() {
           icon="⚠️"
           title="Unable to load bots"
           description="The request to GET /api/trading/strategies failed. This is a failed read, NOT an empty registry — no bot has been deleted or disabled. Check the API is running."
+        />
+      )}
+      {positionsError && !isError && (
+        // ⚠️ Separate from the bot-list failure above: the bots loaded, the PORTFOLIO cross-reference
+        // did not, so the "held" column is unknown rather than zero (#782).
+        <EmptyState
+          icon="⚠️"
+          title="Holdings could not be read"
+          description="GET /api/portfolio?source=mt5 failed, so the portfolio column below is unknown — it does NOT mean no strategy holds a position. Retry to restore it."
+          actionLabel="Retry"
+          actionOnClick={() => refetchPositions()}
         />
       )}
       {toggleError && (

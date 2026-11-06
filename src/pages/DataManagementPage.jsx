@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { feedUnavailable } from '../core/api/feed-state.js';
 import { formatDateTime } from '../core/format-utils';
 import LogRetentionPanel from '../components/system/LogRetentionPanel';
 import './data-management.css';
@@ -21,7 +22,10 @@ export default function DataManagementPage() {
 
   const statsQuery = useQuery({
     queryKey: ['data-retention-stats'],
-    queryFn: () => apiGet('/api/system/data-retention/stats').catch(() => ({})),
+    // ⚠️ NO `.catch(() => ({}))` (#782 / INV-NO-EMPTY-SWALLOW). The header states
+    // "N tables tracked · M total rows" — a failed read printed **0 tables · 0 rows**, which reads as
+    // "this database is empty" on the page whose job is to show what is in it.
+    queryFn: () => apiGet('/api/system/data-retention/stats'),
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
@@ -63,9 +67,18 @@ export default function DataManagementPage() {
       <header className="dm-header">
         <h1>🗄️ Data Management</h1>
         <p className="dm-subtitle">
-          {tables.length} tables tracked · {totalRows.toLocaleString()} total rows · Auto-prune daily at 3 AM
+          {feedUnavailable(statsQuery)
+            ? 'retention statistics could not be read — the table and row counts below are unknown, not zero'
+            : `${tables.length} tables tracked · ${totalRows.toLocaleString()} total rows · Auto-prune daily at 3 AM`}
         </p>
       </header>
+
+      {feedUnavailable(statsQuery) && (
+        <div className="dm-banner dm-banner-warn" role="alert">
+          ⚠️ The retention statistics could not be loaded, so this page cannot say what is stored.{' '}
+          <button type="button" className="dm-retry" onClick={() => statsQuery.refetch()}>retry</button>
+        </div>
+      )}
 
       {pruneResult && (
         <div className={`dm-banner ${pruneResult.all ? 'dm-banner-ok' : (pruneResult.deleted > 0 ? 'dm-banner-ok' : 'dm-banner-info')}`}>

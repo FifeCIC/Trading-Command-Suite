@@ -143,7 +143,7 @@
 .eq-event-row:hover { background: rgba(128,128,128,0.03); }
 .eq-event-left {
   display: flex; align-items: center; gap: 0.35rem; min-width: 160px;
-  border-left: 3px solid transparent; padding-left: 0.35rem;
+   padding-left: 0.35rem;
 }
 .eq-event-type-badge {
   font-size: 0.58rem; font-weight: 700; text-transform: uppercase;

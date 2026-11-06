@@ -72,6 +72,8 @@
 .tp-config-table,
 .tp-table,
 .uir-table,
+.brk-table,
+.vd-table,
 .va-table {
   width: 100%;
   border-collapse: collapse;
@@ -138,6 +140,8 @@
 .tp-config-table th,
 .tp-table th,
 .uir-table th,
+.brk-table th,
+.vd-table th,
 .va-table th {
   text-align: left;
   padding: 0.5rem 0.65rem;
@@ -210,6 +214,8 @@
 .tp-config-table td,
 .tp-table td,
 .uir-table td,
+.brk-table td,
+.vd-table td,
 .va-table td {
   padding: 0.45rem 0.65rem;
   border-bottom: 1px solid var(--line);
@@ -275,6 +281,8 @@
 .tp-config-table tbody tr:last-child td,
 .tp-table tbody tr:last-child td,
 .uir-table tbody tr:last-child td,
+.brk-table tbody tr:last-child td,
+.vd-table tbody tr:last-child td,
 .va-table tbody tr:last-child td {
   border-bottom: none;
 }
@@ -339,6 +347,20 @@
 .tp-config-table tbody tr:hover,
 .tp-table tbody tr:hover,
 .uir-table tbody tr:hover,
+/* ── Numeric column modifier ──────────────────────────────────────────────────────────────────────
+   A cell that must be RIGHT-ALIGNED (money, counts, percentages). Registered here rather than in a
+   page stylesheet because the alignment has to out-rank .x-table td (0,1,1) — a bare .num
+   (0,1,0) loses and the column silently stops lining up. Add your table's prefix to both lists. */
+.brk-table th.num,
+.brk-table td.num,
+.vd-table th.num,
+.vd-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.brk-table tbody tr:hover,
+.vd-table tbody tr:hover,
 .va-table tbody tr:hover {
   background: color-mix(in srgb, var(--accent) 5%, transparent);
 }

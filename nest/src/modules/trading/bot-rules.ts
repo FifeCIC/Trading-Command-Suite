@@ -378,6 +378,25 @@ export const BOT_RULES: BotRule[] = [
     summary: 'The tighter trail distance, measured back from the best price reached. NULL = not configured.',
     caveat: '⚠️ Never sent to the broker — the declared stop remains the real risk.' },
 
+  // ── money take-profit (2026-11-06) ─────────────────────────────────────────────────────────
+  // `live` and NOT `display-only`: this one CLOSES the position. That is the difference from the
+  // sim-TSL above, which records a decision point and does nothing.
+  { field: 'takeProfitAmount', label: 'Take-profit target (account currency)', stage: 'exit', enforcement: 'live',
+    enforcedBy: 'nest/src/modules/automation/stop-guardian.service.ts',
+    summary:
+      'Close the position once its unrealised P&L reaches this amount, in the ACCOUNT CURRENCY of the ' +
+      'bridge holding it. NULL = never act, which is the default.',
+    caveat:
+      '⚠️ WHY MONEY RATHER THAN tpPct: a percentage target is a fixed DISTANCE, so the money it captures ' +
+      'drifts with the price level — 0.23% on GER40 at 25,701 is 59 points = GBP 4.93, but at 30,000 the ' +
+      'same 0.23% is 69 points = GBP 5.75. A target that must stay GBP 5 cannot be expressed as a ' +
+      'percentage. Checked on the same 10 s guardian pass, BEFORE the bar load, so a degraded feed cannot ' +
+      'stop a position sitting above its target from closing. Every unknown REFUSES and names the missing ' +
+      'input: an unreadable P&L never closes anything, and a broker-refused close is retried at most once a ' +
+      'minute. The close is stamped `system:take-profit` on the trade row and `TCS:take-profit` on the ' +
+      'broker deal, which are separate from `broker:tp` (a PRICE order) on purpose: a replay must be able ' +
+      'to tell whether the money target earned its place or the price target happened to fill.' },
+
   // #995 — the UP-move exhaustion OBSERVER. `display-only` for the same reason as `simTslEnabled`
   // above: the guardian READS it every tick, so it is not `none` — but it places no order and moves
   // no stop, so it is not `live` either. It records that a move was decelerating, which is what

@@ -34,6 +34,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiPut } from '../core/api/client';
+import { feedUnavailable } from '../core/api/feed-state.js';
 import { noticeFromError } from '../core/notices/from-error.js';
 import NoticeBlock from '../components/NoticeBlock';
 import MetaStackLayerSwitch from '../components/MetaStackLayerSwitch';
@@ -351,11 +352,15 @@ function BrokerConfigSection() {
 
 function AutomationRulesSection() {
   const qc = useQueryClient();
-  const { data } = useQuery({
+  const rulesQuery = useQuery({
     queryKey: ['automation-rules-settings'],
-    queryFn: () => apiGet('/api/automation/rules').catch(() => []),
+    // ⚠️ NO `.catch(() => [])` (#782 / INV-NO-EMPTY-SWALLOW). The empty state below states, in
+    // words, that an empty list means none are seeded — a confident claim about the database that a
+    // failed read must not be able to make.
+    queryFn: () => apiGet('/api/automation/rules'),
     staleTime: 60_000,
   });
+  const data = rulesQuery.data;
   const rules = Array.isArray(data) ? data : [];
 
   const toggle = useMutation({
@@ -365,7 +370,12 @@ function AutomationRulesSection() {
 
   return (
     <>
-      {rules.length === 0 ? (
+      {feedUnavailable(rulesQuery) ? (
+        <p className="settings-section-desc">
+          ⚠️ The automation rules could not be read — that is <strong>not</strong> the same as having
+          none. <button type="button" className="settings-retry" onClick={() => rulesQuery.refetch()}>retry</button>
+        </p>
+      ) : rules.length === 0 ? (
         <p className="settings-section-desc">
           No automation rules configured. Rules are seeded from the database, so an empty list
           means none have been seeded — not that the feature is broken.

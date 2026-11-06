@@ -1,0 +1,10 @@
+{
+  "_comment": "Ratchet for INV-NO-EMPTY-SWALLOW. A file may only go DOWN; a file not listed fails the build. `.catch(() => null)` is deliberately allowed — null is distinguishable from an empty result. Regenerate with `node scripts/validate-no-empty-swallow.cjs --write`, which refuses to record an increase.",
+  "_measured": "2026-11-06",
+  "_method": "literal `.catch(<callback>)` returning [] , {} , ({ key: [] }) or function(){return []}; comments and string literals stripped first",
+  "totals": {
+    "sites": 0,
+    "files": 0
+  },
+  "files": {}
+}

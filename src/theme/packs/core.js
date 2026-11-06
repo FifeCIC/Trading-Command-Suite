@@ -1,4 +1,4 @@
-import { createThemeTokens } from '../tokens';
+import { createThemeTokens } from '../tokens.js';
 
 export const themePack = {
   id: 'core',

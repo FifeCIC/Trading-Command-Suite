@@ -125,7 +125,10 @@ export function useTickRecording({ queryKey, symbol, refetchInterval = 5000 }) {
 
   const activeRecQuery = useQuery({
     queryKey,
-    queryFn: () => apiGet('/api/speed/record/active').catch(() => []),
+    // ⚠️ NO `.catch(() => [])` (#782 / INV-NO-EMPTY-SWALLOW). "There are no active recordings" and
+    // "I could not ask" both rendered as an empty list, so the cockpit showed Rec OFF while a
+    // recording was in fact running server-side.
+    queryFn: () => apiGet('/api/speed/record/active'),
     refetchInterval,
   });
   const activeRecordings = Array.isArray(activeRecQuery.data)

@@ -19,13 +19,24 @@
  * WHY IT IS ITS OWN COMPONENT rather than living inside DashboardPage: the dashboard is a widget
  * board (`WidgetBoard`), which is also used by other boards. Putting automation controls inside that
  * generic component would couple every board to the automation loop — so this renders beside it.
+ *
+ * ⚠️ IT NOW RENDERS INSIDE A WIDGET, NOT ABOVE THE BOARD (owner, 2026-11-06): *"Merge `<div.lc-strip>`
+ * … into `<li.wb-library-item>` … so that widget becomes system status with the control over the loop
+ * which is a key functionality."* So the loop's controls belong to the **System Status** widget
+ * (`widgets/builtin-widgets.jsx`), and `variant="embedded"` drops this component's own panel chrome
+ * so the strip does not draw a second border inside a card that already has one.
+ *
+ * ⚠️ THE CONSEQUENCE, STATED RATHER THAN DISCOVERED: a board only has loop controls while the System
+ * Status widget is on it — that is why `system-health` was added to `BOARD_DEFAULTS.dashboard`. The
+ * loop is still controllable from **Settings → Automation**, which has its own Start/Stop, so removing
+ * the widget cannot strand the loop in a state nobody can change.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import { formatDuration } from '../core/format-utils';
 import './loop-controls.css';
 
-export default function LoopControls() {
+export default function LoopControls({ variant = 'strip' }) {
   const qc = useQueryClient();
 
   const statusQuery = useQuery({
@@ -60,7 +71,7 @@ export default function LoopControls() {
   const busy = start.isPending || stop.isPending || runNow.isPending;
 
   return (
-    <div className="lc-strip">
+    <div className={`lc-strip${variant === 'embedded' ? ' lc-strip--embedded' : ''}`}>
       <span className={`lc-dot ${loopRunning === null ? 'lc-unknown' : loopRunning ? 'lc-on' : 'lc-off'}`} />
       <strong className="lc-label">
         {loopRunning === null ? 'Loop — status unavailable' : loopRunning ? 'Loop Active' : 'Loop Stopped'}
@@ -93,22 +104,24 @@ export default function LoopControls() {
         </>
       )}
 
-      {true && (
-        <span className="lc-actions">
-          {loopRunning ? (
-            <button className="lc-btn lc-btn-stop" onClick={() => stop.mutate()} disabled={busy}>
-              {stop.isPending ? '⏳' : '⏸'} Stop Loop
-            </button>
-          ) : (
-            <button className="lc-btn lc-btn-start" onClick={() => start.mutate()} disabled={busy || loopRunning === null}>
-              {start.isPending ? '⏳' : '▶'} Start Loop
-            </button>
-          )}
-          <button className="lc-btn" onClick={() => runNow.mutate()} disabled={busy || loopRunning !== true}>
-            {runNow.isPending ? '⏳' : '⚡'} Run Now
+      {/* ⚠️ `{true && (…)}` used to wrap this block — the leftover of the free-edition gate that hid
+          Start / Stop / Run Now from the free build (removed 2026-10-28, SETTLED-DECISIONS row 96).
+          The gate is gone so the wrapper is gone: it was invisible to the compiler and only surfaced
+          when `no-constant-binary-expression` ran over this file. */}
+      <span className="lc-actions">
+        {loopRunning ? (
+          <button className="lc-btn lc-btn-stop" onClick={() => stop.mutate()} disabled={busy}>
+            {stop.isPending ? '⏳' : '⏸'} Stop Loop
           </button>
-        </span>
-      )}
+        ) : (
+          <button className="lc-btn lc-btn-start" onClick={() => start.mutate()} disabled={busy || loopRunning === null}>
+            {start.isPending ? '⏳' : '▶'} Start Loop
+          </button>
+        )}
+        <button className="lc-btn" onClick={() => runNow.mutate()} disabled={busy || loopRunning !== true}>
+          {runNow.isPending ? '⏳' : '⚡'} Run Now
+        </button>
+      </span>
     </div>
   );
 }

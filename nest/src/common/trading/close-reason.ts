@@ -75,6 +75,16 @@ export const CLOSE_REASONS = {
   /** MT5 filled the take profit. */
   BROKER_TP: 'broker:tp',
   /**
+   * The MONEY TAKE-PROFIT closed it (`trading_strategy.takeProfitAmount` reached) — 2026-11-06.
+   *
+   * ⚠️ A value of its own rather than reusing `BROKER_TP`, and the distinction is the whole point of
+   * the mechanism: `broker:tp` means MT5 filled a price order, this means the APP decided to close at
+   * a P&L figure. Collapse them and a replay could not tell whether a £5 target earned its place or
+   * whether the price target happened to fill — which is exactly the question the copied
+   * configuration exists to answer.
+   */
+  SYSTEM_TAKE_PROFIT: 'system:take-profit',
+  /**
    * MT5 closed it because it decided to — client terminal, web, expert, rollover.
    *
    * ⚠️⚠️ #916 (2026-10-02) — **THIS IS NOT AN ATTRIBUTION. It NAMES A BUCKET, not an actor.**

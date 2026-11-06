@@ -125,7 +125,7 @@
 .sal-trace-dirs { display: flex; flex-direction: column; gap: 0.3rem; }
 .sal-trace-dir {
   padding: 0.22rem 0.35rem; border-radius: 0 4px 4px 0; font-size: 0.68rem;
-  border-left: 3px solid transparent;
+
   background: color-mix(in srgb, var(--ink-soft) 5%, transparent);
 }
 /* Server-classified tone (`d.signalClass`) — the CLIENT never re-derives this from a number. */

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { feedUnavailable } from '../core/api/feed-state.js';
 import { NAV_TREE } from '../core/nav-tree';
 import { PAGE_DATA_STATUS } from '../core/page-data-status';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -390,9 +391,12 @@ export default function CapabilityMapPage() {
   });
 
   // ── DB-backed capabilities (primary source when available) ──
+  // ⚠️ NO `.catch(() => [])` (#782 / INV-NO-EMPTY-SWALLOW). The empty array silently changed the
+  // SOURCE of every row on this page — `buildCapabilityRows` falls back to local definitions — so the
+  // map looked complete while it was built from a different, possibly older, register.
   const capabilitiesQuery = useQuery({
     queryKey: ['capability-map', 'db-capabilities'],
-    queryFn: () => apiGet('/api/capabilities').catch(() => []),
+    queryFn: () => apiGet('/api/capabilities'),
     refetchInterval: 120_000,
     staleTime: 60_000,
   });
@@ -463,6 +467,16 @@ export default function CapabilityMapPage() {
           Unified inventory of {allRows.length} capabilities — {dbCapabilities.length > 0 ? `${dbCapabilities.length} from DB` : 'built from live system scan'}. New capabilities added via POST /api/capabilities.
         </p>
       </motion.header>
+
+      {/* ⚠️ The rows below are built from a DIFFERENT source when the DB read fails (#782). Saying so
+          is the difference between "built from live system scan" as a choice and as a fallback. */}
+      {feedUnavailable(capabilitiesQuery) && (
+        <p className="cm-unread" role="alert">
+          ⚠️ The DB capability register could not be read — every row below is built from the live
+          system scan instead, so stored fields (persistence, completion) may be older.{' '}
+          <button type="button" className="cm-unread-retry" onClick={() => capabilitiesQuery.refetch()}>retry</button>
+        </p>
+      )}
 
       {/* ── Summary ── */}
       <div className="cm-summary">

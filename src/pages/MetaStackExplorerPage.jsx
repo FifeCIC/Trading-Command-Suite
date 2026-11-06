@@ -25,6 +25,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
+import { feedUnavailable } from '../core/api/feed-state.js';
 import FadeCardGroup from '../components/FadeCardGroup';
 import './meta-stack-explorer.css';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -350,45 +351,51 @@ export default function MetaStackExplorerPage() {
   }, [playing, queryClient]);
 
   // ── Prerequisite data queries ──
+  //
+  // ⚠️ NONE OF THESE SWALLOW (#782 / INV-NO-EMPTY-SWALLOW). This page renders a READINESS verdict —
+  // each stage says "met" or "missing" — so a swallowed failure did not merely hide an error, it
+  // reported a **missing prerequisite that was never checked**. A trader reading "no positions" or
+  // "no protocols" here would go looking for a configuration fault that does not exist.
+  // `failedPrereqs` below turns every one of those into a named gap instead.
   const symbolsQuery = useQuery({
     queryKey: ['mse-symbols-count'],
-    queryFn: () => apiGet('/api/symbols').catch(() => ({ symbols: [] })),
+    queryFn: () => apiGet('/api/symbols'),
     staleTime: 60_000,
   });
   const watchlistsQuery = useQuery({
     queryKey: ['mse-watchlists'],
-    queryFn: () => apiGet('/api/watchlists').catch(() => []),
+    queryFn: () => apiGet('/api/watchlists'),
     staleTime: 60_000,
   });
   const autoQuery = useQuery({
     queryKey: ['mse-automation'],
-    queryFn: () => apiGet('/api/automation/status').catch(() => ({})),
+    queryFn: () => apiGet('/api/automation/status'),
     refetchInterval: 30_000,
   });
   const providerHealthQuery = useQuery({
     queryKey: ['mse-provider-health'],
-    queryFn: () => apiGet('/api/providers/health').catch(() => ({})),
+    queryFn: () => apiGet('/api/providers/health'),
     staleTime: 30_000,
   });
   const scoringStratsQuery = useQuery({
     queryKey: ['mse-scoring-strats'],
-    queryFn: () => apiGet('/api/automation/scoring-strategies').catch(() => []),
+    queryFn: () => apiGet('/api/automation/scoring-strategies'),
     staleTime: 60_000,
   });
   const tradingStratsQuery = useQuery({
     queryKey: ['mse-trading-strats'],
-    queryFn: () => apiGet('/api/trading/strategies').catch(() => []),
+    queryFn: () => apiGet('/api/trading/strategies'),
     staleTime: 60_000,
   });
   const positionsQuery = useQuery({
     queryKey: ['mse-positions'],
-    queryFn: () => apiGet('/api/trading/mt5/positions').catch(() => []),
+    queryFn: () => apiGet('/api/trading/mt5/positions'),
     refetchInterval: 30_000,
   });
   // Directive registry — used for readiness badges on directive results
   const directivesQuery = useQuery({
     queryKey: ['mse-directives'],
-    queryFn: () => apiGet('/api/directives').catch(() => []),
+    queryFn: () => apiGet('/api/directives'),
     staleTime: 120_000,
   });
 
@@ -418,7 +425,7 @@ export default function MetaStackExplorerPage() {
 
   const protoQuery = useQuery({
     queryKey: ['mse-protocols-v2'],
-    queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })),
+    queryFn: () => apiGet('/api/scoring/gated/protocols'),
     staleTime: 120_000,
   });
   const protocols = protoQuery.data?.protocols ?? [];
@@ -465,13 +472,12 @@ export default function MetaStackExplorerPage() {
   // above everything that reads it.
   const protoAllQuery = useQuery({
     queryKey: ['mse-protocols-all'],
-    queryFn: () => apiGet('/api/scoring/protocols').catch(() => ({ protocols: [] })),
+    queryFn: () => apiGet('/api/scoring/protocols'),
     staleTime: 120_000,
   });
   const allProtocolsData = protoAllQuery.data?.protocols ?? [];
 
-  // ⚠️ MEASURED CEILING — the number that explains every "0-33" composite, and it was already
-  // being computed and served by `/api/scoring/gated/thresholds` with nothing displaying it.
+  // ⚠️ MEASURED CEILING — the number that explains every "0-33" composite, and it was already  // being computed and served by `/api/scoring/gated/thresholds` with nothing displaying it.
   //
   // `protocolCeilings[slug].ceilingPct` is the HIGHEST percentage that protocol reached in
   // `ceilingWindowDays` (90). Measured 2026-10-20: one-directive probes reach 60-100%, three
@@ -532,9 +538,31 @@ export default function MetaStackExplorerPage() {
   // every other cadence is `na` here rather than silently presented as covered.
   const freshnessQuery = useQuery({
     queryKey: ['mse-freshness'],
-    queryFn: () => apiGet('/api/market-data/freshness').catch(() => ({ results: [] })),
+    queryFn: () => apiGet('/api/market-data/freshness'),
     staleTime: 60_000,
   });
+
+  // ── Which prerequisite reads FAILED, named — the input to the banner in the header (#782) ──
+  // ⚠️ DECLARED HERE, AFTER EVERY QUERY IT REFERENCES. This file has already been bitten twice by a
+  // temporal-dead-zone `ReferenceError` from a const used above its declaration (see the
+  // `selectedProtocol` and `allProtocolsData` notes); a computed list of the queries themselves is the
+  // same hazard, so it sits below all of them.
+  const prereqFeeds = [
+    ['symbols', symbolsQuery],
+    ['watchlists', watchlistsQuery],
+    ['automation status', autoQuery],
+    ['provider health', providerHealthQuery],
+    ['scoring strategies', scoringStratsQuery],
+    ['trading strategies', tradingStratsQuery],
+    ['open positions', positionsQuery],
+    ['the directive registry', directivesQuery],
+    ['protocol status', protoQuery],
+    ['the protocol list', protoAllQuery],
+    ['market-data freshness', freshnessQuery],
+  ];
+  const failedPrereqFeeds = prereqFeeds.filter(([, q]) => feedUnavailable(q));
+  const failedPrereqs = [...new Set(failedPrereqFeeds.map(([name]) => name))];
+  const retryPrereqs = () => failedPrereqFeeds.forEach(([, q]) => q.refetch());
 
   const marketTech = useMemo(() => {
     const results = Array.isArray(freshnessQuery.data?.results) ? freshnessQuery.data.results : [];
@@ -1230,6 +1258,17 @@ export default function MetaStackExplorerPage() {
           <button className="mse-action-btn mse-action-reset" onClick={resetAll}>Reset</button>
         </div>
       </header>
+
+      {/* ⚠️ A MISSING PREREQUISITE AND AN UNREAD ONE ARE DIFFERENT ANSWERS (#782). Every stage below
+          reports "met" or "missing"; without this banner a failed read reports "missing" — sending the
+          reader to look for a configuration fault that does not exist. */}
+      {failedPrereqs.length > 0 && (
+        <div className="mse-feed-gap" role="alert">
+          ⚠️ Could not read {failedPrereqs.join(', ')} — the stages below report those checks as{' '}
+          <strong>unknown</strong>, not as missing.{' '}
+          <button type="button" className="mse-feed-retry" onClick={retryPrereqs}>retry</button>
+        </div>
+      )}
 
       {/* ── Selected Strategy Banner ── */}
       {selectedStrategy ? (

@@ -175,7 +175,7 @@
 .sl-ladder-row:hover { background: rgba(14,165,166,0.03); }
 .sl-ladder-rank { font-size: 0.68rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .sl-ladder-strat {
-  display: inline-block; padding-left: 6px; border-left: 3px solid;
+  display: inline-block; padding-left: 6px; 
   font-size: 0.7rem; color: var(--ink-soft);
 }
 .sl-ladder-signal { font-size: 0.68rem; font-weight: 700; }

@@ -8,7 +8,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { apiGet, apiPost } from '../core/api/client';
+import { apiGet, apiPost, apiDelete } from '../core/api/client';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import { usePersistentState } from '../hooks/usePersistentState';
@@ -109,9 +109,14 @@ export default function UserWatchlistsPage() {
       : [];
 
   // Fetch all symbols to get company names
+  // ⚠️ NO `.catch(() => ({ symbols: [] }))` (#782 / INV-NO-EMPTY-SWALLOW). Deliberately the one place
+  // where a failed read needs NO banner: company names are supplementary, the ticker always renders, and
+  // an absent name is visible as an absent name rather than being misread as a fact. The catch is still
+  // removed — a swallow at the data layer is what this invariant forbids — but the surface is silence,
+  // not a notice.
   const { data: allSymbols } = useQuery({
     queryKey: ['all-symbols-names'],
-    queryFn: () => apiGet('/api/symbols').catch(() => ({ symbols: [] })),
+    queryFn: () => apiGet('/api/symbols'),
     staleTime: 120_000,
   });
   const symbolNameMap = {};
@@ -151,11 +156,15 @@ export default function UserWatchlistsPage() {
   }, [posRows]);
 
   // Delete watchlist mutation
+  // Delete watchlist mutation.
+  // ⚠️ Was `apiPost('/api/watchlists/delete', { id })` with a `.catch` fallback to a raw `fetch`
+  // DELETE. `POST /api/watchlists/delete` has NEVER existed — the controller declares
+  // `@Delete(':id')` only — so every delete threw a 404 first and then quietly worked through the
+  // fallback. Two defects in one: a wasted failing request per delete, and a raw `fetch` that
+  // bypassed the API helper's error handling (so a real failure surfaced nowhere). The DELETE below
+  // is the same route the fallback used, called directly. Found by `validate-api-routes.cjs`, #867.
   const deleteMutation = useMutation({
-    mutationFn: (id) => apiPost('/api/watchlists/delete', { id }).catch(async () => {
-      // Fallback: use fetch for DELETE
-      await fetch(`/api/watchlists/${id}`, { method: 'DELETE' });
-    }),
+    mutationFn: (id) => apiDelete(`/api/watchlists/${encodeURIComponent(id)}`),
     onSuccess: () => {
       setSelectedId(null);
       queryClient.invalidateQueries({ queryKey: ['watchlists'] });

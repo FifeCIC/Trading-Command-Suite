@@ -93,7 +93,9 @@ export default function ActiveSymbolsPage() {
   // Both now go through `core/symbol-positions.js` so they cannot drift again. (2026-09-22)
   const positionsQuery = useQuery({
     queryKey: POSITIONS_QUERY_KEY,
-    queryFn: () => apiGet('/api/symbols/positions').catch(() => ({ positions: [] })),
+    // ⚠️ NO `.catch(() => ({ positions: [] }))` (#782 / INV-NO-EMPTY-SWALLOW) — this feeds the
+    // per-symbol "held" column, so a failed request painted the whole table as unheld.
+    queryFn: () => apiGet('/api/symbols/positions'),
     refetchInterval: POSITIONS_REFETCH_MS,
   });
 
@@ -321,6 +323,18 @@ export default function ActiveSymbolsPage() {
                   })
             }
           />
+        </div>
+      )}
+
+      {positionsQuery.isError && (
+        <div className="tp-banner-retry" style={{ marginBottom: 16 }} role="alert">
+          <NoticeBlock
+            notice={noticeFromError(positionsQuery.error, 'TCS-SYS-009', {
+              detail: 'the open-positions request did not complete, so the HELD column below is unknown rather than empty',
+            })}
+            compact
+          />
+          <button type="button" onClick={() => positionsQuery.refetch()} style={{ marginLeft: 12 }}>Retry</button>
         </div>
       )}
 

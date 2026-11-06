@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { feedUnavailable } from '../core/api/feed-state.js';
 import { timeAgo } from '../core/format-utils';
 import OrderModal from '../components/OrderModal';
 
@@ -127,10 +128,15 @@ export default function PortfolioPage() {
 
   const scoresQuery = useQuery({
     queryKey: ['portfolio-scores'],
-    queryFn: () => apiGet('/api/portfolio/scores').then((d) => d?.scores || []).catch(() => []),
+    // ⚠️ NO `.then((d) => d?.scores || []).catch(() => [])` (#782 / INV-NO-EMPTY-SWALLOW). Both halves
+    // of that chain produced an empty list: a failed request AND a shape the caller did not expect.
+    // The consequence was a `Data` column reading **"Untracked"** for every holding — a statement
+    // about market-data coverage made by a broken request.
+    queryFn: () => apiGet('/api/portfolio/scores'),
     staleTime: 60_000,
     refetchInterval: 120_000,
   });
+  const scoresUnread = feedUnavailable(scoresQuery);
 
   const data = portfolioQuery.data;
   const unavailable = data?.unavailable;
@@ -299,8 +305,12 @@ export default function PortfolioPage() {
           </thead>
           <tbody>
             {positions.map((p, i) => {
-              const s = (scoresQuery.data || []).find((sc) => sc.symbol === p.symbol);
-              const dataStatus = s?.dataStatus || 'untracked';
+              // ⚠️ An unread scores feed must not render as "untracked" (#782) — unknown ≠ untracked.
+              const scoresList = Array.isArray(scoresQuery.data)
+                ? scoresQuery.data
+                : (scoresQuery.data?.scores ?? []);
+              const s = scoresList.find((sc) => sc.symbol === p.symbol);
+              const dataStatus = scoresUnread ? 'unknown' : (s?.dataStatus || 'untracked');
               return (
               <motion.tr
                 key={p.symbol}
@@ -317,8 +327,8 @@ export default function PortfolioPage() {
                 <td className={(p.pnl || 0) >= 0 ? 'pf-green' : 'pf-red'}>{(p.pnl || 0) >= 0 ? '+' : ''}${Math.abs(p.pnl || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td className={(p.pnlPct || 0) >= 0 ? 'pf-green' : 'pf-red'}>{(p.pnlPct || 0) >= 0 ? '+' : ''}{(p.pnlPct || 0).toFixed(1)}%</td>
                 <td>
-                  <span className={`pf-data-status pf-ds-${dataStatus}`} title={dataStatus === 'live' ? 'Live market data flowing' : dataStatus === 'stale' ? 'Market data is stale' : 'No market data available'}>
-                    {dataStatus === 'live' ? 'Live' : dataStatus === 'stale' ? 'Stale' : 'No Data'}
+                  <span className={`pf-data-status pf-ds-${dataStatus}`} title={dataStatus === 'live' ? 'Live market data flowing' : dataStatus === 'stale' ? 'Market data is stale' : dataStatus === 'unknown' ? 'The scores feed could not be read — this is unknown, not "no data"' : 'No market data available'}>
+                    {dataStatus === 'live' ? 'Live' : dataStatus === 'stale' ? 'Stale' : dataStatus === 'unknown' ? '?' : 'No Data'}
                   </span>
                 </td>
                 <td>

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
+import { feedUnavailable } from '../core/api/feed-state.js'
 import './database-tables.css'
 
 // These mirror the Prisma schema models and planned tables
@@ -73,9 +74,12 @@ export default function DatabaseTablesPage() {
   })
 
   // Table stats (last insert timestamps)
+  // ⚠️ NO `.catch(() => ({}))` (#782 / INV-NO-EMPTY-SWALLOW). `tStats` drives the "last insert"
+  // column; an empty object renders every table as having NO DATA, which is the claim this page
+  // exists to make truthfully.
   const tableStats = useQuery({
     queryKey: ['db-table-stats'],
-    queryFn: () => apiGet('/api/database/table-stats').catch(() => ({})),
+    queryFn: () => apiGet('/api/database/table-stats'),
     retry: 1,
     staleTime: 30_000,
   })
@@ -135,6 +139,14 @@ export default function DatabaseTablesPage() {
           {runs.length} import runs
         </p>
       </header>
+
+      {feedUnavailable(tableStats) && (
+        <p className="db-unread" role="alert">
+          ⚠️ Table statistics could not be read — the <strong>Last Insert</strong> column below is
+          unknown for every table, not "no data".{' '}
+          <button type="button" className="db-unread-retry" onClick={() => tableStats.refetch()}>retry</button>
+        </p>
+      )}
 
       <table className="tables-table">
         <thead>

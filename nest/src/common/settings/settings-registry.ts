@@ -464,6 +464,26 @@ export const SETTINGS: SettingDefinition[] = [
     max: 1440,
   },
   {
+    key: 'automation.guardianTickIntervalMs',
+    type: 'number',
+    defaultValue: 10000,
+    class: 'runtime',
+    owner: 'automation',
+    label: 'Stop guardian check interval (ms)',
+    description:
+      'How often the stop guardian re-reads every open position and re-derives its trailing stop. ' +
+      'This is the ONLY loop that moves a stop, and its cost is a fixed ~105–145 ms per pass ' +
+      'regardless of rate, so the interval trades latency for bridge reads — not CPU. ' +
+      'MEASURED 2026-11-06: 30 s → 144 ms/pass, 10 s → 103 ms, 5 s → 105 ms, 2 s → 105 ms ' +
+      '(0.5 % → 5.3 % duty), moving the worst-case latency of a stop edit from ~90 s to ~70 s at 10 s. ' +
+      '⚠️ Going faster does NOT move stops sooner than the modify throttle below allows: ' +
+      '`MIN_MODIFY_INTERVAL_MS` (60 s per position) is the real floor, and the ≥55 stop-confidence ' +
+      'gate blocks most positions anyway. See #1199 for the measurements.',
+    userChangeable: true,
+    min: 2000,
+    max: 300000,
+  },
+  {
     key: 'automation.preOpenAlertMinutes',
     type: 'number',
     defaultValue: 30,
@@ -627,9 +647,64 @@ export const SETTINGS: SettingDefinition[] = [
       'turning it off does not unlock anything that was ever for sale.',
     userChangeable: true,
   },
+
+  // ── Discord publishing policy (2026-11-06) ─────────────────────────────────
+  // ⚠️ THE PUBLIC FEED IS A PUBLISHING DECISION, NOT A NOTIFICATION. The owner's instruction:
+  // *"I do not want ALL signals to be shared. Only one per day for now to create the system and
+  // keep it well tested"* and *"I don't think we should share trade wins and losses that are
+  // within a dollar. That might reduce what is essentially noise."*
+  //
+  // These are separate from the per-event preferences above: those decide WHO is told, these
+  // decide WHAT IS PUBLISHED. A reader tuning one must not accidentally tune the other.
+  {
+    key: 'notifications.discord.publishEnabled',
+    type: 'boolean',
+    defaultValue: true,
+    class: 'runtime',
+    owner: 'notifications',
+    label: 'Publish to the Discord feed',
+    description:
+      'Master switch for the public Discord feed (signal / win / loss channels). When false nothing ' +
+      'is published; the per-event channel preferences still govern the operator channels. Default ' +
+      'true because the feed was explicitly requested — set false to silence it without a deploy.',
+    userChangeable: true,
+  },
+  {
+    key: 'notifications.discord.signalMinIntervalMinutes',
+    type: 'number',
+    defaultValue: 60,
+    class: 'runtime',
+    owner: 'notifications',
+    label: 'Minimum minutes between Discord signals per strategy',
+    description:
+      'One suggestion per strategy per window. 60 (hourly) at the owner\'s instruction 2026-11-06, ' +
+      'replacing a global one-per-day allowance: a ration shared by every strategy meant the first ' +
+      'signal of the day silenced all the others, so the feed reported the calendar instead of the ' +
+      'market. 0 disables the throttle. The per-strategy last-post time is a FAMILY member (see ' +
+      'SETTING_FAMILIES), not a column and not a seeded setting — an install that never publishes ' +
+      'carries no extra data at all.',
+    userChangeable: true,
+    min: 0,
+    max: 10080,
+  },
+  {
+    key: 'notifications.discord.minPnlToAnnounce',
+    type: 'number',
+    defaultValue: 1,
+    class: 'runtime',
+    owner: 'notifications',
+    label: 'Minimum |P&L| published for a closed trade',
+    description:
+      'A closed trade whose ABSOLUTE profit is below this is not published — it is noise in a feed ' +
+      'about outcomes. 1.00 (account currency) at the owner\'s instruction: wins and losses within a ' +
+      'dollar say nothing. ⚠️ A trade with no recorded P&L is NOT published either: "cannot judge" ' +
+      'must never render as a win.',
+    userChangeable: true,
+    min: 0,
+    max: 100000,
+  },
 ];
 
-/** Fast lookup. Built once at module load; the registry is static by design. */
 export const SETTINGS_BY_KEY: ReadonlyMap<string, SettingDefinition> = new Map(
   SETTINGS.map((s) => [s.key, s]),
 );
@@ -1025,6 +1100,56 @@ export const SETTING_FAMILIES: SettingFamily[] = [
         description:
           'ISO instant the baseline was accepted. Kept so a reader can tell an old reference from a ' +
           'fresh one without guessing from the run\'s own createdAt.',
+        userChangeable: false,
+      },
+    },
+  },
+  {
+    /**
+     * discordSignalLastPost — the per-strategy Discord signal throttle (2026-11-06).
+     *
+     * WHY A FAMILY AND NOT A COLUMN OR A SETTING: the owner's reasoning, verbatim —
+     * *"strategies will need what could probably be a meta data value that stores the last time of
+     * discord posting of a signal. I say meta data because its a lot of extra data for something that
+     * wont be active for all users so a table column would be inherent for most installations."*
+     *
+     * ⚠️ THREE IMPLEMENTATIONS WERE REJECTED, and each is a real trap in this repo:
+     *   • A new COLUMN on `protocol` / `trading_strategy` — ships to every install, and nothing can
+     *     leave it NULL, so it reads as configured everywhere it was never used.
+     *   • An in-memory `Map` — survives until the next `build:api`, and this repo rebuilds constantly.
+     *     A throttle that resets on deploy is a throttle that floods after every deploy.
+     *   • A row per strategy seeded up front — families are NEVER seeded (only `SETTINGS` is iterated
+     *     by `ensureDefaults`), so this is the one shape that costs nothing for an install that never
+     *     publishes. That is the whole point.
+     *
+     * ⚠️ The SUBJECT is a protocol slug (`vix-spike-v1-long`), because a signal suggestion comes from
+     * the ladder envelope and a ladder card has NO bot attached to it. `any` is the subject the
+     * automation loop writes when a card names no protocol — it is a real subject, not a null.
+     *
+     * ⚠️ ONE FIELD, `at`, and that is deliberate: `signalMinIntervalMinutes` is the RULE and lives as
+     * a normal setting; this family is only the FACT. Storing a copy of the interval per strategy
+     * would create two sources for one policy.
+     */
+    id: 'discordSignalLastPost',
+    label: 'Last Discord signal per strategy',
+    owner: 'notifications',
+    description:
+      'When this strategy last published a signal suggestion to the Discord signals channel. Written ' +
+      'by discord.channel.ts on every publish and read to enforce ' +
+      '`notifications.discord.signalMinIntervalMinutes`. Absent means "never published", which is ' +
+      'different from "published long ago" — the reader must not treat a missing row as an error.',
+    pattern: /^notifications\.discord\.lastSignal\.([a-z0-9][a-z0-9-]*)\.(at)$/,
+    prefix: 'notifications.discord.lastSignal.',
+    subjectGroup: 1,
+    fieldGroup: 2,
+    fields: {
+      at: {
+        type: 'string',
+        description:
+          'ISO instant of the last publish for this strategy. Compared against the current instant ' +
+          'minus `signalMinIntervalMinutes`; an unparseable value must be treated as "never ' +
+          'published" and logged, never as "publish now" — a corrupt timestamp that silently ' +
+          'un-throttles a public channel is worse than a skipped signal.',
         userChangeable: false,
       },
     },

@@ -37,6 +37,6 @@ import { DiscordChannel } from './channels/discord.channel';
     TelegramChannel,
     DiscordChannel,
   ],
-  exports: [NotificationService],
+  exports: [NotificationService, DiscordChannel],
 })
 export class NotificationsModule {}

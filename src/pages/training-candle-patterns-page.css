@@ -202,7 +202,7 @@
 
 .pattern-item.direction-bullish { border-color: var(--color-profit); }
 .pattern-item.direction-bearish { border-color: var(--color-loss); }
-.pattern-item.direction-neutral { border-left: 3px solid var(--ink-soft); }
+.pattern-item.direction-neutral {  }
 
 .pattern-item .pattern-icon {
   font-size: 0.9rem;

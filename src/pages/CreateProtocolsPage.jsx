@@ -73,9 +73,13 @@ export default function CreateProtocolsPage() {
     let cancelled = false;
     async function load() {
       try {
+        // ⚠️ NO `.catch()` PER-REQUEST (#782 / INV-NO-EMPTY-SWALLOW). The `try/catch` around this
+        // already renders a notice on failure — the per-request catches ran FIRST and converted the
+        // failure into empty lists, so that notice could never fire and the form silently showed "no
+        // directives" / "no protocols" as though the registry were empty.
         const [dirs, protos] = await Promise.all([
-          apiGet('/api/directives').catch(() => []),
-          apiGet('/api/scoring/protocols').catch(() => ({ protocols: [] })),
+          apiGet('/api/directives'),
+          apiGet('/api/scoring/protocols'),
         ]);
         if (cancelled) return;
         setDirectives(Array.isArray(dirs) ? dirs : []);
@@ -229,9 +233,18 @@ export default function CreateProtocolsPage() {
       const res = await apiPost('/api/scoring/protocols', payload);
       if (res.success) {
         setSavedMsg(`Protocol "${protocolName}" saved successfully!`);
-        // Refresh existing protocols
-        const protos = await apiGet('/api/scoring/protocols').catch(() => ({ protocols: [] }));
-        setExistingProtocols(Array.isArray(protos.protocols) ? protos.protocols : []);
+        // Refresh existing protocols.
+        // ⚠️ The SAVE succeeded, so a failed refresh must not be reported as a failed save (#782).
+        // It gets its own notice naming the actual gap.
+        try {
+          const protos = await apiGet('/api/scoring/protocols');
+          setExistingProtocols(Array.isArray(protos.protocols) ? protos.protocols : []);
+        } catch (refreshErr) {
+          setSaveNotice(noticeFromError(refreshErr, 'TCS-SYS-007', {
+            operation: 'refresh the protocol list after saving',
+            detail: 'the protocol WAS saved — this list below is stale, not empty',
+          }));
+        }
       } else {
         setSaveError('');
       setSaveNotice(notice('TCS-SYS-007', { operation: 'save the protocol', detail: res.error || 'The API reported a failure with no reason.' }));

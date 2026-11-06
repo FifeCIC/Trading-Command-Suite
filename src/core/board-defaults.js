@@ -27,6 +27,11 @@ export const BOARD_DEFAULTS = {
   dashboard: [
     'market-context',
     'alerts',
+    // ⚠️ ADDED 2026-11-06 (owner): the automation loop's Start / Stop / Run Now moved INTO this
+    // widget, so without it here a NEW board would have no way to control the loop. Existing boards
+    // get it appended once through the `seeded` list, and a board where it was deliberately removed
+    // stays removed — Settings → Automation keeps its own Start/Stop either way.
+    'system-health',
     // Placed high on purpose (#943): the owner asked for the caps to be visible
     // without hunting for them. Existing boards receive it appended once via the
     // `seeded` list; this order applies to a first-run board.
@@ -37,13 +42,31 @@ export const BOARD_DEFAULTS = {
     'worst-case',
     'mt5-positions',
     'recent-trades',
-    'diversification',
+    // ⚠️ 'diversification' and 'automation' were REMOVED here on 2026-11-06 (owner, Dashboard
+    // walkthrough: *"Hide … that will need a github issue"* / *"hide this one too"*). They are also in
+    // BOARD_RETIRED below, because removing a default only affects a NEW board — the owner's existing
+    // board already had both. The `automation` widget's loop controls now live inside System Status,
+    // so it was a second copy of the same state.
     'top-signals',
     'market-sessions',
     'news-sources',
-    'automation',
   ],
   lab: ['market-context', 'top-signals', 'positions', 'system-health'],
+};
+
+/**
+ * BOARD_RETIRED — defaults the owner has asked to HIDE, removed once from an existing board.
+ *
+ * ⚠️ This is not the same as deleting them from `BOARD_DEFAULTS`. A default only reaches a NEW board;
+ * a widget the owner already has must be removed from the stored board, and only once, because the
+ * widget stays in the library and re-adding it by hand must stick. `docs` on why each is retired is
+ * beside it — a retirement with no reason is indistinguishable from an accident.
+ *
+ * 2026-11-06, owner (Dashboard walkthrough): *"Hide <Diversification> that will need a github issue"*
+ * and *"hide this one too"* (Automation Pulse). Both remain in the widget library.
+ */
+export const BOARD_RETIRED = {
+  dashboard: ['diversification', 'automation'],
 };
 
 /**

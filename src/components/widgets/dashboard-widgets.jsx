@@ -18,10 +18,11 @@
  *     settings registry endpoint that already validates the value against its
  *     declaration. Add a second writer only with a reason this good.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { apiGet, apiPut } from '../../core/api/client';
+import { feedUnavailable } from '../../core/api/feed-state.js';
 import { registerWidget } from '../../core/widget-registry';
 import { signalColor } from '../../core/signal-utils';
 import { noticeLine } from '../../core/notices/registry.js';
@@ -35,40 +36,65 @@ const useMt5Diag = () =>
   }).data || {};
 
 /** Live MT5 positions (broker truth, not the stored Position table). */
+// ⚠️ RETURNS THE QUERY, NOT A BARE ARRAY (#782 / INV-NO-EMPTY-SWALLOW). It used to end
+// `.catch(() => ({ positions: [] })).data?.positions || []`, which handed every widget an empty
+// array with the status thrown away — so five dashboard tiles reported **"Open Positions 0"** and
+// **"Unrealized P&L +0.00"** while the bridge request was failing. In a trading app a false flat is
+// the most expensive wrong number there is: it is indistinguishable from a real flat book.
 function useMt5Positions(enabled = true) {
   return useQuery({
     queryKey: ['dash-positions'],
-    queryFn: () => apiGet('/api/providers/mt5/positions').catch(() => ({ positions: [] })),
+    queryFn: () => apiGet('/api/providers/mt5/positions'),
     refetchInterval: 30_000,
     enabled,
-  }).data?.positions || [];
+  });
 }
 
 function useT212() {
   return useQuery({
     queryKey: ['dash-t212'],
-    queryFn: () => apiGet('/api/portfolio?source=trading212').catch(() => ({ positions: [] })),
+    queryFn: () => apiGet('/api/portfolio?source=trading212'),
     refetchInterval: 60_000,
     staleTime: 30_000,
-  }).data || {};
+  });
 }
 
 function useIsa() {
   return useQuery({
     queryKey: ['dash-isa'],
-    queryFn: () => apiGet('/api/isa/dashboard').catch(() => ({})),
+    queryFn: () => apiGet('/api/isa/dashboard'),
     refetchInterval: 60_000,
     staleTime: 30_000,
-  }).data || {};
+  });
 }
 
 /** Per-broker rollup — shared by the portfolio, P&L and worst-case widgets. */
 function useBrokerRollup() {
   const diag = useMt5Diag();
   const mt5Connected = diag.connected === true;
-  const positions = useMt5Positions(mt5Connected);
-  const t212 = useT212();
-  const isaData = useIsa();
+  const positionsQuery = useMt5Positions(mt5Connected);
+  const t212Query = useT212();
+  const isaQuery = useIsa();
+
+  const positions = positionsQuery.data?.positions || [];
+  const t212 = t212Query.data || {};
+  const isaData = isaQuery.data || {};
+
+  /**
+   * ⚠️ WHICH NUMBER IS A ZERO AND WHICH IS UNKNOWN — this object is the difference.
+   * A consumer must render "—" for a truthy here, never the computed 0 / empty list.
+   *
+   * ⚠️ `isError` ALONE IS NOT ENOUGH, and that was measured: a failing request does not flip it
+   * immediately. react-query sat in a RETRY WAIT (`status: 'pending'`, `failureCount: 1`,
+   * `isFetching: false`) for seconds with `data` undefined and `isError` still false — and the tiles
+   * printed "Open Positions 0" and "nothing at risk" for that whole window (observed 2026-11-06
+   * against a 404). `feedUnavailable()` covers both the failure and the not-yet-an-answer case.
+   */
+  const unavailable = {
+    positions: feedUnavailable(positionsQuery),
+    t212: feedUnavailable(t212Query),
+    isa: feedUnavailable(isaQuery),
+  };
 
   const t212Positions = t212.positions || [];
   const t212Account = t212.account || {};
@@ -107,6 +133,12 @@ function useBrokerRollup() {
     mt5,
     t212: t212Row,
     isa,
+    unavailable,
+    retry: () => {
+      if (positionsQuery.isError) positionsQuery.refetch();
+      if (t212Query.isError) t212Query.refetch();
+      if (isaQuery.isError) isaQuery.refetch();
+    },
     // ISA accounts are always live; T212 reports its own mode.
     t212Mode: (t212.mode || 'demo') === 'live' ? 'live' : 'practice',
     total: mt5.pnl + t212Row.pnl + isa.pnl,
@@ -118,34 +150,119 @@ const money = (value, symbol = '$') =>
 
 const signed = (value) => `${value >= 0 ? '+' : ''}${(value || 0).toFixed(2)}`;
 
-/* ── MT5 Portfolio Summary ───────────────────────────────────── */
-function Mt5PortfolioWidget() {
-  const { diag, mt5Connected, mt5 } = useBrokerRollup();
+/**
+ * UnknownChip — the "I could not ask" marker for a tile (#782).
+ * ⚠️ It exists so a widget never has to choose between showing a fabricated 0 and showing nothing.
+ * A dash with a reason and a retry is strictly more information than either.
+ */
+function UnknownChip({ what = 'this figure', onRetry }) {
   return (
-    <div className="dash-card-stats">
-      <div className="dash-stat">
-        <span className="dash-stat-label">MT5 Bridge</span>
-        <span className={`dash-stat-value ${mt5Connected ? 'ok' : 'err'}`}>
-          {mt5Connected ? 'Connected' : 'Offline'}
-        </span>
-      </div>
-      <div className="dash-stat">
-        <span className="dash-stat-label">Balance</span>
-        <span className="dash-stat-value ok">{money(diag.balance ?? 0)}</span>
-      </div>
-      <div className="dash-stat">
-        <span className="dash-stat-label">Equity</span>
-        <span className="dash-stat-value ok">{money(diag.equity ?? 0)}</span>
-      </div>
-      <div className="dash-stat">
-        <span className="dash-stat-label">Open Positions</span>
-        <span className="dash-stat-value">{mt5.count}</span>
-      </div>
-      <div className="dash-stat">
-        <span className="dash-stat-label">Unrealized P&amp;L</span>
-        <span className={`dash-stat-value ${mt5.pnl >= 0 ? 'ok' : 'err'}`}>{signed(mt5.pnl)}</span>
-      </div>
+    <span className="dash-stat-value err" title={`${what} could not be loaded — this is not zero`}>
+      — <button type="button" className="dash-retry" onClick={onRetry}>retry</button>
+    </span>
+  );
+}
+
+/* ── MT5 Portfolio Summary ───────────────────────────────────── */
+function HScroll({ children, label }) {
+  const bodyRef = useRef(null);
+  const [overflow, setOverflow] = useState({ left: false, right: false });
+
+  const measure = useCallback(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setOverflow({ left: el.scrollLeft > 2, right: max > 2 && el.scrollLeft < max - 2 });
+  }, []);
+
+  /* Re-measure after EVERY render as well as on resize/scroll. ⚠️ Measured 2026-11-06: a
+     ResizeObserver alone left the arrows stale when the tile's width changed without React
+     re-rendering the children, so the button either appeared with nothing to scroll (phantom) or
+     stayed absent with 173px hidden. A deferred measure per render is cheap and cannot go stale. */
+  useEffect(() => {
+    const t = setTimeout(measure, 0);
+    return () => clearTimeout(t);
+  });
+
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return undefined;
+    const child = el.firstElementChild;
+    el.addEventListener('scroll', measure, { passive: true });
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    if (ro) { ro.observe(el); if (child) ro.observe(child); }
+    return () => { if (ro) ro.disconnect(); el.removeEventListener('scroll', measure); };
+  }, [measure]);
+
+  const nudge = (dir) => {
+    const el = bodyRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * Math.max(80, el.clientWidth * 0.8), behavior: 'smooth' });
+  };
+
+  return (
+    <div className="dash-hscroll">
+      {overflow.left && (
+        <button type="button" className="dash-hscroll-btn" onClick={() => nudge(-1)} aria-label={`Scroll ${label} left`}>◀</button>
+      )}
+      <div className="dash-hscroll-body" ref={bodyRef}>{children}</div>
+      {overflow.right && (
+        <button type="button" className="dash-hscroll-btn" onClick={() => nudge(1)} aria-label={`Scroll ${label} right`}>▶</button>
+      )}
     </div>
+  );
+}
+
+/* ── MT5 Portfolio Summary ──
+   Owner, 2026-11-06: *"Surely we can add more information … Lets hide some of that additional
+   information if the widget is too small for it. Rather than just relying on scroll bar lets add
+   buttons for scrolling information sideways. Also position the information so it's always two
+   rows. Right now it's one with a lot of empty space below each piece of data."*
+   So: TWO rows (the column count is derived from the item count, so it cannot drift back into one
+   row), ◀ ▶ buttons only when the row is wider than the tile, and the least load-bearing figure
+   drops out below a container width where it would be unreadable. */
+function Mt5PortfolioWidget() {
+  const { diag, mt5Connected, mt5, unavailable, retry } = useBrokerRollup();
+
+  const stats = [
+    {
+      label: 'MT5 Bridge',
+      value: <span className={`dash-stat-value ${mt5Connected ? 'ok' : 'err'}`}>{mt5Connected ? 'Connected' : 'Offline'}</span>,
+    },
+    { label: 'Balance', value: <span className="dash-stat-value ok">{money(diag.balance ?? 0)}</span> },
+    { label: 'Equity', value: <span className="dash-stat-value ok">{money(diag.equity ?? 0)}</span> },
+    {
+      label: 'Open Positions',
+      optional: true,
+      value: unavailable.positions
+        ? <UnknownChip what="Open positions" onRetry={retry} />
+        : <span className="dash-stat-value">{mt5.count}</span>,
+    },
+    {
+      label: 'Unrealized P&L',
+      value: unavailable.positions
+        ? <UnknownChip what="Unrealized P&L" onRetry={retry} />
+        : <span className={`dash-stat-value ${mt5.pnl >= 0 ? 'ok' : 'err'}`}>{signed(mt5.pnl)}</span>,
+    },
+  ];
+
+  const columns = Math.ceil(stats.length / 2);
+
+  return (
+    <HScroll label="portfolio figures">
+      {/* ⚠️ `minmax(96px, 1fr)`, NOT `minmax(0, 1fr)` — measured 2026-11-06: with `0` the tracks
+          simply shrink, so the row never overflows and the scroll buttons the owner asked for could
+          never appear. A 96px floor makes the row genuinely wider than a small tile, which is what
+          the arrows are for; below that the optional figure drops out instead. */}
+      <div className="dash-card-rows" style={{ gridTemplateColumns: `repeat(${columns}, minmax(96px, 1fr))` }}>
+        {stats.map((s) => (
+          <div key={s.label} className={`dash-stat${s.optional ? ' dash-stat--optional' : ''}`}>
+            <span className="dash-stat-label">{s.label}</span>
+            {s.value}
+          </div>
+        ))}
+      </div>
+    </HScroll>
   );
 }
 
@@ -172,9 +289,12 @@ function BrokerPnlRow({ icon, name, badge, badgeClass, metrics }) {
 }
 
 function BrokerPnlWidget() {
-  const { mt5Connected, mt5, t212, isa, t212Mode, total } = useBrokerRollup();
+  const { mt5Connected, mt5, t212, isa, t212Mode, total, unavailable } = useBrokerRollup();
   const showMt5 = mt5.pnl !== 0 || mt5Connected;
   const showT212 = t212.pnl !== 0 || t212Mode === 'live';
+  // ⚠️ "All Brokers" is a SUM. If any leg failed, the total is not a partial answer — it is a wrong
+  // one, and it looks exactly like a real number. It renders as unknown instead.
+  const totalKnown = !unavailable.positions && !unavailable.t212 && !unavailable.isa;
 
   return (
     <div className="dash-broker-grid">
@@ -187,12 +307,12 @@ function BrokerPnlWidget() {
           metrics={[
             { label: 'Balance', value: money(mt5.balance) },
             { label: 'Equity', value: money(mt5.equity) },
-            { label: 'Positions', value: mt5.count },
+            { label: 'Positions', value: unavailable.positions ? '—' : mt5.count },
             {
               label: 'P&L',
-              value: signed(mt5.pnl),
-              tone: mt5.pnl >= 0 ? 'ok' : 'err',
-              sub: `${mt5.winners}W / ${mt5.losers}L`,
+              value: unavailable.positions ? '—' : signed(mt5.pnl),
+              tone: unavailable.positions ? '' : (mt5.pnl >= 0 ? 'ok' : 'err'),
+              sub: unavailable.positions ? 'unavailable' : `${mt5.winners}W / ${mt5.losers}L`,
             },
           ]}
         />
@@ -206,12 +326,12 @@ function BrokerPnlWidget() {
           metrics={[
             { label: 'Balance', value: money(t212.balance) },
             { label: 'Equity', value: money(t212.equity) },
-            { label: 'Positions', value: t212.count },
+            { label: 'Positions', value: unavailable.t212 ? '—' : t212.count },
             {
               label: 'P&L',
-              value: signed(t212.pnl),
-              tone: t212.pnl >= 0 ? 'ok' : 'err',
-              sub: `${t212.winners}W / ${t212.losers}L`,
+              value: unavailable.t212 ? '—' : signed(t212.pnl),
+              tone: unavailable.t212 ? '' : (t212.pnl >= 0 ? 'ok' : 'err'),
+              sub: unavailable.t212 ? 'unavailable' : `${t212.winners}W / ${t212.losers}L`,
             },
           ]}
         />
@@ -222,9 +342,13 @@ function BrokerPnlWidget() {
         badge="LIVE"
         badgeClass="badge-live"
         metrics={[
-          { label: 'Value', value: isa.value > 0 ? money(isa.value, '£') : '—' },
-          { label: 'Positions', value: isa.count },
-          { label: 'P&L', value: signed(isa.pnl), tone: isa.pnl >= 0 ? 'ok' : 'err' },
+          { label: 'Value', value: unavailable.isa ? '—' : (isa.value > 0 ? money(isa.value, '£') : '—') },
+          { label: 'Positions', value: unavailable.isa ? '—' : isa.count },
+          {
+            label: 'P&L',
+            value: unavailable.isa ? '—' : signed(isa.pnl),
+            tone: unavailable.isa ? '' : (isa.pnl >= 0 ? 'ok' : 'err'),
+          },
         ]}
       />
       <div className="dash-broker-row dash-broker-total">
@@ -234,9 +358,15 @@ function BrokerPnlWidget() {
         <div className="dash-broker-metrics">
           <div className="dash-broker-metric">
             <span className="dash-broker-mlabel">Total P&amp;L</span>
-            <span className={`dash-broker-mval dash-broker-total-val ${total >= 0 ? 'ok' : 'err'}`}>
-              {signed(total)}
-            </span>
+            {totalKnown ? (
+              <span className={`dash-broker-mval dash-broker-total-val ${total >= 0 ? 'ok' : 'err'}`}>
+                {signed(total)}
+              </span>
+            ) : (
+              <span className="dash-broker-mval" title="At least one broker leg failed — a partial total would understate the book">
+                — <span className="dash-broker-sub">incomplete</span>
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -294,10 +424,20 @@ function DiversificationWidget() {
 /* ── Open Positions (live MT5) ───────────────────────────────── */
 function Mt5PositionsWidget() {
   const navigate = useNavigate();
-  const { mt5Connected, positions } = useBrokerRollup();
+  const { mt5Connected, positions, unavailable, retry } = useBrokerRollup();
   const count = positions.length;
 
   if (!mt5Connected) return <p className="dash-hint">MT5 bridge offline — connect to see positions.</p>;
+  // ⚠️ BEFORE the empty check (#782). "No open positions." is a factual claim about the book; when the
+  // request failed it is a fabrication, and it is indistinguishable from a genuinely flat account.
+  if (unavailable.positions) {
+    return (
+      <p className="dash-hint">
+        ⚠️ Positions could not be loaded — this is <strong>not</strong> an empty book.{' '}
+        <button type="button" className="dash-retry" onClick={retry}>retry</button>
+      </p>
+    );
+  }
   if (count === 0) return <p className="dash-hint">No open positions.</p>;
 
   return (
@@ -334,16 +474,27 @@ function Mt5PositionsWidget() {
 /* ── Recent Trades ───────────────────────────────────────────── */
 function RecentTradesWidget() {
   const { mt5Connected } = useBrokerRollup();
-  const { data } = useQuery({
+  const historyQuery = useQuery({
     queryKey: ['dash-history'],
-    queryFn: () => apiGet('/api/providers/mt5/history?limit=5').catch(() => ({ deals: [] })),
+    // ⚠️ NO `.catch(() => ({ deals: [] }))` (#782 / INV-NO-EMPTY-SWALLOW). "No recent trades." is a
+    // claim about the account's history; a failed read must not make it.
+    queryFn: () => apiGet('/api/providers/mt5/history?limit=5'),
     refetchInterval: 60_000,
     staleTime: 30_000,
     enabled: mt5Connected,
   });
+  const data = historyQuery.data;
   const trades = data?.deals || (Array.isArray(data) ? data : []);
 
   if (!mt5Connected) return <p className="dash-hint">MT5 bridge offline.</p>;
+  if (feedUnavailable(historyQuery)) {
+    return (
+      <p className="dash-hint">
+        ⚠️ Trade history could not be loaded — this is <strong>not</strong> "no recent trades".{' '}
+        <button type="button" className="dash-retry" onClick={() => historyQuery.refetch()}>retry</button>
+      </p>
+    );
+  }
   if (!trades.length) return <p className="dash-hint">No recent trades.</p>;
 
   return (
@@ -373,9 +524,22 @@ function RecentTradesWidget() {
 
 /* ── Worst-Case Monitor ──────────────────────────────────────── */
 function WorstCaseWidget() {
-  const { positions } = useBrokerRollup();
+  const { positions, unavailable, retry } = useBrokerRollup();
   const losers = positions.filter((p) => (p.profit || 0) < 0);
   const worst = [...positions].sort((a, b) => (a.profit || 0) - (b.profit || 0))[0];
+
+  // ⚠️ BEFORE the no-losers branch (#782). This tile used to print
+  // "No losing positions — nothing at risk." whenever the positions request failed, because an empty
+  // array was indistinguishable from a failed one. That sentence, produced by an outage, is the single
+  // most dangerous claim in this app: it tells the owner the book is safe when nothing was read.
+  if (unavailable.positions) {
+    return (
+      <p className="dash-hint">
+        ⚠️ Worst case is <strong>unknown</strong> — positions could not be loaded, so nothing here
+        says the book is safe. <button type="button" className="dash-retry" onClick={retry}>retry</button>
+      </p>
+    );
+  }
 
   if (!worst || (worst.profit || 0) >= 0) return <p className="dash-hint">No losing positions — nothing at risk.</p>;
 
@@ -458,7 +622,10 @@ function RiskCapsWidget() {
   }
 
   return (
-    <div className="dash-card-stats">
+    /* ⚠️ A MAX WIDTH, on the owner's instruction (2026-11-06): *"force a maximum width on this one —
+       it has no benefit to be wider than the content."* Two label/value/input rows do not become more
+       readable at 500px; they just stretch and leave the value adrift from its label. */
+    <div className="dash-card-stats dash-card-stats--capped">
       {present.map(({ meta, setting }) => (
         <RiskCapRow key={meta.key} meta={meta} setting={setting} onSaved={capsQuery.refetch} />
       ))}
@@ -688,7 +855,15 @@ function HotPicksWidget() {
             {/* Colour = the SERVER's classification (`pick.signal`), not a remembered 0-100 bar.
                 Measured 2026-09-20: ranked `score` is 29-57 — a display number with no owning bar,
                 and the client never re-derives a classification from a number (#847). */}
-            <span className="dash-hp-score" style={{ color: signalColor(pick.signal) }}>{pick.score}</span>
+            {/* ⚠️ THE NUMBER NEEDED A UNIT (owner, 2026-11-06: *"right now there's some very small
+                numbers listed, not sure if its the SIGNAL score which is often low or it's a
+                percentage without the %"*). It is the SEES composite score out of 100 from
+                `/api/scoring/ranked` — not a percentage — and composites are compressed, which is why
+                29-57 looks low. Shown as `n/100` with the signal named beside it so the number cannot
+                be read as a confidence percentage. */}
+            <span className="dash-hp-score" style={{ color: signalColor(pick.signal) }} title={`SEES composite score ${pick.score} of 100 — the server's ranking value, not a percentage`}>
+              {pick.score}<span className="dash-hp-score-unit">/100</span>
+            </span>
           </a>
         ))}
       </div>

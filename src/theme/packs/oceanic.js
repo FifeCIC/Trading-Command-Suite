@@ -1,4 +1,4 @@
-import { createThemeTokens } from '../tokens';
+import { createThemeTokens } from '../tokens.js';
 
 export function createOceanicTokens(mode = 'light') {
   const base = createThemeTokens(mode);

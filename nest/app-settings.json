@@ -278,9 +278,10 @@
         "note": "strong page - needs slight improvement to autosize widgets but it might be complex as some widgets should have a minimum size else they will look messy",
         "noteNew": "The entire dashboard and widget system is strong. I will want to copy this into my React Stack Core and use it in most projects. ",
         "uiScore": 8,
-        "updatedAt": "2026-10-11T18:54:34.236Z",
+        "updatedAt": "2026-11-06T13:16:09.284Z",
         "importance": "H",
-        "noteApplied": true
+        "noteApplied": true,
+        "visibility": "public"
       },
       "/development/roadmap": {
         "hide": null,
@@ -1354,6 +1355,17 @@
         "importance": "H",
         "noteApplied": true
       },
+      "/appearance/responsive-layout-lab": {
+        "hide": null,
+        "keen": null,
+        "note": "",
+        "noteNew": "Lets make use of the screen size options on our new theme lab: Element:  <div.rll-device-bar> Text:     4K+ (2560px)Desktop (1440px)Laptop (1024px)Tablet (768px)Mob Source:   /development/responsive-layout-lab",
+        "uiScore": 8,
+        "updatedAt": "2026-10-13T16:58:17.755Z",
+        "importance": null,
+        "noteApplied": null,
+        "noteNewApplied": null
+      },
       "/development/daily-summary-report": {
         "hide": null,
         "keen": null,
@@ -1406,17 +1418,6 @@
         "uiScore": 3,
         "updatedAt": "2026-10-11T23:33:36.032Z",
         "importance": "M"
-      },
-      "/appearance/responsive-layout-lab": {
-        "importance": null,
-        "hide": null,
-        "keen": null,
-        "uiScore": 8,
-        "note": "",
-        "noteNew": "Lets make use of the screen size options on our new theme lab: Element:  <div.rll-device-bar> Text:     4K+ (2560px)Desktop (1440px)Laptop (1024px)Tablet (768px)Mob Source:   /development/responsive-layout-lab",
-        "noteApplied": null,
-        "noteNewApplied": null,
-        "updatedAt": "2026-10-13T16:58:17.755Z"
       }
     }
   }

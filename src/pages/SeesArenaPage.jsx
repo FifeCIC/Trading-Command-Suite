@@ -234,15 +234,28 @@ export default function SeesArenaPage() {
     try {
       // Collect all symbols from all selected protocols via the new symbols endpoint
       const allSymbols = new Set();
+      // ⚠️ NO inner `.catch(() => ({ symbols: [] }))` (#782 / INV-NO-EMPTY-SWALLOW). It made the
+      // outer catch below unreachable, so a FAILED symbol lookup and a protocol that genuinely has no
+      // symbols both ended in the same sentence: "No symbols found for the selected protocols. Check
+      // that protocols have linked watchlists…" — an instruction to inspect config that was never read.
+      // Now a total failure is reported as a failure, and a partial one names how many could not be read.
+      let failed = 0;
       for (const pid of activeProtocols) {
         try {
-          const res = await apiGet(`/api/scoring/gated/protocols/${pid}/symbols`).catch(() => ({ symbols: [] }));
+          const res = await apiGet(`/api/scoring/gated/protocols/${pid}/symbols`);
           for (const s of (res.symbols || [])) {
             if (s) allSymbols.add(s.toUpperCase());
           }
-        } catch { /* protocol may not have symbols */ }
+        } catch { failed += 1; }
       }
       const symbols = [...allSymbols];
+      if (!symbols.length && failed > 0) {
+        setCompResult({
+          error: `Could not read the symbol list for ${failed} of ${activeProtocols.length} selected protocol(s) — this is a failed lookup, not a protocol with no symbols.`,
+        });
+        setComparing(false);
+        return;
+      }
       if (!symbols.length) {
         setCompResult({ error: 'No symbols found for the selected protocols. Check that protocols have linked watchlists or single-symbol config.' });
         setComparing(false);

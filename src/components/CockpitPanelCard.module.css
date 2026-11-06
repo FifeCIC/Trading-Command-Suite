@@ -28,7 +28,7 @@
   padding: var(--space-sm) var(--space-md);
   background: var(--panel);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--line);
+
   border-radius: var(--radius-md);
 }
 

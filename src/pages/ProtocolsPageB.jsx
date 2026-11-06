@@ -12,6 +12,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPatch, apiDelete } from '../core/api/client';
+import { feedUnavailable } from '../core/api/feed-state.js';
 import PageInfoPopover from '../components/PageInfoPopover';
 import { getProtocolType, getProtocolTiming } from '../core/protocol-utils';
 import { timeAgo, formatDateTime } from '../core/format-utils';
@@ -104,12 +105,15 @@ export default function ProtocolsPageB({ initialProtocolId }) {
   });
 
   // Config health (#716 follow-up) — static validation of group/directive wiring.
+  // ⚠️ NO `.catch(() => ({ issues: [] }))` (#782 / INV-NO-EMPTY-SWALLOW). An empty issue list is the
+  // page's ALL-CLEAR: it renders a clean protocol as "no wiring problems" when the check never ran.
   const healthQuery = useQuery({
     queryKey: ['protocols-health'],
-    queryFn: () => apiGet('/api/scoring/gated/protocols/health').catch(() => ({ issues: [] })),
+    queryFn: () => apiGet('/api/scoring/gated/protocols/health'),
     staleTime: 60_000,
     refetchInterval: 300_000,
   });
+  const healthUnread = feedUnavailable(healthQuery);
   const healthIssues = healthQuery.data?.issues || [];
   const issuesByProtocol = useMemo(() => {
     const m = new Map();
@@ -364,6 +368,16 @@ export default function ProtocolsPageB({ initialProtocolId }) {
           </h1>
         </div>
       </header>
+
+      {/* ⚠️ The per-protocol health badges below are the page's ALL-CLEAR (#782). When the health check
+          could not run, "no issues" would be a fabrication, so it says so instead. */}
+      {healthUnread && (
+        <p className="prb-health-unread" role="alert">
+          ⚠️ The config-health check could not run — protocols below are <strong>not</strong> verified
+          clean.{' '}
+          <button type="button" className="prb-health-retry" onClick={() => healthQuery.refetch()}>retry</button>
+        </p>
+      )}
 
       {/* Toolbar: search + style filter + sort */}
       <div className="prb-toolbar">

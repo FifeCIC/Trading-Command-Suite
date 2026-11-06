@@ -18,6 +18,13 @@ import EmptyState from '../components/EmptyState';
 import './speed-cockpit.css';
 
 const SYMBOL = 'BTCUSD';
+// ⚠️ The SCORED ticker, which is not the charted one. Measured 2026-11-06:
+//   `score_snapshot` for `btc-scalp-v1-long` → BTC 13,668 rows (minutes old), BTCUSD 5 rows (none
+//   since 2026-09-10), plus ETH and SOL. `symbol_route` has BTC as `provider='binance', brokerId=0`
+//   — "#760 crypto via binance (not an MT5 symbol)" — and there is NO BTCUSD row at all.
+// So the decision panel must ask about `BTC`; asking about `BTCUSD` is what kept it blank.
+const SCORE_SYMBOL = 'BTC';
+const PROTOCOL = 'btc-scalp-v1-long';
 const SIZE_PRESETS = [1, 5, 10];
 const TIMEFRAMES = ['1s', '5s', '15s', '1m', '5m'];
 
@@ -179,7 +186,7 @@ export default function BtcSpeedTradingPage() {
       {/* ── Decision Panel + Chart ─────────────────────── */}
       <div className="btc-main">
         <div className="btc-decision">
-          <SpeedDecisionPanel symbol={SYMBOL} />
+          <SpeedDecisionPanel symbol={SYMBOL} scoreSymbol={SCORE_SYMBOL} protocolId={PROTOCOL} />
         </div>
         <div className="btc-chart">
           <SpeedChart symbol={SYMBOL} timeframe={timeframe} chartMode={chartMode} scanScore={scanData} chartSettings={chartSettings} />

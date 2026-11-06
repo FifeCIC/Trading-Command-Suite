@@ -14,7 +14,7 @@
  * INDETERMINATE classes (a `signalClass` assigned from a variable or call) are NOT listed and are
  * treated as direction-capable: "cannot judge" must never be silently read as "neutral".
  *
- * Scanner: 145 directive(s) — 33 neutral-only, 112 directional, 0 indeterminate.
+ * Scanner: 144 directive(s) — 33 neutral-only, 111 directional, 0 indeterminate.
  */
 export const NEUTRAL_ONLY_DIRECTIVES: ReadonlySet<string> = new Set<string>([
   'basic-weekly-rhythm',
@@ -53,11 +53,11 @@ export const NEUTRAL_ONLY_DIRECTIVES: ReadonlySet<string> = new Set<string>([
 ]);
 
 export const DIRECTIVE_CAPABILITY_COUNTS = {
-  total: 145,
+  total: 144,
   neutralOnly: 33,
-  directional: 112,
+  directional: 111,
   indeterminate: 0,
-  both: 97,
+  both: 96,
   bullishOnly: 13,
   bearishOnly: 2,
   neither: 33,
@@ -194,7 +194,6 @@ export const DIRECTIVE_DIRECTION: Readonly<Record<string, {
   'session-open-effect': { direction: 'both', sharedInputs: [] },
   'session-timing-filter': { direction: 'none', sharedInputs: [] },
   'sigma-score': { direction: 'both', sharedInputs: [] },
-  'social-buzz': { direction: 'both', sharedInputs: [] },
   'sp500-regime': { direction: 'both', sharedInputs: [] },
   'speed-momentum': { direction: 'both', sharedInputs: [] },
   'spike-hold-confirmation': { direction: 'both', sharedInputs: [] },

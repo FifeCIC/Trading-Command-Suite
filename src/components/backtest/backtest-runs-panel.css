@@ -160,7 +160,7 @@
   margin: 0 0 var(--space-sm, 8px);
   padding: var(--space-sm, 8px) var(--space-md, 12px);
   font-size: 0.82rem;
-  border-left: 3px solid var(--line);
+
   color: var(--ink);
 }
 
@@ -182,7 +182,7 @@
   padding: var(--space-sm, 8px) var(--space-md, 12px);
   font-size: 0.78rem;
   color: var(--color-warning);
-  border-left: 3px solid var(--color-warning);
+
 }
 
 .btr-caveat {
@@ -238,4 +238,3 @@
   color: var(--text-faint);
   max-width: 100ch;
 }
-

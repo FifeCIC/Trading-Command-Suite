@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { IsaService } from '../isa/isa.service';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
@@ -264,12 +264,23 @@ export class PortfolioAccountsService {
     return { categories, grandTotal };
   }
 
-  /** Toggle an account or a category. `id` = account id or `cat:live` / `cat:demo`. */
+  /**
+   * Toggle an account or a category. `id` = account id or `cat:live` / `cat:demo`.
+   *
+   * ⚠️ THROWS RATHER THAN RETURNING `{ success: false }` (fixed 2026-11-06, reported by the primary
+   * agent). This used to return `{ success: false, error: … }` with HTTP **201 Created**, because
+   * `@Post()` has no `@HttpCode` and Nest defaults POST to 201. So an UNKNOWN ACCOUNT came back as
+   * `201 Created` and every caller checking `res.ok` — which is most of them — read a refusal as a
+   * success. A status code is the contract; a body field is a convention each caller may not read.
+   *
+   * `400` for a malformed category id (the REQUEST is wrong), `404` for an account that does not
+   * exist (the THING is missing) — the distinction tells the reader which side to fix.
+   */
   async setEnabled(id: string, enabled: boolean) {
     if (id.startsWith('cat:')) {
       const cat = id.slice(4);
       if (cat !== 'live' && cat !== 'demo') {
-        return { success: false, error: `Unknown category: ${cat}` };
+        throw new BadRequestException(`Unknown account category: ${cat} (expected live or demo)`);
       }
       await this.writeEnabled(`${CATEGORY_PREFIX}${cat}`, enabled);
       return { success: true, id, enabled };
@@ -278,7 +289,7 @@ export class PortfolioAccountsService {
     const accounts = await this.collectAccounts();
     const match = accounts.find((a) => a.id === id);
     if (!match) {
-      return { success: false, error: `Unknown account: ${id}` };
+      throw new NotFoundException(`Unknown account: ${id}`);
     }
     await this.writeEnabled(`${SETTING_PREFIX}${id}`, enabled);
     return { success: true, id, enabled };

@@ -26,6 +26,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from './api/client';
+import { feedUnavailable } from './api/feed-state.js';
 
 export const PROTOCOL_STATUS_META = {
   scoring: { label: 'Active', kind: 'ok', help: 'Scored symbols on the last tick' },
@@ -82,11 +83,20 @@ export function buildProtocolStatus(protocol, statusRow) {
 export function useProtocolStatuses() {
   const q = useQuery({
     queryKey: ['protocol-statuses'],
-    queryFn: () => apiGet('/api/scoring/gated/protocols/status').catch(() => ({ statuses: [] })),
+    // ⚠️ NO `.catch(() => ({ statuses: [] }))` (#782 / INV-NO-EMPTY-SWALLOW). An empty status map
+    // makes every protocol derive `pending` — "awaiting its first scoring tick" — which is a statement
+    // about the scoring loop produced by a failed request.
+    queryFn: () => apiGet('/api/scoring/gated/protocols/status'),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
   const statusMap = {};
   for (const s of q.data?.statuses || []) statusMap[s.protocolId] = s;
-  return { statuses: q.data?.statuses || [], statusMap, isLoading: q.isLoading };
+  return {
+    statuses: q.data?.statuses || [],
+    statusMap,
+    isLoading: q.isLoading,
+    isError: feedUnavailable(q),
+    retry: q.refetch,
+  };
 }

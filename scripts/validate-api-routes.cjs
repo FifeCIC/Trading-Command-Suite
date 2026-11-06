@@ -51,13 +51,6 @@
  *
  * ⚠️ THE WORST BLIND SPOT: A CONSTANT PREFIX. Measured 2026-09-18, after adding three calls to a
  * new page and watching the count NOT move (469 -> 469):
- *
- *     const TRADING = '/api/trading/strategies';
- *     apiGet(`${TRADING}/${id}`)            // <-- skipped entirely, not even counted
- *
- *     const API = '/api/trading/strategies';
- *     apiPost(`${API}`, body)               // <-- same
- *
  * The scanner requires the first argument to be a literal starting `/api/`, so this shape is
  * dropped BEFORE the unresolved counter — it is silent, which makes it worse than the raw-`fetch`
  * gap above (that one at least leaves nothing ambiguous about why it is missing).
@@ -66,6 +59,26 @@
  *
  * Fix, not yet applied: pre-scan module scope for `const X = '/api/...'` and substitute before
  * matching. Trivial to parse, and it would recover most of the gap. Tracked in #867.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * FIXED 2026-11-06 — FOUR PARSER FAULTS, EVERY ONE OF WHICH REPORTED LIVE ROUTES AS DEAD (#867)
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ *
+ * The count was 19 and FIVE were phantoms. Each fault is recorded at the code that fixes it, and
+ * each is canaried by `--self-test` — required by the repo's own rule that a guard never observed to
+ * fail is a decoration:
+ *
+ *   1. `raw.split('?')[0]` cut at a `?` INSIDE an expression — `?.` optional chaining and ternaries.
+ *   2. `arg.indexOf(quote)` stopped at a NESTED BACKTICK inside `${…}`.
+ *   3. The call-argument regex stopped at the first `)` — including one inside the argument.
+ *   4. The backend side never stripped comments, so a `@Controller(...)` QUOTED IN A DOCBLOCK set the
+ *      prefix for the whole file; and `*.controller.ts` missed a controller in a `.module.ts`.
+ *
+ * ⚠️ A widening that lets more calls pass can also HIDE a defect, which is worse than a phantom. So
+ * the trailing-expression rule is mechanical — a `${…}` directly after `/` is a PATH SEGMENT and is
+ * never stripped — and `--self-test` asserts that direction too. Measured: without it,
+ * `GET /api/market-data/candles/${symbol}` matched `@Get('candles')` (whose `symbol` is a QUERY
+ * param) and the two genuinely broken calls on `SymbolDetailPage` and `PatternScannerPage` vanished.
  *
  * ⚠️ **A check that scans nothing must FAIL, not pass.** If either side parses to zero entries this
  * exits non-zero and says which side is empty — an empty result is indistinguishable from a broken
@@ -100,27 +113,148 @@ function walk(dir, re, out = []) {
 }
 
 const VERBS = ['Get', 'Post', 'Put', 'Patch', 'Delete'];
+
+/**
+ * Advance past the `${…}` expression beginning at `start` (the index of `$`), using brace matching
+ * that understands NESTED template literals. Returns the index just past the closing `}`, or -1.
+ *
+ * ⚠️ Naive brace counting is wrong here, and it showed up as a truncated URL the moment the
+ * argument capture was fixed (2026-11-06):
+ *
+ *     `/api/broker-symbols/classes${brokerFilter ? `?brokerId=${brokerFilter}` : ''}`
+ *
+ * The `{` of the INNER `${brokerFilter}` was counted as an opening brace of the outer expression, so
+ * the match ran past the real close and left `` :p` : ''} `` dangling on the end of the URL. A
+ * URL with debris on it matches no route, so a live endpoint is reported dead — the same class of
+ * false positive as the truncation, reached from the other direction.
+ */
+function endOfExpression(s, start) {
+  let depth = 1;
+  let i = start + 2;
+  while (i < s.length && depth > 0) {
+    if (s[i] === '\\') { i += 2; continue; }
+    if (s[i] === '`') {
+      const nestedEnd = endOfStringLiteral(s, i);
+      if (nestedEnd === -1) return -1;
+      i = nestedEnd + 1;
+      continue;
+    }
+    if (s[i] === '{') depth += 1;
+    else if (s[i] === '}') depth -= 1;
+    i += 1;
+  }
+  return depth === 0 ? i : -1;
+}
+
+/** Every complete `${…}` becomes `:p`. Template-aware, so a nested `${}` cannot leave debris. */
+function replaceExpressions(raw) {
+  let out = '';
+  let i = 0;
+  while (i < raw.length) {
+    if (raw[i] === '$' && raw[i + 1] === '{') {
+      const end = endOfExpression(raw, i);
+      if (end === -1) { out += raw.slice(i); break; }
+      out += ':p';
+      i = end;
+      continue;
+    }
+    out += raw[i];
+    i += 1;
+  }
+  return out;
+}
+
 /** `:id`, `:id?` and `${expr}` all collapse to the same token so the two sides can be compared. */
-const normalisePath = (s) => s.replace(/\$\{[^}]*\}/g, ':p').replace(/:[A-Za-z0-9_]+/g, ':p').replace(/\/+$/, '');
+const normalisePath = (s) => replaceExpressions(s).replace(/:[A-Za-z0-9_]+/g, ':p').replace(/\/+$/, '');
+
+/**
+ * Cut a query string from a template literal WITHOUT cutting inside a `${…}` expression.
+ *
+ * ⚠️ `raw.split('?')[0]` was the old implementation and it was WRONG. Measured 2026-11-06: it
+ * produced FIVE phantom failures, every one of them a live route reported as dead.
+ *
+ *   `/api/scoring/protocols/${selectedProto?.id}/latest-score`
+ *        the `?` here is OPTIONAL CHAINING (`?.`), not a query string
+ *        → split gave  `/api/scoring/protocols/${selectedProto`   (an unclosed expression)
+ *   `/api/broker-symbols/classes${brokerFilter ? '?brokerId=x' : ''}`
+ *        the `?` here is a TERNARY inside the expression
+ *        → split gave  `/api/broker-symbols/classes${brokerFilter `
+ *
+ * No route can match a truncated expression, so five endpoints that answer `200` were reported
+ * dead — and the `?.` case is the house style, so the false positives grew with the codebase.
+ *
+ * This walks the string, skips each `${…}` by brace-matching, and cuts at the first `?` that is at
+ * TOP LEVEL. A `?` inside an expression is never a query marker and is now never treated as one.
+ */
+function stripQuery(raw) {
+  let i = 0;
+  while (i < raw.length) {
+    if (raw[i] === '$' && raw[i + 1] === '{') {
+      const end = endOfExpression(raw, i);
+      if (end === -1) return raw;
+      i = end;
+      continue;
+    }
+    if (raw[i] === '?') return raw.slice(0, i);
+    i += 1;
+  }
+  return raw;
+}
+
+/**
+ * If the literal ENDS with a `${…}` expression, return the index where that expression starts.
+ * Otherwise -1.
+ *
+ * ⚠️ The old variant-builder used `/\$\{[^}]*\}\s*$/`, which could not match a trailing expression
+ * that itself contains a nested template — so `${qs ? `?${qs}` : ''}` at the end of a URL produced
+ * no stripped variant at all, and the URL kept a spurious `:p` on the end. Measured 2026-11-06:
+ * `stop-guardian-stats${qs ? …}` was reported dead while `GET /api/trading/stop-guardian-stats`
+ * answers 200. Template-aware, so nesting is handled.
+ */
+function trailingExpressionStart(raw) {
+  let i = 0;
+  while (i < raw.length) {
+    if (raw[i] === '$' && raw[i + 1] === '{') {
+      const end = endOfExpression(raw, i);
+      if (end === -1) return -1;
+      if (end === raw.length) return i;
+      i = end;
+      continue;
+    }
+    i += 1;
+  }
+  return -1;
+}
 
 /**
  * A template literal can hide a query string inside the expression — `\`/api/x${qs}\`` where `qs`
  * begins with `?` — leaving nothing literal to split on. Try the URL as written, and again with a
  * trailing expression removed. Both are honest candidates; a match on either is accepted.
- * ⚠️ Only a TRAILING expression is stripped. Stripping from the middle would let a wrong URL match.
+ *
+ * ⚠️ Only a TRAILING expression is stripped, AND only when it cannot be a PATH SEGMENT. The rule is
+ * mechanical: an expression immediately preceded by `/` occupies a segment, so stripping it would
+ * let a wrong URL match. Measured 2026-11-06 — without this guard the widening was a false NEGATIVE
+ * that HID a real defect:
+ *
+ *     GET /api/market-data/candles/${symbol}?timeframe=…     frontend
+ *     @Get('candles')  @Query('symbol')                       backend — symbol is a QUERY param
+ *
+ * So the call 404s (confirmed live) and the guard must keep saying so. Stripping it produced
+ * `/api/market-data/candles`, which matched the declared route and silently excused the bug.
  */
 function urlVariants(raw) {
   const out = new Set();
   const push = (s) => {
-    const v = normalisePath(s.split('?')[0]);
+    const v = normalisePath(stripQuery(s));
     // ⚠️ `/api` itself IS a route — `@Controller()` + `@Get()` is the server-info endpoint the
     // dashboard calls. A `length > 4` filter silently drops it and then reports a BLANK failure,
     // which reads as a parser crash rather than a missing route.
     if (v && v.startsWith('/api')) out.add(v);
   };
   push(raw);
-  const stripped = raw.replace(/\$\{[^}]*\}\s*$/, '');
-  if (stripped !== raw) push(stripped);
+  const cut = trailingExpressionStart(stripQuery(raw));
+  const isPathSegment = cut > 0 && stripQuery(raw)[cut - 1] === '/';
+  if (cut > 0 && !isPathSegment) push(raw.slice(0, cut));
   return [...out];
 }
 
@@ -128,8 +262,20 @@ function urlVariants(raw) {
 const routes = new Set();
 let controllerFiles = 0;
 
-for (const file of walk(NEST_SRC, /\.controller\.ts$/)) {
-  const src = fs.readFileSync(file, 'utf8');
+// ⚠️ EVERY `.ts` FILE, NOT JUST `*.controller.ts` (fixed 2026-11-06). Measured: `snapshots.module.ts`
+// declares a full `@Controller('snapshots')` class — `@Post('import')`, `@Post('compare')`,
+// `@Get(':id/replay')` and five more. A `*.controller.ts` glob cannot see it, so two LIVE routes were
+// reported dead. A controller in a module file is poor placement, but the guard's job is to describe
+// the routes that exist, not the routes that follow a naming convention. Specs are skipped because a
+// test may legitimately quote `@Controller(...)`.
+for (const file of walk(NEST_SRC, /\.ts$/)) {
+  if (file.endsWith('.spec.ts')) continue;
+  // ⚠️ COMMENTS ARE STRIPPED HERE TOO (fixed 2026-11-06). Without it, a `@Controller(...)` QUOTED IN
+  // A DOCBLOCK sets the prefix for the whole file. Measured on `trend-read.controller.ts`, whose
+  // comment says *"Writing `@Controller('api/trend')` produces `/api/api/trend`, which 404s"* —
+  // and the guard read that quoted example as the prefix, producing `/api/api/trend/read` and
+  // reporting two live routes as dead. The guard fell for the exact trap the comment documents.
+  const src = stripComments(fs.readFileSync(file, 'utf8'));
   // ⚠️ `@Controller()` with NO argument is legitimate and contributes routes at the root
   // (`@Get('version')` → `/api/version`). Requiring a quoted argument here skips the whole file
   // and reports its routes as missing — which is exactly what the first version of this script did.
@@ -197,6 +343,141 @@ function stripComments(src) {
   return out;
 }
 
+/**
+ * Find the index of the closing quote of the string literal that begins at `start`.
+ *
+ * ⚠️ `arg.indexOf(arg[0], 1)` was the old implementation and it stopped at a NESTED BACKTICK.
+ * Measured 2026-11-06 on a route that answers `200`:
+ *
+ *     apiGet(`/api/broker-symbols/classes${brokerFilter ? `?brokerId=${brokerFilter}` : ''}`)
+ *                                                    ^ inner template opens here
+ *
+ * so the extracted URL ended at `${brokerFilter ? ` — truncated mid-expression, and no route can
+ * match a truncated expression. A nested template inside `${}` is ordinary JavaScript; the guard
+ * has to read it rather than stop at it.
+ */
+function endOfStringLiteral(s, start) {
+  const quote = s[start];
+  if (quote === "'" || quote === '"') {
+    for (let i = start + 1; i < s.length; i += 1) {
+      if (s[i] === '\\') { i += 1; continue; }
+      if (s[i] === quote) return i;
+    }
+    return -1;
+  }
+  let i = start + 1;
+  while (i < s.length) {
+    if (s[i] === '\\') { i += 2; continue; }
+    if (s[i] === '`') return i;
+    if (s[i] === '$' && s[i + 1] === '{') {
+      let depth = 1;
+      i += 2;
+      while (i < s.length && depth > 0) {
+        if (s[i] === '\\') { i += 2; continue; }
+        if (s[i] === '`') {
+          const nestedEnd = endOfStringLiteral(s, i);
+          if (nestedEnd === -1) return -1;
+          i = nestedEnd + 1;
+          continue;
+        }
+        if (s[i] === '{') depth += 1;
+        else if (s[i] === '}') depth -= 1;
+        i += 1;
+      }
+      continue;
+    }
+    i += 1;
+  }
+  return -1;
+}
+
+// ── 1b. SELF-TEST — prove the parser fails when it should ───────────────────────────────────────
+//
+// ⚠️ REQUIRED by the repo's own rule: *"Any NEW audit or validator script must ship a `--self-test`…
+// A guard that has never been observed to fail is a decoration."* This one has now been wrong three
+// times in one afternoon (truncated at a nested template, split at a `?` inside an expression,
+// debris left by naive brace counting), and every fault made LIVE routes look dead.
+//
+// TWO DIRECTIONS. Each case asserts the exact variant produced, and cases 1–4 and 6 additionally
+// assert the result MATCHES a declared route. Case 5 asserts the opposite — that the stripped variant
+// is ABSENT — because stripping there was a false NEGATIVE that hid a real defect.
+if (process.argv.includes('--self-test')) {
+  const CASES = [
+    ['`?` inside an expression — optional chaining',
+      '/api/scoring/protocols/${selectedProto?.id}/latest-score',
+      '/api/scoring/protocols/:p/latest-score', true],
+    ['`?` inside an expression — ternary, nested template',
+      '/api/trading/stop-guardian-stats${qs ? `?${qs}` : \'\'}',
+      '/api/trading/stop-guardian-stats', true],
+    ['nested template must not truncate the literal',
+      '/api/broker-symbols/classes${brokerFilter ? `?brokerId=${brokerFilter}` : \'\'}',
+      '/api/broker-symbols/classes', true],
+    ['function call inside the expression',
+      '/api/scoring/exit-consensus${botName ? `?bot=${encodeURIComponent(botName)}` : \'\'}',
+      '/api/scoring/exit-consensus', true],
+    ['a trailing ${…} directly after "/" is a PATH SEGMENT — must NOT be stripped',
+      '/api/market-data/candles/${symbol}?timeframe=${timeframe}',
+      '/api/market-data/candles', false],
+    ['plain query string after an expression',
+      '/api/trend/read?symbol=${encodeURIComponent(symbol)}&bars=200',
+      '/api/trend/read', true],
+    // ⚠️ Covers the glob fix: this route lives in `snapshots.module.ts`, NOT a `*.controller.ts`.
+    // The 5th element is the VERB — the match check defaults to GET, and this one is POST-only.
+    ['a controller declared OUTSIDE *.controller.ts must still be found',
+      '/api/snapshots/import',
+      '/api/snapshots/import', true, 'POST'],
+  ];
+
+  let failures = 0;
+  for (const [label, raw, expected, mustMatch, routeVerb = 'GET'] of CASES) {
+    const variants = urlVariants(raw);
+    const hasVariant = variants.includes(expected);
+    const matches = variants.some((v) => routes.has(`${routeVerb} ${v}`));
+
+    if (!mustMatch) {
+      // NEGATIVE case: the variant must NOT be produced at all, because producing it hides a defect.
+      if (hasVariant) {
+        console.error(`  ✖ ${label} — the stripped variant exists, so a real defect is HIDDEN`);
+        console.error(`      ${JSON.stringify(variants)}`);
+        failures += 1;
+      }
+      continue;
+    }
+
+    if (!hasVariant) {
+      console.error(`  ✖ ${label}`);
+      console.error(`      expected variant ${expected}`);
+      console.error(`      got            ${JSON.stringify(variants)}`);
+      failures += 1;
+      continue;
+    }
+    if (!matches) {
+      console.error(`  ✖ ${label} — variant produced, but no declared route matches it`);
+      console.error(`      ${JSON.stringify(variants)}`);
+      failures += 1;
+    }
+  }
+
+  // Sanity: a made-up route must never match, or the positive cases above prove nothing.
+  const bogus = urlVariants('/api/self-test-these-words-do-not-exist/${id}');
+  if (bogus.some((v) => routes.has(`GET ${v}`))) {
+    console.error('  ✖ a made-up route matched a declared route — the positive cases are worthless');
+    failures += 1;
+  }
+
+  if (routes.size === 0) {
+    console.error('  ✖ no routes parsed — the self-test cannot judge anything');
+    failures += 1;
+  }
+
+  if (failures) {
+    console.error(`\n[validate-api-routes] ✖ SELF-TEST FAILED — ${failures} case(s)`);
+    process.exit(1);
+  }
+  console.log(`[validate-api-routes] ✅ SELF-TEST — ${CASES.length} URL-shape case(s) + 1 bogus-route check, against ${routes.size} declared route(s)`);
+  process.exit(0);
+}
+
 // ── 2. Frontend: every URL it calls ─────────────────────────────────────────────────────────────
 // ⚠️ Scanned as ONE string per file, not line by line. A call is frequently formatted across lines:
 //
@@ -207,6 +488,17 @@ function stripComments(src) {
 // A per-line scanner captures nothing from that and reports a blank URL as a failure. A guard that
 // cries wolf about its own parse gets allowlisted, and an allowlisted guard is worse than none.
 //
+// ⚠️ THE ARGUMENT IS READ FROM THE SOURCE, NOT FROM A REGEX CAPTURE (fixed 2026-11-06). The old
+// regex was `api(Get|…)\(([\s\S]{0,400}?)\)`, which stops at the FIRST `)` anywhere — including one
+// inside the first argument:
+//
+//     apiGet(`/api/scoring/exit-consensus${botName ? `?bot=${encodeURIComponent(botName)}` : ''}`)
+//                                                                   ^ capture ended here
+//
+// so the URL was truncated and a live route was reported dead. Since only the FIRST argument is
+// needed, the literal is now read directly from its opening quote with `endOfStringLiteral`, which
+// makes the capture immune to parentheses, nested templates and ternaries alike.
+//
 // Calls whose first argument is NOT a string literal cannot be resolved statically. They are counted
 // as UNRESOLVED and reported separately — never silently dropped, and never counted as a failure.
 const calls = [];
@@ -216,17 +508,27 @@ for (const file of walk(FE_SRC, /\.(jsx?|mjs)$/)) {
   const src = stripComments(fs.readFileSync(file, 'utf8'));
   const rel = path.relative(ROOT, file).replace(/\\/g, '/');
 
-  const re = /\bapi(Get|Post|Put|Patch|Delete)\s*\(([\s\S]{0,400}?)\)/g;
+  const re = /\bapi(Get|Post|Put|Patch|Delete)\s*\(\s*/g;
   let m;
   while ((m = re.exec(src)) !== null) {
     const verb = m[1].toUpperCase();
     const line = src.slice(0, m.index).split('\n').length;
-    const arg = m[2].trim();
+    const argStart = m.index + m[0].length;
+    const q = src[argStart];
 
-    if (arg.startsWith('`') || arg.startsWith("'")) {
-      const end = arg.indexOf(arg[0], 1);
-      const raw = end === -1 ? null : arg.slice(1, end);
-      if (raw == null) { unresolved += 1; continue; }
+    if (q === '`' || q === "'" || q === '"') {
+      const end = endOfStringLiteral(src, argStart);
+      if (end === -1) { unresolved += 1; continue; }
+      const raw = src.slice(argStart + 1, end);
+
+      // ⚠️ CONCATENATION: `'/api/portfolio/accounts/' + id`. The literal is only a PREFIX, so the
+      // real URL is unknowable here. Producing `/api/portfolio/accounts` from it invents a URL that
+      // ends at the base — and for a POST that route does not exist, so the guard reported a defect
+      // that is not there. Measured 2026-11-06: `ScreenOptions.jsx:526` was flagged `POST
+      // /api/portfolio/accounts` while `@Post(':id')` declares `/api/portfolio/accounts/:id` and
+      // answers 400 (route exists, body rejected). Counted as UNRESOLVED instead — the honest answer.
+      if (/^\s*\+/.test(src.slice(end + 1, end + 8))) { unresolved += 1; continue; }
+
       if (!raw.startsWith('/api/')) continue; // a real call, just not to this API
       calls.push({
         verb,
@@ -236,7 +538,7 @@ for (const file of walk(FE_SRC, /\.(jsx?|mjs)$/)) {
         line,
         dynamic: /\$\{/.test(raw),
       });
-    } else if (arg.length > 0) {
+    } else if (q !== ')') {
       // A variable, a helper, or a concatenation — real, but not statically knowable here.
       unresolved += 1;
     }
@@ -338,7 +640,18 @@ if (missing.length === 0) {
   process.exit(0);
 }
 
-console.error(`❌ ${missing.length} frontend call(s) match NO declared route:`);
+// `--report` prints the same finding set but does NOT fail the build.
+//
+// ⚠️ Only the FINDINGS are downgraded. The two INVALID checks above (no routes parsed / no calls
+// parsed) still exit 1 under `--report`, because a run that inspected nothing must never pass —
+// that is the whole reason they exist. `--self-test` is the fatal gate in `prebuild`; the count is
+// reported until it reaches zero, at which point this flag should be dropped (see #867).
+const REPORT_ONLY = process.argv.includes('--report');
+if (REPORT_ONLY) {
+  console.log(`⚠️  REPORT ONLY — ${missing.length} unresolved call(s) (build NOT failed; #867 drives this to 0)`);
+} else {
+  console.error(`❌ ${missing.length} frontend call(s) match NO declared route:`);
+}
 console.error('');
 /**
  * Declared routes that share a prefix with `url`, ranked by shared segments.
@@ -373,4 +686,4 @@ console.error('');
 console.error('A URL the frontend invents that no controller answers 404s silently when wrapped in');
 console.error('`.catch(() => …)`. Check the route spelling, the HTTP verb, and whether the endpoint');
 console.error('lives on a different controller prefix.');
-process.exit(1);
+process.exit(REPORT_ONLY ? 0 : 1);

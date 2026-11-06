@@ -9,8 +9,13 @@ import { useState, useEffect } from 'react';
  * Sits top-right in the content area. Use on any view that fetches data.
  *
  * Pass `null` or omit `at` to hide the badge entirely.
+ *
+ * ⚠️ `inline` (added 2026-11-06) — the base `.last-updated` is `position: absolute; top: 8px;
+ * right: 16px` against its nearest positioned ancestor, which is correct for a page-level badge and
+ * wrong inside a heading row: on /trading212/t212-portfolio it escaped the row and drew over the
+ * breadcrumb. `inline` keeps the text and the 30s tick and drops only the placement.
  */
-export default function LastUpdated({ at }) {
+export default function LastUpdated({ at, inline = false }) {
   const [minutesAgo, setMinutesAgo] = useState(null);
 
   useEffect(() => {
@@ -31,7 +36,7 @@ export default function LastUpdated({ at }) {
   if (minutesAgo === null) return null;
 
   return (
-    <div className="last-updated">
+    <div className={`last-updated${inline ? ' last-updated--inline' : ''}`}>
       Updated {minutesAgo === 0 ? 'now' : `${minutesAgo}m ago`}
     </div>
   );

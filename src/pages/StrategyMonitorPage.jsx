@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet, apiPost } from '../core/api/client';
+import { feedUnavailable } from '../core/api/feed-state.js';
 import { dismissSignal, fetchScoringThresholds } from '../core/api/signals';
 import { timeAgo } from '../core/format-utils';
 // noticeLine() — the coded one-liner. A table cell cannot hold a NoticeBlock, and the point here is
@@ -45,11 +46,22 @@ export default function StrategyMonitorPage() {
   const queryClient = useQueryClient();
 
   // ── Shared data ──
-  const { data: strategies = [], isLoading: stratLoading } = useQuery({
+  // ⚠️ NO `.catch()` FALLBACKS HERE (#782 / INV-NO-EMPTY-SWALLOW). Bots and queues are the two
+  // numbers this page exists to show. Swallowing a failure made "no bots" and "no queued signals"
+  // look identical to "the API did not answer", on a page whose whole purpose is knowing whether
+  // anything is about to trade.
+  const stratQuery = useQuery({
     queryKey: ['monitor-strategies'],
-    queryFn: () => apiGet('/api/trading/strategies/with-ratios').catch(() => ({ strategies: [] })),
+    queryFn: () => apiGet('/api/trading/strategies/with-ratios'),
     refetchInterval: 15_000,
   });
+  const strategies = stratQuery.data;
+  const stratLoading = stratQuery.isLoading;
+  const refetchStrategies = stratQuery.refetch;
+  // ⚠️ `feedUnavailable`, not `.isError` — a failing query sits in a retry wait with `isError` still
+  // false and no data, so the "No active trading strategies" state below would be shown for that
+  // whole window. See src/core/api/feed-state.js.
+  const stratError = feedUnavailable(stratQuery);
   const stratList = Array.isArray(strategies) ? strategies : (strategies?.strategies || strategies?.viable || []);
 
   const { data: autoStatus } = useQuery({
@@ -65,11 +77,15 @@ export default function StrategyMonitorPage() {
   });
 
   // ── Signal queues (#714 Stage 2) — pending entries per trading bot ──
-  const { data: queueEntries = [], isLoading: queueLoading } = useQuery({
+  const queueQuery = useQuery({
     queryKey: ['monitor-queues'],
-    queryFn: () => apiGet('/api/trading/strategies/queues').catch(() => []),
+    queryFn: () => apiGet('/api/trading/strategies/queues'),
     refetchInterval: 15_000,
   });
+  const queueEntries = queueQuery.data;
+  const queueLoading = queueQuery.isLoading;
+  const refetchQueues = queueQuery.refetch;
+  const queueError = feedUnavailable(queueQuery);
   const queueList = Array.isArray(queueEntries) ? queueEntries : [];
 
   // ── Live thresholds — the scale the *Pct columns are measured on (#847) ──
@@ -273,7 +289,12 @@ export default function StrategyMonitorPage() {
           </span>
         </div>
 
-        {stratLoading ? <LoadingSkeleton variant="card" count={6} /> : monitoredStrats.length === 0 ? (
+        {stratError ? (
+          <p className="sm-notice">
+            ⚠️ Bots could not be loaded — the request failed, so an empty list here would be wrong.{' '}
+            <button type="button" className="sm-retry" onClick={() => refetchStrategies()}>retry</button>
+          </p>
+        ) : stratLoading ? <LoadingSkeleton variant="card" count={6} /> : monitoredStrats.length === 0 ? (
           <EmptyState icon="◆" title="No active trading strategies" description="Activate a trading strategy to see monitoring data." />
         ) : (
           <div className={styles.tablePane}>
@@ -413,7 +434,12 @@ export default function StrategyMonitorPage() {
             </div>
           </div>
 
-          {queueLoading && queueList.length === 0 ? <LoadingSkeleton variant="card" count={2} /> : queueBots.length === 0 ? (
+          {queueError ? (
+            <p className="sm-notice">
+              ⚠️ Queued signals could not be loaded — this does <strong>not</strong> mean the queues are
+              empty. <button type="button" className="sm-retry" onClick={() => refetchQueues()}>retry</button>
+            </p>
+          ) : queueLoading && queueList.length === 0 ? <LoadingSkeleton variant="card" count={2} /> : queueBots.length === 0 ? (
             <EmptyState
               icon="⏳"
               title={queueList.length === 0 ? 'No pending signals' : 'No bots match the filter'}

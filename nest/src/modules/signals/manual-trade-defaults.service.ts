@@ -28,6 +28,66 @@ export interface ManualTradeDefaults {
 
 export const DEFAULT_MANUAL_TRADE: ManualTradeDefaults = { size: 0.01, slPct: 2, tpPct: 4, maxPyramidTiers: 1 };
 
+/**
+ * The resolved size for ONE instrument, and why it is that number.
+ *
+ * ⚠️ WHY THIS TYPE EXISTS (#835). A single global `signals.manualTrade.size` cannot be correct,
+ * because the broker's volume floor is a property of BROKER × INSTRUMENT: measured 2026-09-15,
+ * every index reports `volumeMin 0.1` while FX/metals report `0.01`. So one number is either
+ * impossible for indices or 10× too big for FX — and both directions were observed live:
+ * 0.01 made every index manual trade impossible, and 0.1 multiplied FX risk by 10×.
+ *
+ * The floor is NOT guessed from an asset class; it comes from the broker's own `volumeMin`, which
+ * is why `resolveSize()` takes the floor as an argument rather than looking one up. A second
+ * lookup here would drift from `ExecutionFeasibilityService`'s, and the two would eventually
+ * disagree about what is tradeable.
+ */
+export interface ResolvedTradeSize {
+  /** Size to place, in lots: the request raised to the broker floor when it was below it. */
+  placed: number;
+  /** What was asked for — the caller's explicit size, or the global default. */
+  requested: number;
+  /** The broker's floor, or `null` when it could not be established. */
+  floor: number | null;
+  /** True only when `placed > requested` BECAUSE of the floor. Never true on a guess. */
+  raised: boolean;
+  /** Where `requested` came from, so "why is this 0.01?" is answerable at the point of trade. */
+  source: 'caller' | 'setting' | 'fallback';
+}
+
+/**
+ * resolveTradeSize — the per-instrument size rule for manual trades.
+ *
+ * ── DECISION (2026-11-06, #835) ──
+ * WHAT:      The placed size is `max(requested, brokerFloor)`, with the floor taken from the
+ *            `size-below-minimum` blocker's own `params` — never re-derived here.
+ * WHY:       One global manual size cannot be right when the floor is per BROKER x INSTRUMENT
+ *            (measured 2026-09-15: every index 0.1 lots, FX/metals 0.01). At 0.01 no index manual
+ *            trade can fill; at 0.1 every FX manual trade is 10x the intended risk. Both observed.
+ * INSTEAD OF: Asking the operator to read the refusal message and retype a number in Settings —
+ *            the stopgap the issue itself calls "not the fix".
+ * REVERSE BY: Returning `{ placed: requested }` unconditionally, and restoring the old hint-only
+ *            behaviour of `size-below-minimum`.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 150
+ * GUARD:     nest/src/modules/signals/manual-trade-size.spec.ts (6 cases, canaried both ways)
+ *
+ * ⚠️ Pure on purpose: no I/O, so it is exhaustively testable and cannot acquire a hidden dependency
+ * on the database. The asymmetry matters — an UNKNOWN floor (`null`) must pass the request through
+ * UNCHANGED, because "we could not ask the broker" is not evidence that the size is wrong, and
+ * silently enlarging an order on missing information is the worst possible failure here.
+ */
+export function resolveTradeSize(
+  requested: number,
+  floor: number | null | undefined,
+  source: ResolvedTradeSize['source'] = 'setting',
+): ResolvedTradeSize {
+  const known = typeof floor === 'number' && Number.isFinite(floor) && floor > 0 ? floor : null;
+  if (known != null && requested < known) {
+    return { placed: known, requested, floor: known, raised: true, source };
+  }
+  return { placed: requested, requested, floor: known, raised: false, source };
+}
+
 const KEYS = {
   size: 'signals.manualTrade.size',
   slPct: 'signals.manualTrade.slPct',

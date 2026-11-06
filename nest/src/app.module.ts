@@ -66,7 +66,18 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env.local', '.env'],
+      // ⚠️ THE MACHINE CREDENTIALS FILE IS THE LAST FALLBACK, not the first (2026-11-06). Earlier
+      // entries win, so `nest/.env` still decides anything it declares and the shared file only
+      // fills gaps. That ordering matters: a machine-wide value silently overriding a project's is
+      // the kind of drift nobody notices until two environments disagree.
+      //
+      // The path is OUTSIDE every repository on purpose — it holds the Discord webhook URLs and the
+      // Intranet API key, and a repo can only commit files inside itself.
+      envFilePath: [
+        '.env.local',
+        '.env',
+        process.env.TCS_CREDENTIALS_FILE || 'C:/wamp64/www/.secrets/credentials.env',
+      ],
     }),
     QueueModule.forRoot(),
     AuthModule,

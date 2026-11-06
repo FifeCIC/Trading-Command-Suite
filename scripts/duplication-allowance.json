@@ -1,10 +1,10 @@
 {
   "_comment": "Ratchet for cross-file duplication (INV-NO-NEW-DUPLICATION). An existing pair may only go DOWN; a pair NOT listed here fails the build. Record a reduction deliberately with `node scripts/validate-duplication.cjs --update-allowance` so the delta is printed. If a pair must remain, prefer FIXING it (extract the shared block) over adding it here — an allowlisted guard that no longer guards is worse than no guard.",
-  "_measured": "2026-11-05",
+  "_measured": "2026-11-06",
   "_method": "8-line whitespace-normalised windows appearing in 2+ distinct non-test files; new pair fails at >= 3",
   "totals": {
-    "pairs": 126,
-    "windows": 2073
+    "pairs": 124,
+    "windows": 2071
   },
   "pairs": {
     "src/core/architecture-reference.js || src/pages/architecture-framework.data.js": 1615,
@@ -104,8 +104,6 @@
     "nest/src/modules/directives/directive-groups.ts || nest/src/modules/scoring/protocols-seed-data.ts": 1,
     "nest/src/modules/directives/directives.module.ts || nest/src/modules/training/pattern-detector.service.ts": 1,
     "nest/src/modules/directives/implementations/candle-pressure.directive.ts || nest/src/modules/directives/implementations/volume-rhythm.directive.ts": 1,
-    "nest/src/modules/directives/implementations/dilution-impact.directive.ts || nest/src/modules/directives/implementations/social-buzz.directive.ts": 1,
-    "nest/src/modules/directives/implementations/insider-activity.directive.ts || nest/src/modules/directives/implementations/social-buzz.directive.ts": 1,
     "nest/src/modules/directives/implementations/macd-divergence.directive.ts || nest/src/modules/directives/implementations/price-above-sma.directive.ts": 1,
     "nest/src/modules/directives/implementations/market-entropy.directive.ts || nest/src/modules/directives/implementations/market-memory-zones.directive.ts": 1,
     "nest/src/modules/directives/implementations/market-entropy.directive.ts || nest/src/modules/directives/implementations/market-structure-bos.directive.ts": 1,

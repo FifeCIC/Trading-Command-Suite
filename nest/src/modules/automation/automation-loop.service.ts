@@ -83,6 +83,10 @@ import { computeMarketStatus } from '../directives/market-status';
 // ⚠️ The DEFAULTS in settings-registry.ts are load-bearing: `automation.tradingEnabled` is false, and it
 // must stay false. See the warning comment there before changing any of them.
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
+// 2026-11-06 — the public SIGNAL feed. The loop already builds the ranked ladder every tick, so the
+// suggestion can be shared from the same place without a second scoring path.
+import { NotificationService } from '../notifications/notifications.service';
+import { DiscordChannel } from '../notifications/channels/discord.channel';
 // #981 — the FX-session axis (New York open) and the ADVISORY pre-open planner. The planner is
 // pure; this file only writes an alert row and a status block. No trade effect on any path.
 import { MarketSessionsService } from '../calendar/market-sessions.service';
@@ -954,6 +958,10 @@ export class AutomationLoopService implements OnModuleInit {
     // #875 — the materialisation watcher: syncAuto() mints a registry row (stable id, name null)
     // for a NEWLY materialised combination, so every live strategy has an identity before naming.
     private readonly strategyRegistry: StrategyRegistryService,
+    private readonly notifications: NotificationService,
+    // The signal ration lives in the channel that speaks in public, and is PEEKED here only to
+    // choose which card to offer. The claim inside the channel remains the single gate.
+    private readonly discord: DiscordChannel,
   ) {
     this.initBrokerStates();
   }
@@ -1715,6 +1723,14 @@ export class AutomationLoopService implements OnModuleInit {
         for (const [slug, st] of Object.entries(bestLadder?.protocolStatus || {})) {
           if (!scoringStatus.has(slug)) scoringStatus.set(slug, st);
         }
+
+        // ── The public SIGNAL feed (2026-11-06) ──
+        // Shares ONE ranked ladder card as a "suggestion to enter" — generated from scoring with no
+        // bot attached, which is exactly the Signals area the owner described. Fire-and-forget: a
+        // public post must never delay or fail the scoring line it rides on.
+        void this.publishSignalSuggestion(bestLadder).catch((err) =>
+          this.logger.warn(`Signal suggestion not published: ${(err as Error).message}`),
+        );
         // Decision-log observability — one OBSERVED row per visible signal.
         //
         // ⚠️ #971 — these are OBSERVATIONS, not signals. A ladder envelope is protocol-driven:
@@ -3266,5 +3282,81 @@ export class AutomationLoopService implements OnModuleInit {
       interTradeDelayMinutes: this.state.botInterTradeDelayMinutes,
       lastBotTradeAt: this.state.lastBotTradeAt,
     };
+  }
+
+  /**
+   * publishSignalSuggestion() — share ONE ranked ladder card as a suggestion to enter.
+   *
+   * ── WHY THIS AND NOT `entry-signal` (owner direction, 2026-11-06) ────────────────────────────
+   * *"my framing of signal is based on the Signals area which is suggestion to enter so any sharing
+   * would happen before a bots action and without a bot attached to create a full strategy."*
+   *
+   * `entry-signal` fires only after a bot PLACES AN ORDER — after the decision, and impossible without
+   * a bot. The ladder envelopes here are exactly the opposite: `buildBestLadder` scores protocols
+   * with **no bot subscribed** (that is why the decision log below writes them as OBSERVED, not
+   * SCORED). So this is the honest source for "the app suggests entering".
+   *
+   * ⚠️ IT DOES NOT RANK. The ladder is already ranked by `combinedStrength`; re-sorting here would
+   * invent a second ordering that could disagree with the page the reader is looking at.
+   *
+   * ⚠️ `signalPct >= 6` is the engine's OWN entry bar (`ENTRY_THRESHOLD` in protocol-gating). Below
+   * it the engine itself says HOLD, so publishing the card would be advertising a non-signal.
+   *
+   * ⚠️ THE RATION IS NOT HERE. `signalMinIntervalMinutes` and the ±$1 rule live in the Discord
+   * channel, which owns the publishing policy. This method runs every tick and is cheap to refuse
+   * there — a second counter here would be two sources of truth for one allowance.
+   *
+   * ⚠️ BUT THE CARD IS CHOSEN HERE (changed 2026-11-06, when the ration became PER STRATEGY).
+   * Posting only `actionable[0]` made the per-strategy ration behave worse than the global one it
+   * replaced: the top-ranked strategy holds that slot tick after tick, so once it had published,
+   * EVERY strategy stayed silent until its window elapsed. So the loop now walks the ranked ladder
+   * and offers the first card whose strategy is not inside its window — still ONE message per tick,
+   * so the change cannot turn into a burst. `isSignalThrottled` is a read-only HINT; the claim in the
+   * channel is still the only gate that writes.
+   */
+  private async publishSignalSuggestion(ladder: { envelopes: any[] } | null): Promise<void> {
+    const envelopes = ladder?.envelopes ?? [];
+    if (envelopes.length === 0) return;
+
+    const ENTRY_THRESHOLD_PCT = 6;
+    const actionable = envelopes.filter((e) => Number(e?.signalPct ?? 0) >= ENTRY_THRESHOLD_PCT);
+    if (actionable.length === 0) return;
+
+    let best: any = null;
+    for (const card of actionable) {
+      const subject = this.discord.signalSubject({ metadata: { protocolId: card?.protocolId } });
+      if (!(await this.discord.isSignalThrottled(subject))) {
+        best = card;
+        break;
+      }
+    }
+    if (!best) return; // every actionable strategy is inside its window
+
+    const short = best.directionMode === 'SHORT_ONLY';
+    const signalPct = Math.round(Number(best.signalPct ?? 0));
+
+    await this.notifications.send({
+      event: 'signal-suggestion',
+      title: `${best.symbol} — ${short ? 'SHORT' : 'LONG'} suggestion`,
+      body: [
+        `Signal ${signalPct}% of capacity`,
+        best.opportunityPct != null ? `Opportunity ${Math.round(Number(best.opportunityPct))}%` : null,
+        `Protocol ${best.protocolId ?? 'any'}`,
+        `${actionable.length} actionable card${actionable.length === 1 ? '' : 's'}`,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      symbol: best.symbol,
+      score: signalPct,
+      metadata: {
+        protocolId: best.protocolId ?? 'any',
+        signalPct,
+        opportunityPct: best.opportunityPct ?? null,
+        direction: short ? 'SHORT' : 'LONG',
+        // ⚠️ Recorded so a reader can tell a SUGGESTION from an EXECUTION later. There is no order
+        // behind this message, and nothing in the feed should ever imply there is.
+        kind: 'suggestion',
+      },
+    });
   }
 }

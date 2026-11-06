@@ -271,6 +271,78 @@ export default function ResponsiveLayoutLabPage() {
             </div>
           </div>
         </div>
+
+        {/* ── Fluid vs Stepped Sizing (owner report, 2026-11-06) ──
+            ⚠️ THE FIRST VERSION OF THIS DEMO WAS WRONG and is corrected here. It claimed
+            `flex: 1 1 140px` fixed the jump. RE-MEASURED after building it on the real page: the tile
+            width still oscillated 140 → 156 → 148 → 161 → 147 → 163 … because flex wraps at the same
+            items-per-row threshold as `auto-fill`. What actually changes the behaviour is WHO DECIDES
+            THE COLUMN COUNT: the browser (wherever the floor stops fitting) or the designer (declared
+            breakpoints). Both demos hold the same six figures. */}
+        <div className="rll-fluid-section">
+          <h3>Fluid vs Stepped Sizing <span className="rll-hint">— who decides how many figures fit in a row?</span></h3>
+          <p className="rll-hint" style={{ marginBottom: '0.6rem' }}>
+            Both rows hold the same six figures and both shrink their tiles as the space narrows. The
+            difference is <strong>where the column count changes</strong>: in the stepped row the browser
+            drops a column at whatever width the 140px floor stops fitting, so tiles jump wider by a
+            different amount every time. In the fluid row the count changes only at the widths written
+            in the stylesheet, so the jumps are predictable and a lone last tile keeps its column
+            instead of stretching across the row.
+            <span className="rll-fluid-readout"> Measured on /trading212/t212-portfolio at 1600 → 640px: tile width 148 → 147 → 162 → 178 → 205 → 141.</span>
+          </p>
+
+          <div className="rll-fluid-demos">
+            <div className="rll-fluid-demo">
+              <div className="rll-fluid-demo-label">
+                ❌ Browser decides — <code>repeat(auto-fill, minmax(140px, 1fr))</code>
+              </div>
+              <div className="rll-fluid-body">
+                <div className="rll-tiles rll-tiles--stepped">
+                  <div className="rll-tile"><span className="rll-tile-label">All accounts</span><span className="rll-tile-value">£10,125.44</span></div>
+                  <div className="rll-tile"><span className="rll-tile-label">Cost basis</span><span className="rll-tile-value">£11,835.92</span></div>
+                  <div className="rll-tile"><span className="rll-tile-label">Free cash</span><span className="rll-tile-value">£0.00</span></div>
+                  <div className="rll-tile"><span className="rll-tile-label">Total value</span><span className="rll-tile-value">£8,682.86</span></div>
+                  <div className="rll-tile"><span className="rll-tile-label">P&amp;L open</span><span className="rll-tile-value">−£1,299.35</span></div>
+                  <div className="rll-tile"><span className="rll-tile-label">Positions</span><span className="rll-tile-value">18</span></div>
+                </div>
+              </div>
+              <p className="rll-hint">
+                The count is an accident of the available width. Narrowing the container therefore
+                removes a whole column at an arbitrary point, and each surviving column gets
+                <strong> wider</strong> before the next drop — widths go <strong>up</strong> as the
+                window goes down.
+              </p>
+            </div>
+
+            <div className="rll-fluid-demo">
+              <div className="rll-fluid-demo-label">
+                ✅ Designer decides — <code>@container</code> breakpoints + <code>repeat(N, minmax(0, 1fr))</code>
+              </div>
+              <div className="rll-fluid-body">
+                <div className="rll-tiles rll-tiles--fluid">
+                  <div className="rll-tile"><span className="rll-tile-label">All accounts</span><span className="rll-tile-value">£10,125.44</span></div>
+                  <div className="rll-tile"><span className="rll-tile-label">Cost basis</span><span className="rll-tile-value">£11,835.92</span></div>
+                  <div className="rll-tile"><span className="rll-tile-label">Free cash</span><span className="rll-tile-value">£0.00</span></div>
+                  <div className="rll-tile"><span className="rll-tile-label">Total value</span><span className="rll-tile-value">£8,682.86</span></div>
+                  <div className="rll-tile"><span className="rll-tile-label">P&amp;L open</span><span className="rll-tile-value">−£1,299.35</span></div>
+                  <div className="rll-tile"><span className="rll-tile-label">Positions</span><span className="rll-tile-value">18</span></div>
+                </div>
+              </div>
+              <p className="rll-hint">
+                The count is a decision (5 → 4 → 3 → 2 at declared widths). Between breakpoints every
+                tile shrinks continuously with the container, <code>1fr</code> tracks stay equal, and a
+                tile that lands alone keeps its column width instead of filling the row.
+              </p>
+            </div>
+          </div>
+
+          <p className="rll-hint">
+            Where it landed: <code>/trading212/t212-portfolio</code> now uses the container-query form
+            for its money tiles (8 → 7 → 6 → 5 → 4 → 3 → 2 columns). Neither form is perfectly smooth —
+            a discrete column count always jumps when it changes. The difference is whether the jump
+            happens at a width you chose.
+          </p>
+        </div>
       </motion.div>
     </div>
   );

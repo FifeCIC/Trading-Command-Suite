@@ -98,6 +98,19 @@ export interface UiReviewEntry {
   noteApplied: boolean | null;
   /** Has the SECOND round's suggestion been applied? Same three states as `noteApplied`. */
   noteNewApplied: boolean | null;
+  /**
+   * THE THREE-STATE VISIBILITY (added 2026-11-06, #1204).
+   *
+   * `withheld` = built but not ready, `member` = finished but behind an entitlement, `public` = everyone.
+   * It superseded the single `hide` boolean, which could not tell "unfinished" from "premium" — see the
+   * long note in `src/core/hidden-views.js`.
+   *
+   * ⚠️ IT WAS MISSING FROM THIS TYPE **AND** FROM THE CONTROLLER'S WRITE WHITELIST, so the page's
+   * Visibility select wrote a value the endpoint silently dropped: 0 of 144 stored entries carried a
+   * `visibility` key, and the select re-rendered from the legacy `hide` field each time. `null` means
+   * "no verdict yet", which is not "public".
+   */
+  visibility: 'public' | 'member' | 'withheld' | null;
   /** ISO timestamp of the last write, so a stale verdict is visible rather than implied. */
   updatedAt: string;
 }
@@ -263,6 +276,7 @@ export class SettingsService {
       noteNew: '',
       noteApplied: null,
       noteNewApplied: null,
+      visibility: null,
       updatedAt: '',
     };
     const entry: UiReviewEntry = { ...previous, ...patch, updatedAt: new Date().toISOString() };

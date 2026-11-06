@@ -110,7 +110,7 @@ export class DirectivesController {
 
       if (d.id.includes('multi') || d.id.includes('combo') || d.id.includes('composite')) { level += 2; factors.push('multi-factor'); }
       if (['atr-dip', 'adx', 'volatility-tools', 'bollinger-band-squeeze', 'volatility-envelope'].includes(d.id)) { level += 1; factors.push('statistical'); }
-      if (['earnings-momentum', 'social-buzz', 'insider-activity', 'dilution-impact', 'earnings-proximity'].includes(d.id)) { level += 1; factors.push('external-data'); }
+      if (['earnings-momentum', 'insider-activity', 'dilution-impact', 'earnings-proximity'].includes(d.id)) { level += 1; factors.push('external-data'); }
       if (['gold-macro-correlation', 'cad-usd-oil-correlation', 'dxy-regime'].includes(d.id)) { level += 2; factors.push('multi-source'); }
       if (['budget-gate', 'liquidity-check', 'rollover-risk', 'position-size-kelly', 'position-size-confidence'].includes(d.id)) { level += 1; factors.push('risk-calculation'); }
       if (['mt5-engulfing', 'mt5-harami', 'mt5-star-doji', 'mt5-hammer'].includes(d.id)) { level += 1; factors.push('pattern-detection'); }
@@ -245,7 +245,7 @@ export class DirectivesController {
       'btc-halving-cycle': 'symbol-specific', 'crypto-fear-greed': 'symbol-specific',
       // Data-gated — require external data that may not be present
       'earnings-proximity': 'data-gated',
-      'earnings-momentum': 'data-gated', 'social-buzz': 'data-gated',
+      'earnings-momentum': 'data-gated',
       'insider-activity': 'data-gated',
     };
 

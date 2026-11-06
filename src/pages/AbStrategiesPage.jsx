@@ -80,6 +80,25 @@ const API_BOT_PERF = '/api/trading/bot-performance';
 const API_TESTS = '/api/automation/ab-tests';
 const API_SNAPSHOTS = `${API_TESTS}/snapshots`;
 const API_METASTACKS = '/api/scoring/metastacks';
+/** Lifecycle decisions for every live comparison — the ONE rule, served (#1201). */
+const API_EXPERIMENTS = '/api/automation/experiments';
+
+/**
+ * Actions that need a person or an agent. `RUNNING` and `ARCHIVED` are deliberately absent — a page
+ * that lists everything trains the reader to skim, and the whole point of this panel is that a
+ * stalled or unanswerable experiment is LOUD.
+ */
+const EXPERIMENT_NEEDS_ACTION = ['DECIDE', 'BLOCKED', 'NO-ARMS', 'UNMEASURED', 'INCONCLUSIVE', 'STALLED'];
+
+/** Glyph per action, never colour alone (ui-standards: state must survive colour-blind rendering). */
+const EXPERIMENT_GLYPH = {
+  DECIDE: '✅',
+  BLOCKED: '🛑',
+  'NO-ARMS': '🚫',
+  UNMEASURED: '❓',
+  INCONCLUSIVE: '⌛',
+  STALLED: '💤',
+};
 
 /**
  * The treatment fields, in the source page's order first, then the four it omits — this page is
@@ -602,6 +621,26 @@ export default function AbStrategiesPage() {
   });
   const strategies = useMemo(() => data?.strategies ?? [], [data]);
 
+  /**
+   * Every live comparison, with the ACTION to take — the owner's 2026-11-06 request:
+   * "agentic AI needs to be able to pick up A/B tests and decide how to proceed, else we will have
+   * clutter and strategies that run for months needlessly."
+   *
+   * ⚠️ The rule lives on the SERVER (`experiment-decision.ts`), so this page cannot disagree with
+   * the CLI (`scripts/report-experiments.cjs`) or with an agent reading the same endpoint. Do not
+   * re-derive an action here from the numbers below — render what the API decided.
+   */
+  const experimentsQuery = useQuery({
+    queryKey: ['automation', 'experiments'],
+    queryFn: () => apiGet(API_EXPERIMENTS),
+    staleTime: 60_000,
+  });
+  const experiments = experimentsQuery.data?.experiments ?? [];
+  const experimentsToAct = useMemo(
+    () => experiments.filter((e) => EXPERIMENT_NEEDS_ACTION.includes(e.action)),
+    [experiments],
+  );
+
   // #875 overlay (shared hook — the Strategies list reads the same overlay, same cache key).
   // A failure there must not blank this page: names are an overlay, not the data.
   const registry = useStrategyRegistry();
@@ -1045,6 +1084,72 @@ export default function AbStrategiesPage() {
           </PageInfoPopover>
         </h1>
       </header>
+
+      {/*
+        EXPERIMENT DECISIONS — the answer to "what do I DO about these tests?" (#1201).
+        Owner, 2026-11-06: "agentic AI needs to be able to pick up A/B tests and decide how to
+        proceed, else we will have clutter and strategies that run for months needlessly."
+
+        ⚠️ THREE STATES, NEVER TWO. "Nothing needs a decision", "the check failed" and "still
+        loading" must never render the same — collapsing them is how a dead experiment stays
+        invisible, which is the defect this panel exists to fix.
+      */}
+      <section className={styles.experiments} aria-labelledby="experiments-heading">
+        <div className={styles.experimentsHead}>
+          <h2 className={styles.experimentsTitle} id="experiments-heading">
+            Experiments — what needs a decision
+          </h2>
+          {experimentsQuery.data && (
+            <span className={styles.experimentsMeta}>
+              {experiments.length} tracked
+              {experimentsToAct.length > 0
+                ? ` · ${experimentsToAct.length} need${experimentsToAct.length === 1 ? 's' : ''} action`
+                : ' · nothing needs action'}
+            </span>
+          )}
+        </div>
+
+        {experimentsQuery.isLoading && (
+          <p className={styles.experimentsMeta}>Checking experiments…</p>
+        )}
+
+        {experimentsQuery.isError && (
+          <p className={styles.experimentsError}>
+            🛑 Cannot judge: {noticeFromError(experimentsQuery.error).title}. This is not &ldquo;all
+            clear&rdquo; — an experiment&apos;s state is unknown until the check answers.
+          </p>
+        )}
+
+        {experimentsQuery.data && experimentsToAct.length === 0 && (
+          <p className={styles.experimentsClear}>
+            ✅ Nothing needs a decision. {experiments.filter((e) => e.action === 'RUNNING').length} running,{' '}
+            {experiments.filter((e) => e.action === 'ARCHIVED').length} archived.
+          </p>
+        )}
+
+        {experimentsToAct.length > 0 && (
+          <ul className={styles.experimentsList}>
+            {experimentsToAct.map((e) => (
+              <li className={styles.experimentRow} key={e.id}>
+                <span className={styles.experimentAction}>
+                  <span aria-hidden="true">{EXPERIMENT_GLYPH[e.action] || '•'}</span> {e.action}
+                </span>
+                <div className={styles.experimentBody}>
+                  <span className={styles.experimentName}>{e.title}</span>
+                  <span className={styles.experimentFacts}>
+                    sample {Object.values(e.n).map((v) => (v === null ? '?' : v)).join(' / ')} of{' '}
+                    {e.requiredPerSide} per side
+                    {e.daysLeft !== null
+                      ? ` · ${e.daysLeft >= 0 ? `${e.daysLeft}d left` : `${-e.daysLeft}d overdue`}`
+                      : ''}
+                  </span>
+                  <span className={styles.experimentStep}>{e.nextStep}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {testIdParam ? (
         !test ? (

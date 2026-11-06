@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 211,
+  "count": 217,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -87,6 +87,16 @@
       "purpose": "the filtered-rate check for #825.",
       "selfTest": false,
       "reaches": null
+    },
+    {
+      "name": "audit-protocol-copies.cjs",
+      "where": "repo",
+      "category": "audit",
+      "purpose": "\"which comparison does this copy serve?\"",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "audit-protocol-faults.cjs",
@@ -542,7 +552,7 @@
       "name": "commit-only.cjs",
       "where": "repo",
       "category": "tool",
-      "purpose": "commit EXACTLY the files you name, in a working tree eight agents share.",
+      "purpose": "© 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite",
       "selfTest": true,
       "reaches": [
         "docs"
@@ -638,7 +648,7 @@
       "name": "docs-facts.cjs",
       "where": "repo",
       "category": "tool",
-      "purpose": "GENERATE the volatile facts so no document has to remember them.",
+      "purpose": "© 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite",
       "selfTest": true,
       "reaches": [
         "prebuild",
@@ -1076,6 +1086,22 @@
       ]
     },
     {
+      "name": "report-experiments.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "\"which experiments are finished, and what do I DO about it?\"",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
+      "name": "report-first-passage.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "\"does a small target get hit BEFORE the stop, often enough?\"",
+      "selfTest": false,
+      "reaches": null
+    },
+    {
       "name": "report-rule-inventory.cjs",
       "where": "nest",
       "category": "tool",
@@ -1084,6 +1110,14 @@
       "reaches": [
         "npm"
       ]
+    },
+    {
+      "name": "report-symbol-movement.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "HOW MUCH does each symbol actually MOVE in a short window?",
+      "selfTest": false,
+      "reaches": null
     },
     {
       "name": "report-symbol-priority-ties.cjs",
@@ -1163,7 +1197,7 @@
       "name": "tools-index.cjs",
       "where": "repo",
       "category": "tool",
-      "purpose": "GENERATE the index of this repo's own tooling, so no capability is",
+      "purpose": "© 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite",
       "selfTest": true,
       "reaches": [
         "prebuild",
@@ -1225,8 +1259,11 @@
       "where": "repo",
       "category": "validator",
       "purpose": "every `/api/...` URL the frontend calls must exist on a NestJS controller.",
-      "selfTest": false,
-      "reaches": null
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
     },
     {
       "name": "validate-arch-surfaces.cjs",
@@ -1521,6 +1558,27 @@
       ]
     },
     {
+      "name": "validate-no-empty-swallow.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "INV-NO-EMPTY-SWALLOW (build-time, ratcheted)",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-no-notice-bar.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "validate-no-notice-bar — the owner has asked REPEATEDLY for the thick coloured left-hand bar to be",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
       "name": "validate-notices.cjs",
       "where": "repo",
       "category": "validator",
@@ -1803,7 +1861,7 @@
       "name": "validate-site-links.cjs",
       "where": "repo",
       "category": "validator",
-      "purpose": "the public site has no build step, so nothing catches a broken link.",
+      "purpose": "© 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite",
       "selfTest": true,
       "reaches": [
         "prebuild",

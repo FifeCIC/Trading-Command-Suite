@@ -54,9 +54,12 @@ export default function PerformanceLabPage() {
   });
 
   // Live MT5 positions for mark-to-market context
+  // ⚠️ NO `.catch(() => [])` (#782 / INV-NO-EMPTY-SWALLOW). The empty array read as "no open
+  // positions" and pulled the mark-to-market context down with it, while `isError` below stayed false
+  // because that flag only covered the other two queries.
   const mt5Query = useQuery({
     queryKey: ['mt5-positions'],
-    queryFn: () => apiGet('/api/trading/mt5/positions').catch(() => []),
+    queryFn: () => apiGet('/api/trading/mt5/positions'),
     refetchInterval: 30000,
   });
 
@@ -64,7 +67,7 @@ export default function PerformanceLabPage() {
   const strategies = strategiesQuery.data?.strategies || [];
   const mt5Positions = Array.isArray(mt5Query.data) ? mt5Query.data : [];
   const isLoading = summaryQuery.isLoading || strategiesQuery.isLoading;
-  const isError = summaryQuery.isError || strategiesQuery.isError;
+  const isError = summaryQuery.isError || strategiesQuery.isError || mt5Query.isError;
 
   // Compute max values for bar scaling
   const maxPnl = useMemo(() => Math.max(1, ...strategies.map(s => Math.abs(s.totalPnl))), [strategies]);

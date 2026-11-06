@@ -17,8 +17,20 @@ import { registerWidget } from '../../core/widget-registry';
 import { timeAgo, formatNumber } from '../../core/format-utils';
 import { normaliseAlert, ALERT_LEVEL_WEIGHT } from '../../core/alerts';
 import MarketContextWidget from '../MarketContextWidget';
+import LoopControls from '../LoopControls';
 
-/* ── System Health ─────────────────────────────────────────────── */
+/* ── System Status (health + the automation loop) ─────────────────
+ *
+ * ⚠️ THE LOOP CONTROLS LIVE HERE NOW (owner, 2026-11-06): *"Merge `<div.lc-strip>` … so that widget
+ * becomes system status with the control over the loop which is a key functionality."* They used to
+ * render as a standalone strip above the board, which put the app's most consequential switch in a
+ * band of its own and left it off every OTHER board (the Lab board, the screenshot cockpit) that has
+ * this widget.
+ *
+ * ⚠️ ORDER IS DELIBERATE — loop first, health second. The loop is the thing that acts; the health
+ * facts are the thing that explains why it cannot. A reader who scrolls no further than the tile's
+ * first row still sees whether the loop is running.
+ */
 function SystemHealthWidget() {
   const { data, isLoading } = useQuery({
     queryKey: ['wb-health'],
@@ -26,16 +38,11 @@ function SystemHealthWidget() {
     refetchInterval: 30_000,
   });
 
-  if (isLoading) return <p className="wb-muted">Loading…</p>;
-  if (!data) return <p className="wb-muted">Health unavailable.</p>;
-
-  const db = data.subsystems?.database;
-  const queue = data.subsystems?.queue;
-  const providers = data.subsystems?.providers;
-  const providerTotal = Number(providers?.total ?? (providers ? Object.keys(providers).length : 0));
-  const providerHealthy = Number(providers?.healthy ?? 0);
-
-  return (
+  const health = isLoading ? (
+    <p className="wb-muted">Loading…</p>
+  ) : !data ? (
+    <p className="wb-muted">Health unavailable.</p>
+  ) : (
     <ul className="wb-facts">
       <li>
         <span>API</span>
@@ -47,38 +54,61 @@ function SystemHealthWidget() {
       </li>
       <li>
         <span>Database</span>
-        <strong className={db?.status === 'ok' ? 'wb-pos' : 'wb-warn'}>
-          {db?.status || '—'}
-          {db?.latency != null ? ` · ${db.latency}ms` : ''}
+        <strong className={data.subsystems?.database?.status === 'ok' ? 'wb-pos' : 'wb-warn'}>
+          {data.subsystems?.database?.status || '—'}
+          {data.subsystems?.database?.latency != null ? ` · ${data.subsystems.database.latency}ms` : ''}
         </strong>
       </li>
       <li>
         <span>Queue</span>
-        <strong>{queue?.status || '—'}</strong>
+        <strong>{data.subsystems?.queue?.status || '—'}</strong>
       </li>
-      {providerTotal > 0 && (
+      {Number(data.subsystems?.providers?.total ?? 0) > 0 && (
         <li>
           <span>Providers</span>
-          <strong className={providerHealthy === providerTotal ? 'wb-pos' : 'wb-warn'}>
-            {providerHealthy}/{providerTotal} healthy
+          <strong
+            className={
+              Number(data.subsystems.providers.healthy ?? 0) === Number(data.subsystems.providers.total)
+                ? 'wb-pos'
+                : 'wb-warn'
+            }
+          >
+            {Number(data.subsystems.providers.healthy ?? 0)}/{Number(data.subsystems.providers.total)} healthy
           </strong>
         </li>
       )}
     </ul>
   );
+
+  return (
+    <>
+      <LoopControls variant="embedded" />
+      {health}
+    </>
+  );
 }
 
 /* ── Open Positions ────────────────────────────────────────────── */
 function PositionsWidget() {
-  const { data, isLoading } = useQuery({
+  // ⚠️ NO `.catch(() => ({ positions: [] }))` (#782). "No open positions." was printed for both a
+  // genuinely flat book and a failed request — the same string for two opposite facts.
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['symbols-positions'],
-    queryFn: () => apiGet('/api/symbols/positions').catch(() => ({ positions: [] })),
+    queryFn: () => apiGet('/api/symbols/positions'),
     refetchInterval: 60_000,
   });
 
   const rows = Array.isArray(data?.positions) ? data.positions : [];
 
   if (isLoading) return <p className="wb-muted">Loading…</p>;
+  if (isError) {
+    return (
+      <p className="wb-muted">
+        ⚠️ Positions unavailable — this is <strong>not</strong> a flat book.{' '}
+        <button type="button" className="wb-retry" onClick={() => refetch()}>retry</button>
+      </p>
+    );
+  }
   if (!rows.length) return <p className="wb-muted">No open positions.</p>;
 
   const withPnl = rows.filter((p) => typeof p.pnl === 'number');
@@ -221,9 +251,11 @@ function AutomationPulseWidget() {
  * through normaliseAlert(), never straight off `title`/`severity`.
  */
 function ActiveAlertsWidget() {
-  const { data, isLoading } = useQuery({
+  // ⚠️ NO `.catch(() => [])` (#782) — a failed request would render "No active alerts.", i.e. it would
+  // quietly assert that nothing needs attention at the exact moment nothing could be checked.
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['wb-alerts'],
-    queryFn: () => apiGet('/api/alerts/active').catch(() => []),
+    queryFn: () => apiGet('/api/alerts/active'),
     refetchInterval: 60_000,
   });
 
@@ -232,6 +264,14 @@ function ActiveAlertsWidget() {
     .map(normaliseAlert);
 
   if (isLoading) return <p className="wb-muted">Loading…</p>;
+  if (isError) {
+    return (
+      <p className="wb-muted">
+        ⚠️ Alerts unavailable — this does not mean there are none.{' '}
+        <button type="button" className="wb-retry" onClick={() => refetch()}>retry</button>
+      </p>
+    );
+  }
   if (!rows.length) return <p className="wb-muted">No active alerts.</p>;
 
   const sorted = [...rows].sort(
@@ -318,12 +358,22 @@ registerWidget({
 
 registerWidget({
   id: 'system-health',
-  title: 'System Health',
+  // ⚠️ TITLE CHANGED 2026-11-06 (owner): the tile now carries the automation loop's Start / Stop /
+  // Run Now as well as the subsystem facts, so "System Health" described less than half of it.
+  // ⚠️ THE ID IS UNCHANGED ON PURPOSE — a board stores `widgetId`, so renaming the id would orphan
+  // every tile already placed and the `seeded` list would re-add it as if it were new.
+  title: 'System Status',
   icon: '🩺',
   category: 'Status',
-  description: 'API, database, queue and provider health.',
+  description: 'Loop control (start, stop, run now) plus API, database, queue and provider health.',
   frame: true,
-  size: { w: 4, h: 5, minW: 3, minH: 4 },
+  // ⚠️ TALLER THAN THE OLD h=5 / minH=4 (2026-11-06), measured rather than guessed. The tile now
+  // carries the loop strip AND the five subsystem facts: title bar 39px + strip 53px + facts 132px
+  // + spacing = **218px** of content. At h=5 the body is 189px, so the last fact was clipped and the
+  // tile body showed a scrollbar. h=7 gives a 268px tile / 229px body — the first height that fits.
+  // ⚠️ At w=4 the strip wraps to two lines (83px, content 248px), so minH stays 7 and a 4-wide tile
+  // wants one drag taller. Default width is 6 for that reason.
+  size: { w: 6, h: 7, minW: 4, minH: 7 },
   Component: SystemHealthWidget,
 });
 

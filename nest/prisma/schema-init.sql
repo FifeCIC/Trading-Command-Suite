@@ -41,7 +41,7 @@ CREATE TABLE `Symbol` (
 
     UNIQUE INDEX `Symbol_ticker_key`(`ticker`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `Strategy` (
@@ -55,7 +55,7 @@ CREATE TABLE `Strategy` (
     `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `Directive` (
@@ -78,7 +78,7 @@ CREATE TABLE `Directive` (
     INDEX `Directive_parentId_idx`(`parentId`),
     INDEX `Directive_isDefault_idx`(`isDefault`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `Score` (
@@ -93,7 +93,7 @@ CREATE TABLE `Score` (
     INDEX `Score_strategyId_timestamp_idx`(`strategyId`, `timestamp`),
     INDEX `Score_timestamp_idx`(`timestamp`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `Signal` (
@@ -110,7 +110,7 @@ CREATE TABLE `Signal` (
     INDEX `Signal_symbolId_createdAt_idx`(`symbolId`, `createdAt`),
     INDEX `Signal_strategyId_createdAt_idx`(`strategyId`, `createdAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `MarketBar` (
@@ -133,7 +133,7 @@ CREATE TABLE `MarketBar` (
     INDEX `MarketBar_timestamp_idx`(`timestamp`),
     UNIQUE INDEX `MarketBar_symbolId_timeframe_timestamp_key`(`symbolId`, `timeframe`, `timestamp`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `ImportRun` (
@@ -151,7 +151,7 @@ CREATE TABLE `ImportRun` (
     INDEX `ImportRun_symbolId_requestedAt_idx`(`symbolId`, `requestedAt`),
     INDEX `ImportRun_status_requestedAt_idx`(`status`, `requestedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `TickRecordingSession` (
@@ -168,7 +168,7 @@ CREATE TABLE `TickRecordingSession` (
     INDEX `TickRecordingSession_symbolId_startedAt_idx`(`symbolId`, `startedAt`),
     INDEX `TickRecordingSession_status_idx`(`status`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `BacktestRun` (
@@ -217,7 +217,7 @@ CREATE TABLE `BacktestRun` (
     INDEX `BacktestRun_periodId_idx`(`periodId`),
     INDEX `BacktestRun_experimentId_iteration_idx`(`experimentId`, `iteration`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `backtest_experiment` (
@@ -234,7 +234,7 @@ CREATE TABLE `backtest_experiment` (
     INDEX `backtest_experiment_protocolId_createdAt_idx`(`protocolId`, `createdAt`),
     INDEX `backtest_experiment_status_idx`(`status`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `protocol_directive_change` (
@@ -251,7 +251,7 @@ CREATE TABLE `protocol_directive_change` (
     INDEX `protocol_directive_change_protocolSlug_configVersion_idx`(`protocolSlug`, `configVersion`),
     INDEX `protocol_directive_change_directiveId_changedAt_idx`(`directiveId`, `changedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `backtest_period` (
@@ -270,7 +270,7 @@ CREATE TABLE `backtest_period` (
     INDEX `backtest_period_symbolId_timeframe_fromDate_idx`(`symbolId`, `timeframe`, `fromDate`),
     INDEX `backtest_period_createdAt_idx`(`createdAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `BacktestTrade` (
@@ -299,7 +299,7 @@ CREATE TABLE `BacktestTrade` (
     INDEX `BacktestTrade_runId_idx`(`runId`),
     INDEX `BacktestTrade_symbolId_idx`(`symbolId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `ProviderHealth` (
@@ -315,7 +315,7 @@ CREATE TABLE `ProviderHealth` (
     UNIQUE INDEX `ProviderHealth_provider_key`(`provider`),
     INDEX `ProviderHealth_status_checkedAt_idx`(`status`, `checkedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `ApiActivityLog` (
@@ -333,7 +333,7 @@ CREATE TABLE `ApiActivityLog` (
     INDEX `ApiActivityLog_statusCode_timestamp_idx`(`statusCode`, `timestamp`),
     INDEX `ApiActivityLog_method_endpoint_idx`(`method`, `endpoint`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `FaqEntry` (
@@ -349,7 +349,7 @@ CREATE TABLE `FaqEntry` (
     INDEX `FaqEntry_category_order_idx`(`category`, `order`),
     INDEX `FaqEntry_category_idx`(`category`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `ApiTrace` (
@@ -371,7 +371,7 @@ CREATE TABLE `ApiTrace` (
     INDEX `ApiTrace_createdAt_idx`(`createdAt`),
     INDEX `ApiTrace_expiresAt_idx`(`expiresAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `correlation_pair` (
@@ -386,7 +386,7 @@ CREATE TABLE `correlation_pair` (
     INDEX `correlation_pair_computed_at_idx`(`computed_at`),
     UNIQUE INDEX `correlation_pair_symbol_a_symbol_b_period_days_key`(`symbol_a`, `symbol_b`, `period_days`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `SymbolCalibration` (
@@ -403,7 +403,7 @@ CREATE TABLE `SymbolCalibration` (
     INDEX `SymbolCalibration_symbol_idx`(`symbol`),
     UNIQUE INDEX `SymbolCalibration_symbol_directiveId_key`(`symbol`, `directiveId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `NewsSource` (
@@ -418,7 +418,7 @@ CREATE TABLE `NewsSource` (
 
     UNIQUE INDEX `NewsSource_name_key`(`name`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `ArticleSample` (
@@ -434,7 +434,7 @@ CREATE TABLE `ArticleSample` (
     INDEX `ArticleSample_sourceId_publishedAt_idx`(`sourceId`, `publishedAt`),
     INDEX `ArticleSample_publishedAt_idx`(`publishedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `PublishingPattern` (
@@ -448,7 +448,7 @@ CREATE TABLE `PublishingPattern` (
 
     UNIQUE INDEX `PublishingPattern_sourceId_dayOfWeek_hourOfDay_key`(`sourceId`, `dayOfWeek`, `hourOfDay`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `NewsArticle` (
@@ -469,7 +469,7 @@ CREATE TABLE `NewsArticle` (
     INDEX `NewsArticle_category_publishedAt_idx`(`category`, `publishedAt`),
     INDEX `NewsArticle_publishedAt_idx`(`publishedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `NewsImportRun` (
@@ -488,7 +488,7 @@ CREATE TABLE `NewsImportRun` (
     INDEX `NewsImportRun_startedAt_idx`(`startedAt`),
     INDEX `NewsImportRun_tierId_startedAt_idx`(`tierId`, `startedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `news_item` (
@@ -508,7 +508,7 @@ CREATE TABLE `news_item` (
     UNIQUE INDEX `news_item_sourceHash_key`(`sourceHash`),
     INDEX `news_item_publishedAt_idx`(`publishedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `DirectiveOutcome` (
@@ -535,7 +535,7 @@ CREATE TABLE `DirectiveOutcome` (
     INDEX `DirectiveOutcome_directionCorrect_idx`(`directionCorrect`),
     INDEX `DirectiveOutcome_createdAt_idx`(`createdAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `MarketSnapshot` (
@@ -553,7 +553,7 @@ CREATE TABLE `MarketSnapshot` (
     INDEX `MarketSnapshot_symbol_idx`(`symbol`),
     INDEX `MarketSnapshot_starred_createdAt_idx`(`starred`, `createdAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `AppSetting` (
@@ -561,7 +561,7 @@ CREATE TABLE `AppSetting` (
     `value` JSON NOT NULL,
 
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `FeatureFlag` (
@@ -571,7 +571,7 @@ CREATE TABLE `FeatureFlag` (
     `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `ChartSnapshot` (
@@ -590,7 +590,7 @@ CREATE TABLE `ChartSnapshot` (
     INDEX `ChartSnapshot_symbol_createdAt_idx`(`symbol`, `createdAt`),
     INDEX `ChartSnapshot_createdAt_idx`(`createdAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `ProtocolVersion` (
@@ -603,7 +603,7 @@ CREATE TABLE `ProtocolVersion` (
 
     INDEX `ProtocolVersion_strategyId_detectedAt_idx`(`strategyId`, `detectedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `MacroIndicator` (
@@ -621,7 +621,7 @@ CREATE TABLE `MacroIndicator` (
     UNIQUE INDEX `MacroIndicator_indicator_key`(`indicator`),
     INDEX `MacroIndicator_category_date_idx`(`category`, `date`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `FxRate` (
@@ -634,7 +634,7 @@ CREATE TABLE `FxRate` (
     INDEX `FxRate_pair_timestamp_idx`(`pair`, `timestamp`),
     INDEX `FxRate_provider_timestamp_idx`(`provider`, `timestamp`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `SymbolTechnical` (
@@ -647,7 +647,7 @@ CREATE TABLE `SymbolTechnical` (
 
     INDEX `SymbolTechnical_symbolId_timeframe_indicator_idx`(`symbolId`, `timeframe`, `indicator`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `DataSourcesMeta` (
@@ -661,7 +661,7 @@ CREATE TABLE `DataSourcesMeta` (
 
     UNIQUE INDEX `DataSourcesMeta_name_key`(`name`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `ApiCredentials` (
@@ -677,7 +677,7 @@ CREATE TABLE `ApiCredentials` (
 
     UNIQUE INDEX `ApiCredentials_provider_label_key`(`provider`, `label`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `StrategyPerformance` (
@@ -694,7 +694,7 @@ CREATE TABLE `StrategyPerformance` (
 
     INDEX `StrategyPerformance_strategyId_periodEnd_idx`(`strategyId`, `periodEnd`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `UserPreferences` (
@@ -706,7 +706,7 @@ CREATE TABLE `UserPreferences` (
 
     UNIQUE INDEX `UserPreferences_userId_key_key`(`userId`, `key`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `Watchlist` (
@@ -723,7 +723,7 @@ CREATE TABLE `Watchlist` (
     `importedAt` DATETIME(3) NULL,
 
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `screener_hit` (
@@ -742,7 +742,7 @@ CREATE TABLE `screener_hit` (
     INDEX `screener_hit_source_idx`(`source`),
     INDEX `screener_hit_timestamp_idx`(`timestamp`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `watchlist_item` (
@@ -764,7 +764,7 @@ CREATE TABLE `watchlist_item` (
     INDEX `watchlist_item_status_idx`(`status`),
     INDEX `watchlist_item_ticker_idx`(`ticker`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `CronMeta` (
@@ -780,7 +780,7 @@ CREATE TABLE `CronMeta` (
 
     UNIQUE INDEX `CronMeta_name_key`(`name`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `ProcessMeta` (
@@ -796,7 +796,7 @@ CREATE TABLE `ProcessMeta` (
 
     UNIQUE INDEX `ProcessMeta_name_key`(`name`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `MarketSessions` (
@@ -808,7 +808,7 @@ CREATE TABLE `MarketSessions` (
     `active` BOOLEAN NOT NULL DEFAULT true,
 
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `Order` (
@@ -835,7 +835,7 @@ CREATE TABLE `Order` (
     INDEX `Order_createdAt_idx`(`createdAt`),
     INDEX `Order_status_idx`(`status`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `position_intent` (
@@ -849,7 +849,7 @@ CREATE TABLE `position_intent` (
 
     UNIQUE INDEX `position_intent_provider_symbol_key`(`provider`, `symbol`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `Position` (
@@ -877,7 +877,7 @@ CREATE TABLE `Position` (
     INDEX `Position_brokerTicket_idx`(`brokerTicket`),
     UNIQUE INDEX `Position_provider_brokerTicket_key`(`provider`, `brokerTicket`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `Trade` (
@@ -927,7 +927,7 @@ CREATE TABLE `Trade` (
     INDEX `Trade_brokerTicket_idx`(`brokerTicket`),
     UNIQUE INDEX `Trade_provider_brokerTicket_key`(`provider`, `brokerTicket`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `ApiCalls` (
@@ -944,7 +944,7 @@ CREATE TABLE `ApiCalls` (
     INDEX `ApiCalls_provider_timestamp_idx`(`provider`, `timestamp`),
     INDEX `ApiCalls_timestamp_idx`(`timestamp`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `CacheMeta` (
@@ -960,7 +960,7 @@ CREATE TABLE `CacheMeta` (
 
     UNIQUE INDEX `CacheMeta_key_key`(`key`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `DecodedDocument` (
@@ -975,7 +975,7 @@ CREATE TABLE `DecodedDocument` (
 
     INDEX `DecodedDocument_format_createdAt_idx`(`format`, `createdAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `StrategyMeta` (
@@ -994,7 +994,7 @@ CREATE TABLE `StrategyMeta` (
 
     UNIQUE INDEX `StrategyMeta_strategyId_key`(`strategyId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `WatchlistMeta` (
@@ -1007,7 +1007,7 @@ CREATE TABLE `WatchlistMeta` (
     INDEX `WatchlistMeta_symbol_idx`(`symbol`),
     UNIQUE INDEX `WatchlistMeta_watchlistId_symbol_key`(`watchlistId`, `symbol`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `NewsMeta` (
@@ -1025,7 +1025,7 @@ CREATE TABLE `NewsMeta` (
     INDEX `NewsMeta_symbol_publishedAt_idx`(`symbol`, `publishedAt`),
     INDEX `NewsMeta_publishedAt_idx`(`publishedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `OrderExecution` (
@@ -1045,7 +1045,7 @@ CREATE TABLE `OrderExecution` (
     INDEX `OrderExecution_orderId_idx`(`orderId`),
     INDEX `OrderExecution_provider_executedAt_idx`(`provider`, `executedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `tradingplan` (
@@ -1061,7 +1061,7 @@ CREATE TABLE `tradingplan` (
     `portfolioSnapshot` JSON NULL,
 
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `planstep` (
@@ -1083,7 +1083,7 @@ CREATE TABLE `planstep` (
 
     INDEX `planstep_planId_idx`(`planId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `earnings_event` (
@@ -1110,7 +1110,7 @@ CREATE TABLE `earnings_event` (
     INDEX `earnings_event_symbol_report_date_idx`(`symbol`, `report_date`),
     INDEX `earnings_event_source_created_at_idx`(`source`, `created_at`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `analyst_target` (
@@ -1132,7 +1132,7 @@ CREATE TABLE `analyst_target` (
     INDEX `analyst_target_symbol_idx`(`symbol`),
     INDEX `analyst_target_source_fetched_at_idx`(`source`, `fetched_at`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `sources` (
@@ -1150,7 +1150,7 @@ CREATE TABLE `sources` (
     UNIQUE INDEX `sources_slug_key`(`slug`),
     INDEX `sources_kind_idx`(`kind`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `earnings_analysis_batch` (
@@ -1164,7 +1164,7 @@ CREATE TABLE `earnings_analysis_batch` (
     INDEX `earnings_analysis_batch_source_id_created_at_idx`(`source_id`, `created_at`),
     INDEX `earnings_analysis_batch_created_at_idx`(`created_at`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `earnings_analysis` (
@@ -1205,7 +1205,7 @@ CREATE TABLE `earnings_analysis` (
     INDEX `earnings_analysis_source_id_created_at_idx`(`source_id`, `created_at`),
     INDEX `earnings_analysis_created_at_idx`(`created_at`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `score_snapshot` (
@@ -1223,7 +1223,7 @@ CREATE TABLE `score_snapshot` (
     INDEX `score_snapshot_symbol_snappedAt_idx`(`symbol`, `snappedAt`),
     INDEX `score_snapshot_snappedAt_idx`(`snappedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `UserStar` (
@@ -1236,7 +1236,7 @@ CREATE TABLE `UserStar` (
     INDEX `UserStar_userId_itemType_idx`(`userId`, `itemType`),
     UNIQUE INDEX `UserStar_userId_itemType_itemId_key`(`userId`, `itemType`, `itemId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `data_import_log` (
@@ -1257,7 +1257,7 @@ CREATE TABLE `data_import_log` (
     INDEX `data_import_log_dataType_idx`(`dataType`),
     INDEX `data_import_log_dataType_status_fetchedAt_idx`(`dataType`, `status`, `fetchedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `portfolio_snapshot` (
@@ -1275,7 +1275,7 @@ CREATE TABLE `portfolio_snapshot` (
     INDEX `portfolio_snapshot_snapshotType_takenAt_idx`(`snapshotType`, `takenAt`),
     INDEX `portfolio_snapshot_takenAt_idx`(`takenAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `portfolio_snapshot_position` (
@@ -1292,7 +1292,7 @@ CREATE TABLE `portfolio_snapshot_position` (
 
     INDEX `portfolio_snapshot_position_snapshotId_symbol_idx`(`snapshotId`, `symbol`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `trading_strategy` (
@@ -1336,6 +1336,7 @@ CREATE TABLE `trading_strategy` (
     `simTslEnabled` BOOLEAN NOT NULL DEFAULT false,
     `simTslActivationPct` DOUBLE NULL,
     `simTslDistancePct` DOUBLE NULL,
+    `takeProfitAmount` DOUBLE NULL,
     `exhaustionObserveEnabled` BOOLEAN NOT NULL DEFAULT false,
     `exhaustionDecelPct` DOUBLE NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
@@ -1347,7 +1348,7 @@ CREATE TABLE `trading_strategy` (
     UNIQUE INDEX `trading_strategy_magic_key`(`magic`),
     INDEX `trading_strategy_scoringStrategyId_idx`(`scoringStrategyId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `strategy_protocol` (
@@ -1362,7 +1363,7 @@ CREATE TABLE `strategy_protocol` (
     INDEX `strategy_protocol_protocolId_idx`(`protocolId`),
     UNIQUE INDEX `strategy_protocol_strategyId_protocolId_role_key`(`strategyId`, `protocolId`, `role`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `strategy_evaluation` (
@@ -1382,7 +1383,7 @@ CREATE TABLE `strategy_evaluation` (
     INDEX `strategy_evaluation_evaluatedAt_idx`(`evaluatedAt`),
     INDEX `strategy_evaluation_strategyId_evaluatedAt_idx`(`strategyId`, `evaluatedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `ProtocolRun` (
@@ -1403,7 +1404,7 @@ CREATE TABLE `ProtocolRun` (
     INDEX `ProtocolRun_protocolId_idx`(`protocolId`),
     INDEX `ProtocolRun_status_idx`(`status`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `scoring_strategy` (
@@ -1437,7 +1438,7 @@ CREATE TABLE `scoring_strategy` (
 
     INDEX `scoring_strategy_watchlistId_idx`(`watchlistId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `scoring_strategy_protocol` (
@@ -1449,7 +1450,7 @@ CREATE TABLE `scoring_strategy_protocol` (
 
     UNIQUE INDEX `scoring_strategy_protocol_scoringStrategyId_protocolSlug_key`(`scoringStrategyId`, `protocolSlug`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `metastack_snapshot` (
@@ -1464,7 +1465,7 @@ CREATE TABLE `metastack_snapshot` (
     INDEX `metastack_snapshot_scoringStrategyId_idx`(`scoringStrategyId`),
     INDEX `metastack_snapshot_scoringStrategyId_version_idx`(`scoringStrategyId`, `version`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `metastack_change_log` (
@@ -1479,7 +1480,7 @@ CREATE TABLE `metastack_change_log` (
 
     INDEX `metastack_change_log_scoringStrategyId_idx`(`scoringStrategyId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `SymbolProtocolAffinity` (
@@ -1492,7 +1493,7 @@ CREATE TABLE `SymbolProtocolAffinity` (
     INDEX `SymbolProtocolAffinity_symbol_idx`(`symbol`),
     INDEX `SymbolProtocolAffinity_protocolId_idx`(`protocolId`),
     PRIMARY KEY (`symbol`, `protocolId`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `TimelineEvent` (
@@ -1521,7 +1522,7 @@ CREATE TABLE `TimelineEvent` (
     INDEX `TimelineEvent_symbol_idx`(`symbol`),
     INDEX `TimelineEvent_scope_startsAt_idx`(`scope`, `startsAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `AutomationConfig` (
@@ -1543,7 +1544,7 @@ CREATE TABLE `AutomationConfig` (
 
     UNIQUE INDEX `AutomationConfig_brokerId_key`(`brokerId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `AutomationRule` (
@@ -1555,7 +1556,7 @@ CREATE TABLE `AutomationRule` (
     `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `bridge_event` (
@@ -1570,7 +1571,7 @@ CREATE TABLE `bridge_event` (
     INDEX `bridge_event_eventType_createdAt_idx`(`eventType`, `createdAt`),
     INDEX `bridge_event_createdAt_idx`(`createdAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `stock_investigation` (
@@ -1593,7 +1594,7 @@ CREATE TABLE `stock_investigation` (
     INDEX `stock_investigation_symbol_investigatedAt_idx`(`symbol`, `investigatedAt`),
     INDEX `stock_investigation_status_idx`(`status`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `fund_allocation` (
@@ -1608,7 +1609,7 @@ CREATE TABLE `fund_allocation` (
     `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `trading_style_preference` (
@@ -1625,7 +1626,7 @@ CREATE TABLE `trading_style_preference` (
 
     UNIQUE INDEX `trading_style_preference_styleKey_key`(`styleKey`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `trading_objective` (
@@ -1651,7 +1652,7 @@ CREATE TABLE `trading_objective` (
     INDEX `trading_objective_status_idx`(`status`),
     INDEX `trading_objective_category_idx`(`category`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `MacroSnapshot` (
@@ -1666,7 +1667,7 @@ CREATE TABLE `MacroSnapshot` (
     INDEX `MacroSnapshot_createdAt_idx`(`createdAt`),
     INDEX `MacroSnapshot_regime_createdAt_idx`(`regime`, `createdAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `SocialMention` (
@@ -1684,7 +1685,7 @@ CREATE TABLE `SocialMention` (
     INDEX `SocialMention_symbol_fetchedAt_idx`(`symbol`, `fetchedAt`),
     INDEX `SocialMention_fetchedAt_idx`(`fetchedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `InsiderTransaction` (
@@ -1703,7 +1704,7 @@ CREATE TABLE `InsiderTransaction` (
     INDEX `InsiderTransaction_symbol_transactionDate_idx`(`symbol`, `transactionDate`),
     INDEX `InsiderTransaction_fetchedAt_idx`(`fetchedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `CompanyMetric` (
@@ -1720,7 +1721,7 @@ CREATE TABLE `CompanyMetric` (
     INDEX `CompanyMetric_fetchedAt_idx`(`fetchedAt`),
     UNIQUE INDEX `CompanyMetric_symbol_key`(`symbol`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `stack_performance` (
@@ -1752,7 +1753,7 @@ CREATE TABLE `stack_performance` (
     INDEX `stack_performance_scoringStrategyId_idx`(`scoringStrategyId`),
     INDEX `stack_performance_rating_idx`(`rating`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `decision_log` (
@@ -1775,7 +1776,7 @@ CREATE TABLE `decision_log` (
     INDEX `decision_log_strategyId_timestamp_idx`(`strategyId`, `timestamp`),
     INDEX `decision_log_symbol_timestamp_idx`(`symbol`, `timestamp`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `decision_trail` (
@@ -1810,7 +1811,7 @@ CREATE TABLE `decision_trail` (
     INDEX `decision_trail_strategyEvalId_idx`(`strategyEvalId`),
     INDEX `decision_trail_tradeId_idx`(`tradeId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `stop_adjustment` (
@@ -1828,7 +1829,7 @@ CREATE TABLE `stop_adjustment` (
     INDEX `stop_adjustment_tradeTicket_idx`(`tradeTicket`),
     INDEX `stop_adjustment_symbol_adjustedAt_idx`(`symbol`, `adjustedAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `sim_tsl_event` (
@@ -1853,7 +1854,7 @@ CREATE TABLE `sim_tsl_event` (
     INDEX `sim_tsl_event_strategyId_occurredAt_idx`(`strategyId`, `occurredAt`),
     INDEX `sim_tsl_event_occurredAt_idx`(`occurredAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `exhaustion_event` (
@@ -1882,7 +1883,7 @@ CREATE TABLE `exhaustion_event` (
     INDEX `exhaustion_event_strategyId_occurredAt_idx`(`strategyId`, `occurredAt`),
     INDEX `exhaustion_event_occurredAt_idx`(`occurredAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `automation_event` (
@@ -1902,7 +1903,7 @@ CREATE TABLE `automation_event` (
     INDEX `automation_event_step_timestamp_idx`(`step`, `timestamp`),
     INDEX `automation_event_timestamp_idx`(`timestamp`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `directive_audit_run` (
@@ -1918,7 +1919,7 @@ CREATE TABLE `directive_audit_run` (
 
     INDEX `directive_audit_run_symbol_runAt_idx`(`symbol`, `runAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `architecture_section` (
@@ -1931,7 +1932,7 @@ CREATE TABLE `architecture_section` (
 
     UNIQUE INDEX `architecture_section_sectionKey_key`(`sectionKey`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `architecture_entry` (
@@ -1947,7 +1948,7 @@ CREATE TABLE `architecture_entry` (
     INDEX `architecture_entry_sectionId_idx`(`sectionId`),
     INDEX `architecture_entry_status_idx`(`status`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `architecture_revision` (
@@ -1959,7 +1960,7 @@ CREATE TABLE `architecture_revision` (
 
     INDEX `architecture_revision_entryId_idx`(`entryId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `capability` (
@@ -1981,7 +1982,7 @@ CREATE TABLE `capability` (
     INDEX `capability_category_idx`(`category`),
     INDEX `capability_area_idx`(`area`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `global_setting` (
@@ -1990,7 +1991,7 @@ CREATE TABLE `global_setting` (
     `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`key`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `research_note` (
@@ -2001,7 +2002,7 @@ CREATE TABLE `research_note` (
     `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `protocol` (
@@ -2035,7 +2036,7 @@ CREATE TABLE `protocol` (
     INDEX `protocol_slug_idx`(`slug`),
     INDEX `protocol_directionMode_idx`(`directionMode`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `protocol_score_status` (
@@ -2049,7 +2050,7 @@ CREATE TABLE `protocol_score_status` (
 
     INDEX `protocol_score_status_state_idx`(`state`),
     PRIMARY KEY (`protocolId`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `protocol_directive_group` (
@@ -2066,7 +2067,7 @@ CREATE TABLE `protocol_directive_group` (
 
     UNIQUE INDEX `protocol_directive_group_protocolId_groupId_key`(`protocolId`, `groupId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `protocol_directive_entry` (
@@ -2080,7 +2081,7 @@ CREATE TABLE `protocol_directive_entry` (
 
     UNIQUE INDEX `protocol_directive_entry_groupId_directiveId_instanceLabel_key`(`groupId`, `directiveId`, `instanceLabel`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `symbol_protocol_assignment` (
@@ -2092,7 +2093,7 @@ CREATE TABLE `symbol_protocol_assignment` (
     INDEX `symbol_protocol_assignment_symbol_idx`(`symbol`),
     UNIQUE INDEX `symbol_protocol_assignment_symbol_protocolId_key`(`symbol`, `protocolId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `symbol_route` (
@@ -2111,7 +2112,7 @@ CREATE TABLE `symbol_route` (
     INDEX `symbol_route_symbol_idx`(`symbol`),
     UNIQUE INDEX `symbol_route_symbol_brokerId_key`(`symbol`, `brokerId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `pending_action` (
@@ -2131,7 +2132,7 @@ CREATE TABLE `pending_action` (
     INDEX `pending_action_strategyId_idx`(`strategyId`),
     INDEX `pending_action_status_idx`(`status`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `Alert` (
@@ -2153,7 +2154,7 @@ CREATE TABLE `Alert` (
     INDEX `Alert_type_createdAt_idx`(`type`, `createdAt`),
     INDEX `Alert_acknowledged_createdAt_idx`(`acknowledged`, `createdAt`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `broker_config` (
@@ -2169,7 +2170,7 @@ CREATE TABLE `broker_config` (
     `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `scheduled_job` (
@@ -2191,7 +2192,7 @@ CREATE TABLE `scheduled_job` (
     INDEX `scheduled_job_status_runAt_idx`(`status`, `runAt`),
     INDEX `scheduled_job_type_idx`(`type`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `ab_pair` (
@@ -2210,7 +2211,7 @@ CREATE TABLE `ab_pair` (
     INDEX `ab_pair_state_idx`(`state`),
     UNIQUE INDEX `ab_pair_variantId_key`(`variantId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `ab_test` (
@@ -2228,7 +2229,7 @@ CREATE TABLE `ab_test` (
 
     INDEX `ab_test_status_idx`(`status`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `signal_dismissal` (
@@ -2245,7 +2246,7 @@ CREATE TABLE `signal_dismissal` (
     INDEX `signal_dismissal_dismissedUntil_idx`(`dismissedUntil`),
     UNIQUE INDEX `signal_dismissal_symbol_protocolId_key`(`symbol`, `protocolId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `signal_rank_snapshot` (
@@ -2264,7 +2265,7 @@ CREATE TABLE `signal_rank_snapshot` (
     INDEX `signal_rank_snapshot_runAt_idx`(`runAt`),
     INDEX `signal_rank_snapshot_symbol_protocolId_idx`(`symbol`, `protocolId`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `roadmap_card` (
@@ -2277,7 +2278,7 @@ CREATE TABLE `roadmap_card` (
 
     INDEX `roadmap_card_columnId_idx`(`columnId`),
     PRIMARY KEY (`number`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `roadmap_column` (
@@ -2287,7 +2288,7 @@ CREATE TABLE `roadmap_column` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `strategy_registry` (
@@ -2302,7 +2303,7 @@ CREATE TABLE `strategy_registry` (
     UNIQUE INDEX `strategy_registry_strategyKey_key`(`strategyKey`),
     INDEX `strategy_registry_name_idx`(`name`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `broker_symbol` (
@@ -2330,7 +2331,7 @@ CREATE TABLE `broker_symbol` (
     INDEX `broker_symbol_brokerId_registered_idx`(`brokerId`, `registered`),
     UNIQUE INDEX `broker_symbol_brokerId_name_key`(`brokerId`, `name`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `broker_symbol_sync` (
@@ -2345,7 +2346,7 @@ CREATE TABLE `broker_symbol_sync` (
     `updatedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     PRIMARY KEY (`brokerId`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `strategy_track_record` (
@@ -2366,7 +2367,7 @@ CREATE TABLE `strategy_track_record` (
     INDEX `strategy_track_record_strategyId_observedAt_idx`(`strategyId`, `observedAt`),
     INDEX `strategy_track_record_status_idx`(`status`),
     PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- AddForeignKey
 ALTER TABLE `Directive` ADD CONSTRAINT `Directive_strategyId_fkey` FOREIGN KEY (`strategyId`) REFERENCES `Strategy`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;

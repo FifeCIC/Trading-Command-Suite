@@ -49,7 +49,7 @@ export default function SymbolDetailPage() {
   const [activeTf, setActiveTf] = useState('1H');
   const candlesQuery = useQuery({
     queryKey: ['symbol-candles', symbolId, activeTf],
-    queryFn: () => apiGet(`/api/market-data/candles/${symbolId}?timeframe=${activeTf}`),
+    queryFn: () => apiGet(`/api/market-data/candles?symbol=${encodeURIComponent(symbolId)}&timeframe=${activeTf}`),
     enabled: Boolean(symbolId),
   });
 

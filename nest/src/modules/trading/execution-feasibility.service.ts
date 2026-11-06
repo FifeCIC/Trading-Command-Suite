@@ -41,6 +41,23 @@ export interface FeasibilityBlocker {
   key: string;
   message: string;
   hint: string;
+  /**
+   * Machine-readable facts behind the blocker, when the blocker has one.
+   *
+   * ⚠️ ADDED 2026-11-06 (#835). `size-below-minimum` already computed the exact floor and the
+   * broker it came from — but only into the human `message`, so a caller that wanted to ACT on it
+   * (raise the size to the minimum) would have had to parse English. That is how a second, drifting
+   * floor lookup gets written. Carrying the number here means there is one source for it.
+   */
+  params?: {
+    /** Volume floor in lots, as the broker reports it. */
+    floor?: number;
+    /** Broker whose floor this is. A number or a broker NAME — `symbol_route.brokerId` is an int
+     *  while `broker_config.id` is a name, so this cannot be typed as one of them. */
+    broker?: number | string | null;
+    /** Order size that was rejected, in lots. */
+    size?: number;
+  };
 }
 
 export interface FeasibilityResult {
@@ -248,6 +265,9 @@ export class ExecutionFeasibilityService {
             key: 'size-below-minimum',
             message: `${params.size} lots is below ${brokerSymbol}'s ${info.volumeMin}-lot minimum on broker ${routedBrokerId ?? brokerId}`,
             hint: `Raise the manual trade size to at least ${info.volumeMin} lots (Settings → manual trade defaults)`,
+            // The floor and its broker, structurally — so the caller can RAISE the size to the
+            // minimum instead of asking the operator to read the message and retype a number (#835).
+            params: { floor: Number(info.volumeMin), broker: routedBrokerId ?? brokerId ?? null, size: params.size },
           });
         }
       } catch {

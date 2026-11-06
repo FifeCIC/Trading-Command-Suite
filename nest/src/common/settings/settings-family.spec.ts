@@ -232,13 +232,39 @@ describe('key families', () => {
     //     alternative design — an `isBaseline` column on `backtestrun` — was REJECTED because a
     //     baseline must not disappear when the run it names is deleted; a dangling pointer that the
     //     UI reports is recoverable, a missing marker is indistinguishable from "never accepted".
+    //
+    // ⚠️ SIXTH FAMILY ADDED 2026-11-06 — `discordSignalLastPost`, and the confirmation this tripwire
+    // asks for:
+    //   • OPEN-ENDED SHAPE: one member per protocol scope, and protocol slugs grow with the library.
+    //     It is not one key wearing a pattern.
+    //   • NO DECLARED DEFAULTS, so `ensureDefaults()` cannot materialise one — which is exactly why
+    //     the owner asked for metadata rather than a column: *"it's a lot of extra data for
+    //     something that won't be active for all users so a table column would be inherent for most
+    //     installations."* An install that never publishes carries nothing.
+    //   • It exists so the per-strategy Discord signal throttle has somewhere to live. The rejected
+    //     alternatives were an in-memory Map (dies on every `build:api`, and a reset throttle floods
+    //     after every deploy) and a new column on `trading_strategy` (ships to everyone).
     expect(SETTING_FAMILIES.map((f) => f.id).sort()).toEqual([
       'backtestBaseline',
       'brokerTrading',
       'directive',
+      'discordSignalLastPost',
       'notificationEvent',
       'protocol',
     ]);
+  });
+
+  it('the Discord signal throttle family captures protocol slug and field', () => {
+    const family = SETTING_FAMILIES.find((f) => f.id === 'discordSignalLastPost')!;
+    const m = family.pattern.exec('notifications.discord.lastSignal.vix-spike-v1-long.at')!;
+    expect(m).not.toBeNull();
+    expect(m[1]).toBe('vix-spike-v1-long'); // hyphenated slug must survive the subject group
+    expect(m[2]).toBe('at');
+    // The loop's fallback subject is a REAL subject, so it must be writable, not rejected.
+    expect(family.pattern.test('notifications.discord.lastSignal.any.at')).toBe(true);
+    // Anything outside the shape would throw on write and silently drop the post.
+    expect(family.pattern.test('notifications.discord.lastSignal.BTC/USD.at')).toBe(false);
+    expect(family.fields.at.userChangeable).toBe(false);
   });
 
   it('the per-event notification fields validate as declared', () => {

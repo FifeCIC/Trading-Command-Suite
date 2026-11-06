@@ -1,15 +1,47 @@
 /* ── Trading212 Portfolio Page ── */
 
 .t212p-page {
-  max-width: 1000px;
+  /* ⚠️ WAS a hardcoded 1000px while the app standard is `--page-max-width` (1400px) — measured
+     2026-11-06: at a 1500px viewport the page sat at x=375..1375 and the summary grid ended at 1375,
+     leaving the right third of the content area empty. That is the "empty space on the right" the
+     owner reported. `ui-standards.instructions.md` requires every view to sit inside the shared
+     token, so this now follows it instead of inventing a narrower container. */
+  max-width: var(--page-max-width, 1400px);
   margin: 0 auto;
   padding: 1.5rem;
   color: var(--ink, var(--ink));
 }
 
-.t212p-header { margin-bottom: 1.5rem; }
-.t212p-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
-.t212p-subtitle { color: var(--ink-soft, var(--ink-soft)); font-size: 0.88rem; margin: 0; }
+/* ⚠️ `.t212p-header` IS GONE (2026-11-06). Its only child was an `h1`, which `index.css` hides
+   app-wide (`.main-stage h1 { display: none }`) because the breadcrumb names the view — so the
+   element rendered at height 0 while still carrying `margin-bottom: 1.5rem`. Measured: the page
+   started at y=191 and the first content at y=239, ~24px of which was this empty header's margin.
+   The ℹ that lived inside it now sits on the summary section's heading row. */
+
+/* Section heading row: title on the left, the small facts (updated / import state / where the
+   toggles live) on the right. One row instead of three stacked full-width paragraphs. */
+.t212p-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
+.t212p-section-head h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--accent, #22d3ee);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+.t212p-section-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
 
 .t212p-mode { font-weight: 700; }
 .t212p-mode--live { color: var(--color-profit); }
@@ -25,13 +57,39 @@
   color: var(--accent, #22d3ee);
 }
 
-/* ── Summary Grid ── */
+/* ── Summary Grid ──
+   ⚠️ TWO FAILED ATTEMPTS ARE RECORDED HERE, because both looked correct and neither worked.
+   1. `repeat(auto-fill, minmax(140px, 1fr))` (original). Measured 1600 → 640px, tile width went
+      **148 → 147 → 162 → 178 → 205 → 141**: it GREW as the window narrowed, then snapped smaller.
+      A grid track cannot go below its `minmax()` floor, so narrowing drops a whole column and every
+      surviving column jumps wider. The owner reported exactly this: *"a lack of fluidity … there's
+      plenty room in some of the cards for them to shrink."*
+   2. `display: flex` + `flex: 1 1 140px` + a growth filler. RE-MEASURED immediately after building
+      it: **140 → 156 → 148 → 161 → 147 → 163 → 147 → 162 → 146 → 178 → 151 → 205 → 171 → 141** —
+      the same oscillation. Flex wraps at the same items-per-row threshold as `auto-fill`, so it
+      inherits the jump, and the filler made the last row narrower than the first.
+   3. WHAT ACTUALLY WORKS, and is what this rule does: an explicit column count that changes at
+      declared breakpoints, with `1fr` tracks inside each band. Between breakpoints every tile shrinks
+      continuously with the container; the count changes only where a designer put a breakpoint. A
+      lone tile on the last line also keeps its column width instead of stretching to the full row.
+   The counts key off the WRAPPER's width (`container-type: inline-size`), not the viewport, so the
+   grid behaves correctly inside a narrow pane, a Dev Tools split or a future dashboard widget. */
+.t212p-summary-wrap { container-type: inline-size; container-name: tiles; }
+
 .t212p-summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.6rem;
 }
+@container tiles (min-width: 400px) { .t212p-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container tiles (min-width: 540px) { .t212p-summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@container tiles (min-width: 700px) { .t212p-summary-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@container tiles (min-width: 860px) { .t212p-summary-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@container tiles (min-width: 1020px) { .t212p-summary-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
+@container tiles (min-width: 1180px) { .t212p-summary-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+
 .t212p-stat {
+  min-width: 0;
   background: var(--panel, var(--panel));
   border: 1px solid var(--line, var(--line));
   border-radius: 8px;
@@ -59,27 +117,40 @@
 }
 .t212p-hint { font-size: 0.78rem; color: var(--ink-soft, var(--color-muted)); }
 
-/* ── Grand total ── */
-.t212p-grand-total {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  padding: 0.4rem 0.6rem;
-  margin-bottom: 0.5rem;
-  border: 1px solid var(--line, var(--line));
-  border-radius: 8px;
-  background: var(--panel, var(--panel));
+/* ── Grand total — now the FIRST TILE of the summary grid ───────────────────────────────────────
+   ⚠️ WAS its own full-width row above the grid (owner, 2026-11-06: *"a lot of area for a small amount
+   of information"*). The dead `.t212p-grand-total` / `.t212p-grand-label` / `.t212p-grand-value` rules
+   were removed with it. As a tile it reads with the figures it relates to instead of taking a whole
+   line to itself.
+   ⚠️ Accent border, not accent text: this is the one number that spans EVERY enabled account, while
+   the tiles beside it are the T212 investment account alone. The border says "different scope" without
+   implying the money is a different kind. */
+.t212p-stat--grand {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
 }
-.t212p-grand-label {
-  font-size: 0.65rem;
-  color: var(--ink-soft, var(--ink-soft));
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.t212p-stat--grand .t212p-stat-value { font-size: 1.15rem; }
+
+/* The tile the other money tiles resolve to. ⚠️ USED TO CARRY A 3px ACCENT `border-left`; the owner
+   has asked repeatedly for the thick coloured left bar to be deleted everywhere (2026-11-06), so the
+   emphasis is now a uniform 1px accent-tinted border on all four sides. Structurally identical to its
+   neighbours, different only in tone — no edge is drawn thicker than another. */
+.t212p-stat--total {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 5%, var(--panel));
 }
-.t212p-grand-value {
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: var(--ink, var(--ink));
+
+/* A figure the app DERIVES (value − cost) rather than one the broker reported. It is dimmer than the
+   reported figures beside it so the two provenances cannot be mistaken for each other. */
+.t212p-stat--derived {
+  border-style: dashed;
+  border-color: var(--line);
+}
+.t212p-stat--derived .t212p-stat-label::after {
+  content: ' · derived';
+  color: var(--text-faint);
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 /* ── Category + account toggles ── */
@@ -233,3 +304,147 @@
   font-size: 0.85rem;
   font-style: italic;
 }
+
+/* ── Positions table: hover/focus detail row (2026-11-06) ───────────────────────────────────────
+   The row itself is unchanged; the detail opens UNDERNEATH it as another table row, so its facts line
+   up with the columns above instead of floating in a native tooltip. */
+
+/* A row is focusable so the panel is reachable by keyboard (WCAG 2.1.1) — a hover-only panel is
+   pointer-only. The focus ring is the global one; this only makes the row a focus target. */
+.t212p-row { cursor: default; }
+.t212p-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.t212p-row--open { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
+/* LONG / SHORT sits beside the ticker: direction is part of what the row IS, not a detail. */
+.t212p-side {
+  margin-left: 0.35rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+/* Demo vs LIVE. The WORD carries the meaning; the tone only reinforces it, and "demo" is the quieter
+   of the two because it is the safe one. `LIVE` takes the danger tone — real money. */
+.t212p-mode-chip {
+  margin-left: 0.4rem;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+.t212p-mode-chip--demo { border-color: var(--line); color: var(--color-text-dim); }
+.t212p-mode-chip--live { border-color: var(--risk-critical); color: var(--ink); }
+
+/* P&L percentage under the absolute figure — the same money, normalised by position size. */
+.t212p-pnl-pct { display: block; font-size: 0.65rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+/* Profit the STOP protects. Only ever rendered when that is true — see PositionDetail. */
+.t212p-lock { margin-left: 0.3rem; font-size: 0.7rem; }
+
+.t212p-detail-row > td {
+  padding: 0.5rem 0.65rem 0.75rem;
+  background: color-mix(in srgb, var(--accent) 4%, var(--panel));
+  border-bottom: 1px solid var(--line);
+  /* ⚠️ Measured 2026-11-06: the cell computed `text-align: right` with this panel's labels and values
+     then right-aligned inside their grid cells — a long value like "1.104 · -0.00400 (-0.36%) away"
+     floated left of its own heading, which reads as a broken table. The alignment comes from an
+     ancestor rule this stylesheet does not declare, so it is countered here rather than tracked down. */
+  text-align: start;
+}
+
+.t212p-detail { display: flex; flex-direction: column; gap: 0.6rem; }
+
+/* Four pairs per row on a wide screen; the grid wraps rather than crushing the values. */
+.t212p-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.35rem 1rem;
+  margin: 0;
+}
+.t212p-detail-grid > div { min-width: 0; }
+.t212p-detail-grid dt {
+  margin: 0;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+.t212p-detail-grid dd {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.t212p-ok { color: var(--color-profit); }
+.t212p-warn { color: var(--color-warning); }
+.t212p-muted { color: var(--ink-soft); }
+
+/* ── Controls ─────────────────────────────────────────────────────────────────────────────────
+   ⚠️ Close is a TWO-STEP control: the first click only arms it. A single click that closes a broker
+   position is a destructive action on a money path, and there is no undo. */
+.t212p-controls { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 0.5rem; }
+
+.t212p-action {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  min-height: 28px;
+}
+.t212p-action:hover:not(:disabled) { border-color: var(--accent); }
+.t212p-action:disabled { opacity: 0.5; cursor: not-allowed; }
+.t212p-action--danger { border-color: var(--risk-critical); }
+.t212p-action--armed {
+  border-color: var(--risk-critical);
+  background: var(--risk-critical);
+  color: #fff;
+  font-weight: 700;
+}
+
+.t212p-stopform { display: inline-flex; align-items: flex-end; gap: 0.4rem; }
+.t212p-stopform label {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+.t212p-stopform input {
+  width: 6.5rem;
+  padding: 0.25rem 0.4rem;
+  min-height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+.t212p-stopform input:focus { outline: none; border-color: var(--accent); }
+
+.t212p-detail-error {
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.74rem;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+
+  border-radius: 6px;
+}
+.t212p-detail-note { margin: 0; font-size: 0.72rem; color: var(--ink-soft); font-style: italic; }
+/* The qualifier beside a number whose unit is not obvious (a notional is not account currency). */
+.t212p-detail-hint { font-size: 0.66rem; color: var(--text-dim); }

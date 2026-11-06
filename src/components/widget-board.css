@@ -27,6 +27,27 @@
   flex-wrap: wrap;
 }
 
+/* ── Toolbar lifted into the shell's top row (2026-11-06) ────────────────────────────────────────
+   `.wb-toolbar` normally sits inline above the grid. When a page asks for `toolbarPosition="top-row"`
+   it is rendered by `TopRowSlot` into `.main-top-slot`, which lives inside `.main-top-right` beside
+   the ℹ trigger. Measured before this rule: the toolbar kept its content width, so the row read as
+   [toolbar hugging the right][ℹ] instead of one control line spanning the page.
+
+   ⚠️ SCOPED WITH `:has()`, NOT GLOBAL. `.main-top-right` is shared by every page, and making it
+   `flex: 1` globally would move SymbolsLadderPage's refresh countdown from the right edge to the
+   left. The selector only matches when THIS toolbar is present. */
+.main-top-right:has(.wb-toolbar--top-row) { flex: 1 1 auto; min-width: 0; }
+.main-top-slot:has(.wb-toolbar--top-row) { flex: 1 1 auto; min-width: 0; }
+.wb-toolbar--top-row { flex: 1 1 auto; min-width: 0; }
+
+/* ⚠️ VISUAL ORDER, NOT DOM ORDER. `.main-top-right` renders the ℹ before the slot, so with the
+   toolbar spanning the row the ℹ would sit at the far LEFT — measured at x=22 with the toolbar
+   starting at x=54, i.e. the page's help icon moved to the opposite corner from every other page.
+   Swapping the two orders keeps the ℹ where it is expected (right) without moving it in the DOM,
+   which is what makes this safe for the pages that do not use the toolbar. */
+.main-top-right:has(.wb-toolbar--top-row) .main-top-slot { order: 1; }
+.main-top-right:has(.wb-toolbar--top-row) .main-top-info { order: 2; }
+
 .wb-title {
   font-size: var(--text-md);
   font-weight: var(--weight-semibold);
@@ -489,6 +510,18 @@
   margin: 0;
   color: var(--color-muted);
   font-size: var(--text-xs);
+}
+
+/* Inline retry for a widget that could not load its data (#782). Deliberately a small text button:
+   the point is that the failure is VISIBLE, not that it is decorated. */
+.wb-retry {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .wb-more {

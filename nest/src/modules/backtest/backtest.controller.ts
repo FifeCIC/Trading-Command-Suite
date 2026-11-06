@@ -365,6 +365,14 @@ export class BacktestController {
     return this.backtestService.walkForward(body);
   }
 
+  @Get('walk-forward-survivors')
+  @ApiOperation({
+    summary: 'Walk-forward survivors — ranked by OUT-of-sample, with the in-sample figure beside it (#1201)',
+  })
+  async walkForwardSurvivors() {
+    return this.backtestService.walkForwardSurvivors();
+  }
+
   @Get('data-inventory')
   @ApiOperation({ summary: 'Comprehensive market bar inventory — all symbols with bar counts, date ranges, providers, and backtest run stats' })
   async dataInventory(@Query('fresh') fresh?: string) {

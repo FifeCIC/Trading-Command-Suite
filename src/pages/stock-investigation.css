@@ -11,7 +11,7 @@
 .si-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem; }
 .si-card.si-open { border-color: var(--color-profit); }
 .si-card.si-monitoring { border-color: var(--color-warning); }
-.si-card.si-closed { border-left: 3px solid var(--color-text-dim); opacity: 0.7; }
+.si-card.si-closed {  opacity: 0.7; }
 .si-card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
 .si-symbol { font-weight: 700; font-size: 0.85rem; }
 .si-status { font-size: 0.62rem; font-weight: 600; padding: 1px 6px; border-radius: 3px; text-transform: uppercase; }

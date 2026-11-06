@@ -645,3 +645,112 @@
   font-size: 0.78rem;
   color: var(--risk-elevated);
 }
+
+/* ── Experiment decisions (#1201) ──────────────────────────
+ *
+ * The panel that answers "what do I DO about these tests?". Owner, 2026-11-06: without it we get
+ * "clutter and strategies that run for months needlessly".
+ *
+ * ⚠️ The ACTION is carried by a GLYPH plus the action's own word, never by colour alone
+ * (ui-standards). `--risk-elevated` tints the row that needs a decision; the text still says which
+ * decision and why, so the row reads correctly in a colour-blind or forced-colours render.
+ */
+
+.experiments {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elev);
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+
+.experimentsHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.experimentsTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.experimentsMeta {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.experimentsError {
+  margin: 8px 0 0;
+  font-size: 0.82rem;
+  color: var(--risk-elevated);
+}
+
+.experimentsClear {
+  margin: 8px 0 0;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.experimentsList {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.experimentRow {
+  display: grid;
+  grid-template-columns: 122px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elev-2);
+}
+
+.experimentAction {
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--risk-elevated);
+  white-space: nowrap;
+}
+
+.experimentBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.experimentName {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.experimentFacts {
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.experimentStep {
+  font-size: 0.78rem;
+  color: var(--ink);
+}
+
+@media (max-width: 720px) {
+  .experimentRow {
+    grid-template-columns: 1fr;
+  }
+}

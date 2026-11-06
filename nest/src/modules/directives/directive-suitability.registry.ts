@@ -412,11 +412,6 @@ export const DIRECTIVE_SUITABILITY: Record<string, SuitabilityProfile> = {
     instrumentTypes: ['stocks'],
     minTimeframe: 'D1', preferredSessions: ['US'],
   },
-  'social-buzz': {
-    regimeType: 'any', volatilityLevel: 'any',
-    instrumentTypes: ['stocks', 'crypto'],
-    minTimeframe: 'H1', preferredSessions: ['US', 'London', 'Asian'],
-  },
   'insider-activity': {
     regimeType: 'any', volatilityLevel: 'any',
     instrumentTypes: ['stocks'],

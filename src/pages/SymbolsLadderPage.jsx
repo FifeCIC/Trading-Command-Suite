@@ -267,9 +267,13 @@ export default function SymbolsLadderPage() {
   // Latest scoring runs — refreshed in sync with the automation loop tick.
   // refetchInterval is dynamic: schedules the next refetch ~2s after nextTickAt,
   // falling back to 30s if automation status is unavailable.
-  const { data: runsData } = useQuery({
+  // ⚠️ NO `.catch(() => ({ runs: [] }))` (#782) — same defect as the protocols fetch above. With the
+  // catch, a failed score fetch left `scoreMap` empty, so every row lost its score while the table
+  // still rendered — a page full of symbols reporting no signals, which is a claim about the market
+  // made on the strength of a failed request.
+  const { data: runsData, isError: sError, error: sErr, refetch: refetchScores } = useQuery({
     queryKey: ['sl-scores'],
-    queryFn: () => apiGet('/api/scoring/runs').catch(() => ({ runs: [] })),
+    queryFn: () => apiGet('/api/scoring/runs'),
     staleTime: 10_000,
     refetchInterval: () => {
       if (nextTickAt) {
@@ -506,11 +510,12 @@ export default function SymbolsLadderPage() {
         ⚠️ A FAILED FETCH IS NOT AN EMPTY TABLE (#782). Without this branch the table below simply has
         no rows, which reads as "this registry scores nothing" rather than "the request failed".
       */}
-      {pError ? (
+      {pError || sError ? (
         <p className="pl-notice">
-          ⚠️ Could not load protocols — the request failed
-          {pErr?.status ? ` (${pErr.status})` : ''}, so this is <strong>not</strong> an empty registry.{' '}
-          <button type="button" onClick={() => refetchProtocols()}>
+          ⚠️ Could not load {pError ? 'protocols' : 'scores'} — the request failed
+          {(pError ? pErr : sErr)?.status ? ` (${(pError ? pErr : sErr).status})` : ''}, so this is{' '}
+          <strong>not</strong> an empty {pError ? 'registry' : 'score feed'}.{' '}
+          <button type="button" onClick={() => (pError ? refetchProtocols() : refetchScores())}>
             Retry
           </button>
         </p>

@@ -17,6 +17,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { feedUnavailable } from '../core/api/feed-state.js';
 import './symbol-autocomplete.css';
 
 export default function SymbolAutocomplete({
@@ -41,7 +42,9 @@ export default function SymbolAutocomplete({
   // Search symbols as user types
   const searchQuery = useQuery({
     queryKey: ['symbol-search', partial],
-    queryFn: () => apiGet(`/api/symbols?search=${encodeURIComponent(partial)}`).catch(() => []),
+    // ⚠️ NO `.catch(() => [])` (#782 / INV-NO-EMPTY-SWALLOW). "No matches" and "the search failed"
+    // rendered identically, so a typing user was told their symbol does not exist.
+    queryFn: () => apiGet(`/api/symbols?search=${encodeURIComponent(partial)}`),
     enabled: partial.length >= 1,
     staleTime: 30_000,
   });
@@ -128,7 +131,15 @@ export default function SymbolAutocomplete({
         autoComplete="off"
         spellCheck="false"
       />
-      {showDropdown && suggestions.length > 0 && (
+      {/* ⚠️ A failed search must not read as "no such symbol" (#782). */}
+      {showDropdown && feedUnavailable(searchQuery) && (
+        <div className="sa-dropdown">
+          <div className="sa-dropdown-loading">
+            ⚠️ Symbol search failed — retype to retry.
+          </div>
+        </div>
+      )}
+      {showDropdown && !feedUnavailable(searchQuery) && suggestions.length > 0 && (
         <div className="sa-dropdown">
           {searchQuery.isFetching && (
             <div className="sa-dropdown-loading">Searching…</div>

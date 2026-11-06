@@ -93,7 +93,7 @@
   margin-bottom: 12px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--line);
+
   border-radius: 8px;
 }
 

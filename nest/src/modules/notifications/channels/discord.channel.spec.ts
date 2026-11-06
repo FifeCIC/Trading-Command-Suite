@@ -1,0 +1,249 @@
+import { DiscordChannel } from './discord.channel';
+import type { NotificationMessage } from '../notifications.service';
+
+/**
+ * DiscordChannel — the PUBLIC FEED policy (2026-11-06).
+ *
+ * Two owner rules are pinned here, and each is canaried from BOTH sides because a threshold that
+ * only ever passes is indistinguishable from one that never runs:
+ *
+ *   "I do not want ALL signals to be shared. Only one per day for now…"
+ *   "I don't think we should share trade wins and losses that are within a dollar."
+ *   "…once per hour for each strategy" (the 2026-11-06 revision — see the ration block below)
+ *
+ * ⚠️ AND THE THIRD CASE, WHICH IS THE DANGEROUS ONE: a closed trade with NO recorded P&L must be
+ * published NOWHERE. The tempting implementation routes an unknown outcome to `wins` because the
+ * loss channel is scary; that would put a fabricated success in front of an audience.
+ *
+ * The settings are faked with an in-memory map so the policy is exercised without a database or an
+ * HTTP call — these rules are arithmetic, and arithmetic does not need Postgres.
+ */
+describe('DiscordChannel — public feed policy', () => {
+  function makeChannel(initial: Record<string, unknown> = {}) {
+    const store = new Map<string, unknown>(Object.entries(initial));
+    const settings: any = {
+      resolve: jest.fn(async (key: string) => ({
+        key,
+        value: store.has(key) ? store.get(key) : undefined,
+        source: store.has(key) ? 'db' : 'default',
+      })),
+      // Families have NO default and are NEVER seeded — `present: false` is the honest answer for
+      // a strategy that has never published, and the policy must read it as "not throttled".
+      resolveFamily: jest.fn(async (key: string) => {
+        const present = store.has(key);
+        return {
+          key,
+          family: 'discordSignalLastPost',
+          subject: key.split('.')[4] ?? '',
+          field: 'at',
+          present,
+          value: present ? store.get(key) : undefined,
+          source: present ? 'db' : 'absent',
+          owner: 'notifications',
+          userChangeable: false,
+        };
+      }),
+      set: jest.fn(async (key: string, value: unknown) => {
+        store.set(key, value);
+        return { key, value, source: 'db' };
+      }),
+      clear: jest.fn(async (key: string) => {
+        const deleted = store.delete(key) ? 1 : 0;
+        return { key, deleted, previousSource: 'db' };
+      }),
+    };
+    // The constructor injects SettingsResolverService; the fake satisfies the surface used.
+    const channel = new DiscordChannel(settings);
+    return { channel, store, settings };
+  }
+
+  const msg = (over: Partial<NotificationMessage>): NotificationMessage =>
+    ({ title: 't', body: 'b', event: 'signal-suggestion', ...over }) as NotificationMessage;
+
+  describe('routing — which channel, if any', () => {
+    it('a SIGNAL SUGGESTION goes to the signals channel', async () => {
+      const { channel } = makeChannel();
+      expect(await channel.feedChannelFor(msg({ event: 'signal-suggestion' }))).toBe('signals');
+    });
+
+    it('⚠️ an EXECUTED entry-signal is NOT published — that is an order, not a suggestion', async () => {
+      const { channel } = makeChannel();
+      expect(await channel.feedChannelFor(msg({ event: 'entry-signal' }))).toBeNull();
+    });
+
+    it('a profitable close goes to wins', async () => {
+      const { channel } = makeChannel();
+      const m = msg({ event: 'position-closed', metadata: { pnl: 12.5 } });
+      expect(await channel.feedChannelFor(m)).toBe('wins');
+    });
+
+    it('a losing close goes to losses', async () => {
+      const { channel } = makeChannel();
+      const m = msg({ event: 'position-closed', metadata: { pnl: -12.5 } });
+      expect(await channel.feedChannelFor(m)).toBe('losses');
+    });
+
+    it('an unrelated event is not published at all', async () => {
+      const { channel } = makeChannel();
+      expect(await channel.feedChannelFor(msg({ event: 'drawdown-warning' }))).toBeNull();
+      expect(await channel.feedChannelFor(msg({ event: 'daily-summary' }))).toBeNull();
+    });
+  });
+
+  describe('the ±$1 rule — measured from both sides of the boundary', () => {
+    const at = async (pnl: unknown) => {
+      const { channel } = makeChannel();
+      return channel.feedChannelFor(msg({ event: 'position-closed', metadata: { pnl } }));
+    };
+
+    it('+1.00 IS published (the threshold is inclusive)', async () => {
+      expect(await at(1)).toBe('wins');
+    });
+
+    it('-1.00 IS published (absolute value)', async () => {
+      expect(await at(-1)).toBe('losses');
+    });
+
+    it('+0.99 is NOT published — noise', async () => {
+      expect(await at(0.99)).toBeNull();
+    });
+
+    it('-0.99 is NOT published — noise', async () => {
+      expect(await at(-0.99)).toBeNull();
+    });
+
+    it('zero is neither a win nor a loss', async () => {
+      expect(await at(0)).toBeNull();
+    });
+
+    it('a numeric STRING is accepted (payloads travel as JSON)', async () => {
+      expect(await at('-7.25')).toBe('losses');
+    });
+
+    it('⚠️ NO P&L is published NOWHERE — an unknown outcome is not a win', async () => {
+      expect(await at(undefined)).toBeNull();
+      expect(await at(null)).toBeNull();
+      expect(await at('not a number')).toBeNull();
+    });
+
+    it('the threshold is a SETTING, so raising it suppresses more', async () => {
+      const { channel } = makeChannel({ 'notifications.discord.minPnlToAnnounce': 25 });
+      const m = msg({ event: 'position-closed', metadata: { pnl: 10 } });
+      expect(await channel.feedChannelFor(m)).toBeNull();
+
+      const m2 = msg({ event: 'position-closed', metadata: { pnl: 25 } });
+      expect(await channel.feedChannelFor(m2)).toBe('wins');
+    });
+  });
+
+  describe('the hourly PER-STRATEGY ration', () => {
+    const T0 = new Date('2026-11-06T12:00:00.000Z');
+    const at = (minutes: number) => new Date(T0.getTime() + minutes * 60_000);
+    const KEY = (s: string) => `notifications.discord.lastSignal.${s}.at`;
+
+    it('the FIRST signal for a strategy claims a window', async () => {
+      const { channel } = makeChannel();
+      expect(await channel.claimSignalSlot('vix-spike-v1-long', T0)).not.toBeNull();
+    });
+
+    it('a SECOND signal from the SAME strategy inside the window is refused', async () => {
+      const { channel } = makeChannel();
+      await channel.claimSignalSlot('vix-spike-v1-long', T0);
+      expect(await channel.claimSignalSlot('vix-spike-v1-long', at(30))).toBeNull();
+    });
+
+    it('⚠️ a DIFFERENT strategy is NOT blocked — the ration is per strategy, not global', async () => {
+      // This is the regression the change exists for: the previous global daily allowance let the
+      // first strategy to print silence every other strategy until midnight.
+      const { channel } = makeChannel();
+      await channel.claimSignalSlot('vix-spike-v1-long', T0);
+      expect(await channel.claimSignalSlot('gold-breakout-v1-long', at(1))).not.toBeNull();
+    });
+
+    it('⚠️ the boundary is INCLUSIVE: 60 minutes may publish, 59 may not', async () => {
+      const { channel } = makeChannel();
+      await channel.claimSignalSlot('vix-spike-v1-long', T0);
+
+      expect(await channel.claimSignalSlot('vix-spike-v1-long', at(59))).toBeNull();
+      expect(await channel.claimSignalSlot('vix-spike-v1-long', at(60))).not.toBeNull();
+    });
+
+    it('the interval is a SETTING, so a longer window suppresses more', async () => {
+      const { channel } = makeChannel({
+        'notifications.discord.signalMinIntervalMinutes': 120,
+      });
+      await channel.claimSignalSlot('vix-spike-v1-long', T0);
+      expect(await channel.claimSignalSlot('vix-spike-v1-long', at(60))).toBeNull();
+      expect(await channel.claimSignalSlot('vix-spike-v1-long', at(120))).not.toBeNull();
+    });
+
+    it('0 disables the throttle but still records the publish time', async () => {
+      const { channel, store } = makeChannel({
+        'notifications.discord.signalMinIntervalMinutes': 0,
+      });
+      await channel.claimSignalSlot('vix-spike-v1-long', T0);
+      expect(await channel.claimSignalSlot('vix-spike-v1-long', at(1))).not.toBeNull();
+      // Recorded, so raising the number again takes effect from the LAST post, not the next one.
+      expect(store.get(KEY('vix-spike-v1-long'))).toBe(at(1).toISOString());
+    });
+
+    it('a missing row means "never published", not an error', async () => {
+      const { channel } = makeChannel();
+      expect(await channel.isSignalThrottled('vix-spike-v1-long', T0)).toBe(false);
+    });
+
+    it('⚠️ an unparseable stored value is treated as never published, and says so', async () => {
+      // Refusing for ever on one corrupt row would silence that strategy permanently; publishing
+      // one extra signal is the lesser fault. The warning is what stops it being silent.
+      const { channel } = makeChannel({ [KEY('vix-spike-v1-long')]: 'not-a-timestamp' });
+      expect(await channel.isSignalThrottled('vix-spike-v1-long', T0)).toBe(false);
+    });
+
+    it('a released window is available again — a failed post costs nothing', async () => {
+      const { channel } = makeChannel();
+      const slot = await channel.claimSignalSlot('vix-spike-v1-long', T0);
+      expect(slot).not.toBeNull();
+      expect(await channel.claimSignalSlot('vix-spike-v1-long', at(1))).toBeNull();
+
+      await channel.releaseSignalSlot(slot!);
+      expect(await channel.claimSignalSlot('vix-spike-v1-long', at(1))).not.toBeNull();
+    });
+
+    it('release restores the EXACT previous timestamp, not an empty one', async () => {
+      const previous = at(-90).toISOString();
+      const { channel, store } = makeChannel({ [KEY('vix-spike-v1-long')]: previous });
+      const slot = await channel.claimSignalSlot('vix-spike-v1-long', T0);
+      await channel.releaseSignalSlot(slot!);
+      expect(store.get(KEY('vix-spike-v1-long'))).toBe(previous);
+    });
+
+    it('⚠️ release DELETES the row when there was none — it must not leave a false publish time', async () => {
+      const { channel, store } = makeChannel();
+      const slot = await channel.claimSignalSlot('vix-spike-v1-long', T0);
+      expect(store.has(KEY('vix-spike-v1-long'))).toBe(true);
+
+      await channel.releaseSignalSlot(slot!);
+      // A row left behind here would throttle the strategy for an hour on the strength of a post
+      // that never happened.
+      expect(store.has(KEY('vix-spike-v1-long'))).toBe(false);
+    });
+  });
+
+  describe('which strategy a signal belongs to', () => {
+    it('reads metadata.protocolId', () => {
+      const { channel } = makeChannel();
+      expect(channel.signalSubject({ metadata: { protocolId: 'vix-spike-v1-long' } })).toBe(
+        'vix-spike-v1-long',
+      );
+    });
+
+    it('⚠️ an unusable subject folds into "any" rather than being lost', () => {
+      // The family pattern is `[a-z0-9][a-z0-9-]*`; writing anything else would throw and drop the
+      // post entirely. `any` is a real subject, so those signals are still rationed as a group.
+      const { channel } = makeChannel();
+      expect(channel.signalSubject({})).toBe('any');
+      expect(channel.signalSubject({ metadata: { protocolId: 'BTC/USD' } })).toBe('any');
+      expect(channel.signalSubject({ metadata: { protocolId: 42 } })).toBe('any');
+    });
+  });
+});

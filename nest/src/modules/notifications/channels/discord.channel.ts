@@ -1,25 +1,363 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { SettingsResolverService } from '../../../common/settings/settings-resolver.service';
 import type { NotificationMessage } from '../notifications.service';
 
+/**
+ * DiscordChannel — TWO DESTINATIONS, and they are not the same thing.
+ *
+ *   1. THE OPERATOR FEED (`DISCORD_WEBHOOK_URL`) — every event, unchanged since #652/#653. One
+ *      webhook, one private channel, no policy. Existing behaviour preserved exactly, including
+ *      throwing on failure so notification history records a failure.
+ *
+ *   2. THE PUBLIC FEED (`signals` / `wins` / `losses`) — published through the Intranet gateway by
+ *      CHANNEL KEY, subject to the owner's publishing policy. Added 2026-11-06.
+ *
+ * ── WHY A POLICY LIVES HERE AND NOT IN THE DISPATCHER ───────────────────────────────────────────
+ * `notifications.service.ts` answers "who should be told about this event". That is a different
+ * question from "is this worth publishing publicly". Merging them would mean muting a noisy public
+ * feed also muted an operator alert — the failure mode the mandatory-event rule already exists to
+ * prevent. So per-event preferences stay where they are, and these rules sit in the channel that
+ * actually speaks in public.
+ *
+ * ── THE OWNER'S RULES ───────────────────────────────────────────────────────────────────────────
+ *   "I do not want ALL signals to be shared. Only one per day for now to create the system and keep
+ *    it well tested."                                            -> the RATION (see below)
+ *   "I don't think we should share trade wins and losses that are within a dollar. That might reduce
+ *    what is essentially noise."                                  -> minPnlToAnnounce (default 1)
+ *   "change the rule to message the signals channel once per hour for each strategy" (2026-11-06)
+ *                                                    -> signalMinIntervalMinutes (default 60)
+ *
+ * ⚠️ THE RATION IS PER STRATEGY, NOT GLOBAL (changed 2026-11-06). It was one signal per UTC day for
+ * the whole app, keyed on two settings (`lastSignalDate` / `lastSignalCount`). That answered "has
+ * the feed published today" — not "has THIS strategy published recently" — so the first strategy to
+ * print a signal spent the whole day's allowance and every other strategy was silenced until
+ * midnight. The feed ended up reporting the calendar rather than the market. The per-strategy
+ * timestamp now lives in the `discordSignalLastPost` setting FAMILY, which is never seeded, so an
+ * install that never publishes never carries the data (the owner's stated reason for wanting
+ * metadata rather than a column).
+ *
+ * Both numbers are SETTINGS, not constants. A published message cannot be un-published, so the
+ * numbers that decide what goes out must be inspectable and changeable without a deploy.
+ *
+ * ⚠️ "CANNOT JUDGE" IS NOT "A WIN". A closed trade with no usable P&L is NOT published. Routing an
+ * unknown outcome to `wins` would put a fabricated success in front of an audience.
+ */
 @Injectable()
 export class DiscordChannel {
   private readonly logger = new Logger(DiscordChannel.name);
-  private get webhookUrl() { return process.env.DISCORD_WEBHOOK_URL || ''; }
+
+  /** The family member holding one strategy's last publish time. */
+  private static lastPostKey(subject: string): string {
+    return `notifications.discord.lastSignal.${subject}.at`;
+  }
+
+  constructor(private readonly settings: SettingsResolverService) {}
+
+  /** The legacy single-channel operator webhook. Unchanged behaviour. */
+  private get webhookUrl(): string {
+    return process.env.DISCORD_WEBHOOK_URL || '';
+  }
 
   async send(msg: NotificationMessage): Promise<void> {
-    if (!this.webhookUrl) { this.logger.debug('Discord not configured'); return; }
+    // 1. Operator feed — exactly as before. Failures still throw so history records them.
+    if (this.webhookUrl) {
+      await this.postWebhook(this.webhookUrl, this.buildEmbed(msg));
+    }
+
+    // 2. Public feed — never throws; a public post failing is not an operator-notification failure.
     try {
-      const color = msg.event === 'drawdown-warning' ? 0xef4444 : msg.event === 'entry-signal' ? 0x22c55e : msg.event === 'backtest-complete' ? 0x3b82f6 : 0x6b7280;
-      const fields: Array<{ name: string; value: string; inline?: boolean }> = [];
-      if (msg.symbol) fields.push({ name: 'Symbol', value: msg.symbol, inline: true });
-      if (msg.score != null) fields.push({ name: 'Score', value: String(msg.score), inline: true });
-      const embed = { title: msg.title, description: msg.body, color, fields, timestamp: new Date().toISOString() };
-      const res = await fetch(this.webhookUrl, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ embeds: [embed] }), signal: AbortSignal.timeout(10_000),
+      await this.publishToFeed(msg);
+    } catch (err) {
+      this.logger.warn(`Discord feed publish failed: ${(err as Error).message}`);
+    }
+  }
+
+  // ── Public feed ────────────────────────────────────────────────────────────
+
+  private async publishToFeed(msg: NotificationMessage): Promise<void> {
+    const enabled = await this.booleanSetting('notifications.discord.publishEnabled', true);
+    if (!enabled) return;
+
+    const channel = await this.feedChannelFor(msg);
+    if (channel === null) return;
+
+    // The ration applies ONLY to signals; a closed trade is a fact about money and is not rationed.
+    let slot: { subject: string; previous: string | null } | null = null;
+    if (channel === 'signals') {
+      slot = await this.claimSignalSlot(this.signalSubject(msg));
+      if (slot === null) {
+        // Debug, not log: this fires on EVERY tick for the rest of the window once a strategy's
+        // allowance is spent, and a warning that repeats by design trains the reader to ignore it.
+        this.logger.debug(
+          `Signal not published — "${this.signalSubject(msg)}" is inside its interval`,
+        );
+        return;
+      }
+    }
+
+    try {
+      await this.deliver(channel, this.buildFeedEmbed(channel, msg));
+      this.logger.log(`Discord feed published to "${channel}": ${msg.title}`);
+    } catch (err) {
+      // The claim is released on failure: a post that never landed must not consume the window,
+      // or one bad minute would silence that strategy until the interval elapsed.
+      if (slot) await this.releaseSignalSlot(slot);
+      throw err;
+    }
+  }
+
+  /**
+   * The strategy a signal belongs to — the ration's unit.
+   *
+   * ⚠️ A ladder card has NO bot attached, so the closest stable identifier is `metadata.protocolId`,
+   * written by `automation-loop.service.ts`. `any` is a REAL subject, not a null: it is what the
+   * loop writes when a card names no protocol, and grouping those under one key is deliberate —
+   * the alternative is an unrationed channel, which is the one outcome the owner ruled out.
+   */
+  signalSubject(msg: { metadata?: Record<string, unknown> }): string {
+    const raw = msg.metadata?.protocolId;
+    const subject = typeof raw === 'string' ? raw.trim() : '';
+    // The family pattern is `[a-z0-9][a-z0-9-]*`; anything outside it would throw on write and
+    // drop the signal. Fold unknown shapes into `any` rather than losing the post.
+    return /^[a-z0-9][a-z0-9-]*$/.test(subject) ? subject : 'any';
+  }
+
+  /**
+   * Which public channel this event belongs in, or `null` for "do not publish".
+   * Deliberately not `private` so the policy can be unit-tested without an HTTP call.
+   */
+  async feedChannelFor(msg: NotificationMessage): Promise<'signals' | 'wins' | 'losses' | null> {
+    // ⚠️ `signal-suggestion`, NOT `entry-signal` (changed 2026-11-06 at the owner's direction).
+    // `entry-signal` fires only after a bot PLACES AN ORDER, so publishing it would have shared
+    // executions while calling them suggestions. The Signals area is a suggestion to enter,
+    // generated from scoring with no bot attached — and that is what the feed publishes.
+    if (msg.event === 'signal-suggestion') return 'signals';
+
+    if (msg.event === 'position-closed') {
+      const pnl = this.pnlOf(msg);
+      if (pnl === null) {
+        this.logger.warn(
+          `Closed trade not published — no usable P&L in metadata (${msg.symbol ?? 'unknown symbol'}). ` +
+            'An unknown outcome is not a win.',
+        );
+        return null;
+      }
+      if (pnl === 0) return null; // break-even: neither a win nor a loss
+
+      const min = await this.numberSetting('notifications.discord.minPnlToAnnounce', 1);
+      if (Math.abs(pnl) < min) {
+        this.logger.log(
+          `Closed trade not published — |${pnl.toFixed(2)}| is below minPnlToAnnounce (${min}).`,
+        );
+        return null;
+      }
+      return pnl > 0 ? 'wins' : 'losses';
+    }
+
+    return null;
+  }
+
+  /** `metadata.pnl` as a number, or `null` when absent or unusable. Never a guess. */
+  pnlOf(msg: NotificationMessage): number | null {
+    const raw = msg.metadata?.pnl;
+    const n = typeof raw === 'number' ? raw : Number(raw);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  /**
+   * Claim this strategy's signal window, or `null` when it is still inside the interval.
+   *
+   * CLAIMED BEFORE THE POST, NOT AFTER: two signals can be evaluated in the same tick, and checking
+   * then posting would let both pass an interval that allows one. The claim is rolled back if the
+   * post fails.
+   *
+   * ⚠️ `present: false` is NOT an error and NOT "publish now unconditionally" — it means "never
+   * published", which passes the interval check on its merits. A value that cannot be PARSED is a
+   * third thing: it is treated as "never published" but logged, because refusing to publish forever
+   * on one corrupt row is worse than publishing one extra signal, and silence would hide the fault.
+   *
+   * Returns the EXACT previous value so `releaseSignalSlot` can restore it. The earlier global
+   * implementation returned `0` for "different day" and the release path then rewrote history;
+   * `previous` is `null` when there was no row at all, which releases by DELETING.
+   */
+  async claimSignalSlot(
+    subject: string,
+    now: Date = new Date(),
+  ): Promise<{ subject: string; previous: string | null } | null> {
+    const { key, previous } = await this.lastPostFor(subject);
+
+    if (await this.throttledBy(previous, subject, now)) return null;
+
+    await this.settings.set(key, now.toISOString());
+    return { subject, previous };
+  }
+
+  /**
+   * Read-only peek: is this strategy still inside its window? Used by the automation loop to CHOOSE
+   * a card, so that a throttled top-ranked strategy does not silence the whole feed.
+   *
+   * ⚠️ A peek is a HINT, not the gate. The gate is the claim, which is the only thing that writes —
+   * so two callers racing here can still only produce one post per window.
+   */
+  async isSignalThrottled(subject: string, now: Date = new Date()): Promise<boolean> {
+    const { previous } = await this.lastPostFor(subject);
+    return this.throttledBy(previous, subject, now);
+  }
+
+  /** The family member's current value for one strategy. Never throws. */
+  private async lastPostFor(subject: string): Promise<{ key: string; previous: string | null }> {
+    const key = DiscordChannel.lastPostKey(subject);
+    let previous: string | null = null;
+    try {
+      const resolved = await this.settings.resolveFamily(key);
+      if (resolved.source === 'invalid') {
+        this.logger.warn(
+          `Signal throttle: "${key}" holds an unparseable value (${resolved.error ?? 'no detail'}) — ` +
+            'treating it as never published.',
+        );
+      } else if (resolved.present || resolved.value !== undefined) {
+        previous = typeof resolved.value === 'string' ? resolved.value : null;
+      }
+    } catch (err) {
+      // A read failure must not block the public feed: fall through with `previous = null`.
+      this.logger.warn(`Signal throttle: "${key}" could not be read — ${(err as Error).message}`);
+    }
+    return { key, previous };
+  }
+
+  private async throttledBy(previous: string | null, subject: string, now: Date): Promise<boolean> {
+    if (!previous) return false;
+    const minutes = await this.numberSetting('notifications.discord.signalMinIntervalMinutes', 60);
+
+    const last = Date.parse(previous);
+    if (!Number.isFinite(last)) {
+      this.logger.warn(
+        `Signal throttle: last publish for "${subject}" is not a timestamp ("${previous}") — ` +
+          'treating it as never published.',
+      );
+      return false;
+    }
+    // ⚠️ `minutes <= 0` disables the throttle BUT the publish time is still recorded, so raising the
+    // number again takes effect immediately rather than after the first post of the next window.
+    if (minutes <= 0) return false;
+
+    const elapsedMinutes = (now.getTime() - last) / 60_000;
+    // ⚠️ `elapsed >= minutes` is INCLUSIVE: at exactly 60 minutes the strategy may publish. The
+    // boundary is named here and in a test because an off-by-one here is invisible in use.
+    return elapsedMinutes < minutes;
+  }
+
+  /** Undo a claim after a failed post. Deletes the row when there was none before. */
+  async releaseSignalSlot(slot: { subject: string; previous: string | null }): Promise<void> {
+    const key = DiscordChannel.lastPostKey(slot.subject);
+    if (slot.previous === null) {
+      try {
+        await this.settings.clear(key);
+      } catch (err) {
+        this.logger.warn(`Signal throttle: "${key}" could not be cleared — ${(err as Error).message}`);
+      }
+      return;
+    }
+    await this.settings.set(key, slot.previous);
+  }
+
+  /**
+   * Deliver to the named channel.
+   *
+   * The Intranet gateway is preferred because it is the one place credentials live and the one place
+   * an external action is logged. The direct per-channel webhook is the fallback, so the feed keeps
+   * working when WAMP is down — the app should not lose a public post because a second process is
+   * not running.
+   */
+  private async deliver(channel: 'signals' | 'wins' | 'losses', embed: Record<string, unknown>): Promise<void> {
+    const intranetUrl = process.env.INTRANET_GATEWAY_URL || '';
+    const intranetKey = process.env.INTRANET_API_KEY || '';
+
+    if (intranetUrl && intranetKey) {
+      const res = await fetch(intranetUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${intranetKey}`,
+        },
+        body: JSON.stringify({ gateway: 'discord', action: 'post', params: { channel, embed } }),
+        signal: AbortSignal.timeout(15_000),
       });
-      if (!res.ok) throw new Error(`Discord ${res.status}`);
-      this.logger.log(`Discord sent: ${msg.title}`);
-    } catch (err) { this.logger.error(`Discord failed: ${(err as Error).message}`); throw err; }
+      if (!res.ok) {
+        throw new Error(`Intranet gateway refused the post: HTTP ${res.status}`);
+      }
+      return;
+    }
+
+    const direct = process.env[`DISCORD_WEBHOOK_${channel.toUpperCase()}`] || '';
+    if (!direct) {
+      throw new Error(
+        `no transport for "${channel}" — set INTRANET_GATEWAY_URL + INTRANET_API_KEY, ` +
+          `or DISCORD_WEBHOOK_${channel.toUpperCase()}`,
+      );
+    }
+    await this.postWebhook(direct, embed);
+  }
+
+  // ── Shared helpers ─────────────────────────────────────────────────────────
+
+  private async postWebhook(url: string, embed: Record<string, unknown>): Promise<void> {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embeds: [embed] }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) throw new Error(`Discord ${res.status}`);
+  }
+
+  private buildEmbed(msg: NotificationMessage): Record<string, unknown> {
+    const color =
+      msg.event === 'drawdown-warning' ? 0xef4444 : msg.event === 'entry-signal' ? 0x22c55e : 0x64748b;
+    const fields: Array<{ name: string; value: string; inline?: boolean }> = [];
+    if (msg.symbol) fields.push({ name: 'Symbol', value: msg.symbol, inline: true });
+    if (msg.score != null) fields.push({ name: 'Score', value: String(msg.score), inline: true });
+    return { title: msg.title, description: msg.body, color, fields, timestamp: new Date().toISOString() };
+  }
+
+  private buildFeedEmbed(channel: 'signals' | 'wins' | 'losses', msg: NotificationMessage): Record<string, unknown> {
+    const pnl = this.pnlOf(msg);
+    if (channel === 'signals') {
+      return {
+        title: msg.title,
+        description: msg.body,
+        color: 0x22c55e,
+        footer: { text: 'Trading Command Suite - signal' },
+        timestamp: new Date().toISOString(),
+      };
+    }
+    const win = channel === 'wins';
+    return {
+      title: `${win ? 'WIN' : 'LOSS'} - ${msg.symbol ?? msg.title}`,
+      description: msg.body,
+      color: win ? 0x22c55e : 0xef4444,
+      fields: [{ name: 'Profit', value: pnl === null ? '-' : pnl.toFixed(2), inline: true }],
+      footer: { text: 'Trading Command Suite - closed trade' },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  private async numberSetting(key: string, fallback: number): Promise<number> {
+    try {
+      const resolved = await this.settings.resolve(key);
+      const n = Number(resolved.value);
+      return Number.isFinite(n) ? n : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  private async booleanSetting(key: string, fallback: boolean): Promise<boolean> {
+    try {
+      const resolved = await this.settings.resolve(key);
+      return Boolean(resolved.value);
+    } catch {
+      return fallback;
+    }
   }
 }

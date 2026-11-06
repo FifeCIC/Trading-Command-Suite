@@ -727,6 +727,11 @@ export class TradingStrategyService {
     // about it leaves the column NULL, which means "no boundary", so no bot changes behaviour.
     exitBeforeUtc?: string | null;
     maxPyramidTiers?: number;
+    /**
+     * MONEY take-profit (2026-11-06) — close when unrealised P&L reaches this amount in the ACCOUNT
+     * currency. Absent/NULL = the mechanism never acts, which is every bot that does not opt in.
+     */
+    takeProfitAmount?: number | null;
     duplicatedFromId?: string | null;
     /**
      * #1018 — the bot's MT5 magic. Supplied by the DUPLICATE path (which must not inherit the
@@ -827,6 +832,9 @@ export class TradingStrategyService {
         maxHoldHours: data.maxHoldHours ?? null,
         exitBeforeUtc: data.exitBeforeUtc ?? null,
         maxPyramidTiers: data.maxPyramidTiers ?? undefined,
+        // Money take-profit (2026-11-06). Written straight through: NULL (absent) means the
+        // mechanism never acts, so an old client that does not send it changes nothing.
+        takeProfitAmount: data.takeProfitAmount ?? undefined,
         duplicatedFromId: data.duplicatedFromId ?? null,
         // #1018 — EVERY bot gets a magic, including one created through the API. An explicit value
         // is honoured (the duplicate path needs a DIFFERENT one from its source); otherwise the

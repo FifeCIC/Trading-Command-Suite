@@ -142,14 +142,14 @@
   margin-bottom: 16px;
   font-style: italic;
   color: var(--text-dim, #aaa);
-  border-left: 3px solid var(--accent, #0066cc);
+
 }
 
 /* Signal handover context (#702) */
 .plan-signal-context {
   background: var(--bg-elev);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--color-profit);
+
   border-radius: 6px;
   padding: 12px 14px;
   margin-bottom: 16px;

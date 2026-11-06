@@ -82,6 +82,23 @@ export default function ObjectivesPage() {
     refetchInterval: 60000,
   });
 
+  /**
+   * Objective REVIEW status — the owner's 2026-11-06 request: "You could use the Goals page as a way
+   * to remind us to check results."
+   *
+   * ⚠️ The `action` (OVERDUE / NO-DATE / DUE-SOON / ON-TIME) is decided on the SERVER by
+   * `decideObjectiveReview()` in `nest/src/common/trading/experiment-decision.ts`, so this page, the
+   * CLI and an agent cannot disagree. Do not recompute it from `targetDate` here.
+   */
+  const { data: review } = useQuery({
+    queryKey: ['automation', 'experiments'],
+    queryFn: () => apiGet('/api/automation/experiments'),
+    refetchInterval: 120000,
+  });
+  const objectiveReviews = review?.objectives ?? [];
+  const OBJECTIVE_GLYPH = { OVERDUE: '⏰', 'NO-DATE': '📅', 'DUE-SOON': '⏳', 'ON-TIME': '▶', SETTLED: '📦' };
+  const objectiveSpotlight = objectiveReviews.filter((o) => ['OVERDUE', 'NO-DATE', 'DUE-SOON'].includes(o.action));
+
   const seedMutation = useMutation({
     mutationFn: () => apiPost('/api/planner/objectives/seed'),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['planner', 'objectives'] }); setSeeded(true); },
@@ -183,6 +200,55 @@ export default function ObjectivesPage() {
 
       {isError && <ApiOfflineBanner />}
       {isLoading && <LoadingSkeleton variant="text" lines={4} />}
+
+      {/*
+        REVIEW STATUS — the reminder, at the top, before the list.
+        ⚠️ Three states, never two: "nothing needs attention", "the check failed" and "still
+        loading" must not render the same. An objective with no date is called out, because an
+        undated promise is one nothing will ever prompt you to revisit.
+      */}
+      {objectiveReviews.length > 0 && (
+        <section className="ob-review" aria-label="Objective review status">
+          <div className="ob-review-head">
+            <span className="ob-review-title">Review status</span>
+            <span className="ob-review-counts">
+              {['OVERDUE', 'NO-DATE', 'DUE-SOON', 'ON-TIME'].map((k) => {
+                const n = objectiveReviews.filter((o) => o.action === k).length;
+                return n > 0 ? (
+                  <span className={`ob-review-pill ob-review-${k.toLowerCase()}`} key={k}>
+                    <span aria-hidden="true">{OBJECTIVE_GLYPH[k]}</span> {k.toLowerCase().replace('-', ' ')} {n}
+                  </span>
+                ) : null;
+              })}
+            </span>
+          </div>
+
+          {objectiveSpotlight.length === 0 ? (
+            <p className="ob-review-clear">✅ Nothing needs a review right now.</p>
+          ) : (
+            <ul className="ob-review-list">
+              {objectiveSpotlight.map((o) => (
+                <li className="ob-review-row" key={o.id}>
+                  <span className="ob-review-action">
+                    <span aria-hidden="true">{OBJECTIVE_GLYPH[o.action]}</span> {o.action}
+                  </span>
+                  <span className="ob-review-body">
+                    <span className="ob-review-name">{o.title}</span>
+                    <span className="ob-review-facts">
+                      {o.daysLeft === null
+                        ? 'no review date'
+                        : o.daysLeft >= 0 ? `${o.daysLeft}d left` : `${-o.daysLeft}d overdue`}
+                      {o.progressPct !== null && o.progressPct !== undefined ? ` · ${o.progressPct}%` : ''}
+                      {o.hasPrediction ? ' · has a written prediction' : ''}
+                    </span>
+                    <span className="ob-review-step">{o.nextStep}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       <div className="ob-actions">
         <button className="ob-add-btn" onClick={() => setShowForm(!showForm)}>

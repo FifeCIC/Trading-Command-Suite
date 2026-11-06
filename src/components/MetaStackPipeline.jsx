@@ -65,7 +65,10 @@ export default function MetaStackPipeline({ title = 'MetaStack Display', subtitl
 
   var watchlistsQuery = useQuery({
     queryKey: ['watchlists-list'],
-    queryFn: function () { return apiGet('/api/watchlists').catch(function () { return []; }); },
+    // ⚠️ NO `.catch(function () { return []; })` (#782 / INV-NO-EMPTY-SWALLOW) — see the protocols
+    // query directly above, which already lets its error through. A failed watchlist read resolved
+    // the same titles to nothing, so the stage looked unconfigured.
+    queryFn: function () { return apiGet('/api/watchlists'); },
     staleTime: 120000,
   });
   var watchlists = Array.isArray(watchlistsQuery.data) ? watchlistsQuery.data : [];

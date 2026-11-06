@@ -6,6 +6,7 @@ import {
   resolvePositionOwner,
   pickStrictestClaimant,
   stopAdjustmentReason,
+  DEFAULT_TICK_INTERVAL_MS,
 } from './stop-guardian.service';
 
 /**
@@ -1050,5 +1051,203 @@ describe('StopGuardianService — contested positions (#1041)', () => {
     const claimants: string[] = [];
     expect(resolvePositionOwner('some broker note', ['A-B', 'AB'], claimants)).toBeNull();
     expect(claimants).toEqual([]);
+  });
+});
+/**
+ * THE CADENCE IS A SETTING, NOT A LITERAL (2026-11-06, #1199).
+ *
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * WHY IT MOVED
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * The owner asked for sooner checks on open positions (*"a lot can happen in 30 seconds"*). Measured
+ * before changing anything: the guardian already ran on its own 30 s timer and a pass cost 105–145 ms,
+ * so the rate was never the CPU risk it looked like — 2 s still finished in 105 ms. The direction was
+ * therefore to go to 10 s, which buys ~20 s off the worst case for 0.7 bridge requests/second.
+ *
+ * ⚠️ The three directions are all asserted, because "it reads the setting" alone would pass for a
+ * guardian that ignored an out-of-range value and 3×'d its own cadence on a bad row.
+ */
+describe('StopGuardianService — cadence comes from automation.guardianTickIntervalMs (#1199)', () => {
+  function make(settingsGet: jest.Mock | null) {
+    const service = new StopGuardianService(
+      { findAll: jest.fn().mockResolvedValue([]) } as any,
+      {} as any,
+      mt5Double().manager,
+      { recordAdjustment: jest.fn() } as any,
+      undefined,                                   // notifications
+      undefined,                                   // syslog
+      settingsGet ? ({ get: settingsGet } as any) : undefined,
+    );
+    return service;
+  }
+
+  it('⭐ applies the persisted value', async () => {
+    const get = jest.fn().mockResolvedValue(5000);
+    const svc = make(get);
+    expect(svc.state.tickIntervalMs).toBe(DEFAULT_TICK_INTERVAL_MS);   // 10 s default
+    await svc.syncIntervalFromSettings();
+    expect(get).toHaveBeenCalledWith('automation.guardianTickIntervalMs');
+    expect(svc.state.tickIntervalMs).toBe(5000);
+  });
+
+  it('an OUT-OF-RANGE value keeps the current interval instead of snapping to a default', async () => {
+    // 0 would mean "as fast as possible" if it were honoured; 999999 would stall the loop. Neither
+    // may be applied, and neither may silently reset the cadence — that is a 3× change on a blip.
+    for (const bad of [0, 1, 999_999, -5, NaN]) {
+      const svc = make(jest.fn().mockResolvedValue(bad));
+      svc.state.tickIntervalMs = 10_000;
+      await svc.syncIntervalFromSettings();
+      expect(svc.state.tickIntervalMs).toBe(10_000);
+    }
+  });
+
+  it('an UNREADABLE setting keeps ticking at the current cadence (a guardrail must not become a stop)', async () => {
+    const svc = make(jest.fn().mockRejectedValue(new Error('db down')));
+    svc.state.tickIntervalMs = 10_000;
+    await expect(svc.syncIntervalFromSettings()).resolves.toBe(10_000);
+    expect(svc.state.tickIntervalMs).toBe(10_000);
+  });
+
+  it('no settings service at all → the compiled default, so every existing spec/boot still runs', async () => {
+    const svc = make(null);
+    await expect(svc.syncIntervalFromSettings()).resolves.toBe(DEFAULT_TICK_INTERVAL_MS);
+    expect(svc.state.tickIntervalMs).toBe(10_000);
+  });
+});
+
+
+/**
+ * THE MONEY TAKE-PROFIT (2026-11-06) — `trading_strategy.takeProfitAmount`.
+ *
+ * The owner's ask: *"a five dollar strategy … taking small amounts of profit, frequently."*
+ *
+ * ⚠️ WHY MONEY AND NOT `tpPct`. A percentage target is a fixed DISTANCE, so the money it captures
+ * drifts with the price level: 0.23% on GER40 at 25,701 is 59 points = GBP 4.93; at 30,000 the same
+ * 0.23% is 69 points = GBP 5.75. A target that must stay GBP 5 cannot be expressed as a percentage.
+ *
+ * ⚠️ NULL IS THE CONTRACT. The column defaults to NULL and 68 of 69 bots have no value, so the
+ * mechanism is inert unless a bot opts in — which is why shipping it needs no A/B copy.
+ *
+ * The three directions are all asserted: fires at/above target, stays silent below it, and REFUSES
+ * rather than acting when the input it needs is missing.
+ */
+describe('StopGuardianService — MONEY take-profit (takeProfitAmount)', () => {
+  // Every tick arms a real setTimeout; an unstopped one keeps Jest's event loop alive (and the
+  // runner prints 'did not exit one second after').
+  const created: any[] = [];
+  afterEach(() => { for (const s of created.splice(0)) s.stop(); });
+  function make(opts: { target?: number | null; profit?: number | null; closeFails?: string; openRow?: any }) {
+    const closes: Array<{ ticket: number; brokerId?: number; origin?: string }> = [];
+    const manager: any = {
+      getAllPositions: jest.fn().mockResolvedValue([
+        { ticket: 555, symbol: 'GER40', type: 'buy', volume: 0.1, priceOpen: 25701.4, priceCurrent: 25760,
+          sl: 25652.2, tp: 25855, profit: opts.profit === undefined ? 6.2 : opts.profit, brokerId: 3, comment: 'TCS X' },
+      ]),
+      getCandles: jest.fn().mockResolvedValue([]),
+      // The tick publishes rokerCoverage from this; without it the whole pass throws and the
+      // money-target assertions would pass against a tick that never ran.
+      getBrokerIds: jest.fn(() => [3]),
+      closePosition: jest.fn(async (ticket: number, brokerId?: number, origin?: string) => {
+        closes.push({ ticket, brokerId, origin });
+        return opts.closeFails ? { ok: false, error: opts.closeFails } : { ok: true };
+      }),
+      modifyOrder: jest.fn().mockResolvedValue({ ok: true }),
+    };
+    const tradeUpdate = jest.fn().mockResolvedValue({ count: 1 });
+    const tradeFindFirst = jest.fn().mockResolvedValue(opts.openRow ?? null); // the strategy source for the close record
+    const service: any = new StopGuardianService(
+      {
+        findAll: jest.fn().mockResolvedValue([{
+          id: 'bot-1', name: 'X', symbol: 'GER40', active: true, mode: 'auto', magic: 234189,
+          slPct: 0.4, tpPct: 0.23, baseSize: 0.1, takeProfitAmount: opts.target === undefined ? 5 : opts.target,
+        }]),
+      } as any,
+      { runAll: jest.fn().mockResolvedValue(new Map()) } as any,
+      manager,
+      { recordAdjustment: jest.fn(), recordSimTslEvent: jest.fn(), recordExhaustionEvent: jest.fn() } as any,
+      undefined,
+      undefined,
+      undefined,
+      { trade: { updateMany: tradeUpdate, findFirst: tradeFindFirst } } as any,
+    );
+    service.state.enabled = true;
+    created.push(service);
+    return { service, closes, tradeUpdate, tradeFindFirst, manager };
+  }
+
+  it('⭐ closes the position when P&L reaches the target, addressed to the holding broker', async () => {
+    const { service, closes, tradeUpdate } = make({ target: 5, profit: 6.2 });
+
+    await service.tick();
+
+    expect(closes).toHaveLength(1);
+    expect(closes[0]).toEqual({ ticket: 555, brokerId: 3, origin: 'take-profit' });
+    // Durable record: the trade row says WHICH mechanism, not just "closed", AND what it belonged to.
+    // ⚠️ Nested `objectContaining` on purpose — the outer matcher would compare `data` by equality,
+    // so adding the strategy key (required by validate-close-attribution) silently failed this test
+    // in a way that blamed the rule rather than the assertion.
+    expect(tradeUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ closeReason: 'system:take-profit' }),
+    }));
+    expect((tradeUpdate.mock.calls[0][0] as any).data.strategy).toBe('X'); // from the 'TCS X' comment
+  });
+
+  it('⭐ stamps the STRATEGY too when the open row has one — a close that says why but not what is ungroupable (#949)', async () => {
+    const { service, tradeUpdate } = make({
+      target: 5,
+      profit: 6.2,
+      openRow: { strategy: 'DAX Small Target Bot', brokerComment: 'TCS DAX Small Target Bot | 84%' },
+    });
+
+    await service.tick();
+
+    expect(tradeUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      data: { closeReason: 'system:take-profit', strategy: 'DAX Small Target Bot' },
+    }));
+  });
+
+  it('⚠️ a missing trade lookup must NOT error the tick after the position is already closed', async () => {
+    // Adversarial: no findFirst at all. Before 2026-11-06 this threw synchronously INSIDE the tick —
+    // `.catch()` cannot catch a missing function — so a real close went unrecorded AND the pass died.
+    const { service, closes, tradeUpdate } = make({ target: 5, profit: 6.2 });
+    (service as any).prisma = { trade: { updateMany: tradeUpdate } };
+
+    await expect(service.tick()).resolves.not.toThrow();
+    expect(closes).toHaveLength(1);
+    expect(tradeUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ closeReason: 'system:take-profit' }),
+    }));
+  });
+  it('CONTROL — below the target it does nothing (a sentinel would have closed every position)', async () => {
+    const { service, closes } = make({ target: 5, profit: 4.99 });
+    await service.tick();
+    expect(closes).toHaveLength(0);
+  });
+
+  it('⚠️ NULL / 0 target means NEVER ACT — the default for 68 of 69 bots', async () => {
+    for (const t of [null, 0, -5, Number.NaN]) {
+      const { service, closes } = make({ target: t as any, profit: 50 });
+      await service.tick();
+      expect(closes).toHaveLength(0);
+    }
+  });
+
+  it('an UNREADABLE P&L refuses rather than closing on a guess', async () => {
+    // `Number(undefined)` is NaN, and a naive `pnl >= target` would be false — but the danger is the
+    // other shape: treating a missing value as 0 would ALSO be wrong the day the sign flips. Assert
+    // the refusal explicitly.
+    const { service, closes } = make({ target: 5, profit: null });
+    await service.tick();
+    expect(closes).toHaveLength(0);
+  });
+
+  it('a REFUSED close is logged and not retried inside the minute (no 10 s retry storm)', async () => {
+    const { service, closes } = make({ target: 5, profit: 9, closeFails: 'Market closed' });
+
+    await service.tick();      // attempt 1 — refused
+    await service.tick();      // throttled
+    await service.tick();      // throttled
+
+    expect(closes).toHaveLength(1);
   });
 });
