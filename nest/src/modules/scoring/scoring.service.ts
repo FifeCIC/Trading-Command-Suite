@@ -22,6 +22,7 @@
  */
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { screenBars } from '../../common/trading/quote-freshness';
 import { PrismaService } from '../../database/prisma.service';
 import { ModeService } from '../../config/mode.service';
 import { DirectivesService } from '../directives/directives.service';
@@ -942,7 +943,16 @@ export class ScoringService implements OnModuleInit {
         if (this.cryptoRouter.isCrypto(ticker)) {
           try {
             const tf = '1h';
-            const bars = await this.cryptoRouter.getCandles(ticker, tf, 200);
+            const fetched = await this.cryptoRouter.getCandles(ticker, tf, 200);
+            // ⚠️ #1214 — a bar dated in the FUTURE must not be stored: it is invisible to every
+            // "latest bar" query until the calendar catches up, and it makes a freshness check report
+            // the symbol as current while nothing is arriving. One bad bar in a page of 200 is dropped;
+            // the other 199 are kept.
+            const screened = screenBars(fetched || [], new Date(), `crypto ${ticker} bar`);
+            if (screened.rejected.length) {
+              this.logger.warn(`Rejected ${screened.rejected.length} future-dated ${tf} bar(s) for ${ticker} from the crypto router (#1214)`);
+            }
+            const bars = screened.accepted;
             if (bars && bars.length > 0) {
               const importData = bars.map((b) => ({
                 symbolId, provider: 'binance', timeframe: tf,
@@ -963,7 +973,12 @@ export class ScoringService implements OnModuleInit {
           const mt5 = this.adapterFactory.create('mt5');
           if (mt5) {
             const tf = '1h';
-            const mt5Bars = await mt5.getCandles(ticker, tf, 200);
+            const rawMt5Bars = await mt5.getCandles(ticker, tf, 200);
+            const mt5Screened = screenBars(rawMt5Bars || [], new Date(), `mt5 ${ticker} bar`);
+            if (mt5Screened.rejected.length) {
+              this.logger.warn(`Rejected ${mt5Screened.rejected.length} future-dated ${tf} bar(s) for ${ticker} from the MT5 adapter (#1214)`);
+            }
+            const mt5Bars = mt5Screened.accepted;
             if (mt5Bars && mt5Bars.length > 0) {
               const importData = mt5Bars.map((b) => ({
                 symbolId, provider: 'mt5', timeframe: tf,

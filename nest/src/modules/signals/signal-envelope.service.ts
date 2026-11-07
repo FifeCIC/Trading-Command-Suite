@@ -1,3 +1,13 @@
+/* ── PLANNED IN #1229 ──
+ * MISSING:  decomposition. Measured 2,184 lines, 3 function(s) over
+ *           60 lines (longest 181), comment ratio 33.0%.
+ * TODAY:    one file carrying several responsibilities. Nothing here is known to be broken — the
+ *           shape makes review and safe change expensive.
+ * WHEN BUILT: split by RESPONSIBILITY (not by line count), prove behaviour is unchanged, then
+ *           re-bank: node scripts/audit-code-health.cjs --write
+ * CODE-HEALTH-MARKER — written by scripts/audit-code-health.cjs; re-run it rather than editing.
+ */
+
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ProtocolGatingService, GatedScore, DirectiveBreakout } from '../scoring/protocol-gating.service';

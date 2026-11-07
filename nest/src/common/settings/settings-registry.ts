@@ -268,7 +268,13 @@ export const SETTINGS: SettingDefinition[] = [
     // `riskMaxPerSymbol`, which is a whole-number percent in localStorage. Do not mix them.
     key: 'risk.maxPerSymbol',
     type: 'number',
-    defaultValue: 0.25,
+    // 0.25 → 0.2 on 2026-11-07 (owner decision, for the first LIVE account, £1,000 deposit).
+    // ⚠️ Counter-intuitive but deliberate: the PORTFOLIO cap went UP (0.2 → 0.4) while this went
+    // DOWN. Measured that week: 1,299 per-symbol blocks against 1,564 portfolio blocks. Tightening
+    // this stops one gold trade (a min-lot XAUUSD position risks 9.1% of a £1,000 account by itself)
+    // consuming a third of the budget, so the SAME portfolio capacity is spent across more symbols —
+    // which is the "more trading" the owner asked for, rather than more of one trade.
+    defaultValue: 0.2,
     class: 'runtime',
     owner: 'trading',
     label: 'Max per symbol',
@@ -333,10 +339,15 @@ export const SETTINGS: SettingDefinition[] = [
     // measurement: 601 refusals/day under 0.15, driven by one minimum-lot gold position that cannot
     // be sized smaller on a £718 account; 601 → 0 refusals after the raise. Changed here as well as
     // in the database so a reinstall keeps the decision (a DB-only change does not survive).
-    // ⚠️ Written as `0.2`, NOT `0.20` — `validate-risk-profile.cjs` compares this literal against the
+    // 0.2 → 0.4 on 2026-11-07 (owner decision, first LIVE account, £1,000 deposit, "push harder").
+    // Measured basis: the portfolio cap refused 1,564 of 3,069 blocks in 7 days — 51%, and 93% when
+    // combined with `risk.maxPerSymbol`. Worst case now admitted is a 40% drawdown of the account;
+    // `risk.maxDailyLoss` (100) still cuts the day at −10%. `risk.maxPerSymbol` was simultaneously
+    // TIGHTENED to 0.2 so this capacity spreads across symbols instead of pooling in one.
+    // ⚠️ Written as `0.4`, NOT `0.40` — `validate-risk-profile.cjs` compares this literal against the
     // setting's own default as STRINGS and fails the build on `0.20` vs `0.2`. Two spellings of one
     // number is the drift that guard exists to catch, and it caught this.
-    defaultValue: 0.2,
+    defaultValue: 0.4,
     class: 'runtime',
     owner: 'trading',
     label: 'Max portfolio risk',
@@ -686,6 +697,38 @@ export const SETTINGS: SettingDefinition[] = [
     userChangeable: true,
     min: 0,
     max: 10080,
+  },
+  {
+    key: 'notifications.discord.signalMinGlobalIntervalMinutes',
+    type: 'number',
+    defaultValue: 15,
+    class: 'runtime',
+    owner: 'notifications',
+    label: 'Minimum minutes between ANY two Discord signals',
+    description:
+      'A ceiling shared by every strategy, on top of the per-strategy window above. 15 at the ' +
+      "owner's instruction 2026-11-06: the per-strategy rule alone allowed ~15 messages an hour " +
+      'once 13-19 actionable strategies were in the ladder, which is not a feed that can be trusted ' +
+      'in public. The two rules do different jobs — the per-strategy window stops ONE strategy ' +
+      'dominating, this stops the CHANNEL flooding. 0 disables the ceiling.',
+    userChangeable: true,
+    min: 0,
+    max: 10080,
+  },
+  {
+    key: 'notifications.discord.lastSignalAt',
+    type: 'string',
+    defaultValue: '',
+    class: 'runtime',
+    owner: 'notifications',
+    label: '(internal) Last instant any signal was published',
+    description:
+      'Written by the Discord channel on every publish, never by a person: the ISO instant of the ' +
+      'last signal published to ANY strategy. Declared rather than hidden because an undeclared key ' +
+      'cannot be written, and an invented counter is the drift this registry exists to prevent. ' +
+      '⚠️ Deliberately NOT a family: it has exactly ONE member, and a one-member family is an ' +
+      'individual declaration wearing a pattern.',
+    userChangeable: false,
   },
   {
     key: 'notifications.discord.minPnlToAnnounce',

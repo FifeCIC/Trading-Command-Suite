@@ -223,6 +223,103 @@
   font-weight: 600;
 }
 
+/* A directive that structurally cannot emit a direction. Marked where the CHOICE is made, not only
+   in the summary — the summary counts it, this stops you picking it unknowingly. */
+.cp-directive-btn--nosignal {
+  border-color: color-mix(in srgb, var(--notice-warning-text, #b45309) 40%, var(--border));
+}
+.cp-directive-nosignal-mark {
+  color: var(--notice-warning-text, #b45309);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ── Signal capacity panel ───────────────────────────────────────────────────────────────────────
+   Sits above Save. Four derived numbers plus the offending directives, because the arithmetic is
+   invisible otherwise: a direction-incapable directive occupies the divisor and can never earn. */
+.cp-capacity {
+  margin: 1rem 0 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+}
+/* ⚠️ NOT a left accent bar — the owner asked for that styling to be removed everywhere
+   (`validate-no-notice-bar.cjs`). A tone is a uniform border plus a background tint. */
+.cp-capacity--ok {
+  border-color: color-mix(in srgb, var(--risk-normal, #15803d) 45%, var(--border));
+  background: color-mix(in srgb, var(--risk-normal, #15803d) 6%, var(--panel));
+}
+.cp-capacity--warn {
+  border-color: color-mix(in srgb, var(--notice-warning-text, #b45309) 45%, var(--border));
+  background: color-mix(in srgb, var(--notice-warning-text, #b45309) 7%, var(--panel));
+}
+.cp-capacity--danger {
+  border-color: color-mix(in srgb, var(--risk-high, #b91c1c) 45%, var(--border));
+  background: color-mix(in srgb, var(--risk-high, #b91c1c) 7%, var(--panel));
+}
+
+.cp-capacity-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+.cp-capacity-verdict {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.cp-capacity--danger .cp-capacity-verdict { color: var(--risk-high, #b91c1c); }
+.cp-capacity--warn .cp-capacity-verdict { color: var(--notice-warning-text, #b45309); }
+.cp-capacity--ok .cp-capacity-verdict { color: var(--risk-normal, #15803d); }
+
+.cp-capacity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.6rem 1rem;
+}
+.cp-capacity-label {
+  display: block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+.cp-capacity-value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+.cp-capacity-note {
+  display: block;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--text-dim);
+}
+
+.cp-capacity-blocked { margin-top: 0.75rem; }
+.cp-capacity-blocked-title {
+  margin: 0 0 0.3rem;
+  font-size: 0.78rem;
+  color: var(--ink);
+}
+.cp-capacity-blocked-list {
+  margin: 0 0 0.4rem;
+  padding-left: 1.1rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.cp-capacity-hint {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
 /* ── Quick-add ── */
 .cp-quick-add {
   margin-top: 1rem;

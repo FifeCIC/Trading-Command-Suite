@@ -97,6 +97,7 @@ const EXPERIMENT_GLYPH = {
   'NO-ARMS': '🚫',
   UNMEASURED: '❓',
   INCONCLUSIVE: '⌛',
+  'PAUSED-MARKET': '🌙',
   STALLED: '💤',
 };
 

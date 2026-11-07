@@ -293,17 +293,23 @@ export default function EarningsCalendarPage() {
     <div className="ec-page">
       <header className="ec-header">
         <h1>Earnings Calendar</h1>
-        <p className="ec-subtitle">
-          {data?.count ?? 0} upcoming earnings reports from{' '}
-          {data?.source === 'db'
-            ? 'stored data (imported from Finnhub + Nasdaq)'
-            : data?.source === 'nasdaq'
-              ? 'Nasdaq (live fallback)'
-              : data?.source === 'finnhub'
-                ? 'Finnhub (live)'
-                : 'no source'}.
-          <span className="ec-source"> Data refreshes every 15 min.</span>
-        </p>
+        {/* ⚠️ THE SENTENCE BECAME THREE FACTS (owner, 2026-11-06: *"Remove this line … and display the
+            stats within"*). "5785 upcoming earnings reports from stored data (imported from Finnhub +
+            Nasdaq). Data refreshes every 15 min." carried three separate numbers in one unreadable
+            line; they are the same three facts as chips, so they can be scanned instead of parsed. */}
+        <div className="ec-stats">
+          <span className="ec-stat"><strong>{data?.count ?? 0}</strong> upcoming</span>
+          <span className="ec-stat">
+            {data?.source === 'db'
+              ? 'Stored data · Finnhub + Nasdaq'
+              : data?.source === 'nasdaq'
+                ? 'Nasdaq (live fallback)'
+                : data?.source === 'finnhub'
+                  ? 'Finnhub (live)'
+                  : 'No source'}
+          </span>
+          <span className="ec-stat">Refreshes every 15 min</span>
+        </div>
       </header>
 
       {/* ── Import Settings Panel ── */}

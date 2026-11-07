@@ -280,8 +280,8 @@
         "uiScore": 8,
         "updatedAt": "2026-11-06T13:16:09.284Z",
         "importance": "H",
-        "noteApplied": true,
-        "visibility": "public"
+        "visibility": "public",
+        "noteApplied": true
       },
       "/development/roadmap": {
         "hide": null,
@@ -1006,11 +1006,11 @@
         "noteApplied": true
       },
       "/research/earnings-whispers": {
-        "hide": false,
+        "hide": true,
         "keen": 1,
         "note": "This should not be released free or premium. We need to come up with a plan for a custom version OR our first add-on/extension. We don't have such a system so that would be a new epic. Such a system is also going to require the first hooks and filters.",
         "uiScore": 4,
-        "updatedAt": "2026-10-11T23:28:52.358Z",
+        "updatedAt": "2026-11-06T22:01:03.219Z",
         "importance": "L"
       },
       "/settings/screen-assignment": {
@@ -1224,11 +1224,11 @@
         "noteApplied": true
       },
       "/research/stock-investigation": {
-        "hide": false,
+        "hide": true,
         "keen": 2,
         "note": "This is essentially like a report on a stock. It will require the AI phase to be started.",
         "uiScore": 1,
-        "updatedAt": "2026-10-11T23:32:41.272Z",
+        "updatedAt": "2026-11-06T22:01:03.070Z",
         "importance": "M",
         "noteApplied": false
       },
@@ -1412,11 +1412,11 @@
         "noteApplied": true
       },
       "/research/recently-analysed-symbols": {
-        "hide": false,
+        "hide": true,
         "keen": 1,
         "note": "",
         "uiScore": 3,
-        "updatedAt": "2026-10-11T23:33:36.032Z",
+        "updatedAt": "2026-11-06T22:01:03.159Z",
         "importance": "M"
       }
     }

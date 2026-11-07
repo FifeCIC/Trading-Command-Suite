@@ -141,13 +141,19 @@ describe('DiscordChannel — public feed policy', () => {
     const at = (minutes: number) => new Date(T0.getTime() + minutes * 60_000);
     const KEY = (s: string) => `notifications.discord.lastSignal.${s}.at`;
 
+    // ⚠️ The channel-wide ceiling is DISABLED here so these cases isolate the per-strategy rule.
+    // Without that, "a different strategy is not blocked" would pass or fail on the ceiling rather
+    // than on the rule it names — a test that cannot tell which gate it measured.
+    const strategyOnly = (initial: Record<string, unknown> = {}) =>
+      makeChannel({ 'notifications.discord.signalMinGlobalIntervalMinutes': 0, ...initial });
+
     it('the FIRST signal for a strategy claims a window', async () => {
-      const { channel } = makeChannel();
+      const { channel } = strategyOnly();
       expect(await channel.claimSignalSlot('vix-spike-v1-long', T0)).not.toBeNull();
     });
 
     it('a SECOND signal from the SAME strategy inside the window is refused', async () => {
-      const { channel } = makeChannel();
+      const { channel } = strategyOnly();
       await channel.claimSignalSlot('vix-spike-v1-long', T0);
       expect(await channel.claimSignalSlot('vix-spike-v1-long', at(30))).toBeNull();
     });
@@ -155,13 +161,13 @@ describe('DiscordChannel — public feed policy', () => {
     it('⚠️ a DIFFERENT strategy is NOT blocked — the ration is per strategy, not global', async () => {
       // This is the regression the change exists for: the previous global daily allowance let the
       // first strategy to print silence every other strategy until midnight.
-      const { channel } = makeChannel();
+      const { channel } = strategyOnly();
       await channel.claimSignalSlot('vix-spike-v1-long', T0);
       expect(await channel.claimSignalSlot('gold-breakout-v1-long', at(1))).not.toBeNull();
     });
 
     it('⚠️ the boundary is INCLUSIVE: 60 minutes may publish, 59 may not', async () => {
-      const { channel } = makeChannel();
+      const { channel } = strategyOnly();
       await channel.claimSignalSlot('vix-spike-v1-long', T0);
 
       expect(await channel.claimSignalSlot('vix-spike-v1-long', at(59))).toBeNull();
@@ -169,7 +175,7 @@ describe('DiscordChannel — public feed policy', () => {
     });
 
     it('the interval is a SETTING, so a longer window suppresses more', async () => {
-      const { channel } = makeChannel({
+      const { channel } = strategyOnly({
         'notifications.discord.signalMinIntervalMinutes': 120,
       });
       await channel.claimSignalSlot('vix-spike-v1-long', T0);
@@ -178,7 +184,7 @@ describe('DiscordChannel — public feed policy', () => {
     });
 
     it('0 disables the throttle but still records the publish time', async () => {
-      const { channel, store } = makeChannel({
+      const { channel, store } = strategyOnly({
         'notifications.discord.signalMinIntervalMinutes': 0,
       });
       await channel.claimSignalSlot('vix-spike-v1-long', T0);
@@ -188,19 +194,19 @@ describe('DiscordChannel — public feed policy', () => {
     });
 
     it('a missing row means "never published", not an error', async () => {
-      const { channel } = makeChannel();
+      const { channel } = strategyOnly();
       expect(await channel.isSignalThrottled('vix-spike-v1-long', T0)).toBe(false);
     });
 
     it('⚠️ an unparseable stored value is treated as never published, and says so', async () => {
       // Refusing for ever on one corrupt row would silence that strategy permanently; publishing
       // one extra signal is the lesser fault. The warning is what stops it being silent.
-      const { channel } = makeChannel({ [KEY('vix-spike-v1-long')]: 'not-a-timestamp' });
+      const { channel } = strategyOnly({ [KEY('vix-spike-v1-long')]: 'not-a-timestamp' });
       expect(await channel.isSignalThrottled('vix-spike-v1-long', T0)).toBe(false);
     });
 
     it('a released window is available again — a failed post costs nothing', async () => {
-      const { channel } = makeChannel();
+      const { channel } = strategyOnly();
       const slot = await channel.claimSignalSlot('vix-spike-v1-long', T0);
       expect(slot).not.toBeNull();
       expect(await channel.claimSignalSlot('vix-spike-v1-long', at(1))).toBeNull();
@@ -211,14 +217,14 @@ describe('DiscordChannel — public feed policy', () => {
 
     it('release restores the EXACT previous timestamp, not an empty one', async () => {
       const previous = at(-90).toISOString();
-      const { channel, store } = makeChannel({ [KEY('vix-spike-v1-long')]: previous });
+      const { channel, store } = strategyOnly({ [KEY('vix-spike-v1-long')]: previous });
       const slot = await channel.claimSignalSlot('vix-spike-v1-long', T0);
       await channel.releaseSignalSlot(slot!);
       expect(store.get(KEY('vix-spike-v1-long'))).toBe(previous);
     });
 
     it('⚠️ release DELETES the row when there was none — it must not leave a false publish time', async () => {
-      const { channel, store } = makeChannel();
+      const { channel, store } = strategyOnly();
       const slot = await channel.claimSignalSlot('vix-spike-v1-long', T0);
       expect(store.has(KEY('vix-spike-v1-long'))).toBe(true);
 
@@ -226,6 +232,80 @@ describe('DiscordChannel — public feed policy', () => {
       // A row left behind here would throttle the strategy for an hour on the strength of a post
       // that never happened.
       expect(store.has(KEY('vix-spike-v1-long'))).toBe(false);
+    });
+  });
+
+  describe('the channel-wide ceiling, on top of the per-strategy window', () => {
+    const T0 = new Date('2026-11-06T12:00:00.000Z');
+    const at = (minutes: number) => new Date(T0.getTime() + minutes * 60_000);
+    const GLOBAL = 'notifications.discord.lastSignalAt';
+
+    it('⚠️ a DIFFERENT strategy inside 15 minutes is refused — the channel ceiling', async () => {
+      // The per-strategy rule alone allowed ~15 messages/hour once 13-19 strategies were actionable.
+      const { channel } = makeChannel();
+      expect(await channel.claimSignalSlot('vix-spike-v1-long', T0)).not.toBeNull();
+      expect(await channel.claimSignalSlot('gold-breakout-v1-long', at(1))).toBeNull();
+    });
+
+    it('a different strategy IS allowed once the ceiling has passed', async () => {
+      const { channel } = makeChannel();
+      await channel.claimSignalSlot('vix-spike-v1-long', T0);
+      expect(await channel.claimSignalSlot('gold-breakout-v1-long', at(15))).not.toBeNull();
+    });
+
+    it('the ceiling boundary is INCLUSIVE: 14 refused, 15 allowed', async () => {
+      const { channel } = makeChannel();
+      await channel.claimSignalSlot('vix-spike-v1-long', T0);
+      expect(await channel.claimSignalSlot('gold-breakout-v1-long', at(14))).toBeNull();
+      expect(await channel.claimSignalSlot('gold-breakout-v1-long', at(15))).not.toBeNull();
+    });
+
+    it('the ceiling is a SETTING, so it can be widened', async () => {
+      const { channel } = makeChannel({
+        'notifications.discord.signalMinGlobalIntervalMinutes': 60,
+      });
+      await channel.claimSignalSlot('vix-spike-v1-long', T0);
+      expect(await channel.claimSignalSlot('gold-breakout-v1-long', at(15))).toBeNull();
+      expect(await channel.claimSignalSlot('gold-breakout-v1-long', at(60))).not.toBeNull();
+    });
+
+    it('0 disables the ceiling — every strategy may publish immediately', async () => {
+      const { channel } = makeChannel({
+        'notifications.discord.signalMinGlobalIntervalMinutes': 0,
+      });
+      await channel.claimSignalSlot('vix-spike-v1-long', T0);
+      expect(await channel.claimSignalSlot('gold-breakout-v1-long', at(1))).not.toBeNull();
+    });
+
+    it('⚠️ both gates bind independently: ceiling free but strategy throttled', async () => {
+      const { channel } = makeChannel();
+      await channel.claimSignalSlot('vix-spike-v1-long', T0);
+      // 20 minutes later the CEILING is clear, but this strategy's own 60-minute window is not.
+      expect(await channel.claimSignalSlot('vix-spike-v1-long', at(20))).toBeNull();
+    });
+
+    it('the claim records BOTH timestamps', async () => {
+      const { channel, store } = makeChannel();
+      await channel.claimSignalSlot('vix-spike-v1-long', T0);
+      expect(store.get(GLOBAL)).toBe(T0.toISOString());
+      expect(store.get('notifications.discord.lastSignal.vix-spike-v1-long.at')).toBe(
+        T0.toISOString(),
+      );
+    });
+
+    it('⚠️ release restores the ceiling too, so a failed post does not block the channel', async () => {
+      const { channel, store } = makeChannel();
+      const slot = await channel.claimSignalSlot('vix-spike-v1-long', T0);
+      await channel.releaseSignalSlot(slot!);
+      expect(store.get(GLOBAL) ?? '').toBe('');
+      // And the channel is immediately usable by another strategy.
+      expect(await channel.claimSignalSlot('gold-breakout-v1-long', at(1))).not.toBeNull();
+    });
+
+    it('⚠️ a blank ceiling value is BLANK, not a corrupt timestamp', async () => {
+      // The declared key is seeded as '', so a fresh install must not log a warning every tick.
+      const { channel } = makeChannel({ [GLOBAL]: '' });
+      expect(await channel.isSignalThrottled('vix-spike-v1-long', T0)).toBe(false);
     });
   });
 

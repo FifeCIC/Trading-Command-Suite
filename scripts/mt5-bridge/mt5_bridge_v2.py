@@ -447,6 +447,49 @@ def utc_now_iso():
     """Current MACHINE time -> ISO-8601 string with 'Z' suffix (already true UTC)."""
     return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
 
+
+# ── #1214 — a tick time AHEAD of the clock is impossible, not merely stale ────────────────
+# MEASURED 2026-11-06: /quote?symbol=EURCAD returned tickTime 2026-11-17T13:59:08Z — 10.7 days
+# ahead — while EURUSD, GBPUSD and USDJPY on the SAME bridge answered within 3 seconds. So the
+# SERVER OFFSET was right (it applies to every symbol); one instrument was serving a bad tick.
+# The API refuses to price it (checkQuoteFreshness -> kind 'future'), which is correct, but the
+# refusal was only ever visible in the API's log — the bridge, which is where the value is born,
+# said nothing at all, and the same symbol was probed again every few seconds.
+#
+# ⚠️ ONE LINE PER SYMBOL PER STATE, not one per request (#992: this class of line once appeared
+# 4,325 times in a single outage). The flag clears the moment the tick is sane again, so a genuine
+# recurrence is still reported.
+# ⚠️ THE VALUE IS STILL RETURNED. The bridge is a data source; it reports what the broker said and
+# names what is wrong with it. Hiding it here would move the diagnosis into a place the API cannot
+# see, and the API's message is the one the operator reads.
+FUTURE_TICK_TOLERANCE_SECONDS = 120
+_FUTURE_TICK_WARNED = set()
+
+
+def warn_future_tick(symbol, tick_time_iso):
+    """Warn ONCE per symbol while its tick time is more than tolerance ahead of the clock."""
+    if not tick_time_iso:
+        return
+    try:
+        tick_dt = datetime.fromisoformat(tick_time_iso.replace('Z', '+00:00'))
+        lead = (tick_dt - datetime.now(timezone.utc)).total_seconds()
+    except Exception:
+        return
+    if lead <= FUTURE_TICK_TOLERANCE_SECONDS:
+        _FUTURE_TICK_WARNED.discard(symbol)
+        return
+    if symbol in _FUTURE_TICK_WARNED:
+        return
+    _FUTURE_TICK_WARNED.add(symbol)
+    logger.warning(
+        f'{symbol}: broker tick time {tick_time_iso} is {lead:.0f}s AHEAD of the clock '
+        f'(> {FUTURE_TICK_TOLERANCE_SECONDS}s). The server offset is NOT suspect (other symbols '
+        f'on this bridge are current) — this instrument is serving a bad tick, so the app will '
+        f'refuse to price it and its per-symbol exposure cap cannot be evaluated until the '
+        f'broker serves a real one. Enumerate with: node scripts/audit-future-rows.cjs --probe '
+        f'(#1214). Further occurrences suppressed until this symbol recovers.'
+    )
+
 # ─── MT5 Connection ───────────────────────────────────────
 
 import MetaTrader5 as mt5
@@ -1442,9 +1485,11 @@ def quote_payload(symbol):
     # second old, and the sizing path silently trusts it while an ABSENT quote is refused.
     # ⚠️ `utc_iso()` here is the file's rule: MT5 epochs are SERVER time and go through the
     # measured offset correction. `timestamp` stays `utc_now_iso()` (machine clock) — unchanged.
+    tick_time = utc_iso(tick.time) if tick.time else None
+    warn_future_tick(symbol, tick_time)  # #1214 — one line per symbol while its tick is impossible
     return {'symbol': symbol, 'bid': tick.bid, 'ask': tick.ask,
             'last': tick.last or tick.bid, 'timestamp': utc_now_iso(),
-            'tickTime': utc_iso(tick.time) if tick.time else None}, None
+            'tickTime': tick_time}, None
 
 def candles_payload(symbol, tf='1h', limit=100):
     """(payload, error) for one symbol's OHLCV. Always returns a payload shape
@@ -1817,7 +1862,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 if not tick: return json_response(self, {'error': f'{symbol} not available'}, 404)
                 # #1085 — `tickTime` = the broker's own last-tick time (offset-corrected UTC);
                 # `timestamp` stays the response time. See quote_payload() for why both exist.
-                return json_response(self, {'symbol': symbol, 'bid': tick.bid, 'ask': tick.ask, 'last': tick.last or tick.bid, 'timestamp': utc_now_iso(), 'tickTime': utc_iso(tick.time) if tick.time else None})
+                tick_time = utc_iso(tick.time) if tick.time else None
+                warn_future_tick(symbol, tick_time)
+                return json_response(self, {'symbol': symbol, 'bid': tick.bid, 'ask': tick.ask, 'last': tick.last or tick.bid, 'timestamp': utc_now_iso(), 'tickTime': tick_time})
 
             # /candles?symbol=X&timeframe=1d&limit=100
             if path == '/candles':

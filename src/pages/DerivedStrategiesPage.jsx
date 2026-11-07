@@ -556,11 +556,25 @@ export default function DerivedStrategiesPage() {
           <span className={styles.statValue}>{data?.duplicateGroups ?? 0}</span>
           <span
             className={styles.statLabel}
-            title="Bots identical on protocol, role, market, broker and treatment. The owner's rule: these should never exist."
+            title="Bots sharing a key with NO declared copy between them — an accidental duplicate. The owner's rule: these should never exist."
           >
             duplicates
           </span>
         </div>
+        {/* #1212 — a DECLARED experiment pair shares a key on purpose: one bot was created by
+            copying the other, and they differ in a named field. It used to be counted as a
+            duplicate, so a healthy money-take-profit experiment read as a fault on this page. */}
+        {(data?.declaredPairs ?? 0) > 0 && (
+          <div className={styles.stat}>
+            <span className={styles.statValue}>{data.declaredPairs}</span>
+            <span
+              className={styles.statLabel}
+              title="A bot created by copying another (duplicatedFromId), differing in a named field — an experiment pair, not a duplicate."
+            >
+              experiment pairs
+            </span>
+          </div>
+        )}
         {registry.unmaterialised > 0 && (
           <div className={`${styles.stat} ${styles.statAlert}`}>
             <span className={styles.statValue}>{registry.unmaterialised}</span>

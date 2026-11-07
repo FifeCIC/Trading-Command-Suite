@@ -13,6 +13,11 @@
     "active": false,
     "reason": "Created for the #929 tradeThreshold weighting comparison. That run (b50727ee) was cancelled 2026-10-07 after 11 v 6 closed trades, so the copy can never produce a verdict. Deactivated 2026-11-06 (#1201) and retained as evidence; its bot 'Gold Speed Copy Bot' (magic 234186) was deactivated the same day for the same reason."
   },
+  "forex-session-v1-copy-core4-long": {
+    "serves": null,
+    "active": true,
+    "reason": "DIRECTIVE-COUNT experiment (#1184, owner 2026-11-06): forex-session-v1-long with 4 live directives instead of 9 — liquidity-check (risk gate) + rsi-oversold + ema-structure + macd-crossover. Capacity 430 vs the control's 815; group weights, risk gate and multipliers unchanged, so the directive set is the only variable. Twin bot 'GBPUSD Session Core4 Bot' (magic 234193) trades GBPUSD only, and the copy is assigned GBPUSD only, so scoring cost matches the one symbol under test. Judged 2026-11-13 against the control GBPUSD Session Bot."
+  },
   "__orphanScoreHistory": {
     "__why": [
       "A deleted protocol leaves its score_snapshot rows behind: `score_snapshot.protocolId` is a SLUG",

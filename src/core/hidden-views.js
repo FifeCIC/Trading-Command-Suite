@@ -107,7 +107,36 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   // `hide: true` in the walkthrough. Present here so a FRESH INSTALL matches his machine rather than
   // silently showing a page he has already withheld.
   '/trading/calculators',
+
+  // ── Pack 5: too weak to show, kept for the owner to finish (2026-11-06) ───────────────────────
+  // Owner, Research walkthrough: hide these *from other users* while they are still being worked on.
+  // Earnings Whispers is also on the extensions list (Discord-style posting is the other one), so it
+  // is withheld as a future release rather than a reject. Stock Investigation and Recently Analysed
+  // were withheld as "too weak". Nothing is deleted: the routes still resolve by URL.
+  '/research/earnings-whispers',
+  '/research/stock-investigation',
+  '/research/recently-analysed-symbols',
+
+  // ── Pack 6: withheld for public release (2026-11-07) ──────────────────────────────────────────
+  // Owner, Scoring walkthrough: *"A/B Ladder (/scoring/ab-ladder) will be hidden from public"*. Kept
+  // for the owner (amber in the rail) while the A/B comparison story is finished.
+  '/scoring/ab-ladder',
 ]);
+
+/**
+ * OWNER_SEES_WITHHELD — the curator switch for `filterHiddenViews`.
+ *
+ * Owner, 2026-11-06: *"Reminder that hiding pages is for other users only and I want to be able to
+ * see them."* Before this constant, `DEFAULT_HIDDEN_ROUTES` removed the entry from HIS rail too, so
+ * every "hide" also hid the page from the person deciding it needed work.
+ *
+ * ⚠️ IT IS `true` FOR EVERYONE RIGHT NOW, and that is a KNOWN, TEMPORARY gap rather than a design:
+ * the app is pre-release with a single user, and there is no entitlement that can tell the owner
+ * apart from a new user. Wiring this to `true` is what lets him see the unfinished pages; the price
+ * is that a second user would see them as well. **This must become an entitlement check before the
+ * app is offered to anyone else** — filed as an issue rather than left as a comment nobody reads.
+ */
+export const OWNER_SEES_WITHHELD = true;
 
 /**
  * The effective withheld set: defaults, plus `hide: true`, minus any explicit `hide: false`.
@@ -284,9 +313,36 @@ function filterNavTree(tree, isHidden) {
  * Section headers left with nothing real after them are dropped, so hiding the last view of a
  * group cannot leave a dangling heading.
  */
-export function filterHiddenViews(tree, hiddenRoutes) {
+export function filterHiddenViews(tree, hiddenRoutes, { keepWithheld = false } = {}) {
   if (!hiddenRoutes || hiddenRoutes.size === 0) return tree;
+  /* ⚠️ CURATOR MODE (owner, 2026-11-06): *"hiding pages is for other users only and I want to be able
+     to see them"* … *"change the colour of the text in the menu for pages that will be hidden for
+     other users so I know which ones still need work done to them."*
+     So a withheld view is KEPT and TAGGED (`withheld: true`) rather than removed; the rail colours
+     the tag. Nothing else about the tree changes. */
+  if (keepWithheld) return tagWithheld(tree, hiddenRoutes);
   return filterNavTree(tree, (areaId, v) => hiddenRoutes.has(`/${areaId}/${v.id}`));
+}
+
+/**
+ * tagWithheld(tree, hiddenRoutes) — same filtering, minus the deletion.
+ *
+ * Handles BOTH tree shapes for the same reason `filterNavTree` does: `NAV_TREE` is
+ * `{ area: { label, views } }` (top nav) and `getNavStructure()` is `{ area: [views] }` (left rail).
+ * An unrecognised shape passes through untouched, never deleted.
+ */
+function tagWithheld(tree, hiddenRoutes) {
+  const out = {};
+  for (const [areaId, area] of Object.entries(tree)) {
+    const isArray = Array.isArray(area);
+    const views = isArray ? area : area?.views;
+    if (!Array.isArray(views)) { out[areaId] = area; continue; }
+    const tagged = views.map((v) => (
+      v.kind === 'section-header' ? v : { ...v, withheld: hiddenRoutes.has(`/${areaId}/${v.id}`) || undefined }
+    ));
+    out[areaId] = isArray ? tagged : { ...area, views: tagged };
+  }
+  return out;
 }
 
 /**

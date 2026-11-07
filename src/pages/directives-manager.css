@@ -229,6 +229,23 @@
   cursor: pointer;
 }
 
+/* Read-only value in the same row slot the drag handle used to occupy. The handle was removed
+   because it had no `onChange` and no backing field — a control that changes nothing. */
+.directive-detail-value {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+
+/* The directive's own description, shown under "What it does". It was previously rendered only
+   inside the "Formula" section, so the rail never said what the directive was for. */
+.directive-detail-description {
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
 @media (max-width: 768px) {
   .directives-layout { grid-template-columns: 1fr; }
   .directive-detail-rail { position: static; }

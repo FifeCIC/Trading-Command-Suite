@@ -13,6 +13,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import DirectiveScoringNote from '../components/DirectiveScoringNote';
 import PageInfoPopover from '../components/PageInfoPopover';
 import { directionModeLabel, signalTone } from '../core/signal-utils';
 import { formatTimestamp } from '../core/format-utils';
@@ -176,6 +177,16 @@ export default function DirectiveViewerPage() {
         <p className="dv-description">{data.description || data.formula || 'No description available.'}</p>
       </section>
 
+      {/* ⚠️ The metadata grid showed `direction bias` — a DECLARATION — and nothing said what that
+          meant for the score. Measured 2026-11-02: ten directives declare a bias their code does not
+          do, so the declaration alone actively misleads. The note below uses the DERIVED capability
+          and names the denominator effect a reader cannot otherwise see (#1122). */}
+      <DirectiveScoringNote
+        direction={data.direction}
+        directionBias={data.directionBias}
+        maxScore={data.maxScore}
+      />
+
       {/* ── Metadata grid ── */}
       <section className="dv-card">
         <h3 className="dv-section-title">Metadata</h3>
@@ -183,7 +194,8 @@ export default function DirectiveViewerPage() {
           <div className="dv-meta-item"><span>Category</span><strong>{data.category}</strong></div>
           <div className="dv-meta-item"><span>Priority</span><strong>{data.priority ?? '—'}</strong></div>
           <div className="dv-meta-item"><span>Max score</span><strong>{data.maxScore ?? '—'}</strong></div>
-          <div className="dv-meta-item"><span>Direction bias</span><strong>{data.directionBias ?? '—'}</strong></div>
+          <div className="dv-meta-item" title="The DECLARED bias. See 'How it affects the score' above for what the code can actually do."><span>Direction bias (declared)</span><strong>{data.directionBias ?? '—'}</strong></div>
+          <div className="dv-meta-item"><span>Direction (derived)</span><strong>{data.direction ?? 'unknown'}</strong></div>
           <div className="dv-meta-item"><span>Version</span><strong>{data.version ?? '—'}</strong></div>
           <div className="dv-meta-item"><span>Protocols</span><strong>{data.protocolCount}</strong></div>
         </div>

@@ -21,6 +21,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Mt5Adapter } from '../providers/adapters/mt5.adapter';
+import { screenTickTime } from '../../common/trading/quote-freshness';
 
 interface ActiveRecording {
   symbolId: string;
@@ -134,6 +135,15 @@ export class TickRecorderService {
           });
         } else {
           // First tick of a new candle: INSERT with initial OHLC all = mid
+          // ⚠️ #1214 — a candle bucket computed from a FUTURE tick time must not be written. The
+          // bucket is derived from the quote's own timestamp, so a broker tick 10 days ahead would
+          // create a bar 10 days ahead: invisible to every "latest bar" query, and it makes a
+          // freshness check call the symbol current while nothing is arriving.
+          const bucketScreen = screenTickTime(bucketDate, new Date(), `recording bucket for session ${rec.sessionId}`);
+          if (!bucketScreen.ok) {
+            this.logger.warn(`Tick recorder REFUSED a bar — ${bucketScreen.reason}`);
+            return;
+          }
           await this.prisma.marketBar.create({
             data: {
               symbolId: rec.symbolId,

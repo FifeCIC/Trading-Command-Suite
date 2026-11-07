@@ -1,0 +1,54 @@
+/**
+ * directive-scoring-note.css — the "How it affects the score" block (#1216).
+ *
+ * Shared by Directives Registry (the detail rail) and Directive Viewer, so the two pages answer the
+ * same question with the same words rather than drifting apart.
+ *
+ * ⚠️ Colours come from the semantic palette (`--color-profit`, `--color-muted`, notice text), never
+ * from literals — `validate-css-literals.cjs` fails the build on a raw hex here, and the light-mode
+ * contrast work (#861) only guarantees the tokens.
+ */
+.directive-scoring-note {
+  margin: 0 0 0.9rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg-elev, var(--panel));
+}
+
+.directive-scoring-note h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.directive-scoring-note-headline {
+  margin: 0 0 0.4rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.directive-scoring-note-body,
+.directive-scoring-note-scenario {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.directive-scoring-note-scenario {
+  margin-bottom: 0;
+}
+
+.directive-scoring-note strong {
+  color: var(--ink);
+}
+
+.directive-detail-description {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}

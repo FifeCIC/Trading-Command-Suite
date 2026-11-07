@@ -319,7 +319,12 @@ model BacktestRun {
   scoresJson   String?  @db.LongText
   winRate      Float
   totalPnl     Float
-  profitFactor Float
+  // ⚠️ NULLABLE since 2026-11-06 (#1210). `signalProfitFactor()` returns NULL when there is no
+  // losing sample — the documented answer since #126 ("no losing evidence to divide by"), and the
+  // same rule `tradeProfitFactor` below already follows. The column was NOT NULL, so a run with no
+  // losing signal threw on persist and the run was silently lost; Prisma reported it as
+  // "Argument `symbol` is missing", which names none of the real cause.
+  profitFactor Float?
   // ── ADDED 2026-11-02 (#125) ──
   // `profitFactor` above is SIGNAL-based (forward return of every entry signal), so it is
   // identical for two runs with the same entries and different exits — measured: six stop-plan

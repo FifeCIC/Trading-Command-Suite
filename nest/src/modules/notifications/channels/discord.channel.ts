@@ -3,6 +3,17 @@ import { SettingsResolverService } from '../../../common/settings/settings-resol
 import type { NotificationMessage } from '../notifications.service';
 
 /**
+ * A claimed signal window, carrying BOTH previous values so a failed post can restore them exactly.
+ * `null` means "there was no row", which releases by DELETING rather than by writing an empty value.
+ */
+export interface SignalSlot {
+  subject: string;
+  previous: string | null;
+  /** Raw previous value of the channel-wide key — `''` when it was blank, so restore is exact. */
+  globalPrevious: string;
+}
+
+/**
  * DiscordChannel — TWO DESTINATIONS, and they are not the same thing.
  *
  *   1. THE OPERATOR FEED (`DISCORD_WEBHOOK_URL`) — every event, unchanged since #652/#653. One
@@ -41,6 +52,32 @@ import type { NotificationMessage } from '../notifications.service';
  *
  * ⚠️ "CANNOT JUDGE" IS NOT "A WIN". A closed trade with no usable P&L is NOT published. Routing an
  * unknown outcome to `wins` would put a fabricated success in front of an audience.
+ *
+ * ── DECISION (2026-11-06, primary) ──
+ * WHAT:      TWO gates on the signal feed, both claimed before the post:
+ *              `signalMinGlobalIntervalMinutes` (15) — the CHANNEL ceiling, shared by all strategies
+ *              `signalMinIntervalMinutes` (60)       — each STRATEGY's own window
+ *            The per-strategy memory is the `discordSignalLastPost` setting FAMILY; the channel
+ *            memory is one declared setting, `notifications.discord.lastSignalAt`.
+ * WHY:       two different failures, so one number cannot fix both. A GLOBAL-only daily allowance let
+ *            the first strategy to print consume the whole day. A PER-STRATEGY-only window then
+ *            measured ~15 messages/hour in a public channel, because the ladder routinely carries
+ *            13-19 actionable strategies. The owner chose "global cap plus per-strategy window" on
+ *            2026-11-06. The family is the only home that costs an install which never publishes
+ *            exactly nothing, which is the owner's stated reason for wanting metadata over a column.
+ *            ⚠️ The channel key is deliberately NOT a family: it has one member, and a one-member
+ *            family is an individual declaration wearing a pattern.
+ * INSTEAD OF: (a) one signal per UTC day for the whole app — the original implementation;
+ *            (b) per-strategy only, with no channel ceiling — good for ~11 minutes of live traffic
+ *            and then demonstrably a flood; (c) an in-memory Map, which dies on every `build:api`;
+ *            (d) a new column on `protocol` / `trading_strategy`, which ships to every install.
+ * REVERSE BY: set `signalMinGlobalIntervalMinutes` to 0 — that disables the ceiling without
+ *            removing the mechanism, and one setting is a cheaper reversal than a code change.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 152
+ * GUARD:     nest/src/modules/notifications/channels/discord.channel.spec.ts — both windows are
+ *            canaried from BOTH sides (59/60 minutes; 14/15 minutes), the interaction (ceiling clear
+ *            but strategy throttled) is pinned, and the per-strategy cases DISABLE the ceiling so a
+ *            pass cannot come from the wrong gate.
  */
 @Injectable()
 export class DiscordChannel {
@@ -50,6 +87,9 @@ export class DiscordChannel {
   private static lastPostKey(subject: string): string {
     return `notifications.discord.lastSignal.${subject}.at`;
   }
+
+  /** The channel-wide ceiling's memory — ONE value, so a declared setting and not a family. */
+  private static readonly GLOBAL_LAST_POST_KEY = 'notifications.discord.lastSignalAt';
 
   constructor(private readonly settings: SettingsResolverService) {}
 
@@ -82,7 +122,7 @@ export class DiscordChannel {
     if (channel === null) return;
 
     // The ration applies ONLY to signals; a closed trade is a fact about money and is not rationed.
-    let slot: { subject: string; previous: string | null } | null = null;
+    let slot: SignalSlot | null = null;
     if (channel === 'signals') {
       slot = await this.claimSignalSlot(this.signalSubject(msg));
       if (slot === null) {
@@ -167,8 +207,15 @@ export class DiscordChannel {
   /**
    * Claim this strategy's signal window, or `null` when it is still inside the interval.
    *
+   * ⚠️ TWO GATES, BOTH CLAIMED BEFORE THE POST (owner direction 2026-11-06):
+   *   1. `signalMinGlobalIntervalMinutes` — the CHANNEL ceiling, shared by every strategy.
+   *   2. `signalMinIntervalMinutes` — this STRATEGY's window.
+   * They do different jobs. Without (1), 13–19 actionable strategies each taking their own hour
+   * produced ~15 messages/hour in a public channel — measured live. Without (2), one strategy can
+   * dominate the channel for the whole period. Neither number alone is a working policy.
+   *
    * CLAIMED BEFORE THE POST, NOT AFTER: two signals can be evaluated in the same tick, and checking
-   * then posting would let both pass an interval that allows one. The claim is rolled back if the
+   * then posting would let both pass a window that allows one. Both claims are rolled back if the
    * post fails.
    *
    * ⚠️ `present: false` is NOT an error and NOT "publish now unconditionally" — it means "never
@@ -176,32 +223,70 @@ export class DiscordChannel {
    * third thing: it is treated as "never published" but logged, because refusing to publish forever
    * on one corrupt row is worse than publishing one extra signal, and silence would hide the fault.
    *
-   * Returns the EXACT previous value so `releaseSignalSlot` can restore it. The earlier global
+   * Returns the EXACT previous values so `releaseSignalSlot` can restore them. The earlier global
    * implementation returned `0` for "different day" and the release path then rewrote history;
-   * `previous` is `null` when there was no row at all, which releases by DELETING.
+   * `null` means there was no row at all, which releases by DELETING.
    */
-  async claimSignalSlot(
-    subject: string,
-    now: Date = new Date(),
-  ): Promise<{ subject: string; previous: string | null } | null> {
+  async claimSignalSlot(subject: string, now: Date = new Date()): Promise<SignalSlot | null> {
+    const globalPrevious = await this.readRaw(DiscordChannel.GLOBAL_LAST_POST_KEY);
+    if (
+      await this.withinWindow(
+        globalPrevious,
+        'the signal channel',
+        now,
+        'notifications.discord.signalMinGlobalIntervalMinutes',
+        15,
+      )
+    ) {
+      return null;
+    }
+
     const { key, previous } = await this.lastPostFor(subject);
+    if (
+      await this.withinWindow(
+        previous,
+        subject,
+        now,
+        'notifications.discord.signalMinIntervalMinutes',
+        60,
+      )
+    ) {
+      return null;
+    }
 
-    if (await this.throttledBy(previous, subject, now)) return null;
-
+    await this.settings.set(DiscordChannel.GLOBAL_LAST_POST_KEY, now.toISOString());
     await this.settings.set(key, now.toISOString());
-    return { subject, previous };
+    return { subject, previous, globalPrevious };
   }
 
   /**
-   * Read-only peek: is this strategy still inside its window? Used by the automation loop to CHOOSE
-   * a card, so that a throttled top-ranked strategy does not silence the whole feed.
+   * Read-only peek: may this strategy publish now? Used by the automation loop to CHOOSE a card, so
+   * that a throttled top-ranked strategy does not silence the feed.
    *
    * ⚠️ A peek is a HINT, not the gate. The gate is the claim, which is the only thing that writes —
    * so two callers racing here can still only produce one post per window.
    */
   async isSignalThrottled(subject: string, now: Date = new Date()): Promise<boolean> {
+    const globalPrevious = await this.readRaw(DiscordChannel.GLOBAL_LAST_POST_KEY);
+    if (
+      await this.withinWindow(
+        globalPrevious,
+        'the signal channel',
+        now,
+        'notifications.discord.signalMinGlobalIntervalMinutes',
+        15,
+      )
+    ) {
+      return true;
+    }
     const { previous } = await this.lastPostFor(subject);
-    return this.throttledBy(previous, subject, now);
+    return this.withinWindow(
+      previous,
+      subject,
+      now,
+      'notifications.discord.signalMinIntervalMinutes',
+      60,
+    );
   }
 
   /** The family member's current value for one strategy. Never throws. */
@@ -225,20 +310,44 @@ export class DiscordChannel {
     return { key, previous };
   }
 
-  private async throttledBy(previous: string | null, subject: string, now: Date): Promise<boolean> {
-    if (!previous) return false;
-    const minutes = await this.numberSetting('notifications.discord.signalMinIntervalMinutes', 60);
+  /** A declared (non-family) string setting, exactly as stored. `''` when blank or unset. */
+  private async readRaw(key: string): Promise<string> {
+    try {
+      const resolved = await this.settings.resolve(key);
+      return typeof resolved.value === 'string' ? resolved.value.trim() : '';
+    } catch (err) {
+      this.logger.warn(`Signal throttle: "${key}" could not be read — ${(err as Error).message}`);
+      return '';
+    }
+  }
+
+  /**
+   * Is `previous` inside the window named by `settingKey`?
+   *
+   * ⚠️ `minutes <= 0` disables that gate BUT the publish time is still recorded, so raising the
+   * number again takes effect immediately rather than after the first post of the next window.
+   */
+  private async withinWindow(
+    previous: string | null,
+    label: string,
+    now: Date,
+    settingKey: string,
+    fallback: number,
+  ): Promise<boolean> {
+    // ⚠️ An empty string is BLANK, not a corrupt timestamp: the declared channel-wide key is seeded
+    // as `''`, so treating it as unparseable would log a warning on every tick of a fresh install
+    // and train the reader to ignore the one warning that matters.
+    if (!previous || previous.trim().length === 0) return false;
 
     const last = Date.parse(previous);
     if (!Number.isFinite(last)) {
       this.logger.warn(
-        `Signal throttle: last publish for "${subject}" is not a timestamp ("${previous}") — ` +
+        `Signal throttle: last publish for "${label}" is not a timestamp ("${previous}") — ` +
           'treating it as never published.',
       );
       return false;
     }
-    // ⚠️ `minutes <= 0` disables the throttle BUT the publish time is still recorded, so raising the
-    // number again takes effect immediately rather than after the first post of the next window.
+    const minutes = await this.numberSetting(settingKey, fallback);
     if (minutes <= 0) return false;
 
     const elapsedMinutes = (now.getTime() - last) / 60_000;
@@ -247,18 +356,27 @@ export class DiscordChannel {
     return elapsedMinutes < minutes;
   }
 
-  /** Undo a claim after a failed post. Deletes the row when there was none before. */
-  async releaseSignalSlot(slot: { subject: string; previous: string | null }): Promise<void> {
-    const key = DiscordChannel.lastPostKey(slot.subject);
-    if (slot.previous === null) {
-      try {
-        await this.settings.clear(key);
-      } catch (err) {
-        this.logger.warn(`Signal throttle: "${key}" could not be cleared — ${(err as Error).message}`);
+  /** Undo a claim after a failed post, restoring BOTH gates exactly. */
+  async releaseSignalSlot(slot: SignalSlot): Promise<void> {
+    // The channel-wide key is a DECLARED setting seeded as `''`, so it is restored by writing its
+    // previous value back — never deleted, which would make `present` flicker between installs.
+    await this.restoreKey(DiscordChannel.GLOBAL_LAST_POST_KEY, slot.globalPrevious);
+    // The per-strategy member is a FAMILY member: it exists only because a strategy published, so
+    // "no row before" must become "no row now" — an empty string would report `present: true` for a
+    // post that never happened, and throttle that strategy for an hour on nothing.
+    await this.restoreKey(DiscordChannel.lastPostKey(slot.subject), slot.previous, true);
+  }
+
+  private async restoreKey(key: string, previous: string | null, deleteWhenNull = false): Promise<void> {
+    try {
+      if (previous === null) {
+        if (deleteWhenNull) await this.settings.clear(key);
+        return;
       }
-      return;
+      await this.settings.set(key, previous);
+    } catch (err) {
+      this.logger.warn(`Signal throttle: "${key}" could not be restored — ${(err as Error).message}`);
     }
-    await this.settings.set(key, slot.previous);
   }
 
   /**

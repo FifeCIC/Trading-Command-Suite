@@ -256,10 +256,9 @@ export default function ScreenerPage() {
     <main className="screener-page">
       <header className="screener-page-header">
         <h1>Screener</h1>
-        <p>
-          Attention-ranked catalysts — news and earnings events that deserve a look
-          before conviction scoring. The top {topN} are your picks.
-        </p>
+        {/* ⚠️ THE SUBTITLE WAS REMOVED 2026-11-06 (owner, Research walkthrough: *"Remove <p> Attention-ranked
+            catalysts…"*). The transparency strip directly below already states what the app kept and
+            dropped, so the sentence was a second, weaker explanation of the same thing. */}
       </header>
 
       {/* Transparency strip (#682 decision 9) — what the app filtered out */}

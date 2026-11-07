@@ -40,6 +40,7 @@ const ICON = {
   'NO-ARMS': '🚫',
   UNMEASURED: '❓',
   INCONCLUSIVE: '⌛',
+  'PAUSED-MARKET': '🌙',
   STALLED: '💤',
   RUNNING: '▶',
   ARCHIVED: '📦',
@@ -98,11 +99,19 @@ function summarise(payload, opts = {}) {
   const objectiveCounts = {};
   for (const o of objectives) objectiveCounts[o.action] = (objectiveCounts[o.action] || 0) + 1;
 
+  // Two counts, kept apart ON PURPOSE. `todoCount` sums them because "what needs me?" is one question;
+  // the header lines must not, because a header reading `EXPERIMENTS — 8 total, 8 needing a decision`
+  // when all 8 are OBJECTIVES attributes an objective count to experiments. Measured live 2026-11-07:
+  // 0 experiments needed action, 8 objectives did, and the line was unreadable.
+  const experimentsNeedingAction = payload.experiments.filter((e) => NEEDS_ACTION.includes(e.action)).length;
+  const objectivesNeedingAction = objectives.filter((o) => OBJECTIVE_NEEDS_ACTION.includes(o.action)).length;
+
   return {
     rows: rows.map(renderRow),
     objectiveRows,
-    todoCount: payload.experiments.filter((e) => NEEDS_ACTION.includes(e.action)).length
-      + objectives.filter((o) => OBJECTIVE_NEEDS_ACTION.includes(o.action)).length,
+    experimentsNeedingAction,
+    objectivesNeedingAction,
+    todoCount: experimentsNeedingAction + objectivesNeedingAction,
     counts,
     objectiveCounts,
     total: payload.experiments.length,
@@ -148,6 +157,10 @@ function selfTest() {
   t('objectives are summarised separately from experiments', withObj.objectiveTotal === 3 && withObj.total === 1);
   t('an objective with NO date renders "no date", never 0d left', withObj.objectiveRows.some((o) => o.due === 'no date'));
   t('an overdue objective counts toward the todo total', withObj.todoCount === 2); // OVERDUE + NO-DATE
+  // The header carries `experimentsNeedingAction`, so an objective must never inflate it. Measured
+  // 2026-11-07: 6 PAUSED-MARKET experiments + 8 objectives printed "8 total, 8 needing a decision".
+  t('an objective never counts as an experiment needing a decision',
+    withObj.experimentsNeedingAction === 0 && withObj.objectivesNeedingAction === 2);
   t('ON-TIME objectives are excluded from --todo', summarise({
     experiments: [], objectives: [{ id: 'o', title: 'B', action: 'ON-TIME', daysLeft: 30, progressPct: 0, hasPrediction: false, nextStep: 'wait' }],
   }, { todo: true }).objectiveRows.length === 0);
@@ -194,7 +207,7 @@ function selfTest() {
   if (has('json')) { console.log(JSON.stringify(payload, null, 2)); return; }
 
   const out = summarise(payload, { action: arg('action', null), todo: has('todo') });
-  console.log(`\nEXPERIMENTS — ${out.total} total, ${out.todoCount} needing a decision (${payload.computedAt})\n`);
+  console.log(`\nEXPERIMENTS — ${out.total} total, ${out.experimentsNeedingAction} needing a decision (${payload.computedAt})\n`);
   const counts = Object.entries(out.counts).map(([k, v]) => `${ICON[k] || ''}${k} ${v}`).join(' · ');
   console.log(`  ${counts}\n`);
   if (!out.rows.length) {
@@ -208,7 +221,7 @@ function selfTest() {
   }
 
   if (out.objectiveTotal) {
-    console.log(`\nOBJECTIVES — ${out.objectiveTotal} active, reviewed against their own date\n`);
+    console.log(`\nOBJECTIVES — ${out.objectiveTotal} active, ${out.objectivesNeedingAction} needing a decision\n`);
     const oc = Object.entries(out.objectiveCounts).map(([k, v]) => `${ICON[k] || ''}${k} ${v}`).join(' · ');
     console.log(`  ${oc}\n`);
     if (!out.objectiveRows.length) { console.log('  (none need attention)\n'); return; }

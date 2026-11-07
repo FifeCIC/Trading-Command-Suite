@@ -70,6 +70,81 @@ export interface QuoteFreshness {
 export const FUTURE_TOLERANCE_SECONDS = 120;
 
 /**
+ * `screenTickTime` — the ONE owner of "is this timestamp impossibly ahead of the clock?" (#1214).
+ *
+ * ⚠️ WHY IT IS SEPARATE FROM `checkQuoteFreshness()`. A quote is screened for *freshness* — it must
+ * be recent enough to price an order. A BAR, a tick record or an import row is screened for
+ * *possibility* — a timestamp in the future is not a stale datum, it is a datum that cannot exist,
+ * and writing it makes the row invisible to every "latest bar" query while poisoning freshness
+ * checks that assume the newest row is the present.
+ *
+ * Measured 2026-11-06: the MetaQuotes bridge served EURCAD a tick at `2026-11-17T13:59:08Z` — **10.7
+ * days ahead** — while EURUSD/GBPUSD/USDJPY on the same bridge were seconds old. So this is not a
+ * server-offset fault (that would skew every symbol); it is one bad instrument. The timestamp then
+ * travels into whatever consumes it.
+ *
+ * ⚠️ It is deliberately the SAME tolerance the quote path uses. Two thresholds for "too far ahead"
+ * would guarantee that some path accepts what another refuses.
+ */
+export interface TickScreen {
+  ok: boolean;
+  /** Seconds the timestamp is ahead of `now`; negative when it is in the past. */
+  leadSeconds: number;
+  reason: string;
+}
+
+export function screenTickTime(
+  when: Date | null | undefined,
+  now: Date = new Date(),
+  label = 'the timestamp',
+): TickScreen {
+  if (when === null || when === undefined) {
+    return { ok: false, leadSeconds: 0, reason: `${label} is absent` };
+  }
+  if (Number.isNaN(when.getTime())) {
+    return { ok: false, leadSeconds: 0, reason: `${label} is not a valid date` };
+  }
+  const leadSeconds = Math.round((now.getTime() - when.getTime()) / 1000) * -1;
+  if (leadSeconds > FUTURE_TOLERANCE_SECONDS) {
+    return {
+      ok: false,
+      leadSeconds,
+      reason: `${label} ${when.toISOString()} is ${leadSeconds}s AHEAD of the clock (> ${FUTURE_TOLERANCE_SECONDS}s) — refusing to store or price on it`,
+    };
+  }
+  return { ok: true, leadSeconds, reason: `${label} is ${-leadSeconds}s from the clock` };
+}
+
+/**
+ * `screenBars` — the ingest half of #1214, for a batch bound for `marketbar`.
+ *
+ * ⚠️ WHY A BATCH FILTER AND NOT A CHECK AT EACH WRITER. There are **10+** `marketBar.createMany`
+ * call sites. A guard copied into each is a second (and third, and fourth) implementation of the
+ * same rule, and the one that is missed is the one that writes the bad row. Every ingest path calls
+ * THIS, so the rule has one owner.
+ *
+ * ⚠️ A future bar is worse than a stale one. "Stale" is old; "ahead" is impossible. A row dated 11
+ * days ahead is invisible to every "latest bar" query until the calendar catches up, and it makes a
+ * freshness check report a symbol as perfectly current while nothing is arriving — the exact shape
+ * of `marketbar_future_orphan_backup_780` (226 rows kept from an earlier occurrence).
+ *
+ * It FILTERS rather than throws: one bad bar in a 200-bar page must not lose the other 199.
+ */
+export function screenBars<T extends { timestamp?: Date | null }>(
+  bars: T[],
+  now: Date = new Date(),
+  label = 'bar',
+): { accepted: T[]; rejected: T[] } {
+  const accepted: T[] = [];
+  const rejected: T[] = [];
+  for (const bar of bars) {
+    if (screenTickTime(bar?.timestamp ?? null, now, label).ok) accepted.push(bar);
+    else rejected.push(bar);
+  }
+  return { accepted, rejected };
+}
+
+/**
  * Check whether a quote may price/size an order. Pure — the caller passes `now`.
  *
  * Boundary: `ageSeconds === allowanceSeconds` PASSES (inclusive). Named here so the operator does

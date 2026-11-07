@@ -1,3 +1,13 @@
+/* ── PLANNED IN #1229 ──
+ * MISSING:  decomposition. Measured 4,730 lines, 5 function(s) over
+ *           60 lines (longest 1229), comment ratio 40.0%.
+ * TODAY:    one file carrying several responsibilities. Nothing here is known to be broken — the
+ *           shape makes review and safe change expensive.
+ * WHEN BUILT: split by RESPONSIBILITY (not by line count), prove behaviour is unchanged, then
+ *           re-bank: node scripts/audit-code-health.cjs --write
+ * CODE-HEALTH-MARKER — written by scripts/audit-code-health.cjs; re-run it rather than editing.
+ */
+
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 // #965 item 1 — the sample bar is shared with the live snapshot trial's verdict rather than
@@ -715,8 +725,46 @@ export function describeCostDivergence(runs: CostFacts[]): string | null {
   );
 }
 
+/**
+ * persistOutcome() — #1210's symptom guard, as a PURE function so both directions are testable
+ * without running a backtest.
+ *
+ * MEASURED 2026-11-06: a 150-day window returns 200 with full stats, writes no `backtestrun` row and
+ * logs neither the success line nor the catch — so a computed run and a stored run looked identical.
+ * The cause is not isolated; this reports the SYMPTOM, which is the part that never needed a theory.
+ *
+ * ⚠️ A run with ZERO trades is NOT a warning. `run()` legitimately refuses to store an empty run in
+ * some paths, and firing on that would turn the guard into noise — a guard that over-fires is
+ * allowlisted and then it covers nothing.
+ */
+export function persistOutcome(
+  persistedRunId: string | null,
+  trades: number,
+  reason: string | null,
+): { persisted: boolean; persistedReason: string | null; shouldWarn: boolean; message: string | null } {
+  const persisted = Boolean(persistedRunId);
+  const persistedReason = persisted ? null : (reason ?? 'not reported');
+  const shouldWarn = !persisted && trades > 0;
+  return {
+    persisted,
+    persistedReason,
+    shouldWarn,
+    message: shouldWarn
+      ? `computed ${trades} trade(s) but was NOT persisted — ${persistedReason}. The run exists only in this response; it is not in backtestrun.`
+      : null,
+  };
+}
+
 export interface BacktestResult extends BacktestResultBracketFields {
   id: string;
+  /**
+   * #1210 — was this run written to `backtestrun`? A computed run that stored nothing used to be
+   * INDISTINGUISHABLE from a stored one: same 200, same stats, no row. False means the result exists
+   * only in this response.
+   */
+  persisted?: boolean;
+  /** Why it was not stored, in words. Null when it was. `'not reported'` when nothing knows. */
+  persistedReason?: string | null;
   symbol: string;
   protocolId: string;
   period: string;
@@ -2187,9 +2235,11 @@ export class BacktestService {
 
     // ── Persist to database ──────────────────────────────
     let persistedRunId: string | null = null;
+    // #1210 — WHY a run was not stored, so a caller can never be left believing one exists.
+    let persistSkippedReason: string | null = null;
     try {
       const symbolRow = await this.prisma.symbol.findUnique({ where: { ticker: symbol.toUpperCase() } });
-      this.logger.log(`[persist-probe] symbol=` + JSON.stringify(symbol) + ` row=` + (symbolRow ? 'yes' : 'NO') + ` totalDays=` + totalDays + ` trades=` + trades.length);
+      if (!symbolRow) persistSkippedReason = `no symbol row for '${symbol}'`;
       if (symbolRow) {
         const run = await this.prisma.backtestRun.create({
           data: {
@@ -2329,10 +2379,26 @@ export class BacktestService {
         this.logger.log(`Backtest persisted: run=${run.id}, symbol=${symbol}, trades=${trades.length}`);
       }
     } catch (err) {
+      persistSkippedReason = (err as Error).message;
       this.logger.error(`Failed to persist backtest for ${symbol}: ${(err as Error).message}`);
     }
 
     this.logger.log(`Backtest ${symbol}: ${entrySignals.length} signals, winRate=${(winRate*100).toFixed(0)}%${newsExclusion !== 'none' ? ` (news: ${newsExclusion}, ${newsDates?.size ?? 0} news dates)` : ''}`);
+
+    // ── #1210 — A RUN THAT COMPUTED TRADES BUT STORED NOTHING MUST SAY SO ─────────────────────
+    // MEASURED 2026-11-06: a 150-day window returns 200 with full stats, writes no `backtestrun`
+    // row, and logs neither the success line nor the catch. Nothing anywhere reported it — the
+    // caller believed a record existed, `runs/compare` could not see it, and the walk-forward
+    // survivor list silently showed `out: null`.
+    //
+    // ⚠️ THIS IS A SYMPTOM GUARD, DELIBERATELY. The cause is NOT isolated (see #1210): the persist
+    // block is entered, `create` is called, and neither the success nor the catch path is observed.
+    // A guard on the SYMPTOM fires without needing the theory to be right.
+    const outcome = persistOutcome(persistedRunId, trades.length, persistSkippedReason);
+    const persisted = outcome.persisted;
+    if (outcome.shouldWarn) {
+      this.logger.error(`Backtest ${symbol} ${totalDays}d ${outcome.message}`);
+    }
     // ⚠️ `tradeTotals` IS ATTACHED ON BOTH PATHS (owner direction, 2026-10-29). It is attached here —
     // the live POST /run response — AND in `getResult()`, because the two surfaces show the same
     // table. Attaching it in only one made the freshly-run view print "this response carried no
@@ -2346,6 +2412,10 @@ export class BacktestService {
       // that was actually applied — not a default reconstructed from a column.
       tradeTotals: tradeTotals((result as { trades?: TradeLike[] }).trades, { spread, slippage }),
       id: persistedRunId || result.id,
+      // #1210 — the caller can now TELL whether a stored run exists. Without these two fields a
+      // computed-but-unstored run was indistinguishable from a stored one.
+      persisted: outcome.persisted,
+      persistedReason: outcome.persistedReason,
       newsExclusion,
       newsDatesCount: newsDates?.size ?? 0,
     };

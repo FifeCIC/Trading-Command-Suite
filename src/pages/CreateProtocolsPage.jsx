@@ -10,6 +10,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { apiGet, apiPost } from '../core/api/client';
+// The signal thresholds are SERVER-OWNED (`ENTRY_THRESHOLD` / `STRONG_PCT`). A hand-copied 6/13
+// here would silently describe a scale the scorer no longer uses — the same reason the Signal bar
+// reads them over HTTP.
+import { fetchScoringThresholds } from '../core/api/signals';
 import '../core/forms.css';
 import './create-protocols.css';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -44,6 +48,8 @@ export default function CreateProtocolsPage() {
   // ── Data ──
   const [directives, setDirectives] = useState([]);
   const [existingProtocols, setExistingProtocols] = useState([]);
+  // Live classification thresholds (percent of CONFIGURED directional capacity). Read, never copied.
+  const [thresholds, setThresholds] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -90,6 +96,21 @@ export default function CreateProtocolsPage() {
       if (!cancelled) setLoading(false);
     }
     load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // ── Thresholds — loaded SEPARATELY and without blocking the form ──────────────────────────────
+  //
+  // ⚠️ Measured 2026-11-07: `/api/scoring/gated/thresholds` answers in **6,206 ms** — it computes
+  // `protocolCeilings` over a 7-day window for every protocol. Putting it in the `Promise.all` above
+  // held the whole form at "Loading directives…" for six seconds, which is a regression, not a
+  // trade-off. So the form renders from the two fast calls and this arrives afterwards; the capacity
+  // panel already copes with `null` (it says "thresholds unavailable" rather than guessing a band).
+  useEffect(() => {
+    let cancelled = false;
+    fetchScoringThresholds()
+      .then(t => { if (!cancelled) setThresholds(t ?? null); })
+      .catch(() => { if (!cancelled) setThresholds(null); });
     return () => { cancelled = true; };
   }, []);
 
@@ -143,14 +164,51 @@ export default function CreateProtocolsPage() {
     });
   }, [directives]);
 
-  // ── Check which directives are already used in any group ──
-  const usedDirectiveIds = useMemo(() => {
-    const s = new Set();
-    for (const g of groups) {
-      for (const id of g.directiveIds) s.add(id);
+  // ── Signal capacity — the number this form never showed ──────────────────────────────────────
+  //
+  // ⚠️ WHY THIS EXISTS (owner, 2026-11-07). `NEUTRAL_ONLY_DIRECTIVES` was referenced in exactly two
+  // places repo-wide: a comment, and a reporting-only accumulation. Nothing at save time warned that
+  // a directive CANNOT emit a direction — and the arithmetic consequence is brutal, because a
+  // direction-incapable directive still occupies the signal denominator while contributing exactly 0
+  // to the numerator (#1122). Measured 2026-11-07: 43 of 53 protocols contain at least one, and
+  // 10,135 of 38,760 configured points (26.1%) are direction-incapable. `ftse/dax/cac-speed-v1-long`
+  // each carried ~815 such points around a single 80-point directional directive, so their all-time
+  // maximum composite was 31 against a min of 65 — **0 clearances ever** (#760).
+  //
+  // So the form now answers, live: how much capacity is selected, how much of it can EVER contribute,
+  // and whether the resulting ceiling can reach the server's own entry/strong thresholds.
+  //
+  // ⚠️ `direction` is the DERIVED capability (source literals), not `directionBias` (a declaration —
+  // ten directives declare a bias their code does not do). `unknown` is treated as CAPABLE here:
+  // "cannot judge" must never be read as "neutral".
+  const signalCapacity = useMemo(() => {
+    const scoringGroups = groups.filter(g => !g.isRiskGate);
+    let total = 0;
+    let directional = 0;
+    const blocked = [];
+    for (const g of scoringGroups) {
+      for (const id of g.directiveIds) {
+        const d = directives.find(x => x.id === id);
+        const pts = Number(d?.maxScore) || 0;
+        total += pts;
+        const dir = d?.direction ?? 'unknown';
+        const usable =
+          dir === 'both' ||
+          dir === 'unknown' ||
+          (dir === 'bullish-only' && directionMode !== 'SHORT_ONLY') ||
+          (dir === 'bearish-only' && directionMode !== 'LONG_ONLY');
+        if (usable) directional += pts;
+        else blocked.push({ id, name: d?.name || id, pts, dir });
+      }
     }
-    return s;
-  }, [groups]);
+    const ceilingPct = total > 0 ? Math.round((directional / total) * 100) : null;
+    return { total, directional, unearnable: total - directional, ceilingPct, blocked };
+  }, [groups, directives, directionMode]);
+
+  // ── Check which directives are already used in any group ──
+  // (`usedDirectiveIds` used to live here — a Set nothing read. Removed 2026-11-07: the palette
+  // resolves its own `usedBy` per directive, so the Set was dead and only ever produced a lint
+  // error, which is exactly the kind of noise that hides a real one.)
 
   // ── Group actions ──
   function addGroup() {
@@ -195,6 +253,18 @@ export default function CreateProtocolsPage() {
     }
     if (groups.every(g => g.directiveIds.length === 0)) {
       setSaveError('Add at least one directive to a group.');
+      return;
+    }
+    // ── The impossibility, refused rather than saved ─────────────────────────────────────────────
+    // Zero direction-capable capacity is not a weak protocol, it is one that can never produce a
+    // signal: every selected directive occupies the signal denominator and contributes exactly 0 to
+    // the numerator (#1122). `ftse/dax/cac-speed-v1-long` shipped in exactly this state and cleared
+    // their gate 0 times across their whole history (#760). The panel explains WHY; this stops it.
+    if (signalCapacity.total > 0 && signalCapacity.directional === 0) {
+      setSaveError(
+        'Every selected directive is direction-incapable, so this protocol could never produce a BUY or SELL. '
+        + 'Add at least one directive that can emit a direction, or remove the context directives.',
+      );
       return;
     }
     setSaving(true);
@@ -521,12 +591,21 @@ export default function CreateProtocolsPage() {
               {catDirectives.map(d => {
                 const usedBy = groups.find(g => g.directiveIds.includes(d.id));
                 const isUsed = !!usedBy;
+                // A direction-incapable directive is marked IN THE PALETTE, where the choice is made.
+                // The tooltip says what it costs rather than only labelling it.
+                const noSignal = d.direction === 'none';
+                const oneSide = d.direction === 'bullish-only' || d.direction === 'bearish-only';
+                const dirNote = noSignal
+                  ? 'CANNOT emit a direction — it scores, but adds 0 to the signal while still counting in the divisor (dilution).'
+                  : oneSide
+                    ? `Can only read ONE side (${d.direction}) — unearnable capacity in an opposite-direction protocol.`
+                    : '';
                 return (
                   <button
                     key={d.id}
                     type="button"
-                    className={`cp-directive-btn ${isUsed ? 'cp-directive-btn--used' : ''}`}
-                    title={`${d.description || d.name}\nMax Score: ${d.maxScore ?? 'N/A'}\n${isUsed ? `In group: ${usedBy.name}` : 'Click to add to a group'}`}
+                    className={`cp-directive-btn ${isUsed ? 'cp-directive-btn--used' : ''} ${noSignal ? 'cp-directive-btn--nosignal' : ''}`}
+                    title={`${d.description || d.name}\nMax Score: ${d.maxScore ?? 'N/A'}${dirNote ? `\n\n${dirNote}` : ''}\n${isUsed ? `In group: ${usedBy.name}` : 'Click to add to a group'}`}
                     onClick={() => {
                       if (isUsed) {
                         // Remove from its current group
@@ -542,6 +621,7 @@ export default function CreateProtocolsPage() {
                     <span className="cp-directive-name">{d.name}</span>
                     <span className="cp-directive-meta">
                       {d.maxScore ? `↑${d.maxScore}` : ''}
+                      {noSignal && <span className="cp-directive-nosignal-mark" title="Cannot emit a direction — adds 0 to the signal">no signal</span>}
                       {isUsed && <span className="cp-directive-used-mark" title={`In: ${usedBy.name}`}>✓ {usedBy.name}</span>}
                     </span>
                   </button>
@@ -569,6 +649,102 @@ export default function CreateProtocolsPage() {
           <span className="ff-hint">Select a target group, then click directives in the palette to assign them.</span>
         </div>
       </section>
+
+      {/* ── Signal capacity — what the selected directives can actually produce ────────────────
+          Sits directly above Save, because that is the point of commitment. Every number here is
+          derived from the selection; the thresholds are read from the server, not copied. */}
+      {signalCapacity.total > 0 && (() => {
+        const entry = thresholds?.classification?.entry ?? null;
+        const strong = thresholds?.classification?.strong ?? null;
+        const ceiling = signalCapacity.ceilingPct;
+        // ⚠️ A ceiling of 0 is an impossibility that needs no threshold: every selected directive is
+        // direction-incapable, so no reading can ever move BUY/SELL. Checked BEFORE the band
+        // comparison — otherwise a 0% ceiling renders as "not all of it can contribute", which
+        // understates it, and while the thresholds are still in flight the band comparison cannot
+        // run at all, so it must fall back to an honest "pending" rather than a verdict.
+        const nothingEarns = ceiling === 0;
+        const belowStrong = strong != null && ceiling != null && ceiling < strong;
+        const belowEntry = entry != null && ceiling != null && ceiling < entry;
+        const tone = nothingEarns || belowEntry || belowStrong
+          ? 'danger'
+          : signalCapacity.unearnable > 0 ? 'warn' : 'ok';
+        return (
+          <section className={`cp-capacity cp-capacity--${tone}`} aria-live="polite">
+            <div className="cp-capacity-head">
+              <h2 className="cp-section-title">Signal capacity</h2>
+              <span className="cp-capacity-verdict">
+                {nothingEarns
+                  ? 'No selected directive can emit a direction — this protocol can never signal'
+                  : belowEntry
+                    ? 'This protocol can NEVER produce a BUY or SELL'
+                    : belowStrong
+                      ? 'This protocol can never read STRONG'
+                      : entry == null || strong == null
+                        ? 'Thresholds still loading — ceiling so far'
+                        : signalCapacity.unearnable > 0
+                          ? 'Direction-capable, but not all of it'
+                          : 'Every point can contribute to the signal'}
+              </span>
+            </div>
+
+            <div className="cp-capacity-grid">
+              <div>
+                <span className="cp-capacity-label">Selected capacity</span>
+                <span className="cp-capacity-value">{signalCapacity.total} pts</span>
+                <span className="cp-capacity-note">non-risk-gate groups only</span>
+              </div>
+              <div>
+                <span className="cp-capacity-label">Can emit a direction</span>
+                <span className="cp-capacity-value">{signalCapacity.directional} pts</span>
+                <span className="cp-capacity-note">the only points the signal can earn</span>
+              </div>
+              <div>
+                <span className="cp-capacity-label">Never earnt</span>
+                <span className="cp-capacity-value">
+                  {signalCapacity.unearnable} pts
+                  {signalCapacity.unearnable > 0 && ` · ${100 - ceiling}%`}
+                </span>
+                <span className="cp-capacity-note">counts in the divisor, adds 0 to the numerator</span>
+              </div>
+              <div>
+                <span className="cp-capacity-label">Signal ceiling</span>
+                <span className="cp-capacity-value">
+                  {ceiling == null ? '—' : `${ceiling}%`}
+                </span>
+                <span className="cp-capacity-note">
+                  {entry != null && strong != null
+                    ? `entry ${entry}% · strong ${strong}%`
+                    : 'thresholds unavailable'}
+                </span>
+              </div>
+            </div>
+
+            {signalCapacity.blocked.length > 0 && (
+              <div className="cp-capacity-blocked">
+                <p className="cp-capacity-blocked-title">
+                  {signalCapacity.blocked.length} selected directive
+                  {signalCapacity.blocked.length === 1 ? '' : 's'} can never emit a direction
+                  {directionMode !== 'BOTH' ? ` in ${directionMode}` : ''}:
+                </p>
+                <ul className="cp-capacity-blocked-list">
+                  {signalCapacity.blocked.map(b => (
+                    <li key={b.id}>
+                      <strong>{b.name}</strong> — {b.pts} pts
+                      {b.dir !== 'none' ? ` (${b.dir} only)` : ''}
+                    </li>
+                  ))}
+                </ul>
+                <p className="cp-capacity-hint">
+                  These are context directives: their score is real and they are ranked on in
+                  <em> opportunity</em>, but they cannot move BUY/SELL. Removing them raises the
+                  ceiling; keeping many of them makes every signal this protocol produces weaker.
+                  {belowStrong && strong != null && ` With the current set it can never reach ${strong}%.`}
+                </p>
+              </div>
+            )}
+          </section>
+        );
+      })()}
 
       {/* ── Actions ── */}
       <div className="cp-actions">

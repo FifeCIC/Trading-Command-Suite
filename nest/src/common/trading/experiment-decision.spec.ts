@@ -1,5 +1,6 @@
 import {
   decideExperiment,
+  isMarketOpenNow,
   decideObjectiveReview,
   OBJECTIVE_RULES,
   projectEtaDays,
@@ -262,5 +263,63 @@ describe('decideObjectiveReview — a promise has a DATE, not a sample', () => {
     const r = decideObjectiveReview(obj({ targetDate: daysAgo(1), progressPct: 62 }));
     expect(r.reason).toContain('62%');
     expect(r).not.toHaveProperty('requiredPerSide');
+  });
+});
+describe('PAUSED-MARKET — a shut market is not a stall (#1210 follow-up)', () => {
+  // Friday 2026-11-06 23:27 UTC, measured: FX stopped at 21:59:5x, crypto kept scoring.
+  const FRIDAY = new Date('2026-11-06T23:27:00.000Z');
+  const SATURDAY = new Date('2026-11-07T12:00:00.000Z');
+  const MONDAY = new Date('2026-11-09T12:00:00.000Z');
+
+  it('isMarketOpenNow: crypto is 24/7', () => {
+    expect(isMarketOpenNow('crypto', SATURDAY)).toBe(true);
+    expect(isMarketOpenNow('crypto', FRIDAY)).toBe(true);
+  });
+
+  it('isMarketOpenNow: non-crypto is shut at the weekend and open on a weekday', () => {
+    expect(isMarketOpenNow('forex', SATURDAY)).toBe(false);
+    expect(isMarketOpenNow('index', SATURDAY)).toBe(false);
+    expect(isMarketOpenNow('forex', MONDAY)).toBe(true);
+  });
+
+  it('isMarketOpenNow: an unknown class is NULL, never a guess', () => {
+    expect(isMarketOpenNow(null, SATURDAY)).toBeNull();
+    expect(isMarketOpenNow('', SATURDAY)).toBeNull();
+  });
+
+  const idleForDays = (d: number) => facts({
+    lastSampleAt: daysAgo(d),
+    reviewBy: daysAhead(40),
+  });
+
+  it('a weekend on a non-crypto symbol is PAUSED-MARKET, not STALLED', () => {
+    const d = decideExperiment({ ...idleForDays(9), now: SATURDAY, marketOpen: false });
+    expect(d.action).toBe('PAUSED-MARKET');
+    expect(d.nextStep).toMatch(/resumes when the market reopens/i);
+  });
+
+  it('the same 9-day idle WITHOUT the market fact is still STALLED — the old behaviour is intact', () => {
+    const d = decideExperiment({ ...idleForDays(9), now: SATURDAY, marketOpen: null });
+    expect(d.action).toBe('STALLED');
+  });
+
+  it('crypto past its idle window is STALLED even at the weekend — it CAN trade', () => {
+    const d = decideExperiment({ ...idleForDays(9), now: SATURDAY, marketOpen: true });
+    expect(d.action).toBe('STALLED');
+  });
+
+  it('DECIDE outranks PAUSED-MARKET — a finished experiment is finished', () => {
+    const d = decideExperiment(facts({
+      now: SATURDAY, marketOpen: false,
+      sides: [{ label: 'control', n: 30 }, { label: 'variant', n: 31 }],
+    }));
+    expect(d.action).toBe('DECIDE');
+  });
+
+  it('INCONCLUSIVE outranks PAUSED-MARKET — a missed deadline is still a missed deadline', () => {
+    const d = decideExperiment(facts({
+      now: SATURDAY, marketOpen: false, reviewBy: daysAgo(3),
+    }));
+    expect(d.action).toBe('INCONCLUSIVE');
   });
 });

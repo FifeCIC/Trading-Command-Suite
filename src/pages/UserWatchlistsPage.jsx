@@ -334,20 +334,18 @@ export default function UserWatchlistsPage() {
         <div className="wl-split">
           {/* ── Left: Accordion List ── */}
           <div className="wl-list-pane">
-            {/* Built-in Watchlists */}
-            {visibleWatchlists.some(w => w.kind === 'built-in') && (
-              <div className="wl-group">
-                <div className="wl-group-label">Built-in Watchlists</div>
-                {visibleWatchlists.filter(w => w.kind === 'built-in').map((wl, i) => renderWatchlistItem(wl, i))}
-              </div>
-            )}
-            {/* Watchlists */}
+            {/* ⚠️ ONE LIST, NOT TWO (owner, 2026-11-06: *"Remove <div.wl-group-label> Built-in
+                Watchlists and make <div.wl-list-header> ★ Trading212 Portfolio appear in the full list
+                instead"*). The built-ins were in their own group behind a heading, which pushed the
+                one built-in below a label that told the reader nothing. They now sit first inside the
+                single list, under the same count. */}
             <div className="wl-group">
               <div className="wl-group-label">
                 {isLoading
                   ? 'Loading…'
                   : `${visibleWatchlists.length} watchlist${visibleWatchlists.length === 1 ? '' : 's'} · ${visibleSymbols} total symbols`}
               </div>
+              {visibleWatchlists.filter(w => w.kind === 'built-in').map((wl, i) => renderWatchlistItem(wl, i))}
               {visibleWatchlists.filter(w => w.kind !== 'built-in').map((wl, i) => renderWatchlistItem(wl, i))}
               {/* Inline "Create New Watchlist" entry */}
               <motion.div

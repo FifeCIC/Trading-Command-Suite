@@ -837,6 +837,14 @@ button.nav-active {
 .left-rail-collapsed .rail-links button.nav-active { background: var(--accent); }
 .left-rail-collapsed .rail-collapse-toggle { font-size: 0.6rem; padding: 0.3rem; min-width: 32px; min-height: 32px; border-radius: 3px; }
 
+/* ── Withheld from other users — the owner's work queue (2026-11-06) ──────────────────────────────
+ Owner: *"change the colour of the text in the menu for pages that will be hidden for other users so
+ I know which ones still need work done to them the most."* A withheld view is KEPT in the rail and
+ tagged by `filterHiddenViews({ keepWithheld })`, so an amber label means "everyone else cannot see
+ this yet". Colour only — no bar, no badge, nothing that competes with `nav-active`. */
+.rail-links button.rail-link--withheld .rail-link-label { color: var(--color-warning); }
+.left-rail-collapsed .rail-links button.rail-link--withheld .rail-link-icon { color: var(--color-warning); }
+
 .rail-collapse-toggle {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -971,6 +979,43 @@ button {
   cursor: pointer;
   min-height: 44px;
 }
+
+/* ── `.btn` — the shared button class (added 2026-11-06) ────────────────────────────────────────
+   ⚠️ THERE WAS NO `.btn` RULE IN THIS FILE, and `button` is declared TWICE above with different
+   results (line 735: panel background + 1px line border; line 965: no border, `--ink` background,
+   44px). Which one a button got depended on source order, and `className="btn"` had nothing to do
+   with it. Measured 2026-11-06 on /watchlists/active-symbols: "Export CSV" and "⚙ Columns" computed
+   `background: rgb(0,0,0)` with `border: 0px none` on a #0f172a page — a black button on a dark
+   panel, reported by the owner as *"styling is broken"*.
+   Eight pages use `className="btn"`, so they were all in that state. A class beats an element
+   selector whatever the order, so this is the fix rather than editing one of the two `button` rules
+   again — the next agent to touch either of those should collapse them into one. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  min-height: 34px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, var(--panel));
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+}
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn--primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+.btn--primary:hover { background: color-mix(in srgb, var(--accent) 85%, #fff); color: #fff; }
 
 input[type="text"],
 input[type="search"],

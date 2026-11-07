@@ -43,6 +43,24 @@
  * promote labels across the 40/80 thresholds. That is intended, but it is a deliberate
  * operator decision, not something that happens to you. It is also why the Ladder shows
  * a badge when the target is applied — a reader must be able to tell the two scales apart.
+ *
+ * ── DECISION (2026-11-07, primary) — ADMINISTERED HERE FOR THE GATE AS WELL ──
+ * WHAT:      If the adaptive entry GATE in #725 is ever built, it may TIGHTEN on its own and may
+ *            LOOSEN only by an explicit operator action, which must be surfaced. Silent automatic
+ *            loosening is refused.
+ * WHY:       Loosening widens what the automation loop may trade. A gate that falls during a quiet
+ *            spell makes the machine trade MORE, in worse conditions, because the bar moved to meet
+ *            it — the "plausible numbers, no error" failure class this file already cites three
+ *            paragraphs above for the denominator, and it applies with more force to an order.
+ *            The owner stated the same preference in #725: "bidirectional-but-surfaced, or
+ *            loosening-only-by-explicit-action, over silent automatic loosening".
+ * INSTEAD OF: Fully bidirectional adaptivity ("the ceiling can tighten and loosen"), which is what
+ *            #725 originally asked for on its face.
+ * REVERSE BY: Editing this block and register row 154, then wiring the loosening path with a
+ *            visible operator confirmation and an A/B comparison — it is a maths change.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 154
+ * GUARD:     none — 🔴 UNGUARDED. The gate does not exist yet, so there is nothing to canary; the
+ *            decision binds whoever builds it. Register it as 🟢 when that work lands.
  */
 
 /** Minimum observations before the target is trusted. Below this the configured capacity is used. */

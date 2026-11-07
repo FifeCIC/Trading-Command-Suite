@@ -63,9 +63,33 @@ import { parseSessionWindow, parseExitBoundary } from '../trading/session-window
  */
 export interface StrategyTreatment {
   minComposite: number;
+  minRarityBand: string | null;
+  requireDirection: string | null;
   baseSize: number | null;
   slPct: number | null;
   tpPct: number | null;
+  /** Fixed-money take-profit. Part of the identity: it is the exit (#1224). */
+  takeProfitAmount: number | null;
+  /** How the size is computed, and the risk it commits. Part of the identity (#1224). */
+  sizingModel: string | null;
+  sizingRiskPct: number | null;
+  allocationAmount: number | null;
+  /** The OTHER protocol a reversal bot trades through. Part of the identity (#1224). */
+  shortProtocolId: string | null;
+  /** The classification rules that produced the score this bot acts on. Part of the identity. */
+  scoringStrategyId: string | null;
+  /** The simulated trailing stop — it decides when a position closes (#1224). */
+  simTslEnabled: boolean;
+  simTslActivationPct: number | null;
+  simTslDistancePct: number | null;
+  /** Exhaustion observation — it closes positions (#1224). */
+  exhaustionObserveEnabled: boolean;
+  exhaustionDecelPct: number | null;
+  /** Hot-stock top-up allocation — it commits money (#1224). */
+  hotStockEnabled: boolean;
+  hotStockAllocation: number | null;
+  hotStockMaxHoldHours: number | null;
+  hotStockDetectionMode: string | null;
   maxHoldHours: number | null;
   cooldownMinutes: number;
   maxPyramidTiers: number;
@@ -136,6 +160,13 @@ export interface DerivedStrategy {
    * Consumers resolve the id to a name by finding the row whose `botIds` contains it.
    */
   copiedFromBotIds: string[];
+  /**
+   * True when this group shares a key because the extra bot(s) were DECLARED copies of the root —
+   * an experiment pair — rather than an accidental duplicate (#1212).
+   */
+  pairDeclared?: boolean;
+  /** The fields the pair actually differs in, e.g. `['takeProfitAmount']`. Named, never inferred. */
+  pairDifferingFields?: string[];
 }
 
 export interface DerivedStrategiesResponse {
@@ -144,6 +175,12 @@ export interface DerivedStrategiesResponse {
   totalBots: number;
   /** Strategies whose key is shared by more than one bot — a duplication fault. 0 is healthy. */
   duplicateGroups: number;
+  /**
+   * Groups that share a key because one bot was DECLARED as a copy of another (an experiment pair),
+   * not because a duplicate was created by accident (#1212). Counted separately so a healthy
+   * experiment does not look like a fault, and so `duplicateGroups === 0` keeps its meaning.
+   */
+  declaredPairs: number;
   /** Bots with no protocol link at all, so they belong to no strategy. */
   orphans: string[];
   derivedAt: string;
@@ -176,6 +213,24 @@ interface BotRow {
   maxDailyLoss: number | null;
   useRaritySizing: boolean;
   maxSize: number | null;
+  /**
+   * ⚠️ These are NOT part of the hashed treatment, and two bots may differ in them while sharing a
+   * `strategyKey` — which is why the duplicate message must name them (#1212). Declared here so a
+   * typo reads `undefined` at compile time rather than silently comparing nothing.
+   */
+  takeProfitAmount?: number | null;
+  sizingModel?: string | null;
+  sizingRiskPct?: number | null;
+  allocationAmount?: number | null;
+  simTslEnabled?: number | boolean | null;
+  simTslActivationPct?: number | null;
+  simTslDistancePct?: number | null;
+  exhaustionObserveEnabled?: number | boolean | null;
+  exhaustionDecelPct?: number | null;
+  hotStockEnabled?: number | boolean | null;
+  hotStockAllocation?: number | null;
+  hotStockMaxHoldHours?: number | null;
+  hotStockDetectionMode?: string | null;
   /** A/B lineage (2026-09-22) — the bot this one was copied from, or null. Not part of identity. */
   duplicatedFromId: string | null;
   protocols?: Array<{ protocolId: string; role: string }>;
@@ -208,6 +263,10 @@ export class StrategyDerivationService {
     }>();
 
     const orphans: string[] = [];
+
+    // Full rows by id — the pair check needs `duplicatedFromId` and the fields the strategy KEY does
+    // not hash, which `botIds` (id → name) cannot answer (#1212).
+    const botById = new Map<string, BotRow>(bots.map((b) => [b.id, b]));
 
     for (const bot of bots) {
       const treatment = this.treatmentOf(bot);
@@ -265,16 +324,36 @@ export class StrategyDerivationService {
     }
 
     let duplicateGroups = 0;
+    let declaredPairs = 0;
 
     const strategies: DerivedStrategy[] = [...groups.entries()].map(([strategyKey, g]) => {
       const names = [...g.botIds.values()].sort();
-      // A group holding more than one bot is a DUPLICATION FAULT, not a merged strategy. Grouping
-      // is what makes it detectable; reporting it is what makes it fixable.
-      const isDuplicate = names.length > 1;
+      // A group holding more than one bot is EITHER a declared experiment pair OR a duplication
+      // fault, and those two used to be reported identically (#1212).
+      //
+      // ⚠️ MEASURED 2026-11-06. `DAX Five Pound Target Bot` and `DAX Index Tick Scalp Bot` were
+      // warned about as "identical … should not both exist". They are not identical: the first was
+      // created by DUPLICATING the second (`duplicatedFromId` points at it) and its own description
+      // says *"IDENTICAL … except ONE field: takeProfitAmount = 5"* — it is a money-take-profit
+      // experiment whose control is the other bot. Deleting either would have destroyed the
+      // experiment, and the warning would have been the reason.
+      //
+      // ⚠️ AND the word "identical" was itself false: `takeProfitAmount` is NOT part of the hashed
+      // treatment, so two bots can share a key while differing in a money-moving exit parameter.
+      // `differingFields` below names every field that actually differs, so the message can stop
+      // claiming an equality it has not checked.
+      const pair = this.describePair(g.botIds, botById);
+      const isDuplicate = names.length > 1 && !pair.declared;
+      if (names.length > 1 && pair.declared) {
+        declaredPairs += 1;
+        this.logger.log(
+          `Declared experiment pair (${strategyKey}): ${names.join(' vs ')} — ${pair.copiedNames.join(', ')} was created by copying the control, and the pair differs only in [${pair.differingFields.join(', ') || 'nothing'}] (${pair.note}). Not a duplication fault.`,
+        );
+      }
       if (isDuplicate) {
         duplicateGroups += 1;
         this.logger.warn(
-          `Duplicate bots detected (${strategyKey}): ${names.join(' == ')} — identical protocol, role, market, broker and treatment. Per the owner's rule these should not both exist.`,
+          `Duplicate bots detected (${strategyKey}): ${names.join(' == ')} — same protocol, role, market, broker and execution policy, and NOT a declared copy${pair.differingFields.length ? `; they differ in [${pair.differingFields.join(', ')}]` : ''}. Per the owner's rule these should not both exist.`,
         );
       }
 
@@ -296,6 +375,9 @@ export class StrategyDerivationService {
         duplicateBotNames: names,
         unreachableBotNames: [...g.unreachableBotNames].sort(),
         copiedFromBotIds: [...g.copiedFromBotIds].sort(),
+        // #1212 — a declared experiment pair is reported, not warned about.
+        pairDeclared: pair.declared,
+        pairDifferingFields: pair.differingFields,
       };
     });
 
@@ -323,6 +405,7 @@ export class StrategyDerivationService {
       totalStrategies: strategies.length,
       totalBots: bots.length,
       duplicateGroups,
+      declaredPairs,
       orphans: orphans.sort(),
       derivedAt: new Date().toISOString(),
       definition:
@@ -348,88 +431,326 @@ export class StrategyDerivationService {
     brokerId: string,
     treatment: StrategyTreatment,
   ): string {
-    const payload = JSON.stringify({
-      protocolId,
-      role,
-      symbol,
-      brokerId,
-      treatment: this.canonicalise(treatment),
-    });
-    return createHash('sha256').update(payload).digest('hex').slice(0, 16);
+    // Delegates to the module-level pure function so a migration script hashes EXACTLY the same
+    // payload. Two implementations of this hash would drift, and a drifted key is indistinguishable
+    // from a changed configuration (#1224).
+    return computeStrategyKey(protocolId, role, symbol, brokerId, treatment);
   }
 
-  /** Extract the treatment (execution policy) from a bot row. */
-  private treatmentOf(bot: BotRow): StrategyTreatment {
+  /**
+   * describePair() — is this group a DECLARED experiment pair, and what actually differs? (#1212)
+   *
+   * ── DECISION (2026-11-06, primary) ──
+   * WHAT:      A group of >1 bot sharing a strategy key is an EXPERIMENT PAIR when there is exactly
+   *            one root and every other member's `duplicatedFromId` points inside the group. It is
+   *            reported at LOG and counted in `declaredPairs`. Anything else stays a fault.
+   * WHY:       The measured group was `DAX Five Pound Target Bot` vs `DAX Index Tick Scalp Bot` —
+   *            the first created BY COPYING the second, differing only in `takeProfitAmount` (5 vs
+   *            null). The old verdict ("identical … should not both exist") would have had someone
+   *            delete one arm of a money-take-profit experiment.
+   * INSTEAD OF: Deleting, merging or deactivating one bot — which is what the issue proposed as the
+   *            first option, and what the boot warning invited.
+   * REVERSE BY: Treat `duplicatedFromId` as non-significant (always return `declared: false`). The
+   *            pair then reads as a fault again, which is the old behaviour.
+   * REGISTER:  docs/SETTLED-DECISIONS.md row 153
+   * GUARD:     strategy-derivation.pair.spec.ts (6 tests, canaried both ways) — forcing the pair
+   *            check to fail turns 3 of them red.
+   *
+   * ⚠️ THE MEASURED CASE. `DAX Five Pound Target Bot` groups with `DAX Index Tick Scalp Bot`: same
+   * protocol, role, market, broker and hashed treatment. The detector called them "identical … should
+   * not both exist". Both statements were wrong:
+   *
+   *   - `duplicatedFromId` on the second points at the first — it was created BY COPYING it, which is
+   *     how an experiment is authored, not how a duplicate is accidentally made;
+   *   - they differ in `takeProfitAmount` (5 vs null). That field is **not** in the hashed treatment,
+   *     so the group could not see the difference it was claiming did not exist.
+   *
+   * ⚠️ It is deliberately NOT a licence for two free-running bots. Anything that does not match this
+   * shape is still a duplication fault, and the message now names the fields that differ rather than
+   * asserting equality it has not checked.
+   */
+  private describePair(
+    botIds: Map<string, string>,
+    botById: Map<string, BotRow>,
+  ): { declared: boolean; copiedNames: string[]; differingFields: string[]; note: string } {
+    const members = [...botIds.keys()].map((id) => botById.get(id)).filter((b): b is BotRow => !!b);
+    const none = { declared: false, copiedNames: [] as string[], differingFields: [] as string[], note: '' };
+    if (members.length < 2) return none;
+
+    const inGroup = new Set(members.map((b) => b.id));
+    const roots = members.filter((b) => !b.duplicatedFromId || !inGroup.has(b.duplicatedFromId));
+    const copied = members.filter((b) => b.duplicatedFromId && inGroup.has(b.duplicatedFromId));
+
+    const differingFields = this.differingFields(members);
+
+    if (roots.length !== 1 || copied.length !== members.length - 1) {
+      return {
+        declared: false,
+        copiedNames: copied.map((b) => b.name),
+        differingFields,
+        note: `not a declared copy (${roots.length} root(s), ${copied.length} copied)`,
+      };
+    }
+
     return {
-      minComposite: bot.minComposite,
-      baseSize: bot.baseSize,
-      slPct: bot.slPct,
-      tpPct: bot.tpPct,
-      maxHoldHours: bot.maxHoldHours,
-      cooldownMinutes: bot.cooldownMinutes,
-      maxPyramidTiers: bot.maxPyramidTiers,
-      timeframe: bot.timeframe,
-      sessionWindow: bot.sessionWindow,
-      exitBeforeUtc: bot.exitBeforeUtc ?? null,
-      mode: bot.mode,
-      maxPositions: bot.maxPositions,
-      maxDailyLoss: bot.maxDailyLoss,
-      useRaritySizing: bot.useRaritySizing,
-      maxSize: bot.maxSize,
+      declared: true,
+      copiedNames: copied.map((b) => b.name),
+      differingFields,
+      note: `control: ${roots[0].name}`,
     };
   }
 
   /**
-   * canonicalise() — normalise the treatment so the hash is STABLE.
+   * Fields two bots in the SAME group can differ in.
    *
-   * Two hazards this closes:
-   *  1. Integer/float drift — MySQL may hand back `1` where another row holds `1.0`. Both must
-   *     hash identically or the SAME configuration splits into two strategies, inventing a
-   *     difference that does not exist.
-   *  2. Key ordering — `JSON.stringify` follows insertion order, so an object built by a different
-   *     code path would hash differently.
-   * `null` is preserved as an explicit marker: NULL means "no limit" (#773), which is a DIFFERENT
-   * configuration from any numeric value, and must not be coerced to 0.
+   * ⚠️ Since v2 (#1224) these are the fields the KEY still excludes — everything else that changes
+   * behaviour is hashed, so two bots cannot share a key while differing in an exit or a size. The
+   * list therefore shrank to the deliberately-unkeyed columns, and it is the SAME declaration the
+   * coverage spec checks (`DECLARED_UNKEYED_FIELDS`), so it cannot go stale in either direction.
+   *
+   * ⚠️ The previous version of this list also named `mode`, `maxHoldHours` and `maxSize` — three
+   * fields the key ALREADY hashed. It was reported as "they differ in [mode]" while mode was part
+   * of the hash, i.e. a message that lied about the thing it was describing. Removed by deriving
+   * the list rather than maintaining it.
    */
-  private canonicalise(t: StrategyTreatment): Record<string, string> {
-    const num = (v: number | null | undefined): string => (v === null || v === undefined ? 'null' : Number(v).toFixed(6));
-    // ⚠️ Hazard 3 — `sessionWindow` has TWO storage forms. Measured 2026-09-18: 9 bots store a bare
-    // `london`, 3 store `["london"]`. The schema declares both valid and the engine parses them
-    // identically, so they MUST hash identically — otherwise two bots that behave the same are
-    // reported as two different strategies. `parseSessionWindow` is the CANONICAL parser: it folds
-    // both forms AND resolves aliases (`sydney` -> `asian`, `zurich` -> `london`). Do not hand-roll
-    // this — a second implementation would drift from the one the engine actually uses.
-    const tags = parseSessionWindow(t.sessionWindow).slice().sort();
-    const out: Record<string, string> = {
-      baseSize: num(t.baseSize),
-      cooldownMinutes: num(t.cooldownMinutes),
-      maxDailyLoss: num(t.maxDailyLoss),
-      maxHoldHours: num(t.maxHoldHours),
-      maxPositions: num(t.maxPositions),
-      maxPyramidTiers: num(t.maxPyramidTiers),
-      maxSize: num(t.maxSize),
-      minComposite: num(t.minComposite),
-      mode: String(t.mode),
-      // `ungated` is a real declared state (NULL = may act any time), distinct from any tag list.
-      sessionWindow: tags.length ? tags.join(',') : 'ungated',
-      // #928 — CANONICALISED through the parser, never the raw string. `'13:30'` and `' 13:30 '`
-      // must key identically or the whitespace invents a strategy that does not exist — the same
-      // reason `sessionWindow` is normalised one line above. An unreadable value keys as
-      // `invalid:<raw>` rather than collapsing into `none`, so a typo is a DIFFERENT strategy
-      // rather than silently the same as having no rule at all.
-      exitBeforeUtc: (() => {
-        const p = parseExitBoundary(t.exitBeforeUtc);
-        if (p.kind === 'none') return 'none';
-        return p.kind === 'at'
-          ? `${String(Math.floor(p.minutes / 60)).padStart(2, '0')}:${String(p.minutes % 60).padStart(2, '0')}`
-          : `invalid:${String(p.raw)}`;
-      })(),
-      slPct: num(t.slPct),
-      timeframe: String(t.timeframe),
-      tpPct: num(t.tpPct),
-      useRaritySizing: String(Boolean(t.useRaritySizing)),
-    };
-    // Fixed key order — see hazard 2 above.
-    return Object.fromEntries(Object.keys(out).sort().map((k) => [k, out[k]]));
+  private differingFields(members: BotRow[]): string[] {
+    const fields = [...Object.keys(DECLARED_UNKEYED_FIELDS), ...TREATMENT_FIELD_NAMES];
+    const out: string[] = [];
+    for (const field of fields) {
+      // Always differ, or already reported by `pairDeclared` itself.
+      if (field === 'id' || field === 'name' || field === 'duplicatedFromId') continue;
+      const values = new Set(
+        members.map((m) => {
+          const v = (m as unknown as Record<string, unknown>)[field];
+          return v === null || v === undefined ? 'null' : String(v);
+        }),
+      );
+      if (values.size > 1) out.push(field);
+    }
+    return out;
   }
+
+  /** Extract the treatment (execution policy) from a bot row. */
+  private treatmentOf(bot: BotRow): StrategyTreatment {
+    return buildTreatment(bot);
+  }
+
+  private canonicalise(t: StrategyTreatment): Record<string, string> {
+    return canonicaliseTreatment(t);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+// IDENTITY — extracted as PURE functions so a migration script can compute a key without booting
+// Nest. A second implementation of the hash would drift from this one, and a drifted key looks
+// exactly like a changed configuration (#1224).
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ⚠️ KEY VERSION — bumped when the hashed payload changes shape.
+ *
+ * v1 (implicit, until 2026-11-07): protocol + role + symbol + broker + a treatment that OMITTED
+ * every money field — no takeProfitAmount, no sizingModel/sizingRiskPct, no simulated trailing
+ * stop, no exhaustion observation, no hot-stock allocation, no shortProtocolId, no
+ * scoringStrategyId, no requireDirection/minRarityBand.
+ *
+ * v2 (2026-11-07, #1224): every field that changes an EXIT, a SIZE, or the MONEY COMMITTED is part
+ * of the identity. Measured cost of v1: `DAX Five Pound Target Bot` and `DAX Index Tick Scalp Bot`
+ * hashed IDENTICALLY while differing in takeProfitAmount (5 vs null) — two different exit policies
+ * wearing one identity.
+ *
+ * The prefix is not decoration: it lets the migration script (and a future reader) tell which
+ * scheme a stored key came from instead of guessing from a 16-character hex string.
+ */
+export const KEY_VERSION = 2;
+
+/**
+ * The identity RULE, in one sentence, because #1224's first acceptance item is that it be written
+ * down rather than inferred from a field list:
+ *
+ *   A strategy is protocol + role + market + broker + EVERY field that changes what the bot does
+ *   with money — when it enters, how much it commits, and when or how it exits.
+ *
+ * A field that only names, describes or schedules the bot (name, description, active, version,
+ * magic, theory) is not identity. Everything else must be classified — by `KEYED_FIELDS`,
+ * `DECLARED_UNKEYED_FIELDS` or the bot columns read by `buildTreatment` — or the coverage spec
+ * fails the build.
+ */
+export const IDENTITY_RULE =
+  'protocol + role + market + broker + every field that changes an exit, a size, or the money committed';
+
+/**
+ * The columns hashed at the TOP LEVEL of the payload rather than inside `treatment` — `role` is the
+ * fourth, and it is not a column (it comes from the protocol link). Declared so the coverage guard
+ * knows they are identity rather than unclassified.
+ */
+export const IDENTITY_TOP_LEVEL_COLUMNS = ['protocolId', 'symbol', 'brokerId'] as const;
+
+/**
+ * Bot columns that are deliberately NOT identity, with the reason attached.
+ *
+ * ⚠️ This replaced `UNKEYED_FIELDS`, which had the opposite job and the opposite defect: it was a
+ * hand-maintained list of what the key IGNORED, so it went stale silently and it also listed
+ * `mode`, `maxHoldHours` and `maxSize` — three fields the key already hashed. A list that lies
+ * about what is unkeyed is worse than no list. This one is checked against the key by the coverage
+ * spec, so it cannot claim a field the key uses.
+ */
+export const DECLARED_UNKEYED_FIELDS: Record<string, string> = {
+  id: 'the row key, not the configuration',
+  name: 'a label the owner can change without changing behaviour',
+  slug: 'a URL-safe label',
+  description: 'prose',
+  active: 'whether it is running, not what it does — one configuration can be on or off',
+  createdAt: 'bookkeeping',
+  updatedAt: 'bookkeeping',
+  version: 'a schema/seed version stamp',
+  duplicatedFromId: 'provenance: says who copied whom, not what either does',
+  magic: 'per-ORDER attribution (#1018); two bots differ in magic by construction',
+  theory: 'prose',
+  theoryKind: 'prose category',
+};
+
+/** Extract the treatment from a bot row. Pure, so a script can use the SAME extraction. */
+export function buildTreatment(bot: any): StrategyTreatment {
+  return {
+    minComposite: bot.minComposite,
+    minRarityBand: bot.minRarityBand ?? null,
+    requireDirection: bot.requireDirection ?? null,
+    baseSize: bot.baseSize,
+    slPct: bot.slPct,
+    tpPct: bot.tpPct,
+    takeProfitAmount: bot.takeProfitAmount ?? null,
+    sizingModel: bot.sizingModel ?? null,
+    sizingRiskPct: bot.sizingRiskPct ?? null,
+    allocationAmount: bot.allocationAmount ?? null,
+    shortProtocolId: bot.shortProtocolId ?? null,
+    scoringStrategyId: bot.scoringStrategyId ?? null,
+    simTslEnabled: Boolean(bot.simTslEnabled),
+    simTslActivationPct: bot.simTslActivationPct ?? null,
+    simTslDistancePct: bot.simTslDistancePct ?? null,
+    exhaustionObserveEnabled: Boolean(bot.exhaustionObserveEnabled),
+    exhaustionDecelPct: bot.exhaustionDecelPct ?? null,
+    hotStockEnabled: Boolean(bot.hotStockEnabled),
+    hotStockAllocation: bot.hotStockAllocation ?? null,
+    hotStockMaxHoldHours: bot.hotStockMaxHoldHours ?? null,
+    hotStockDetectionMode: bot.hotStockDetectionMode ?? null,
+    maxHoldHours: bot.maxHoldHours,
+    cooldownMinutes: bot.cooldownMinutes,
+    maxPyramidTiers: bot.maxPyramidTiers,
+    timeframe: bot.timeframe,
+    sessionWindow: bot.sessionWindow,
+    exitBeforeUtc: bot.exitBeforeUtc ?? null,
+    mode: bot.mode,
+    maxPositions: bot.maxPositions,
+    maxDailyLoss: bot.maxDailyLoss,
+    useRaritySizing: bot.useRaritySizing,
+    maxSize: bot.maxSize,
+  };
+}
+
+/**
+ * The treatment field NAMES, derived from `buildTreatment` itself.
+ *
+ * ⚠️ Derived, never hand-written: a field added to `buildTreatment` joins the identity AND this
+ * list in one edit, so the duplicate message cannot report a field the key hashes (which is what
+ * the old hand-written `UNKEYED_FIELDS` did with `mode`, `maxHoldHours` and `maxSize`).
+ */
+export const TREATMENT_FIELD_NAMES: string[] = Object.keys(buildTreatment({}));
+
+/**
+ * canonicaliseTreatment() — normalise the treatment so the hash is STABLE.
+ *
+ * Two hazards this closes:
+ *  1. Integer/float drift — MySQL may hand back `1` where another row holds `1.0`. Both must
+ *     hash identically or the SAME configuration splits into two strategies, inventing a
+ *     difference that does not exist.
+ *  2. Key ordering — `JSON.stringify` follows insertion order, so an object built by a different
+ *     code path would hash differently.
+ * `null` is preserved as an explicit marker: NULL means "no limit" (#773), which is a DIFFERENT
+ * configuration from any numeric value, and must not be coerced to 0.
+ */
+export function canonicaliseTreatment(t: StrategyTreatment): Record<string, string> {
+  const num = (v: number | null | undefined): string => (v === null || v === undefined ? 'null' : Number(v).toFixed(6));
+  const text = (v: string | null | undefined): string => (v === null || v === undefined ? 'null' : String(v));
+  const flag = (v: boolean | null | undefined): string => String(Boolean(v));
+  // ⚠️ Hazard 3 — `sessionWindow` has TWO storage forms. Measured 2026-09-18: 9 bots store a bare
+  // `london`, 3 store `["london"]`. The schema declares both valid and the engine parses them
+  // identically, so they MUST hash identically — otherwise two bots that behave the same are
+  // reported as two different strategies. `parseSessionWindow` is the CANONICAL parser: it folds
+  // both forms AND resolves aliases (`sydney` -> `asian`, `zurich` -> `london`). Do not hand-roll
+  // this — a second implementation would drift from the one the engine actually uses.
+  const tags = parseSessionWindow(t.sessionWindow).slice().sort();
+  const out: Record<string, string> = {
+    allocationAmount: num(t.allocationAmount),
+    baseSize: num(t.baseSize),
+    cooldownMinutes: num(t.cooldownMinutes),
+    exhaustionDecelPct: num(t.exhaustionDecelPct),
+    exhaustionObserveEnabled: flag(t.exhaustionObserveEnabled),
+    hotStockAllocation: num(t.hotStockAllocation),
+    hotStockDetectionMode: text(t.hotStockDetectionMode),
+    hotStockEnabled: flag(t.hotStockEnabled),
+    hotStockMaxHoldHours: num(t.hotStockMaxHoldHours),
+    maxDailyLoss: num(t.maxDailyLoss),
+    maxHoldHours: num(t.maxHoldHours),
+    maxPositions: num(t.maxPositions),
+    maxPyramidTiers: num(t.maxPyramidTiers),
+    maxSize: num(t.maxSize),
+    minComposite: num(t.minComposite),
+    minRarityBand: text(t.minRarityBand),
+    mode: String(t.mode),
+    requireDirection: text(t.requireDirection),
+    scoringStrategyId: text(t.scoringStrategyId),
+    // `ungated` is a real declared state (NULL = may act any time), distinct from any tag list.
+    sessionWindow: tags.length ? tags.join(',') : 'ungated',
+    // #928 — CANONICALISED through the parser, never the raw string.
+    exitBeforeUtc: (() => {
+      const p = parseExitBoundary(t.exitBeforeUtc);
+      if (p.kind === 'none') return 'none';
+      return p.kind === 'at'
+        ? `${String(Math.floor(p.minutes / 60)).padStart(2, '0')}:${String(p.minutes % 60).padStart(2, '0')}`
+        : `invalid:${String(p.raw)}`;
+    })(),
+    shortProtocolId: text(t.shortProtocolId),
+    simTslActivationPct: num(t.simTslActivationPct),
+    simTslDistancePct: num(t.simTslDistancePct),
+    simTslEnabled: flag(t.simTslEnabled),
+    sizingModel: text(t.sizingModel),
+    sizingRiskPct: num(t.sizingRiskPct),
+    slPct: num(t.slPct),
+    takeProfitAmount: num(t.takeProfitAmount),
+    timeframe: String(t.timeframe),
+    tpPct: num(t.tpPct),
+    useRaritySizing: String(Boolean(t.useRaritySizing)),
+  };
+  // Fixed key order — see hazard 2 above.
+  return Object.fromEntries(Object.keys(out).sort().map((k) => [k, out[k]]));
+}
+
+/**
+ * computeStrategyKey() — the identity hash, pure so it can be migrated and tested without Nest.
+ *
+ * ⚠️ `symbol` and `brokerId` are INCLUDED, deliberately. A previous version excluded them on the
+ * reasoning that "symbols are scope, not identity", which collapsed six FX markets into one
+ * strategy. The owner's rule: *"Different markets. Is different configuration therefore the end
+ * result is a unique strategy."*
+ *
+ * Returns `v2:<16 hex>`. Version-1 keys carry no prefix, so a stored key self-identifies.
+ */
+export function computeStrategyKey(
+  protocolId: string,
+  role: string,
+  symbol: string,
+  brokerId: string,
+  treatment: StrategyTreatment,
+  version: number = KEY_VERSION,
+): string {
+  const payload = JSON.stringify({
+    v: version,
+    protocolId,
+    role,
+    symbol,
+    brokerId,
+    treatment: canonicaliseTreatment(treatment),
+  });
+  return `v${version}:${createHash('sha256').update(payload).digest('hex').slice(0, 16)}`;
 }

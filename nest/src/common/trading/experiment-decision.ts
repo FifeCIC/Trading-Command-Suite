@@ -58,6 +58,7 @@ export type ExperimentAction =
   | 'UNMEASURED'    // a side's sample was never recorded: "not measured" is not "no trades"
   | 'DECIDE'        // the sample cleared the bar: name the winner and act on it
   | 'INCONCLUSIVE'  // the review date passed without a usable sample: close it, say why
+  | 'PAUSED-MARKET' // the symbol's market is shut: no trade CAN close, and that is not a fault
   | 'STALLED'       // no new closed trade for `stallDays`: fix it or kill it
   | 'RUNNING';      // genuinely collecting: leave it alone
 
@@ -85,6 +86,16 @@ export interface ExperimentFacts {
   measurable?: boolean | null;
   /** Only meaningful at DECIDE. `null` when the winner is not determinable. */
   winner?: string | null;
+  /**
+   * Is the symbol's market OPEN right now? `null` = cannot judge (mixed symbols, unknown class).
+   *
+   * ⚠️ Added 2026-11-06 after the rule cried wolf. MEASURED: on Friday 2026-11-06 at 23:27 UTC every
+   * FX/metal/index protocol had stopped scoring at 21:59:5x — the Friday close — while crypto was
+   * still scoring seconds earlier. The rule had no way to tell "shut" from "stopped", so a new
+   * experiment on GBPUSD was reported `STALLED` within minutes of being created. A guard that fires
+   * every weekend is a guard that gets ignored by Monday.
+   */
+  marketOpen?: boolean | null;
 }
 
 export interface ExperimentDecision {
@@ -105,6 +116,29 @@ export interface ExperimentDecision {
 }
 
 const DAY_MS = 86_400_000;
+
+/**
+ * isMarketOpenNow() — the smallest honest answer to "can a trade close right now?".
+ *
+ * ⚠️ DELIBERATELY SMALL, and it does NOT try to be a trading calendar:
+ *   • `crypto` trades 24/7 → always open.
+ *   • every other class → closed on Saturday/Sunday (UTC), open otherwise.
+ *   • an unknown class → `null` (cannot judge), never a guess.
+ *
+ * It is NOT a holiday calendar, and it does not model the Friday 22:00 UTC FX close. That is a
+ * stated limitation, not an oversight: the only thing this flag changes is whether a 7-day quiet
+ * period is reported as STALLED, so a few hours either side of a close cannot flip the answer.
+ * MEASURED 2026-11-06: FX/metal/index scoring stopped at 21:59:5x on a Friday while crypto kept
+ * scoring — that is the case this exists for.
+ */
+export function isMarketOpenNow(assetType: string | null | undefined, now: Date): boolean | null {
+  const t = String(assetType ?? '').trim().toLowerCase();
+  if (!t) return null;
+  if (t === 'crypto') return true;
+  const day = now.getUTCDay(); // 0 Sunday … 6 Saturday
+  return day !== 0 && day !== 6;
+}
+
 
 function daysBetween(a: Date, b: Date): number {
   return Math.floor((a.getTime() - b.getTime()) / DAY_MS);
@@ -344,7 +378,22 @@ export function decideExperiment(facts: ExperimentFacts): ExperimentDecision {
     };
   }
 
-  // 7. Stopped moving.
+  // 7. The market is SHUT. Nothing is wrong and nothing can be collected — say so, and do not
+  //    blame the experiment. ⚠️ This sits BELOW INCONCLUSIVE on purpose: a dead-line that has
+  //    passed is a real missed promise and must still be reported, however shut the market is.
+  if (facts.marketOpen === false) {
+    return {
+      ...base,
+      action: 'PAUSED-MARKET',
+      reason:
+        `The symbol's market is closed, so no trade can close (${nText}). ` +
+        'This is not a fault and not a stall — weekend or venue closure.',
+      nextStep:
+        'Nothing to do: it resumes when the market reopens. Judge it only on days the market was open, and do not count closed days against the review date.',
+    };
+  }
+
+  // 8. Stopped moving.
   if (facts.lastSampleAt) {
     const idleDays = daysBetween(facts.now, facts.lastSampleAt);
     if (idleDays >= EXPERIMENT_RULES.stallDays) {

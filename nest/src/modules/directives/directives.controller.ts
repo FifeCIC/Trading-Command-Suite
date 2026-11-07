@@ -295,6 +295,11 @@ export class DirectivesController {
       performance: (!dbActive || (isStub && (d as any).readiness !== 'ready')) ? 'underperforming' : (st?.count ? (st.totalScore / st.count >= 50 ? 'healthy' : 'weak') : 'unknown'),
       // ── Directive nature (#289) — DB value first, fallback to defaults ──
       nature: dbNatures.get(d.id) || DEFAULT_NATURE[d.id] || 'predictive',
+      // ── Capacity and formula — needed by the registry rail, which rendered "its maxScore" and
+      //    showed the DESCRIPTION a second time under a heading called "Formula". The viewer
+      //    endpoint already returned both; the list did not, so the rail had nothing to display. ──
+      maxScore: d.maxScore ?? null,
+      formula: (d as any).formula ?? null,
       // ── Merged stats ──
       avgScore: st?.count ? Math.round(st.totalScore / st.count) : null,
       runs: st?.count ?? null,
@@ -439,6 +444,13 @@ export class DirectivesController {
       readiness: dbMeta.readiness || (directive as any).readiness || 'alpha',
       nature: dbMeta.nature,
       directionBias: (directive as any).directionBias ?? 'neutral',
+      // ── DIRECTION CAPABILITY — the FACT beside the declaration, same shape as the list endpoint ──
+      // ⚠️ `directionBias` is what the class DECLARES. Measured 2026-11-02: ten directives declare a
+      // bias their code does not do. A composed view needs to know whether this directive can
+      // contribute to the side being built — `'none'` means its maxScore is capacity that can never be
+      // earned, and it still occupies the signal denominator (#1131).
+      direction: DIRECTIVE_DIRECTION[directive.id]?.direction ?? 'unknown',
+      sharedInputs: DIRECTIVE_DIRECTION[directive.id]?.sharedInputs ?? [],
       complexity: (directive as any).complexity,
       requiredDataFeeds: (directive as any).requiredDataFeeds ?? [],
       formula: (directive as any).formula,

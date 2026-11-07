@@ -2,6 +2,7 @@ import { Fragment, useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
+import DirectiveScoringNote from '../components/DirectiveScoringNote'
 import LoadingSkeleton from '../components/LoadingSkeleton'
 import './directives-manager.css'
 
@@ -42,10 +43,17 @@ function hydrateFromApi(raw) {
     complexity: raw.complexity?.label ?? 'Basic',
     protocolCount: raw.protocolCount ?? 0,
     baseWeight: raw.priority ?? 50,
+    // ⚠️ `priority` was NEVER carried across — only `baseWeight` (which is the same API number under
+    // a second name). The rail's Priority row read `selected.priority` and rendered nothing, and its
+    // drag handle was hardcoded to "5" while the real value is 85 for rsi-oversold.
+    priority: raw.priority ?? 50,
+    // The API's `formula` is a genuine field. It used to be filled with `description`, which is why
+    // the rail showed the same paragraph twice — once under "What it does" and again under "Formula".
+    formula: raw.formula ?? '',
+    maxScore: raw.maxScore ?? null,
     boostEnabled: false,
     multiplierEnabled: false,
     testCoverage: 0,
-    formula: raw.description ?? '',
     inputs: [],
     tests: [],
     owner: 'System',
@@ -58,6 +66,9 @@ function hydrateFromApi(raw) {
     avgScore: raw.avgScore ?? null,
     runs: raw.runs ?? null,
     bias: raw.directionBias ?? null,
+    // The note needs the DECLARED bias under its own name to report a disagreement ("it declares
+    // `bullish`"). It was only carried as `bias`, so the note silently dropped that clause.
+    directionBias: raw.directionBias ?? null,
     // ── What the code ACTUALLY does, derived from its own literals (server-side) ──
     // `bias` above is a DECLARATION and can be wrong; measured 2026-11-02, ten directives declare
     // something their source does not do. Both are shown, side by side, so the disagreement is
@@ -465,32 +476,57 @@ export default function DirectivesManagerPage() {
                 </div>
               </header>
 
+              {/* ⚠️ The description was only ever shown under the heading "Formula", mixed with formula
+                  text, and the rail never said what a "no direction" directive does. The owner asked
+                  directly (2026-11-06) because the page that lists all 144 of them answered it
+                  nowhere. The dilution it describes is #1122. */}
+              {selected.description && (
+                <section className="directive-detail-section">
+                  <h3>What it does</h3>
+                  <p className="directive-detail-description">{selected.description}</p>
+                </section>
+              )}
+
+              <DirectiveScoringNote
+                direction={selected.direction}
+                directionBias={selected.directionBias}
+                maxScore={selected.maxScore}
+              />
+
+              {/* ⚠️ Both rows used to be DRAG HANDLES with no `onChange` — they could not change
+                  anything. The Priority handle was hardcoded to `5` while the real value is 85 for
+                  rsi-oversold, and "Weight" re-displayed the SAME number under a second name
+                  (`baseWeight: raw.priority`). A control that changes nothing next to a number that
+                  is not the value are one defect: the rail stated things about the directive that
+                  were not true. Plain values from the payload now. */}
               <section className="directive-detail-section">
                 <h3>Defaults</h3>
                 <div className="directive-detail-defaults">
                   <div>
                     <span className="directive-detail-label">Priority</span>
                     <div className="directive-slider-row">
-                      <input type="range" min="1" max="10" defaultValue="5" className="directive-slider" />
-                      <span>5</span>
+                      <span className="directive-detail-value">{selected.priority ?? '—'}</span>
                     </div>
                   </div>
                   <div>
-                    <span className="directive-detail-label">Weight</span>
+                    <span className="directive-detail-label">Max score</span>
                     <div className="directive-slider-row">
-                      <input type="range" min="1" max="100" defaultValue={selected.baseWeight} className="directive-slider" />
-                      <span>{selected.baseWeight}</span>
+                      <span className="directive-detail-value">
+                        {selected.maxScore == null ? '—' : `${selected.maxScore} pts`}
+                      </span>
                     </div>
                   </div>
                 </div>
               </section>
 
-              <section className="directive-detail-section">
-                <h3>Formula</h3>
-                <p style={{ fontSize: '0.82rem', color: 'var(--ink-soft)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                  {selected.description || selected.formula || 'No formula description available.'}
-                </p>
-              </section>
+              {selected.formula && (
+                <section className="directive-detail-section">
+                  <h3>Formula</h3>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--ink-soft)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                    {selected.formula}
+                  </p>
+                </section>
+              )}
 
               <section className="directive-detail-section">
                 <h3>Actions</h3>

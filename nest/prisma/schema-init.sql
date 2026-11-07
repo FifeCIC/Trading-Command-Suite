@@ -196,7 +196,7 @@ CREATE TABLE `BacktestRun` (
     `scoresJson` LONGTEXT NULL,
     `winRate` DOUBLE NOT NULL,
     `totalPnl` DOUBLE NOT NULL,
-    `profitFactor` DOUBLE NOT NULL,
+    `profitFactor` DOUBLE NULL,
     `tradeProfitFactor` DOUBLE NULL,
     `sharpeRatio` DOUBLE NOT NULL,
     `maxDrawdown` DOUBLE NOT NULL,

@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 217,
+  "count": 220,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -28,6 +28,16 @@
       "selfTest": true,
       "reaches": [
         "npm"
+      ]
+    },
+    {
+      "name": "audit-code-health.cjs",
+      "where": "repo",
+      "category": "audit",
+      "purpose": "© 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite",
+      "selfTest": true,
+      "reaches": [
+        "docs"
       ]
     },
     {
@@ -67,6 +77,17 @@
       "purpose": "M1 (#1166) evidence extractor. REV 3.",
       "selfTest": false,
       "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "audit-future-rows.cjs",
+      "where": "repo",
+      "category": "audit",
+      "purpose": "INV-NO-FUTURE-ROWS: is any stored timestamp IMPOSSIBLE? (#1214)",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
         "npm"
       ]
     },
@@ -959,6 +980,16 @@
       "selfTest": false,
       "reaches": [
         "docs"
+      ]
+    },
+    {
+      "name": "migrate-strategy-keys.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "move `strategy_registry` rows from key v1 to v2 (#1224).",
+      "selfTest": true,
+      "reaches": [
+        "npm"
       ]
     },
     {

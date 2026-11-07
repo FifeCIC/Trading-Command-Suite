@@ -7,21 +7,77 @@ const API = '/api';
 const SYMBOLS = ['EURUSD', 'GBPUSD', 'USDCAD', 'XAUUSD', 'USDJPY', 'US500', 'BTC-USD'];
 const TIMEFRAMES = ['5m', '15m', '1h'];
 
+/**
+ * FALLBACK_PAIR — the pair this page used to hardcode, kept so the inspector still runs when the
+ * protocol list cannot be read. A picker that empties itself because one request failed would hide
+ * the feature rather than degrade it.
+ */
+const FALLBACK_PAIR = { key: 'mt5-technical-core-v1', long: 'mt5-technical-core-v1-long', short: 'default-short' };
+
+/**
+ * pairsFrom(protocols) — group protocols into LONG × SHORT pairs.
+ *
+ * ⚠️ THE PAIR IS THE THING BEING COMPARED, NOT THE SYMBOL (owner, 2026-11-07: *"change this menu to
+ * contain protocol pairs"*). The ids follow `<base>-long` / `<base>-short`, so the base is the pair's
+ * identity. A base with only one side is still offered — comparing a live protocol against the
+ * fallback short is exactly what this page was doing before, and hiding it would remove a case that
+ * works.
+ */
+function pairsFrom(protocols) {
+  const byBase = new Map();
+  for (const p of protocols || []) {
+    const id = p.protocolId || p.id || p.slug;
+    if (!id) continue;
+    const base = id.replace(/-(long|short)$/i, '');
+    const entry = byBase.get(base) || { key: base, label: p.name || base };
+    if (/-short$/i.test(id)) entry.short = id; else entry.long = id;
+    byBase.set(base, entry);
+  }
+  return [...byBase.values()]
+    .filter((e) => e.long || e.short)
+    .map((e) => ({ ...e, long: e.long || e.short, short: e.short || e.long }))
+    .sort((a, b) => a.key.localeCompare(b.key));
+}
+
 export default function ScoringDebugLab() {
   const [symbol, setSymbol] = useState('EURUSD');
   const [timeframe, setTimeframe] = useState('5m');
   const [barCount, setBarCount] = useState(100);
+  const [pairs, setPairs] = useState([FALLBACK_PAIR]);
+  const [pairKey, setPairKey] = useState(FALLBACK_PAIR.key);
+  const [search, setSearch] = useState('');
   const [longResult, setLongResult] = useState(null);
   const [shortResult, setShortResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  /** The chosen pair, falling back to the first option so a stale selection cannot empty the page. */
+  const activePair = pairs.find((p) => p.key === pairKey) || pairs[0] || FALLBACK_PAIR;
+
+  /* Protocol list → pairs. Fail-open: a failed read leaves the fallback pair in place. */
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API}/scoring/protocols`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((list) => {
+        if (cancelled) return;
+        const found = pairsFrom(Array.isArray(list) ? list : list?.protocols);
+        if (found.length) setPairs(found);
+      })
+      .catch(() => { /* keep the fallback pair — see FALLBACK_PAIR */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  const filteredPairs = pairs.filter((p) => (
+    !search.trim() || `${p.key} ${p.label || ''} ${p.long} ${p.short}`.toLowerCase().includes(search.trim().toLowerCase())
+  ));
+
   const fetchScores = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params = `protocol=mt5-technical-core-v1-long&bars=${barCount}&timeframe=${timeframe}`;
-      const shortParams = `protocol=default-short&bars=${barCount}&timeframe=${timeframe}`;
+      const params = `protocol=${encodeURIComponent(activePair.long)}&bars=${barCount}&timeframe=${timeframe}`;
+      const shortParams = `protocol=${encodeURIComponent(activePair.short)}&bars=${barCount}&timeframe=${timeframe}`;
       const [l, s] = await Promise.all([
         fetch(`${API}/scoring/gated/${symbol}?${params}`).then(r => r.json()),
         fetch(`${API}/scoring/gated/${symbol}?${shortParams}`).then(r => r.json()),
@@ -32,7 +88,7 @@ export default function ScoringDebugLab() {
       setError(noticeFromError(err, 'TCS-SYS-007', { operation: 'load the gated scoring result' }));
     }
     setLoading(false);
-  }, [symbol, timeframe, barCount]);
+  }, [symbol, timeframe, barCount, activePair.long, activePair.short]);
 
   useEffect(() => { fetchScores(); }, [fetchScores]);
 
@@ -55,6 +111,30 @@ export default function ScoringDebugLab() {
 
       {/* Controls */}
       <div className="sdl-controls">
+        {/* ⚠️ SEARCH + PAIR PICKER (owner, 2026-11-07: *"Add a search to this bar … and change this menu
+            to contain protocol pairs"*). The bar used to offer a SYMBOL list while the two protocols
+            being compared were hardcoded in the fetch — so the one thing the page is named after was
+            the one thing that could not be chosen. Symbol stays (a score is per symbol); the PAIR is
+            now the primary selection and the search filters it. */}
+        <label>
+          Search
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Filter protocols…"
+            aria-label="Filter protocol pairs"
+          />
+        </label>
+        <label>
+          Protocol pair
+          <select value={activePair.key} onChange={(e) => setPairKey(e.target.value)}>
+            {filteredPairs.length === 0 && <option value={activePair.key}>No pair matches “{search}”</option>}
+            {filteredPairs.map((p) => (
+              <option key={p.key} value={p.key}>{p.key}</option>
+            ))}
+          </select>
+        </label>
         <label>
           Symbol
           <select value={symbol} onChange={e => setSymbol(e.target.value)}>

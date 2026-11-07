@@ -46,7 +46,7 @@ import { featureFlags } from './utils/featureFlags';
 import { NAV_TREE, getNavStructure } from './core/nav-tree';
 import { PLUGIN_TAB_SKELETONS } from './pages/plugin-tab-skeletons';
 import { VIEW_COMPONENTS } from './core/view-routes.jsx';
-import { filterHiddenViews, filterByExperience } from './core/hidden-views.js';
+import { filterHiddenViews, filterByExperience, OWNER_SEES_WITHHELD } from './core/hidden-views.js';
 import { useHiddenRoutes } from './core/hooks/useHiddenRoutes.js';
 import { usePreferences } from './core/hooks/usePreferences.js';
 
@@ -168,11 +168,11 @@ function AppShell({ directContent = null, directArea = null, directView = null }
   const { prefs } = usePreferences();
   const experienceLevel = prefs?.experienceLevel || 'beginner';
   const NAV_STRUCTURE = useMemo(
-    () => filterByExperience(filterHiddenViews(BASE_NAV_STRUCTURE, hiddenRoutes), experienceLevel),
+    () => filterByExperience(filterHiddenViews(BASE_NAV_STRUCTURE, hiddenRoutes, { keepWithheld: OWNER_SEES_WITHHELD }), experienceLevel),
     [hiddenRoutes, experienceLevel],
   );
   const EDITION_NAV_TREE = useMemo(
-    () => filterByExperience(filterHiddenViews(BASE_NAV_TREE, hiddenRoutes), experienceLevel),
+    () => filterByExperience(filterHiddenViews(BASE_NAV_TREE, hiddenRoutes, { keepWithheld: OWNER_SEES_WITHHELD }), experienceLevel),
     [hiddenRoutes, experienceLevel],
   );
   const { area, view, symbolId, ticker, strategyId } = useParams();
@@ -895,7 +895,15 @@ function AppShell({ directContent = null, directArea = null, directView = null }
             <button
               key={item.id}
               type="button"
-              className={secondaryView === item.id ? 'nav-active' : ''}
+              /* ⚠️ `rail-link--withheld` IS THE OWNER'S WORK QUEUE (2026-11-06): *"change the colour of
+                 the text in the menu for pages that will be hidden for other users so I know which ones
+                 still need work done to them the most."* It marks entries `filterHiddenViews` kept but
+                 tagged, so a coloured label means "everyone else cannot see this yet". */
+              className={[
+                secondaryView === item.id ? 'nav-active' : '',
+                item.withheld ? 'rail-link--withheld' : '',
+              ].filter(Boolean).join(' ')}
+              title={item.withheld ? 'Hidden from other users — needs work before release' : undefined}
               onClick={() => {
                 onSecondarySelect(item.id);
                 setMobileNavOpen(false);

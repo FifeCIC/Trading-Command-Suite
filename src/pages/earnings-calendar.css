@@ -140,3 +140,22 @@
 .ec-time-na { background: rgba(148,163,184,0.1); color: var(--ink-soft, var(--ink-soft)); }
 .ec-source { font-weight: 400; font-size: 0.72rem; opacity: 0.7; }
 .ec-time-badge { font-size: 0.62rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 999px; }
+
+/* ── Header stats (2026-11-06) ─────────────────────────────────────────────────────────────────────
+   The owner asked for the "5785 upcoming earnings reports from stored data …" sentence to go and the
+   figures to be shown instead. Three facts, three chips: count, source, refresh cadence. */
+.ec-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+.ec-stat {
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill, 999px);
+  background: var(--panel);
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+}
+.ec-stat strong { color: var(--ink); font-variant-numeric: tabular-nums; }

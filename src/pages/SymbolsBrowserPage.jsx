@@ -291,10 +291,9 @@ export default function SymbolsBrowserPage() {
     <main className="symbols-page">
       <header className="sb-page-header">
         <h1>Symbols Browser</h1>
-        <p>
-          {syms.length} symbol{syms.length !== 1 ? 's' : ''} in database ·
-          Showing {filtered.length} · Mode: {s.mode || '...'}
-        </p>
+        {/* ⚠️ THE STATUS LINE WAS REMOVED 2026-11-06 (owner, Research walkthrough: *"Remove <p>
+            262 symbols in database · Showing 262 · Mode: fallback"*). "Mode: fallback" is machine
+            chatter about the API, and the two counts restated the table directly below. */}
       </header>
 
       <section className="symbols-toolbar">

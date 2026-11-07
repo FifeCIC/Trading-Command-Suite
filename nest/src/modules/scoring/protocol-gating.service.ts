@@ -1,3 +1,13 @@
+/* ── PLANNED IN #1229 ──
+ * MISSING:  decomposition. Measured 2,280 lines, 1 function(s) over
+ *           60 lines (longest 65), comment ratio 49.0%.
+ * TODAY:    one file carrying several responsibilities. Nothing here is known to be broken — the
+ *           shape makes review and safe change expensive.
+ * WHEN BUILT: split by RESPONSIBILITY (not by line count), prove behaviour is unchanged, then
+ *           re-bank: node scripts/audit-code-health.cjs --write
+ * CODE-HEALTH-MARKER — written by scripts/audit-code-health.cjs; re-run it rather than editing.
+ */
+
 /**
  * ProtocolGatingService — STAGE 1b of the META.Stack pipeline.
  * =============================================================

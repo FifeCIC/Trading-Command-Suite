@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { AbTestService } from './ab-test.service';
 import {
   decideExperiment,
+  isMarketOpenNow,
   decideObjectiveReview,
   ExperimentDecision,
   ExperimentFacts,
@@ -187,6 +188,7 @@ export class ExperimentReviewService {
         canCollect,
         blockedReason,
         measurable: arms?.measurable ?? (verdict?.verdict === 'unmeasurable' ? false : null),
+        marketOpen: await this.symbolsMarketOpen(t.symbols, now),
         winner: verdict?.verdict === 'control-leads' ? 'control'
           : verdict?.verdict === 'variant-leads' ? 'variant'
             : null,
@@ -262,6 +264,8 @@ export class ExperimentReviewService {
         // ⚠️ `false` is a FINDING, not a formality: two bots that differ in nothing trade identically,
         // so the comparison can never produce a difference however long it runs.
         measurable: changedFields.length > 0,
+        // #1210 follow-up (2026-11-06): a shut market is not a stall.
+        marketOpen: isMarketOpenNow(await this.assetTypeOf(String(p.twinSymbol)), now),
         winner,
       });
     }
@@ -280,8 +284,37 @@ export class ExperimentReviewService {
     }
   }
 
-  /** Closed trades and realised P&L for one bot, by magic. `pnlInvalid` rows are excluded (#805). */
-  private async closedStatsForMagic(magic: number): Promise<{ n: number; pnl: number; lastAt: Date | null }> {
+  /** The `symbol.type` for a ticker: crypto / forex / index / stock / etf / commodity. */
+  private async assetTypeOf(ticker: string | null | undefined): Promise<string | null> {
+    const t = String(ticker ?? '').trim().toUpperCase();
+    if (!t) return null;
+    try {
+      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+        'SELECT type FROM symbol WHERE ticker = ?', t,
+      );
+      return rows?.[0]?.type ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Is the market open for an A/B test's symbols?
+   *
+   * ⚠️ A test can span symbols of different classes. If they disagree the answer is `null`
+   * ("cannot judge") rather than the first one's — reporting "open" because one leg is crypto
+   * would hide a shut FX leg, which is the exact conflation this flag exists to prevent.
+   */
+  private async symbolsMarketOpen(symbols: unknown, now: Date): Promise<boolean | null> {
+    const list = Array.isArray(symbols) ? symbols.map((s) => String(s)) : [];
+    if (!list.length) return null;
+    const answers = await Promise.all(list.map(async (s) => isMarketOpenNow(await this.assetTypeOf(s), now)));
+    const known = answers.filter((a) => a !== null);
+    if (!known.length) return null;
+    return known.every((a) => a === true);
+  }
+
+  /** Closed trades and realised P&L for one bot, by magic. `pnlInvalid` rows are excluded (#805). */  private async closedStatsForMagic(magic: number): Promise<{ n: number; pnl: number; lastAt: Date | null }> {
     try {
       const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
         `SELECT COUNT(*) AS n, COALESCE(SUM(pnl),0) AS pnl, MAX(closedAt) AS lastAt

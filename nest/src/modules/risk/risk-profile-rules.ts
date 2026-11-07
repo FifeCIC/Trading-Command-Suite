@@ -90,7 +90,9 @@ export const RISK_CONSTANT_RULES: RiskConstantRule[] = [
     enforcement: 'live',
     enforcedBy: 'nest/src/modules/risk/risk.service.ts',
     settingKey: 'risk.maxPerSymbol',
-    defaultValue: 0.25,
+    // 0.25 → 0.2 on 2026-11-07 with `risk.maxPortfolioRisk` 0.2 → 0.4: the portfolio budget grew, and
+    // this shrank so the extra capacity buys MORE SYMBOLS rather than more of one instrument.
+    defaultValue: 0.2,
     summary:
       'Ceiling on the TOTAL exposure to one symbol — positions already open PLUS this order — as ' +
       'a fraction of portfolio value. Blocks the order in canOpenPosition().',
@@ -158,8 +160,8 @@ export const RISK_CONSTANT_RULES: RiskConstantRule[] = [
     // only ever hold that one trade. Effect of the raise, measured: portfolio-cap refusals **601 → 0**
     // and a trade executed 45s after the change. Kept in step with
     // `settings-registry.ts`'s declared default, because a database-only change is lost on reinstall.
-    // ⚠️ Written as `0.2`, NOT `0.20` — see the note in `settings-registry.ts`.
-    defaultValue: 0.2,
+    // ⚠️ Written as `0.4`, NOT `0.40` — see the note in `settings-registry.ts`.
+    defaultValue: 0.4,
     summary:
       'Total portfolio fraction at risk if every open position’s stop filled — Σ |entry − SL| × ' +
       'volume × contractSize across the book. Blocks a new order while the book exceeds it.',

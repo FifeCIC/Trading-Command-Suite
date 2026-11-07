@@ -1,3 +1,13 @@
+/* ── PLANNED IN #1229 ──
+ * MISSING:  decomposition. Measured 3,396 lines, 6 function(s) over
+ *           60 lines (longest 215), comment ratio 33.7%.
+ * TODAY:    one file carrying several responsibilities. Nothing here is known to be broken — the
+ *           shape makes review and safe change expensive.
+ * WHEN BUILT: split by RESPONSIBILITY (not by line count), prove behaviour is unchanged, then
+ *           re-bank: node scripts/audit-code-health.cjs --write
+ * CODE-HEALTH-MARKER — written by scripts/audit-code-health.cjs; re-run it rather than editing.
+ */
+
 /**
  * TradingStrategyService — STAGE 4 of the META.Stack pipeline.
  * ============================================================
