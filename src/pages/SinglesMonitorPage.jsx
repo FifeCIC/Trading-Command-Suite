@@ -41,10 +41,45 @@ const GROUP_LABELS = {
 const REFRESH_AFTER_TICK_MS = 2000;
 
 export default function SinglesMonitorPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const symbol = searchParams.get('symbol') || '';
   const protocol = searchParams.get('protocol') || '';
   const [countdown, setCountdown] = useState(null);
+
+  /**
+   * AUTO-PICK A SYMBOL (owner, 2026-11-07: *"This page doesn't load a symbol by default … lets
+   * automatically load one that has had recent activity, I will let you choose which data value is
+   * best for that"*).
+   *
+   * CHOSEN VALUE: **most recently scored**. `/api/scoring/recently-analysed` is ordered by scoring
+   * time, so its first row is the symbol the pipeline touched last — the one most likely to have a
+   * fresh breakdown to show. A symbol with no recent score renders an empty page, which is exactly
+   * the complaint being fixed.
+   *
+   * ⚠️ It WRITES `?symbol=` rather than holding a local default. The page is deep-linkable
+   * (`?symbol=XAUUSD&protocol=…`) and the picker owns that parameter, so a local default would fight
+   * the picker and leave the URL disagreeing with the screen. `replace: true` keeps it out of history.
+   */
+  const recentQuery = useQuery({
+    queryKey: ['singles-monitor-recent'],
+    queryFn: () => apiGet('/api/scoring/recently-analysed?limit=10').catch(() => []),
+    enabled: !symbol,
+    staleTime: 30_000,
+  });
+
+  useEffect(() => {
+    if (symbol) return;
+    const list = Array.isArray(recentQuery.data) ? recentQuery.data : (recentQuery.data?.symbols || []);
+    const pick = list
+      .map((r) => r?.ticker || r?.symbol || r?.symbolTicker || '')
+      .find((t) => typeof t === 'string' && t.trim());
+    if (!pick) return;
+    setSearchParams((prev) => {
+      const nextParams = new URLSearchParams(prev);
+      nextParams.set('symbol', pick.trim().toUpperCase());
+      return nextParams;
+    }, { replace: true });
+  }, [symbol, recentQuery.data, setSearchParams]);
 
   // Automation status — syncs the refresh with the loop tick.
   const { data: automation } = useQuery({

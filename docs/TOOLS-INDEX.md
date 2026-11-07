@@ -111,7 +111,7 @@ buried ability `development-philosophy` §7 warns about.
 | `analyse-query-patterns.cjs` | repo | analysis | yes | ⚠️ **NOTHING** | WHERE THE PIPELINE ASKS THE DATABASE FOR SOMETHING IT ALREADY HAS. |
 | `analyse-unreachable-capacity.cjs` | nest | analysis | — | docs | Is the score denominator counting capacity the numerator can never reach? |
 | `audit-bot-activation.cjs` | nest | audit | yes | npm | WHY each trading bot can or cannot trade. |
-| `audit-code-health.cjs` | repo | audit | yes | docs | © 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite |
+| `audit-code-health.cjs` | repo | audit | yes | prebuild, npm | measure the SHAPE of the source tree, and ratchet it so it cannot rot. |
 | `audit-data-health.cjs` | nest | audit | yes | npm | silent data failure: threshold REACHABILITY ("cannot fire"), stalled |
 | `audit-denominator-history.cjs` | nest | audit | — | docs | what did the Signal denominator actually do over time? |
 | `audit-dev-window-coverage.cjs` | repo | audit | yes | npm | what date window can a DEVELOPMENT test actually use? |

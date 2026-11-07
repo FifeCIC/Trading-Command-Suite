@@ -34,10 +34,11 @@
       "name": "audit-code-health.cjs",
       "where": "repo",
       "category": "audit",
-      "purpose": "© 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite",
+      "purpose": "measure the SHAPE of the source tree, and ratchet it so it cannot rot.",
       "selfTest": true,
       "reaches": [
-        "docs"
+        "prebuild",
+        "npm"
       ]
     },
     {

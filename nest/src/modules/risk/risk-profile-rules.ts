@@ -158,10 +158,14 @@ export const RISK_CONSTANT_RULES: RiskConstantRule[] = [
     // entry attempts in one day, 97% of all blocks, because ONE minimum-lot XAUUSD position risks
     // 12.2% of a £718 account — the MT5 floor (0.01 lot) cannot be sized smaller, so a 15% cap can
     // only ever hold that one trade. Effect of the raise, measured: portfolio-cap refusals **601 → 0**
-    // and a trade executed 45s after the change. Kept in step with
+    // and a trade executed 45s after the change.
+    // 0.4 → 0.6 on 2026-11-07 — DEMO-TUNED, see the DECISION marker in `settings-registry.ts`.
+    // Re-measured basis: this is the ONLY cap that has ever refused an order here (1,306 refusals on
+    // 11-06, all citing 20.2–22.8% observed). `risk.maxPerSymbol` never bound — the rows labelled
+    // "per-symbol cap" are stale-tick refusals on a shut market. Kept in step with
     // `settings-registry.ts`'s declared default, because a database-only change is lost on reinstall.
-    // ⚠️ Written as `0.4`, NOT `0.40` — see the note in `settings-registry.ts`.
-    defaultValue: 0.4,
+    // ⚠️ Written as `0.6`, NOT `0.60` — see the note in `settings-registry.ts`.
+    defaultValue: 0.6,
     summary:
       'Total portfolio fraction at risk if every open position’s stop filled — Σ |entry − SL| × ' +
       'volume × contractSize across the book. Blocks a new order while the book exceeds it.',

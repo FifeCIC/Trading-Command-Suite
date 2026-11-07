@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * © 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite
- *
  * audit-code-health.cjs — measure the SHAPE of the source tree, and ratchet it so it cannot rot.
+ *
+ * © 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite
  *
  * WHY THIS EXISTS (owner direction, 2026-11-07)
  * ----------------------------------------------

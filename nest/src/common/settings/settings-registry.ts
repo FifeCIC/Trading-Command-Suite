@@ -333,6 +333,22 @@ export const SETTINGS: SettingDefinition[] = [
     // Definition (the one the owner asked for): "X% is in red on current positions" →
     // Σ |entry − brokerSL| × volume × contractSize, converted to account currency. NOT the same
     // question as maxDrawdown (peak-to-current on realised+unrealised equity).
+    //
+    // ── DECISION (2026-11-07, primary) ──
+    // WHAT:      these caps are DEMO-TUNED (0.6 portfolio / 0.2 per-symbol) and no live account
+    //            exists. Risk is set for DATA GENERATION, not for capital protection.
+    // WHY:       owner direction — "all trading going forward to be riskier on demo accounts also so
+    //            that we're generating more trading data for tweaking strategies". The demo book's
+    //            product is TRADES TO MEASURE; a cap that refuses them costs data, not money.
+    // INSTEAD OF: leaving the 0.4 that was raised on 2026-11-06 for a £1,000 LIVE account. That
+    //            account was abandoned the same evening (IC Markets login unusable), so the premise
+    //            for 0.4 was gone and the demo book inherited a live-shaped cap.
+    // REVERSE BY: `UPDATE global_setting SET value='0.2' WHERE key='risk.maxPortfolioRisk'` and set
+    //            `defaultValue: 0.2` here + in `risk-profile-rules.ts`. No code depends on the value.
+    // REGISTER:  docs/SETTLED-DECISIONS.md row 155
+    // GUARD:     NONE TODAY (🔴). #1153 is the epic that will gate automated trading on a REAL
+    //            account — it currently publishes `accountKind` and NOTHING READS IT. Until it
+    //            lands, a real account would silently inherit demo-tuned caps.
     key: 'risk.maxPortfolioRisk',
     type: 'number',
     // 0.15 → 0.20 on 2026-10-13 (owner decision, R47/R57). See `risk-profile-rules.ts` for the
@@ -340,14 +356,30 @@ export const SETTINGS: SettingDefinition[] = [
     // be sized smaller on a £718 account; 601 → 0 refusals after the raise. Changed here as well as
     // in the database so a reinstall keeps the decision (a DB-only change does not survive).
     // 0.2 → 0.4 on 2026-11-07 (owner decision, first LIVE account, £1,000 deposit, "push harder").
-    // Measured basis: the portfolio cap refused 1,564 of 3,069 blocks in 7 days — 51%, and 93% when
-    // combined with `risk.maxPerSymbol`. Worst case now admitted is a 40% drawdown of the account;
-    // `risk.maxDailyLoss` (100) still cuts the day at −10%. `risk.maxPerSymbol` was simultaneously
-    // TIGHTENED to 0.2 so this capacity spreads across symbols instead of pooling in one.
-    // ⚠️ Written as `0.4`, NOT `0.40` — `validate-risk-profile.cjs` compares this literal against the
+    // 0.4 → 0.6 on 2026-11-07 (owner decision): "all trading going forward to be riskier on demo
+    // accounts also so that we're generating more trading data". The live account was abandoned the
+    // same evening, so the demo book is the only venue and these are DEMO-TUNED caps.
+    // Measured basis: the portfolio cap was the ONLY cap that has ever actually refused an order —
+    // 1,306 refusals on 2026-11-06 alone, every one of them citing 20.2–22.8% observed risk against
+    // the then-20% cap, and the last such refusal is 2026-11-06T22:04:52Z (the moment 0.4 landed).
+    // ⚠️ CORRECTION to the note this comment used to carry: "93% when combined with
+    // `risk.maxPerSymbol`" was MISATTRIBUTED. Re-measured 2026-11-07 — `risk.maxPerSymbol` has never
+    // refused an order on this book. The rows counted as "per-symbol blocks" read
+    // "Cannot evaluate the per-symbol cap for X: quote cannot price this order ? last broker tick
+    // 11309s old ? over the 300s allowance", i.e. STALE TICKS on a shut market (1,112 of them on
+    // 11-06, all after the 22:00 Friday close). Failing closed there is correct; the cap never
+    // bound. `risk.maxPerSymbol` therefore stays at 0.2.
+    // `risk.maxOpenPositions` also stays at 20: it has blocked 0 orders ever, and the BRIDGES cache
+    // it from `nest/.env` at import (#901), so raising it here alone would make the app and the
+    // bridge disagree — the lower silently binding.
+    // ⚠️ DEMO-TUNED — see the DECISION marker below before this book ever meets a real account.
+    // Worst case now admitted is a 60% loss of one account if every broker stop filled;
+    // `risk.maxDailyLoss` (100) still cuts the day at −10%, and `risk.maxDrawdown` (0.25) is the
+    // next mechanism that can halve the data supply — watch it before raising this again.
+    // ⚠️ Written as `0.6`, NOT `0.60` — `validate-risk-profile.cjs` compares this literal against the
     // setting's own default as STRINGS and fails the build on `0.20` vs `0.2`. Two spellings of one
     // number is the drift that guard exists to catch, and it caught this.
-    defaultValue: 0.4,
+    defaultValue: 0.6,
     class: 'runtime',
     owner: 'trading',
     label: 'Max portfolio risk',

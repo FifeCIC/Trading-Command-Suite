@@ -597,6 +597,44 @@ input[type='radio'] {
   border-radius: 0;
 }
 
+/* ── Refresh countdown in the current crumb (owner, 2026-11-07) ────────────────────────────────────
+   *"I want the breadcrumb to have an affect like a loading bar which acts as the refresh count down …
+   every page that has reloading."*
+   A 2px line along the bottom edge of the pill fills left-to-right over the polling interval, then
+   snaps back when the refresh lands — the same information as `⟳ 59s` with no number to read and no
+   extra element on the page. Values come from `use-refresh-pulse` via `--pulse`; when a page does not
+   poll, the class is absent and nothing renders at all. */
+.breadcrumbs-current { overflow: hidden; }
+
+.breadcrumbs-refresh-bar {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0,
+    var(--accent) var(--pulse, 0%),
+    color-mix(in srgb, var(--accent) 18%, transparent) var(--pulse, 0%),
+    color-mix(in srgb, var(--accent) 18%, transparent) 100%
+  );
+  pointer-events: none;
+}
+
+/* While a request is in flight the bar says so, rather than sitting frozen at whatever it reached. */
+.breadcrumbs-current--fetching .breadcrumbs-refresh-bar {
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+  animation: breadcrumbs-pulse 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes breadcrumbs-pulse {
+  from { opacity: 0.35; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breadcrumbs-current--fetching .breadcrumbs-refresh-bar { animation: none; opacity: 0.8; }
+}
+
 /* Arrow connector between pills */
 .breadcrumbs-pill:not(:last-child)::after {
   content: '';
