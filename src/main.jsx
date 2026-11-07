@@ -5,6 +5,7 @@ import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import { getPreferences } from './core/hooks/usePreferences';
 import { applyNoticeLocale } from './core/notices/apply-locale';
+import { installSupportBuffers } from './core/support/report-buffers';
 import './index.css';
 // ⚠️ THE CANONICAL TABLE ARRANGEMENT, LOADED AFTER index.css. It is one arrangement for 57 table
 // classes, replacing 57 hand-written ones (measured: 69 families, 69 distinct arrangements before this).
@@ -16,6 +17,11 @@ import './core/tables.css';
 // messages at a user who chose otherwise (#826 Phase 6). Every later change applies through
 // usePreferences.save() — this only covers the case where nothing has been written yet.
 applyNoticeLocale(getPreferences().noticeLocale);
+
+// The support service's capture layer (#1248). Installed BEFORE the first render so an
+// error thrown while the app is mounting is still recorded — a buffer installed later
+// would miss exactly the failures that make a page unusable.
+installSupportBuffers();
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -49,6 +49,7 @@ import { VIEW_COMPONENTS } from './core/view-routes.jsx';
 import { filterHiddenViews, filterByExperience, OWNER_SEES_WITHHELD } from './core/hidden-views.js';
 import { useHiddenRoutes } from './core/hooks/useHiddenRoutes.js';
 import { usePreferences } from './core/hooks/usePreferences.js';
+import SupportReportPanel from './components/SupportReportPanel';
 
 /**
  * Nav filtering happens twice, and the split is deliberate.
@@ -857,10 +858,10 @@ function AppShell({ directContent = null, directArea = null, directView = null }
                       <li><a style={{ display: 'block', padding: '0.35rem 0' }} href="https://github.com/FifeCIC/Trading-Command-Suite/wiki/Troubleshooting" target="_blank" rel="noreferrer">Troubleshooting</a></li>
                     </ul>
                     <p style={{ margin: '0.6rem 0 0', fontSize: '0.75rem', color: 'var(--ink-soft)' }}>
-                      <strong>Not built yet:</strong> one-click bug capture with a diagnostics bundle. For
-                      now, the status panel shows system health, and the Dev Tools rail shows versions and
-                      adapters.
+                      The status panel shows system health; the Dev Tools rail shows versions and
+                      adapters. Use the report below when something is visibly wrong.
                     </p>
+                    <SupportReportPanel experienceLevel={experienceLevel} />
                   </div>
                 )}
               </div>
