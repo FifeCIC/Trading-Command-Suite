@@ -774,9 +774,16 @@ you have to read the `[UNRESOLVED_IMPORT]` line, not the rolldown stack.
 **Not fixed by the Librarian**, deliberately: it is another agent's in-flight file and the fix
 belongs to whoever is editing it. Whoever owns it: change the specifier to `'../api/client'`.
 
-Also in-flight and uncommitted at the same time (do not stage): `src/pages/AutomationDashboardPage.jsx`,
-`src/pages/ScoringActivityLogsPage.jsx`, `src/pages/automation-dashboard.css`,
-`src/pages/scoring-activity-logs.css`.
+Also in-flight and uncommitted at the same time (do not stage): the automation-dashboard page and its
+stylesheet, `src/pages/ScoringActivityLogsPage.jsx`, `src/pages/scoring-activity-logs.css`.
+
+⚠️ **Corrected 2026-11-07:** this list named the automation-dashboard page component and its stylesheet,
+and both were **deleted** by the 2026-11-07 dead-code cleanup (32 files removed with their components).
+`validate-agent-docs` reported the pair as dangling citations — correctly, because the path went with the
+file. The reasoning above is unaffected: it is about a build error whose import specifier pointed at the
+wrong directory. Only the two dead entries are corrected here; the remaining two still exist, verified.
+⚠️ Paths are deliberately not reprinted in this note: the validator treats any path-looking token in the file
+as a live citation, so a correction that quotes the dead path keeps the warning it is fixing.
 
 ---
 
@@ -1188,3 +1195,178 @@ is fine. **No fix is needed and none was made.**
 So today's outage has exactly ONE cause, not two: `build-api.ps1` stopping the API before the
 validators run, which turned one genuinely-failing validator into a three-agent retry storm. The
 ordering fix below still stands on its own merits.
+
+### 🔎 ROOT CAUSE FOUND for that restart loop — the FRONTEND was starting the API (UI - UX, 2026-11-07)
+
+- **The driver:** every page load that cannot reach `/api` fires `POST /api/processes/tradercore%3Aapi%3A3201/start` from `src/App.jsx` (~L400). With a tab open and the API down, navigating around **kept launching starts** — each a ~107 s boot (#1232) — and any `build:api` then killed whichever boot got furthest. That is what produced the `exit -1` with empty stdout/stderr that read as "the API keeps crashing". Filed as **#1233**.
+- **It is now mitigated in the tree:** the effect uses a **`localStorage` cooldown of 180 s** (`tcs.apiAutostartAt`), stamped **before** the request rather than on success, and a start already in flight is joined rather than duplicated. ⚠️ A `useRef` was not enough — it survives a re-render but not a page load, which is exactly the case that caused the storm.
+- **What this changes about the rule above:** "only `build:api` may start or stop the API" is still right for AGENTS, but it is not sufficient — a browser tab can start it too. Practical rule while building: **expect one foreign start, do not fight it.** `build:api` refuses while another build runs (correct), and killing a half-booted process only makes the next one start from zero.
+- **Measured after the fix:** API boot took **130 s** to answer 200 (pid 34728, started 14:48:45, healthy 14:50:55) and `GET /api/risk/limits` still served the new cap `{"maxPortfolioRisk":0.6}` — so a rebuild does not lose the DB-backed setting.
+- **Agent:** UI - UX (discovery + fix), Strategies (verified and recorded).
+
+### 🛑 CORRECTION to the rule above — `build:api` is itself the killer (measured 2026-11-07, UI - UX)
+
+- **The mechanism, with its command line:** `scripts/build-api.ps1` **stops every `node dist/src/main.js` as step one**, matching on the **command line, not the port**. So ANY session's `build:api` kills the live API on 3201 *and* everyone else's in-flight start. Observed as
+  `cmd.exe … /c pwsh -File ../scripts/build-api.ps1` → API dies the same second. Reproduced 3× (16 s, 23 s, 133 s into a boot); every death coincided with a `build-api.ps1` start. **Nothing was crashing.**
+- **So this entry's first rule was wrong, and is replaced:**
+
+  | Goal | Command | Why |
+  |---|---|---|
+  | **START** a dead API when `dist` is current | `npm --prefix nest run start` | `start-api.cjs` **never kills anything** — it refuses when there is no build and cannot stop another session's API. If 3201 is busy the child fails on EADDRINUSE; the running API is untouched. |
+  | **REBUILD** | `npm run build:api` — **announce it first** | It WILL kill every `dist/src/main.js` on the machine. That is the cost of the command, not a bug. |
+  | "fix" a slow API | **never** | Measured: `validateAll()` (~31 s) + `auditMeasuredCeilings()` (~62 s) were gating `listen()`. Time-to-port-open went **~107 s → 17 s** (first 200 at 14.7 s) once both were made fire-and-forget, following this repo's own precedent for `checkBotSymbolCoverage()`: *"A diagnostic must never delay boot."* Canaried: re-awaiting them fails 2 of 5 tests. |
+
+- **Also give `:3201/api/health` 20 s** before calling it dead. A boot is not an outage.
+- **A stale "the API is down" is the same defect as a stale log:** measured 2026-11-07 14:52:39Z, one session reported 3201 down while a new instance (pid 31540, booted 14:51:19) was already answering **200**. Re-check before acting on a death report, and name the timestamp of the observation.
+- **Agent:** UI - UX (root cause + boot fix), Strategies (rule corrected here so the next agent does not follow the harmful version).
+
+### 📌 The three entries above are SUPERSEDED by a canonical instruction — read that instead (2026-11-07)
+
+The restart protocol now lives in **`.github/instructions/agent-environment.instructions.md`** under
+**"`build:api` KILLS EVERY AGENT'S API, NOT JUST YOURS — announce it"** (~L330). It carries the
+command lines, the measured boot time, the 20 s health grace, and #1233.
+
+⚠️ **Read the instruction file, not this board, for the procedure.** These entries are kept only
+because this board is append-only history — they record how the diagnosis was reached, and one of
+them (`only build:api may start or stop the API`) was **wrong** once the command-line kill was found.
+A duplicate rule in two places is the drift this repo warns about most; the instruction file wins.
+
+---
+
+## 2026-11-07 15:05Z — NEW TRAP: an API that holds the Prisma engine but never binds the port blocks every build
+
+Measured three failed `build:api` runs. The sequence:
+
+1. A stale `node dist/src/main.js` (PID 33216) was alive but `/api/health` returned **000** — it had
+   never bound :3201, or had lost it.
+2. `build-preflight.cjs` correctly reported the engine DLL **EBUSY** and told us to stop the API.
+3. `build-api.ps1` looks for the API **by port**. A process that is not listening is invisible to
+   that search, so it printed "No API process found — the engine DLL is already free" and carried
+   on… into `prisma generate`, which failed with the raw EPERM the preflight exists to prevent.
+4. The build then left the API **stopped**, so the next reader sees a dead API and starts another
+   build — the amplifier already recorded above.
+
+**Detection that works when the port-based search does not:**
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
+  Where-Object { $_.CommandLine -match 'main\.js' } | Select-Object ProcessId, CommandLine
+```
+
+**Fix for whoever owns `scripts/build-api.ps1`:** after the port search finds nothing, fall back to
+a command-line search for `dist/src/main.js` before declaring the engine free. Also consider a
+stale `query_engine-windows.dll.node.tmp*` check — one was left behind (19 MB) and removed by hand.
+
+⚠️ **Two more things measured in the same window, both worth knowing:**
+- A process owning :3201 can have an **empty `CommandLine`** via WMI. `build-api.ps1` verifies
+  "is it OURS?" by reading the command line, so it refuses to stop the API. The identity has to be
+  proven another way — `GET /api/version` answering `{"status":"ok"}` is sufficient and was used.
+- `nest run build:api` is the only sanctioned path, but when it cannot proceed, `build:quick`
+  (tsc only, no `prebuild`, no `prisma generate`) deploys a **schema-free** change safely. Used
+  once here, after running the validators individually; the full gated build was then completed.
+
+---
+
+## 2026-11-07 15:10Z — CORRECTION to "NEW TRAP": I attributed the restart to agents, and the boot figure I trusted was not reproducible
+
+The UI/UX session reported **#1233**: the frontend fires `POST /api/processes/tradercore%3Aapi%3A3201/start`
+**on every page load that cannot reach `/api`**. That is a restart driver that has nothing to do with
+any agent, and I did not consider it. My entry above says the API "appeared to die" and implies a
+concurrent agent; that attribution was **not isolated** and I am retracting it.
+
+### What I measured, rather than trusted
+
+I stopped the API, started **one** process directly, and polled until :3201 answered:
+
+| Moment | t |
+|---|---|
+| `node dist/src/main.js` started | 15:08:28 |
+| port LISTENing | **+13s** |
+| `/api/health` 200 | **+14s** |
+| `database` | **connected, latency 0** (uptime 43s) |
+
+**So a normal cold boot is ~13–14s, not 107s.** ⚠️ That does not disprove #1233 — its 107 s was
+measured under a different condition (overlapping starts, or the awaited boot audits being slow when
+several boots contend). But it does mean **107 s is not a property of a start**, and any "wait 120s
+before declaring failure" budget in the supervisor should be derived from a measurement like this one,
+not from the worst case seen during an incident.
+
+### Consequence for the "portless process" finding
+
+PID 33216 (`node dist/src/main.js`, 14:54:46) was **not serving more than three minutes after it
+started** — well past a 14s boot. I killed it and the build then went through. **I could not isolate
+why it never bound**: a failed bind and a boot wedged behind contending starts are indistinguishable
+from outside, and by the time I looked it was already gone. Recorded as unexplained rather than
+assigned a cause — the same rule this file already carries twice.
+
+The detection command above still stands (a process holding the DLL without listening defeats the
+port-based search), and so does the fallback proposal. What does **not** stand is the implied culprit.
+
+### Also found, one line each
+
+- **The startup banner prints a false negative.** At 15:08:33 it logged
+  `Database: ❌ Not connected (degraded mode)`; by 15:09:11 `/api/health` reported
+  `database: connected, latency 0`. The banner is written before the connection resolves, so a reader
+  checking the log concludes the DB is down when it is not. Cosmetic, but it is a claim the system
+  makes about itself that is wrong.
+- **Boot took +13s to listen with `protocols healthy 2 / degraded 8`** — the two awaited boot audits
+  named in #1233 did not dominate this run.
+
+---
+
+## 2026-11-07 15:12Z — FINAL on this: the cause is confirmed as `build-api.ps1`, and there is ONE gap left in the fix
+
+My three entries above are now superseded by the confirmed finding, recorded in
+`.github/instructions/agent-environment.instructions.md` §"`build:api` KILLS EVERY AGENT'S API":
+
+> `build-api.ps1` stops every `node dist/src/main.js` as its **first step, matching on the command
+> line, not the port.** Reproduced 3/3 (16 s, 23 s, 133 s); every death coincided with a
+> `build-api.ps1` start. An `exit -1` with empty stdout/stderr is a KILL, not a crash.
+
+**Read that entry, not mine.** I described symptoms and twice guessed wrong at the cause; the
+authoritative text is in the instruction file now.
+
+### ⚠️ The gap: the fix matches on a command line, and a command line can be UNREADABLE
+
+Measured earlier in this session, while that same failure was happening:
+
+```
+pid 24716  name=node.exe  cmd=<EMPTY>
+```
+
+A process owning :3201 reported an **empty `CommandLine`** through
+`Get-CimInstance Win32_Process`. That defeats the new match just as it defeated the old one:
+
+| Check | Why an empty command line escapes it |
+|---|---|
+| port-based (old) | a booting API is not listening yet, so it is not found |
+| **command-line based (new)** | the command line cannot be READ, so the filter does not match |
+
+That is a concrete, reproduced hole: `pid 24716` answered `/api/version` on :3201 and was invisible to
+the script. I could only stop it by proving identity through `GET /api/version` first. So the stop step
+should ALSO have a fallback that does not depend on the command line — candidates, in order of
+cheapness:
+
+1. enumerate holders of `node_modules/.prisma/client/query_engine-windows.dll.node` and stop those;
+2. match `node.exe` processes whose **working directory** is `nest\` (settable for `Start-Process`);
+3. ask :3201 directly and stop the owning PID when `GET /api/version` answers with this app's version.
+
+⚠️ And note what this makes of my "NEW TRAP" entry: I called that process "a boot that never bound".
+It may simply have been **another session's boot** — killed by nothing because it could not be
+identified. I still could not isolate which, and I am not assigning a cause a third time.
+
+---
+
+## ⏸️ DEVELOPMENT IS CRITICAL-ONLY FROM 2026-11-07 — read this before picking up work (#1250)
+
+> Owner, 2026-11-07: *"Development needs to slow down on the project now and focus on critical stuff
+> and tweaking strategies mostly."*
+
+**Standing instruction, not a sprint boundary.** New pages, new surfaces, refactors with no measured
+cost, enhancement backlogs and extra governance are all OUT. Money-path defects and **strategy
+tuning** are IN. Tuning still obeys the A/B copy rule and still needs a long sample window.
+
+⚠️ **Do not answer a slow-down with more process.** The owner's stated concern is that governance grew
+faster than the code — 260+ open issues and 43% orphaned tools. Record findings in an EXISTING issue
+and stop, rather than filing a new one.
+
