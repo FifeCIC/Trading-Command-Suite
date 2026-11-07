@@ -232,6 +232,25 @@ function AppShell({ directContent = null, directArea = null, directView = null }
   const [screenOptionsView, setScreenOptionsView] = useState(null);
   // ── Status popout ──
   const [statusPopoutOpen, setStatusPopoutOpen] = useState(false);
+  // ⚠️ SUPPORT ENTRY POINT (2026-11-07). The app had no way for a user to ask for help or report what
+  // they were looking at, so a confused first-time user's only option was to close the tab. This panel
+  // is the first piece of the support service (epic: "Support service — help, bug capture and
+  // diagnostics bundle"): destinations first, because they exist today, and in-app capture later —
+  // naming what is NOT built yet rather than implying a report button that does nothing.
+  const [helpOpen, setHelpOpen] = useState(false);
+  // Escape closes the help panel, handled on the DOCUMENT in the CAPTURE phase rather than on the
+  // wrapper div. Verified 2026-11-07 by dispatching keydown from inside the page: the panel closes
+  // whether the event is dispatched on the button or on <body>, and an unrelated key leaves it open
+  // (canaried both directions).
+  // ⚠️ Do not "re-test" this with real key presses in the integrated browser — measured that day,
+  // it delivers NO input events at all (zero keydown AND zero click reached window capture, even
+  // after bringToFront). A key press there proves nothing; dispatch the event instead.
+  useEffect(() => {
+    if (!helpOpen) return undefined;
+    const onKey = (ev) => { if (ev.key === 'Escape') setHelpOpen(false); };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [helpOpen]);
 
   // Screen Options and Dev Tools share the right rail — keep them exclusive.
   useEffect(() => {
@@ -314,7 +333,6 @@ function AppShell({ directContent = null, directArea = null, directView = null }
   }
 
   // ── Track app view on mount ──
-  const autoStartAttempted = useRef(false);
 
   useEffect(() => {
     trackAppView();
@@ -331,41 +349,43 @@ function AppShell({ directContent = null, directArea = null, directView = null }
     };
   }, []);
 
-  // Auto-start the NestJS API if it's not running on app launch
+  // Detect an unreachable API — and DO NOT START IT. (#1233)
+  //
+  // ⚠️ THIS USED TO POST A START ON EVERY FAILED PAGE LOAD, AND IT NEVER STARTED ANYTHING.
+  // Measured 2026-11-07: the request went to `/api/processes/tradercore:api:3201/start`, a task id
+  // the process manager does not have (it knows exactly one, `tradercore:all`), so the API answered
+  // `{"success":false,"message":"Unknown task: tradercore:api:3201"}` with HTTP 200. The old code
+  // logged "Start command sent" regardless — a call that started nothing, reporting that it had.
+  //
+  // The cooldown added before this reduced the noise but did not fix the shape: a page load is not an
+  // operator action, and a render side effect that spawns servers is the wrong place for this. So the
+  // POST is GONE. What remains is a reachability check and an honest message telling the reader what
+  // to do — the start belongs to the Intranet Controls page or `scripts/tcs-launch.ps1`, both of which
+  // are deliberately manual.
   useEffect(() => {
-    if (autoStartAttempted.current) return;
+    let cancelled = false;
 
-    const attemptAutoStart = async () => {
-      // Wait for initial health check to settle
+    const reportApiReachability = async () => {
+      // Let the first health poll settle so a booting API is not reported as down.
       await new Promise((r) => setTimeout(r, 3000));
-
-      if (autoStartAttempted.current) return;
-      autoStartAttempted.current = true;
-
-      // Check if API is already reachable
+      if (cancelled) return;
       try {
         const res = await fetch('http://localhost:3201/api/version', { signal: AbortSignal.timeout(3000) });
-        if (res.ok) {
-          pushActivity('AUTOSTART', 'API already running');
-          return;
-        }
+        if (cancelled) return;
+        pushActivity('BOOT', res.ok ? 'API reachable' : `API answered ${res.status} — some pages will show an error`);
       } catch {
-        // API not reachable — try to start it
-      }
-
-      pushActivity('AUTOSTART', 'Attempting to start API server...');
-      try {
-        await fetch('/api/processes/tradercore%3Aapi%3A3201/start', {
-          method: 'POST',
-          signal: AbortSignal.timeout(10000),
-        });
-        pushActivity('AUTOSTART', 'Start command sent');
-      } catch {
-        pushActivity('AUTOSTART', 'Could not reach task runner');
+        if (cancelled) return;
+        pushActivity(
+          'BOOT',
+          'API unreachable — start it from http://localhost/intranet/controls.php or run scripts/tcs-launch.ps1',
+        );
       }
     };
 
-    attemptAutoStart();
+    reportApiReachability();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -683,6 +703,22 @@ function AppShell({ directContent = null, directArea = null, directView = null }
   });
   const isMt5Online = mt5Query.data?.connected === true || mt5Query.data?.status === 'online';
 
+  // ── Loop heartbeat — moved here from the Bot Monitor header (2026-11-07) ──────────────────────
+  // Owner: *"Remove sm-loop-badge … and add the stat to the top right status menu"*. The loop tick
+  // is machine-wide state, not page state, so it belongs with API/DB/MT5 rather than inside one
+  // page's heading. `staleTime` matches the other header pollers so a page transition does not
+  // re-request it, and `.catch(() => null)` keeps a down API from blanking the badge — the popout
+  // already reports API offline separately.
+  const autoStatusQuery = useQuery({
+    queryKey: ['automation-status-topbar'],
+    queryFn: () => apiGet('/api/automation/status').catch(() => null),
+    refetchInterval: 15_000,
+    staleTime: 10_000,
+  });
+  const loopEnabled = autoStatusQuery.data?.loopEnabled;
+  const loopTick = autoStatusQuery.data?.tickCount;
+  const loopLastMs = autoStatusQuery.data?.lastTickMs;
+
   const statusLevel = isApiOnline
     ? (isDbOnline && isMt5Online ? 'online' : 'warn')
     : 'offline';
@@ -778,6 +814,56 @@ function AppShell({ directContent = null, directArea = null, directView = null }
               <span className="hamburger-line" />
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              {/* ⚠️ Placed to the LEFT of the calculator, as the owner asked: help is the one topbar
+                  control a stuck user needs, so it outranks a tool they only reach for once they
+                  already know what they are doing. */}
+              <div
+                style={{ position: 'relative' }}
+                onBlur={(ev) => { if (!ev.currentTarget.contains(ev.relatedTarget)) setHelpOpen(false); }}
+                onKeyDown={(ev) => { if (ev.key === 'Escape') setHelpOpen(false); }}
+              >
+                <button
+                  type="button"
+                  className="topbar-help-btn"
+                  onClick={() => setHelpOpen((v) => !v)}
+                  title="Help and support"
+                  aria-label="Help and support"
+                  aria-expanded={helpOpen}
+                >
+                  ?
+                </button>
+                {helpOpen && (
+                  <div
+                    className="topbar-status-popout"
+                    role="group"
+                    aria-label="Help and support"
+                    style={{
+                      position: 'absolute', top: '100%', right: 0, marginTop: 6,
+                      background: 'var(--panel)', border: '1px solid var(--line)',
+                      borderRadius: 8, padding: '0.75rem 1rem', zIndex: 100,
+                      minWidth: 240, boxShadow: 'var(--shadow-card)',
+                      fontFamily: 'var(--font-body)',
+                    }}
+                  >
+                    <div className="dev-section-title" style={{ marginBottom: '0.5rem' }}>Help &amp; support</div>
+                    <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '0.1rem', fontSize: '0.85rem' }}>
+                      {/* ⚠️ Each link is a BLOCK with vertical padding: measured 2026-11-07, a bare
+                          inline anchor here was 18px tall — under the 24px WCAG 2.2 target minimum, and
+                          a help menu is exactly where a frustrated user misclicks. */}
+                      <li><a style={{ display: 'block', padding: '0.35rem 0' }} href="https://github.com/FifeCIC/Trading-Command-Suite/issues/new/choose" target="_blank" rel="noreferrer">Report a problem</a></li>
+                      <li><a style={{ display: 'block', padding: '0.35rem 0' }} href="https://github.com/FifeCIC/Trading-Command-Suite/discussions" target="_blank" rel="noreferrer">Ask a question</a></li>
+                      <li><a style={{ display: 'block', padding: '0.35rem 0' }} href="https://discord.gg/8gRFkhbbfg" target="_blank" rel="noreferrer">Discord — quickest answer</a></li>
+                      <li><a style={{ display: 'block', padding: '0.35rem 0' }} href="https://github.com/FifeCIC/Trading-Command-Suite/wiki/Start-Here" target="_blank" rel="noreferrer">Start here (wiki)</a></li>
+                      <li><a style={{ display: 'block', padding: '0.35rem 0' }} href="https://github.com/FifeCIC/Trading-Command-Suite/wiki/Troubleshooting" target="_blank" rel="noreferrer">Troubleshooting</a></li>
+                    </ul>
+                    <p style={{ margin: '0.6rem 0 0', fontSize: '0.75rem', color: 'var(--ink-soft)' }}>
+                      <strong>Not built yet:</strong> one-click bug capture with a diagnostics bundle. For
+                      now, the status panel shows system health, and the Dev Tools rail shows versions and
+                      adapters.
+                    </p>
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
                 className="topbar-calc-btn"
@@ -839,6 +925,22 @@ function AppShell({ directContent = null, directArea = null, directView = null }
                       </div>
                     </>
                   )}
+                  <div className="dev-stat-row">
+                    <span className="dev-stat-label">Loop</span>
+                    <span className={`dev-stat-value ${loopEnabled ? 'ok' : 'muted'}`}>
+                      {loopEnabled == null
+                        ? '—'
+                        : loopEnabled
+                          ? `Active · tick #${loopTick ?? 0}`
+                          : 'Stopped'}
+                    </span>
+                  </div>
+                  {loopEnabled && loopLastMs ? (
+                    <div className="dev-stat-row">
+                      <span className="dev-stat-label">Last tick</span>
+                      <span className="dev-stat-value muted">{loopLastMs}ms</span>
+                    </div>
+                  ) : null}
                   <div className="dev-stat-row">
                     <span className="dev-stat-label">Mode</span>
                     <span className="dev-stat-value muted">{healthQuery.data?.mode || '—'}</span>

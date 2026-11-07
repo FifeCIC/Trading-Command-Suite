@@ -1055,6 +1055,51 @@ button {
 .btn--primary { border-color: var(--accent); background: var(--accent); color: #fff; }
 .btn--primary:hover { background: color-mix(in srgb, var(--accent) 85%, #fff); color: #fff; }
 
+/**
+ * ⚠️ WHY THE TOOLBAR BUTTONS GET THEIR OWN RULE, AND WHY IT IS THIS SPECIFIC.
+ *
+ * Measured on /watchlists/active-symbols, TWICE, in two separate browser sessions — "Export CSV" and
+ * "⚙ Columns" computed:
+ *
+ *     background: rgb(0, 0, 0)          border: 1px solid rgb(26, 26, 26)
+ *     border-radius: 10px               padding: 9.6px 14.4px        min-height: 44px
+ *
+ * Those four values are the box model of the SECOND `button` rule (index.css:1011 —
+ * `padding: 0.6rem 0.9rem; min-height: 44px; border: 0; background: var(--ink)`), i.e. the element was
+ * NOT getting `.btn`'s box model at that point. Its custom properties, read off the element itself,
+ * were the correct ones (`--panel: #1e293b`, `--line: #334155`, `--ink: #e2e8f0`), which the black
+ * background contradicts — so whatever wins is not a rule I could enumerate (a CSSOM sweep for every
+ * matching rule returned an EMPTY list, which is itself evidence the winning declaration is not
+ * reachable that way).
+ *
+ * ⇒ Rather than keep guessing, these two controls are pinned with a specificity that no element
+ * selector or single class can reach (0,3,0), using the token that was MEASURED correct on the
+ * element (`--bg-elev: #1e293b`), and a `background-image: none` so no inherited gradient applies.
+ * The 262 row buttons on the same page were already correct and are untouched.
+ *
+ * ⚠️ NOT VISUALLY CONFIRMED YET. The API was down for the browser checks that followed, and this page
+ * redirects to /status/setup when it cannot reach the backend, so the buttons could not be observed
+ * after the change. Re-check on the next visit.
+ */
+.trading-platforms-page .tp-controls-grid .btn,
+.trading-platforms-page .tp-controls-grid > .btn {
+  background-color: var(--bg-elev);
+  background-image: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 8px);
+  color: var(--ink);
+  padding: 0.45rem 0.75rem;
+  min-height: 34px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.trading-platforms-page .tp-controls-grid .btn:hover,
+.trading-platforms-page .tp-controls-grid > .btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 10%, var(--bg-elev));
+}
+
 input[type="text"],
 input[type="search"],
 input[type="email"],
@@ -1231,7 +1276,11 @@ button.nav-active {
   flex-shrink: 0;
 }
 
-.topbar-calc-btn {
+/* ⚠️ The Help button SHARES the calculator's styling on purpose (2026-11-07): two topbar controls that
+   look different invite the reader to wonder whether one is a different kind of thing. It sits to the
+   left of the calculator because a stuck user needs help before they need a calculator. */
+.topbar-calc-btn,
+.topbar-help-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1248,7 +1297,10 @@ button.nav-active {
   min-width: 44px;
   margin-right: 0.35rem;
 }
-.topbar-calc-btn:hover { border-color: var(--accent); color: var(--ink); }
+.topbar-calc-btn:hover,
+.topbar-help-btn:hover { border-color: var(--accent); color: var(--ink); }
+/* The help glyph is a plain letter, so it needs weight and spacing to read as an icon. */
+.topbar-help-btn { font-weight: 700; font-size: 1rem; line-height: 1; }
 
 .topbar-status-summary {
   display: flex;
