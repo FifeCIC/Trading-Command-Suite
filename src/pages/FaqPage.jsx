@@ -2,6 +2,13 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
 import './trading-platforms.css'
+// ── #1228 (2026-11-07) — the stylesheet existed and was never imported ──────────────────────
+// Every class this page renders (`faq-entry`, `faq-answer`, `faq-categories`, …) is defined in
+// `faq.css` and in no other sheet, so the page has been rendering UNSTYLED against a complete
+// stylesheet sitting beside it. Measured: 9 of the 9 defined classes are used here, 0 elsewhere.
+// ⚠️ `faq-search-input` is used by the page and is NOT in `faq.css` — recorded on #1228 rather than
+// invented a rule for here.
+import './faq.css'
 
 export default function FaqPage() {
   const [search, setSearch] = useState('')

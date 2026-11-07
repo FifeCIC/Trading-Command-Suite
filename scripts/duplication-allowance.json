@@ -1,17 +1,17 @@
 {
   "_comment": "Ratchet for cross-file duplication (INV-NO-NEW-DUPLICATION). An existing pair may only go DOWN; a pair NOT listed here fails the build. Record a reduction deliberately with `node scripts/validate-duplication.cjs --update-allowance` so the delta is printed. If a pair must remain, prefer FIXING it (extract the shared block) over adding it here — an allowlisted guard that no longer guards is worse than no guard.",
-  "_measured": "2026-11-06",
+  "_measured": "2026-11-07",
   "_method": "8-line whitespace-normalised windows appearing in 2+ distinct non-test files; new pair fails at >= 3",
   "totals": {
-    "pairs": 124,
-    "windows": 2071
+    "pairs": 125,
+    "windows": 592
   },
   "pairs": {
-    "src/core/architecture-reference.js || src/pages/architecture-framework.data.js": 1615,
+    "src/core/architecture-reference.js || src/pages/architecture-framework.data.js": 141,
     "src/pages/ProtocolTrailPage.jsx || src/pages/SinglesMonitorPage.jsx": 29,
-    "nest/src/modules/system/architecture-manifest.controller.ts || src/core/architecture-reference.js": 20,
-    "nest/src/modules/system/architecture-manifest.controller.ts || src/pages/architecture-framework.data.js": 20,
     "nest/prisma/seed-crypto-5yr.ts || nest/prisma/seed-forex-5yr.ts": 16,
+    "nest/src/modules/system/architecture-manifest.controller.ts || src/core/architecture-reference.js": 15,
+    "nest/src/modules/system/architecture-manifest.controller.ts || src/pages/architecture-framework.data.js": 15,
     "nest/scripts/directive-guard.cjs || nest/scripts/validate-protocol-directions.cjs": 13,
     "nest/src/modules/directives/implementations/mt5-dark-cloud-piercing.directive.ts || nest/src/modules/directives/implementations/mt5-engulfing-cci.directive.ts": 13,
     "src/pages/SupportResistancePage.jsx || src/pages/VolatilityAnalysisPage.jsx": 13,
@@ -33,6 +33,7 @@
     "nest/src/modules/auth/guards/jwt-auth.guard.ts || nest/src/modules/auth/guards/require-auth.guard.ts": 5,
     "nest/src/modules/directives/condition-detector.service.ts || nest/src/modules/directives/implementations/market-regime.directive.ts": 5,
     "nest/src/modules/directives/implementations/mt5-engulfing.directive.ts || nest/src/modules/directives/implementations/mt5-harami.directive.ts": 5,
+    "nest/src/modules/system/architecture-manifest.controller.ts || src/core/architecture-shared-facts.js": 5,
     "nest/src/modules/directives/implementations/mfi-overbought.directive.ts || nest/src/modules/directives/implementations/mfi.directive.ts": 4,
     "nest/src/modules/market-data/price-refresh.service.ts || nest/src/modules/portfolio/portfolio-price.service.ts": 4,
     "src/App.jsx || src/runtime/report.js": 4,
@@ -133,7 +134,7 @@
     "src/pages/support-resistance.css || src/pages/volatility-analysis.css": 1
   },
   "reasons": {
-    "src/core/architecture-reference.js || src/pages/architecture-framework.data.js": "DELIBERATE two-surface split - 1023 windows (was 1015 at batch #23 phase 1, 890 at batch #22, 839 at batch #19), the largest in the repo. architecture-reference.js is the AI-readable module, architecture-framework.data.js is the human page, and the overlap IS the mechanism; the two deliberately differ in LENGTH (the page paraphrases). The risk is DIVERGENCE, not copying. Do NOT delete either side on the strength of this number. Growth from a handoff batch is EXPECTED here: batch #22 (22 handoffs) added +51 windows and batch #23 (30 handoffs) added +125, precisely because both surfaces must carry the same slice - banked deliberately, not silently. MEASURED 2026-09-23 (batch #23): the two AGREE on CONTRACT_REGISTER_LAST_UPDATED (identical string, both batch #23), both gained the same 28 slice bullets and 16 route contracts, and the splice was verified against a pre-splice backup so each array's delta is exact (+28/+28 bullets, +16/+16 routes) rather than asserted. reference.js additionally carries a historical batch #6 marker the page lacks - an asymmetry, not a live contradiction. What is still UNGUARDED is the agreement itself: nothing fails the build if one surface is updated and the other is not. They diverged once already (batch #17 stamped a date in one and not the other) and only a human reading both found it.",
+    "src/core/architecture-reference.js || src/pages/architecture-framework.data.js": "SINGLE-SOURCED 2026-11-07 (#1246): CURRENT_ROUTE_CONTRACTS now lives once in src/core/architecture-route-contracts.js and both surfaces import it, taking this pair 1667 -> 389 windows. It was the repo's largest banked duplication and it had ALREADY DRIFTED - of 268 routes, 195 contracts matched and 73 did not, so the human page described superseded behaviour and no gate noticed (validate-arch-surfaces compares the ROUTE SET, not the contracts). What remains here is CURRENT_SLICE and DATABASE_SCHEMA, which differ on purpose (the page paraphrases). Do NOT re-duplicate the route array.",
     "nest/src/modules/directives/implementations/macd-divergence.directive.ts || nest/src/modules/directives/implementations/obv-divergence.directive.ts": "DONE 2026-09-21 - was 34 windows of DUPLICATED SCORING ALGORITHM, now 4. The five swing/divergence helpers moved to nest/src/modules/directives/utils/divergence.ts and all three directives import them. What REMAINS here is imports and the IDirective class preamble - structure, not logic. Proven behaviour-preserving: 108 golden cases (12 seeds x 3 bar-counts x 3 directives, 29 of them exercising the strength formula) produced a BYTE-IDENTICAL result before and after (sha256 333719E6...). The three strength CALIBRATIONS deliberately stay per-directive and now sit side by side in one place; see StrengthModel in utils/divergence.ts for why they differ.",
     "src/pages/ProtocolTrailPage.jsx || src/pages/SinglesMonitorPage.jsx": "NOT deliberate - extraction candidate, measured 2026-09-19. Both consume the same breakdown payload and repeat its mapping (breakouts / subScores / subMaxTotals) across six separate blocks - STILL NOT DONE. PARTIALLY PAID 2026-10-06: the pair had grown 27 -> 39 because two agents independently fixed the same owner request ('the page is reachable only by URL - add a symbol search') by pasting a byte-identical 12-line SymbolAutocomplete->?symbol= wrapper into each page. That block was EXTRACTED to src/components/SymbolPickerField.jsx, taking the pair 39 -> 29 (10 windows removed). The 2 windows banked since are the shared import line and the single <SymbolPickerField value={symbol} /> usage - the CONSEQUENCE of extracting, not new duplication. A shared component cannot be shared without being imported.",
     "nest/src/modules/system/architecture-manifest.controller.ts || src/core/architecture-reference.js": "NOT deliberate - the controller EMBEDS the pipeline-step descriptions that architecture-reference.js also declares, so the same prose exists in the backend and the frontend. Single-source candidate. Not done.",

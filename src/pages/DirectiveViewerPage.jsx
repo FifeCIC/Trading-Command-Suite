@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import DirectiveScoringNote from '../components/DirectiveScoringNote';
+import BeginnerGuide from '../components/BeginnerGuide';
 import PageInfoPopover from '../components/PageInfoPopover';
 import { directionModeLabel, signalTone } from '../core/signal-utils';
 import { formatTimestamp } from '../core/format-utils';
@@ -176,6 +177,19 @@ export default function DirectiveViewerPage() {
         <p className="dv-code">{data.id}</p>
         <p className="dv-description">{data.description || data.formula || 'No description available.'}</p>
       </section>
+
+      {/* ── Education containers ────────────────────────────────────────────────────────────────
+          ⚠️ WHY THIS IS HERE (2026-11-07, #1228). `BeginnerGuide` was written, styled and wired to
+          `prefs.dismissedGuides` — and mounted NOWHERE. Meanwhile /settings/settings-education already
+          offered the two toggles ("What Are Directives?", "About This Directive") AND a "Reset All
+          Dismissed Containers" button that could never have anything to reset. A control for a surface
+          that does not exist is worse than a missing control: it reports a capability the app lacks.
+          This page is the right home because the component renders BOTH containers and needs the
+          per-directive identity (`category`, `name`, `description`) that only a single-directive view
+          has. `data` from /api/directives/:id/viewer carries all four.
+          ⚠️ The master toggle `showTrainingGuidance` still governs this — the component returns null
+          when it is off, so the settings page keeps working as the off switch. */}
+      <BeginnerGuide directive={data} />
 
       {/* ⚠️ The metadata grid showed `direction bias` — a DECLARATION — and nothing said what that
           meant for the score. Measured 2026-11-02: ten directives declare a bias their code does not

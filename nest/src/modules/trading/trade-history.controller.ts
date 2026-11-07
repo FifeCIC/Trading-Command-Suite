@@ -15,6 +15,9 @@ import { PositionSyncService } from '../providers/position-sync.service';
 import { BotPerformanceService, DEFAULT_RATING_POLICY } from './bot-performance.service';
 // #884 — the ONE comment parser. The live-positions fallback below used to hand-roll its own.
 import { extractStrategyFromComment } from '../providers/mt5-comment.util';
+// #1149 — the exit-quality maths, pure so it can be tested without a database.
+import { computeExitQuality, DEFAULT_REACHED_THRESHOLD_PCT } from './exit-quality';
+import { barMaxState, isBarMaxFresh, refreshBarMax } from './exit-quality-bars';
 
 @Controller('trading')
 export class TradeHistoryController {
@@ -179,6 +182,77 @@ export class TradeHistoryController {
       limit: limit ? Number(limit) : 200,
       status,
     });
+  }
+
+  /**
+   * GET /api/trading/exit-quality — "did we leave profit on the table?" (#1149, the owner's question).
+   *
+   * Answers it from what the trades themselves recorded: `peakProfitPct` (the best the position ever
+   * showed) against a realised percentage DERIVED from `entryPrice`/`exitPrice`.
+   *
+   * ⚠️ `pnl` IS NEVER MIXED INTO A PERCENTAGE. It is currency; `peakProfitPct` is a percent of the
+   * entry price. Subtracting one from the other produces a plausible-looking number with no meaning —
+   * see the docblock in `exit-quality.ts`.
+   *
+   * ⚠️ COVERAGE IS PART OF THE ANSWER. `peakProfitPct` only exists from October 2026, so most of the
+   * history contributes to `n` and to no average. Every bucket reports `nWithPeak` beside `n` so a
+   * reader cannot mistake one for the other.
+   */
+  @Get('exit-quality')
+  async getExitQuality(@Query('days') days?: string) {
+    const windowDays = days ? Math.max(1, Number(days)) : 365;
+    const since = new Date(Date.now() - windowDays * 86400000);
+
+    const rows = await this.prisma.trade.findMany({
+      where: { closedAt: { gte: since }, pnl: { not: null } },
+      select: {
+        id: true,
+        symbol: true,
+        side: true,
+        entryPrice: true,
+        exitPrice: true,
+        peakProfitPct: true,
+        closeReason: true,
+        strategy: true,
+        pnlInvalid: true,
+        openedAt: true,
+        closedAt: true,
+      },
+      orderBy: { closedAt: 'desc' },
+      take: 5000,
+    });
+
+    // ⚠️ THE STORED PEAK IS A SAMPLED HIGH-WATER MARK, AND IT UNDERSTATES ON FAST INSTRUMENTS.
+    // Measured 2026-11-07 against `marketbar` on 40 trades: 19 understated by more than 0.1pp, 0
+    // overstated. On VIX the gap reached **7.5 percentage points** (stored 1.04%, bars 8.52%), while
+    // on GER40/GBPUSD the two agreed to 0.1pp. So `reached 0.5%` means something different on each
+    // instrument unless the bar-derived maximum is reported beside it.
+    //
+    // ⚠️ IT IS READ FROM A CACHE, NEVER COMPUTED HERE. The range join over `marketbar` (1.61M rows)
+    // measured 14,326–34,490 ms — it cannot be served on a request. See `exit-quality-bars.ts`.
+    const bars = barMaxState();
+    if (!isBarMaxFresh() && !bars.computing) {
+      // Kick it off; this request answers without it and says so.
+      void refreshBarMax(this.prisma, windowDays);
+    }
+
+    const enriched = rows.map((r) => ({ ...r, barMaxPct: bars.map.get(String(r.id)) ?? null }));
+
+    return {
+      windowDays,
+      since: since.toISOString(),
+      thresholdPct: DEFAULT_REACHED_THRESHOLD_PCT,
+      /** How many of the returned trades the bar-derived measurement covers. */
+      barMeasured: enriched.filter((r) => r.barMaxPct != null).length,
+      /**
+       * ⚠️ `ready` / `computing` / `error` ARE PART OF THE ANSWER. A bar column that is silently
+       * empty is indistinguishable from "no position moved"; this makes the difference visible.
+       */
+      barStatus: bars.error ? 'error' : bars.computing || !isBarMaxFresh() ? 'computing' : 'ready',
+      barComputedAt: bars.computedAt ? new Date(bars.computedAt).toISOString() : null,
+      barError: bars.error,
+      ...computeExitQuality(enriched as never),
+    };
   }
 
   /**

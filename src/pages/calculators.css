@@ -25,7 +25,9 @@
 
 /* Card */
 .calc-card {
-  background: var(--panel);
+  /* ⚠️ `--bg-elev`, not `--panel` (2026-11-07). `--panel` is #000000 in this pack, which made the card
+     and the page the same black. `--bg-elev` is the themed raised surface (ui-standards). */
+  background: var(--bg-elev);
   border: 1px solid var(--line);
   border-radius: 10px;
   margin-bottom: 16px;
@@ -48,7 +50,9 @@
 }
 
 .calc-card-header:hover {
-  background: rgba(255,255,255,0.03);
+  /* Was `rgba(255,255,255,0.03)` — a white overlay, which is invisible on a light theme. Mixing the
+     theme's own ink does the same job in either direction. */
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
 }
 
 .calc-card-header h3 {
@@ -104,16 +108,33 @@
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: #0f1117;
+  /* ⚠️ WAS `#0f1117` — a hardcoded near-black that ignored the theme, which is the "fields are too
+     dark" the owner reported. An input inside a raised card should read as INSET, so it takes the
+     page background (`--bg`) against the card's `--bg-elev`, with the border doing the definition.
+     Both tokens are themed (ui-standards "TOKENS: STATIC vs THEMED"), so this follows a theme change. */
+  background: var(--bg);
   color: var(--ink);
   font-size: 0.9rem;
   font-family: inherit;
+  min-height: 40px;
+  box-sizing: border-box;
 }
 
 .calc-input-group input:focus,
 .calc-input-group select:focus {
   outline: none;
-  border-color: var(--color-accent-blue);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* ⚠️ WHY THE FIELDS READ AS "TOO DARK" (measured 2026-11-07). The old value was `#0f1117` and the
+   card was `--panel` (#111118) — near-identical, so an input had NO definition against its card: it
+   was a border on the same colour. The inset `--bg` (#08080d) below gives a real step, and a hover
+   edge confirms the control is there before it is focused. Both tokens are themed, so this holds in
+   every pack. */
+.calc-input-group input:hover,
+.calc-input-group select:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
 }
 
 /* Results */
@@ -128,7 +149,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: var(--color-input-bg);
+  /* `--color-input-bg` is a STATIC token (#111318) — it does not follow the theme. `--bg` does. */
+  background: var(--bg);
+  border: 1px solid var(--line);
   border-radius: 6px;
   font-size: 0.875rem;
 }

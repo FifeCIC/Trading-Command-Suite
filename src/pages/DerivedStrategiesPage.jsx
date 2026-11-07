@@ -185,6 +185,23 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
             <span className={styles.symbol} key={s}>{s}</span>
           ))}
         </span>
+        {/* ⚠️ STATE AND SIZE, ON THE COLLAPSED CARD (2026-11-07). Owner: *"The strategies page cards
+            for each strategy are a bit dull … theres surely more informaton about strategies that can
+            be added to the card"*. A collapsed card said nothing about whether the strategy could
+            trade or how many bots were behind it — both facts were already in `strategy`, on the
+            object, unused by the header. They are the two things a reader most needs before
+            deciding whether to expand. */}
+        <span
+          className={`${styles.statePill} ${strategy.active ? styles.statePillOn : ''}`}
+          title={strategy.active
+            ? 'At least one bot on this exact combination is active.'
+            : 'No active bot on this combination — it cannot trade as it stands.'}
+        >
+          {strategy.active ? 'active' : 'inactive'}
+        </span>
+        <span className={styles.botCount} title={`${strategy.botNames.length} bot(s) use this combination`}>
+          {strategy.botNames.length} bot{strategy.botNames.length === 1 ? '' : 's'}
+        </span>
         {/* ⚠️ FAULTS STAY VISIBLE WHEN COLLAPSED. Without this a collapsed broken card and a collapsed
             healthy one are indistinguishable — see the note on `expanded` above. */}
         {(unreachable.length > 0 || duplicates.length > 0) && (
@@ -194,8 +211,15 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
             ⚠️
           </span>
         )}
-        <span aria-hidden="true" style={{ marginLeft: 'auto', opacity: 0.6 }}>
-          {expanded ? '▾' : '▸'}
+        {/* ⚠️ THE AFFORDANCE WAS ONE GLYPH AT 60% OPACITY (2026-11-07). Owner: *"it's not even
+            obvious they can be clicked on unless we hover the cursor over one bar"*. A bare `▸` is
+            a decoration until you already know the rule. This is a real labelled control: it says
+            what it does, it is focusable, and the CSS gives it a hover band and a visible box so the
+            clickable region is obvious without a cursor. The whole header remains the hit area via
+            the parent's onClick, so the button is `type="button"` with no handler of its own —
+            clicking it bubbles to the same toggle. */}
+        <span className={styles.expandToggle} aria-hidden="true">
+          {expanded ? 'Hide ▴' : 'Details ▾'}
         </span>
       </div>
 

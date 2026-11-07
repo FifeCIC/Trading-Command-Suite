@@ -56,7 +56,12 @@ export const PAGE_DATA_STATUS = {
   'screener': { status: 'live', source: 'ScreenerHit catalysts (#682) + /api/screener/ranked' },
   'snapshots': { status: 'live', source: 'MarketData DB + MT5 Bridge import' },
   'sector-rotation': { status: 'live', source: 'Finnhub sectors' },
-  'fluff-detector': { status: 'live', source: 'News sentiment analysis' },
+  // ⚠️ REMOVED 2026-11-07 (#1228). It said status: 'live' and the page was a STATIC MOCK —
+  // no fetch, no API, no route, no nav entry, imported by nothing, and its stylesheet was loaded by
+  // nothing either. The claim was the only thing making it look real. The page and its CSS were
+  // deleted; if the capability is wanted it must be built against /api/news sentiment, not restored
+  // from this entry. Deleted rather than corrected because a status row for a file that no longer
+  // exists is the same defect one step later.
   'market-correlations': { status: 'live', source: 'Pearson correlation API' },
   'news-intel': { status: 'live', source: 'Finnhub + DB' },
   'gap-scanner': { status: 'live', source: 'SEES gap-scanner directive via /api/scoring/ranked' },

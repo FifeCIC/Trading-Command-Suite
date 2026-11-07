@@ -63,6 +63,33 @@ test('withholding does not empty any area — a vanished area is a deleted secti
   assert.deepEqual(lost, [], `areas emptied entirely: ${lost.join(', ')}`);
 });
 
+test('an area marked hidden: true leaves BOTH nav shapes — top bar and sidebar must agree', () => {
+  /* ⚠️ THE GUARD FOR A REAL MISTAKE, MADE WHILE HIDING EDUCATION (2026-11-07).
+     `NAV_TREE` is `{ area: { label, hidden, views } }`; `getNavStructure()` is `{ area: [views] }`.
+     The array form has nowhere to hold `hidden`, so an area suppressed ONLY in `hidden-views.js`
+     disappeared from the top bar (which reads NAV_TREE) and stayed in the left rail (which reads
+     getNavStructure). The two surfaces disagreed about which areas exist.
+     This asserts the OUTCOME on both shapes rather than the mechanism, so it stays true whichever
+     layer performs the suppression. */
+  const inTree = Object.entries(NAV_TREE).filter(([, a]) => a?.hidden === true).map(([k]) => k);
+  assert.ok(inTree.length > 0, 'no area carries hidden: true — this guard would be vacuous');
+
+  for (const areaId of inTree) {
+    assert.equal(areaId in getNavStructure(), false, `${areaId} is still in the flat (rail) shape`);
+    // Both filter branches, because which one runs depends on OWNER_SEES_WITHHELD.
+    assert.equal(areaId in filterHiddenViews(NAV_TREE, new Set()), false, `${areaId} survived tagWithheld`);
+  }
+});
+
+test('a hidden area keeps its views declared so un-hiding is one line', () => {
+  // The flag is the reversal switch. Deleting `views` while it is set would make restoring the area
+  // a re-typing exercise, which is how a two-second revert becomes a ticket.
+  for (const [, area] of Object.entries(NAV_TREE)) {
+    if (area?.hidden !== true) continue;
+    assert.ok(Array.isArray(area.views) && area.views.length > 0, 'a hidden area must still declare its views');
+  }
+});
+
 test('the duplicate-id trap: hiding /settings/settings-education leaves the /education copy', () => {
   // Keyed by id this hid BOTH, because both end in "settings-education". Keyed by route, one goes.
   const tree = {

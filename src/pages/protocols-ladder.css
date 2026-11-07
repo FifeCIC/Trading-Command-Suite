@@ -75,7 +75,14 @@
 .pl-badge-sell { background: color-mix(in srgb, var(--color-sell) 12%, transparent); color: var(--color-sell); border-color: var(--color-sell); }
 .pl-badge-hold { background: color-mix(in srgb, var(--color-warning) 12%, transparent); color: var(--color-warning); border-color: var(--color-warning); }
 
-.pl-muted { font-size: 0.78rem; } /* color now global (index.css) */
+/* ⚠️ SCOPED 2026-11-07 — this used to be a bare `.pl-muted { font-size: 0.78rem; }`, i.e. a rule
+   written for THIS page's table that changed a SHARED colour utility APP-WIDE. Vite bundles every
+   stylesheet into one file, so it applied on every page loaded after this one. Measured live on
+   /trading/strategy-monitor: the "Avg Score" stat rendered at 12.48px while its three sibling stat
+   cards rendered at 20.8px, because that one cell carried `pl-muted`.
+   `.pl-muted` means "muted COLOUR" (index.css) and is used in 11 files. A class that means one thing
+   must not also mean a size. The ladder's own cells still get the smaller size here. */
+.pl-table .pl-muted { font-size: 0.78rem; }
 .pl-time { white-space: nowrap; }
 .pl-proto-link { color: var(--ink-soft); text-decoration: none; }
 .pl-proto-link:hover { color: var(--accent); text-decoration: underline; }

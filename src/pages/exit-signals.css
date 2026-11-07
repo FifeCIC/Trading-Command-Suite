@@ -12,22 +12,36 @@
 .es-hint { font-size: 0.88rem; margin-top: 0.5rem; }
 
 /* ── Status Groups ────────────────────────────────────────── */
-.es-group { margin-bottom: 1.5rem; }
+/*
+ * ⚠️ THE GROUP HEADER IS NOT A NOTICE (2026-11-07).
+ *
+ * Owner: *"This <div.es-group-header-high> might actually be a notice. If it is then the styling is
+ * wrong when compared to the red one … the strength of the coloured background is too much and the
+ * triangle icon tells me nothing."*
+ *
+ * He was right that it read as a notice, and the cause was the treatment: a filled tinted block with
+ * a 0.6-alpha border, in the same visual family as `.app-notice`. A section divider should DIVIDE,
+ * not assert — so the fill is gone, the border is a single hairline, and only the severity word keeps
+ * a colour. The card borders below carry the severity; the header just names the group.
+ */
+.es-group { margin-bottom: 1.75rem; }
 .es-group-header {
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   font-weight: 700;
   margin: 0 0 0.6rem;
-  padding: 0.55rem 0.85rem;
-  border-radius: 8px;
+  padding: 0 0 0.35rem;
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: baseline;
+  gap: 0.45rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--line);
 }
-.es-group-header-critical { color: var(--color-loss); background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.6); }
-.es-group-header-high { color: var(--color-warning); background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.6); }
-.es-group-header-medium { color: var(--notice-info-text); background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.6); }
-.es-group-header-low { color: #86efac; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.6); }
-.es-group-header-none { color: var(--ink-soft); background: rgba(100,116,139,0.08); border: 1px solid rgba(100,116,139,0.6); }
+.es-group-header-critical { color: var(--color-loss); border-bottom-color: color-mix(in srgb, var(--color-loss) 45%, var(--line)); }
+.es-group-header-high { color: var(--color-warning); border-bottom-color: color-mix(in srgb, var(--color-warning) 45%, var(--line)); }
+.es-group-header-medium { color: var(--notice-info-text); border-bottom-color: color-mix(in srgb, var(--notice-info-text) 45%, var(--line)); }
+.es-group-header-low { color: var(--color-profit); border-bottom-color: color-mix(in srgb, var(--color-profit) 45%, var(--line)); }
+.es-group-header-none { color: var(--ink-soft); border-bottom-color: var(--line); }
 
 /* ── Card Grid ────────────────────────────────────────────── */
 .es-grid {
@@ -36,37 +50,75 @@
   gap: 0.75rem;
 }
 .es-card {
-  background: var(--panel);
+  /* Raised surface so the coloured border has an edge to sit against — `--panel` is #000000 here. */
+  background: var(--bg-elev);
   border: 1px solid var(--line);
   border-radius: 10px;
-  padding: 1rem;
+  padding: 0.9rem 1rem;
   transition: border-color 0.15s, box-shadow 0.15s;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
 }
-.es-card:hover { border-color: var(--accent); box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.es-card:hover { border-color: var(--accent); box-shadow: var(--shadow-card); }
 
-/* ── Card Header ── */
+/* ⚠️ THE STATE COLOURS THE WHOLE EDGE (2026-11-07). The cards were neutral-bordered while the group
+   header carried the severity — which put the colour on a label above the thing, not on the thing.
+   ui-standards asks for a FULL coloured border so the tone reads as part of the card. Only CRITICAL
+   and HIGH are coloured: MEDIUM and LOW would colour the whole grid, and a page where every card is
+   tinted has no accent left to mean anything. */
+.es-card--critical { border-color: var(--color-loss); }
+.es-card--high { border-color: var(--color-warning); }
+.es-card--critical:hover, .es-card--high:hover { box-shadow: var(--shadow-card); }
+
+/* ── Card Header ────────────────────────────────────────────────────────────
+   ⚠️ RESTRUCTURED 2026-11-07. Owner: *"the symbol in bold a little larger text is not enough to
+   designate it as the title/header, bits like es-pnl are in different places on every card as some
+   have a sentence too es-bot and others don't"*.
+
+   Before: symbol, bot and P&L were all inline in one wrapping flex row, so the P&L slid left on any
+   card whose bot sentence was absent and the symbol competed with its own metadata.
+
+   Now the header is two fixed zones — identity on the left, figures pinned right — separated from
+   the body by a rule. The symbol is a real TITLE (its own line, larger, tighter tracking) and the
+   bot always occupies its slot, so every card in a grid row shares one geometry. */
 .es-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--line);
+}
+.es-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.es-card-figures {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+  flex: 0 0 auto;
 }
 .es-symbol-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
 .es-symbol {
-  font-weight: 700;
-  font-size: 1.15rem;
-  letter-spacing: 0.02em;
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  color: var(--ink);
 }
 
 /* #1016 — the resolved OWNER of the position (see #1018). Shown because "which bot is this?"
    was unanswerable from this page: a ticket says nothing about ownership, and symbol is not an
    owner (XAUUSD carries eight active bots). */
-.es-bot { font-size: 0.82rem; color: var(--ink-soft); font-weight: 500; }
+.es-bot { font-size: 0.78rem; color: var(--ink-soft); font-weight: 500; }
+.es-bot--none { color: var(--color-muted); font-style: italic; }
 
-.es-pnl { font-size: 0.92rem; font-weight: 700; }
+.es-pnl { font-size: 1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .es-pnl.positive { color: var(--color-profit); }
 .es-pnl.negative { color: var(--color-loss); }
 

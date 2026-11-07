@@ -1,18 +1,24 @@
 {
   "note": "Raw error renders left in the UI (#826 Phase 5). This number may only go DOWN: raising it is a regression and the gate fails on it. Lower it with: node scripts/validate-notices.cjs --update-allowance",
-  "total": 12,
+  "total": 16,
   "files": {
+    "src/components/RegisterSymbolOverlay.jsx": 2,
+    "src/components/ScoringMechanicsPanel.jsx": 1,
+    "src/components/SupportReportPanel.jsx": 1,
+    "src/core/support/report-buffers.js": 2,
+    "src/core/support/report-build.js": 1,
     "src/pages/Mt5TradingPage.jsx": 5,
     "src/pages/ProtocolsPageB.jsx": 1,
     "src/pages/SignalsOverviewPage.jsx": 1,
-    "src/theme/registry.js": 2,
-    "src/components/RegisterSymbolOverlay.jsx": 2,
-    "src/components/ScoringMechanicsPanel.jsx": 1
+    "src/theme/registry.js": 2
   },
   "notes": {
     "src/theme/registry.js": "Error boundary: converts a thrown Error into a plain data object for its renderer. There is no user-facing message here, so nothing to code.",
     "src/pages/ProtocolsPageB.jsx": "The API validation-issue list ([{severity, message}]) rendered as validation bullets. This is DATA, not an Error: it needs codes on the API side (Phase 4), not a UI change.",
     "src/components/RegisterSymbolOverlay.jsx": "Symbol-registration and watchlist-add submit errors (err.detail || err.message) rendered as a form alert. No registered code covers symbol-registration failure yet; declared 2026-10-09 (committed in 2848043 'UI Establishments') to unblock prebuild. Migrate when a symbol-onboarding code lands.",
-    "src/components/ScoringMechanicsPanel.jsx": "Score-computation failure line (error.detail || error.message). Candidate codes exist (TCS-SYS-002 / TCS-SYS-007) but the panel still renders the raw string; declared 2026-10-09 to unblock prebuild, migrate when the panel is next touched."
+    "src/components/ScoringMechanicsPanel.jsx": "Score-computation failure line (error.detail || error.message). Candidate codes exist (TCS-SYS-002 / TCS-SYS-007) but the panel still renders the raw string; declared 2026-10-09 to unblock prebuild, migrate when the panel is next touched.",
+    "src/core/support/report-build.js": "SUPPORT REPORT — the raw text IS the deliverable. Line 131 emits each captured console error into a fenced block of a Markdown diagnostics bundle: `[at] (source) message @ detail`. There is no user-facing message here, so a notice code would replace the evidence a developer needs with an identity they cannot diagnose. Declared 2026-11-07 to unblock prebuild.",
+    "src/core/support/report-buffers.js": "SUPPORT REPORT capture — records console error events and unhandled-rejection reasons into buffers (`name: message`) so the bundle can reproduce them verbatim. This is the recording side of the same feature; the strings are data at this point, never rendered as the app's failure message. Declared 2026-11-07 to unblock prebuild.",
+    "src/components/SupportReportPanel.jsx": "SUPPORT REPORT builder — line 45 catches a /api/health or /api/version failure WHILE ASSEMBLING the bundle and stores it as `system.error`, which then appears as one section of the report. It is not an error surface: nothing here is shown to the user as a notice, and the panel's job is to say why the report could not gather a live snapshot. Declared 2026-11-07 to unblock prebuild."
   }
 }

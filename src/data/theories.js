@@ -107,6 +107,62 @@ export const THEORIES = [
 
   // ── Data / processing ─────────────────────────────────────────────────────────────────────────
   {
+    id: 'gold-directive-trim-lifts-signal-strength',
+    raisedAt: '2026-11-07',
+    statement:
+      'Removing directives that were never directional raises `signalPct` by exactly the capacity ratio, because the denominator is configured capacity and a neutral directive adds to it without adding direction.',
+    predictedDirection:
+      'On the same symbol and the same bars, `xau-speed-v1-long-copy` (6 directives, capacity 540) reports 1010/540 = 1.87x the mean `signalPct` of `xau-speed-v1-long` (11 directives, capacity 1010).',
+    measure: 'signalPct',
+    unit: '% of the protocol configured directional capacity',
+    window:
+      'From the metals reopen 2026-11-08 22:00Z, one week. Both arms resolve the same 2 symbols and tick together — compare per symbol, never arm totals.',
+    status: 'testing',
+    evidence: {
+      basis: 'measurement',
+      n: 882,
+      result:
+        'The premise is measured: over 882 readings across 5 weekdays, SIX of the control protocol\u2019s eleven directives were neutral on 100.0% of ticks (bollinger-band-squeeze 90, volatility-tools 90, volume-confirmation 100, gold-macro-correlation 100, gold-session-profile 90, liquidity-check 100) while scoring 30-96 out of their own maxima. 570 of 1010 capacity (56%) carried no direction at all, and a seventh (support-resistance-levels, 95) was directional 84% of ticks yet counted on 0.0% because it permanently opposed the chosen direction. Capacity that never reached the numerator: 865 of 1010 (86%). The only reliable contributor held 25 of 1010 capacity (2.5%).',
+      measuredAt: '2026-11-07',
+      source:
+        'score.breakdown, 120h window — node logs/measure-neutral-capacity.cjs xau-speed-v1-long 120',
+    },
+    falsification:
+      'Compare mean and p90 `signalPct` for both arms on the same symbols once each has >= 200 readings. Ratio ~1.87 supports capacity dilution; ratio ~1.0 refutes it.',
+    decision:
+      'COPY BUILT, NOT YET GRADED (#1243). `xau-speed-v1-long-copy` was created through the canonical duplicate endpoint, trimmed of the five never-directional NON-GATE directives, and its subscriptions were deleted so it can score but never trade. liquidity-check was KEPT because it is the risk gate and removing it would change safety as well as maths — two variables at once.',
+    area: 'scoring',
+    issue: 1243,
+  },
+  {
+    id: 'directive-count-dilutes-normalised-strength',
+    raisedAt: '2026-11-07',
+    statement:
+      'A protocol with more directives reports LOWER normalised strength for the same directional evidence, because `signalPct` divides by the sum of every directive’s `maxScore` while only the directional ones contribute to the numerator.',
+    predictedDirection:
+      'On the same symbol and the same bars, a protocol holding only the 4 shared directives reports ~815/430 = 1.9x the `signalPct` of the 9-directive protocol. A ratio near 1.0 REFUTES the capacity-dilution explanation and moves the cause elsewhere.',
+    measure: 'signalPct',
+    unit: '% of the protocol configured directional capacity',
+    window:
+      'From the FX reopen 2026-11-08 22:00Z, one trading week. GBPUSD only — both arms, identical bars, never arm totals (the control has 15 symbols, the variant 1).',
+    status: 'testing',
+    evidence: {
+      basis: 'measurement',
+      n: 22,
+      result:
+        'The symptom is measured and still active: across 22 protocols over 2 days, every protocol at <=7 directives clears STRONG_PCT (13) on 30-100% of readings, every protocol at >=12 on 0.0-2.5%, and two have a ceiling BELOW 13 (11.4 and 11.3). ⚠️ Directive COUNT alone does not explain it: 9-directive protocols range from 6.6% to 95.6% strong. The neutral share is the candidate mechanism; this entry tests it, it does not assume it.',
+      measuredAt: '2026-11-07',
+      source:
+        'score_snapshot.signalPct, 2-day window, joined to protocol_directive_entry — reproducible query posted on #1184',
+    },
+    falsification:
+      'Compare mean and p90 `signalPct` between `forex-session-v1-long` and `forex-session-v1-copy-core4-long` on GBPUSD once both have >= 200 snapshots. Ratio ~1.9 supports capacity dilution; ratio ~1.0 refutes it.',
+    decision:
+      'NOT DECIDED — the pair is built and waiting for the first open market (#1234). ⚠️ The variant must not trade: a scoring question must not spend demo money to answer it. No threshold, denominator or weight may be edited while this runs — the pair IS the control (maths-change-requires-ab).',
+    area: 'scoring',
+    issue: 1234,
+  },
+  {
     id: 'most-scoring-is-on-untradeable-symbols',
     raisedAt: '2026-09-22',
     statement:

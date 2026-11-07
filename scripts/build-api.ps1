@@ -61,7 +61,8 @@ param(
     [switch]$SkipRestart,
     [switch]$Quick,
     [switch]$SelfTest,
-    [switch]$LockSelfTest
+    [switch]$LockSelfTest,
+    [switch]$ApiIdentitySelfTest
     )
 
 $ErrorActionPreference = 'Continue'
@@ -73,17 +74,103 @@ function Write-Ok($msg)   { Write-Host "   OK  $msg" -ForegroundColor Green }
 function Write-Warn2($msg){ Write-Host "   !!  $msg" -ForegroundColor Yellow }
 
 <#
+  Get-PortOwnerPid — who is actually serving this port?
+
+  ⚠️ `State -eq 'Listen'` IS NOT AN OWNER LOOKUP ON THIS HOST (#1238, measured twice by two agents).
+  The node sockets report NO `Listen` row at all (3201, 5173 -> 0), and the Python bridges report
+  2-7 rows that ALL carry `OwningProcess = 0`. The one row that names the owner, on every port, is
+  the one with NO REMOTE PEER — `RemotePort -eq 0` — because a listener has no peer while every
+  client row names a real remote port.
+
+  Returns 0 when no attributable owner exists. 0 means "cannot judge", NOT "nothing is listening":
+  the caller must not treat it as down.
+#>
+function Get-PortOwnerPid([int]$Port) {
+    $rows = @(Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue |
+        Where-Object { $_.OwningProcess -ne 0 })
+    if ($rows.Count -eq 0) { return 0 }
+    $pick = @($rows | Where-Object { $_.RemotePort -eq 0 }) | Select-Object -First 1
+    if (-not $pick) { $pick = @($rows | Where-Object { $_.State -eq 'Listen' }) | Select-Object -First 1 }
+    if (-not $pick) { $pick = $rows | Select-Object -First 1 }
+    if ($pick) { return [int]$pick.OwningProcess }
+    return 0
+}
+
+<#
+  Test-ApiIdentity — is the process serving the port the one WE just launched? (#1240)
+
+  ⚠️ WHY THIS EXISTS. `Assert-ApiUp` used to return $true on ANY 200. If another agent's bare
+  `nest run start` bound the port inside the rebuild window, it served the OLD build — Windows keeps
+  the mapping alive after `rimraf dist` deletes the files — so `build:api` printed "API healthy",
+  exited 0, and the API actually running was NOT the new build. A FALSE SUCCESS is worse than a false
+  failure here, because nobody goes looking.
+
+  ⚠️ HOW THE COMPARISON WORKS, and why it is a CREATION TIME rather than a pid:
+  the WMI launch path starts `cmd.exe` which spawns `node`, so `$Proc.Id` is the cmd pid and can
+  never equal the port owner. A pid comparison would fail on the very path that is supposed to work.
+  A process created BEFORE we launched cannot be ours, whichever shell spawned it — so creation time
+  is the identity that survives both launch paths.
+
+  PURE and canaried (see -ApiUpSelfTest). Returns:
+    'ours'    — an owner exists and it started at or after our launch
+    'stale'   — an owner exists and it started BEFORE our launch (someone else's, or an un-killed one)
+    'unknown' — no attributable owner, or no launch time to compare against, or the start time is
+                unreadable (access denied)
+  ⚠️ 'unknown' must never be reported as success *or* as stale. It is the third state, and collapsing
+  it into either one is the defect this whole family of issues is about.
+#>
+function Test-ApiIdentity([int]$OwnerPid, $LaunchedAtUtc, $OwnerProcess) {
+    if (-not $LaunchedAtUtc) { return 'unknown' }
+    if (-not $OwnerPid -or $OwnerPid -le 0) { return 'unknown' }
+    if (-not $OwnerProcess) { return 'unknown' }   # owner vanished between the port read and now
+    try {
+        $startedUtc = $OwnerProcess.StartTime.ToUniversalTime()
+    } catch {
+        return 'unknown'                            # access denied on the start time — cannot judge
+    }
+    if ($startedUtc -lt $LaunchedAtUtc) { return 'stale' }
+    return 'ours'
+}
+
+<#
   Assert-ApiUp — the post-restart verification, extracted so the failure path can be canaried
   without breaking a real start (-SelfTest points it at a dead port).
-  Returns $true only when /api/version answers 200 within the budget.
+  Returns $true only when /api/version answers 200 within the budget AND the answering process is the
+  one we launched, whenever that can be determined (#1240).
 #>
-function Assert-ApiUp([int]$Port = 3201, [int]$TimeoutSeconds = 180, [System.Diagnostics.Process]$Proc = $null) {
-    # ⚠️ 180s, NOT 60s (2026-11-04). MEASURED: after the bootstrap header the API blocks in
-    # `app.listen()` for ~90 SECONDS while its module init hooks run — directive seed, protocol
-    # readiness passes, first scoring pass. On a 60s budget this function printed "API IS DOWN …
-    # the process did not bind the port" and the script exited 1 while /api/version answered
-    # 40 seconds later. A false failure is worse than a slow pass: it sends the reader to logs
-    # that contain no fault, and it teaches them to ignore the red line.
+function Assert-ApiUp([int]$Port = 3201, [int]$TimeoutSeconds = 180, [System.Diagnostics.Process]$Proc = $null, $LaunchedAtUtc = $null) {
+    # ⚠️ 180s, NOT 60s (2026-11-04). On a 60s budget this function printed "API IS DOWN … the
+    # process did not bind the port" and the script exited 1 while /api/version answered 40
+    # seconds later. A false failure is worse than a slow pass: it sends the reader to logs that
+    # contain no fault, and it teaches them to ignore the red line.
+    #
+    # ⚠️ CORRECTED 2026-11-07 — this block used to say "the API blocks in `app.listen()` for ~90
+    # SECONDS while its module init hooks run". THAT MECHANISM IS NO LONGER TRUE. The two
+    # ProtocolHealthService audits are fire-and-forget in the compiled code
+    # (`void this.runBootDiagnostics()`), so nothing gates `listen()` on them: the port answers in
+    # 5–19.6 s (six boots), and the audit runs ON AFTERWARDS for 86.6 s, measured to completion.
+    # The 180s budget is KEPT deliberately — it is a ceiling on a false-failure path, not a block
+    # anyone waits through, and tightening it would re-introduce the exact failure it was raised
+    # to prevent. Pre-change (audits awaited) that boot really was ~107 s, which is where the
+    # original observation came from. THREE numbers, never merged — see
+    # agent-environment.instructions.md.
+    #
+    # ⚠️ WAS `PLANNED IN #1240` — REMOVED 2026-11-07 because the gap is now CLOSED. The loop below
+    # calls `Test-ApiIdentity` and returns $false on `stale`, so a 200 from ANOTHER process no longer
+    # reads as "healthy". The marker said "MISSING: returns $true on ANY 200" and that sentence had
+    # become false — a `PLANNED IN` that outlives its issue is worse than no marker, because it sends
+    # the next reader to build something that already exists.
+    #
+    # ⚠️ AND THE FIX IS NOT THE ONE THE MARKER PROPOSED — worth keeping, because the marker's version
+    # would have BROKEN the working path. It said "compare the served pid against $Proc.Id". The WMI
+    # launch path starts `cmd.exe`, which spawns `node`, so `$Proc.Id` is the CMD pid and can never
+    # equal the port owner. The shipped check compares CREATION TIME instead (`Test-ApiIdentity`):
+    # a process created before we launched cannot be ours, whichever shell parented it. Three states,
+    # and 'unknown' is never reported as success *or* stale.
+    #
+    # LESSON: a gap marker is a claim like any other. "WHEN BUILT: compare the pid" was a plausible
+    # sentence that had never been tested against the two launch paths — and had it been implemented
+    # literally, it would have turned a working health check into a permanent false failure.
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     $listening = $false
     while ((Get-Date) -lt $deadline) {
@@ -95,7 +182,29 @@ function Assert-ApiUp([int]$Port = 3201, [int]$TimeoutSeconds = 180, [System.Dia
         $listening = [bool](Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue)
         try {
             $r = Invoke-WebRequest -Uri "http://localhost:$Port/api/version" -UseBasicParsing -TimeoutSec 3
-            if ($r.StatusCode -eq 200) { return $true }
+            if ($r.StatusCode -eq 200) {
+                # ── #1240: a 200 is not proof that OUR build is serving ──────────────────────────
+                # Without this check, another agent's bare `nest run start` could bind the port
+                # inside the rebuild window, serve the OLD build, and this function would report
+                # "API healthy". A FALSE SUCCESS is worse than a false failure, because nobody
+                # goes looking. 'unknown' (cannot judge) is REPORTED and then accepted — the port
+                # answers, and refusing on an unreadable start time would break the normal path.
+                $ownerPid  = Get-PortOwnerPid -Port $Port
+                $ownerProc = if ($ownerPid -gt 0) { Get-Process -Id $ownerPid -ErrorAction SilentlyContinue } else { $null }
+                $identity  = Test-ApiIdentity -OwnerPid $ownerPid -LaunchedAtUtc $LaunchedAtUtc -OwnerProcess $ownerProc
+                if ($identity -eq 'stale') {
+                    Write-Host "`n   THE PORT IS SERVED BY A DIFFERENT PROCESS (#1240)." -ForegroundColor Red
+                    Write-Host "   pid $ownerPid started $($ownerProc.StartTime.ToUniversalTime().ToString('HH:mm:ss'))Z," -ForegroundColor Red
+                    Write-Host "   BEFORE this build launched (${LaunchedAtUtc}Z)." -ForegroundColor Red
+                    Write-Host "   The build did NOT take effect: an older API is answering 200 on port $Port." -ForegroundColor Red
+                    Write-Host "   That is why a stale build can look healthy. Stop it, then start dist/src/main.js." -ForegroundColor Yellow
+                    return $false
+                }
+                if ($identity -eq 'unknown') {
+                    Write-Warn2 "Health answered 200 but the serving process could not be identified (pid $ownerPid) — accepting, and saying so."
+                }
+                return $true
+            }
         } catch { }
         if ($Proc -and $Proc.HasExited) { break }   # crashed — no point waiting the full budget
     }
@@ -177,6 +286,58 @@ function Release-BuildLock {
     }
 }
 
+if ($ApiIdentitySelfTest) {
+    # Canary for #1240 — BOTH directions, on fabricated process objects. No build runs, no port is
+    # read, the API is never touched. A decision that has never been observed to return the
+    # WRONG answer is not a decision, it is a decoration: every case below is asserted, including
+    # the one that must NOT be reported as stale (a clock-identical launch) and the one that must
+    # NOT be reported as success (no attributable owner).
+    Write-Step 'API IDENTITY SELFTEST — ours vs an older api vs cannot-judge'
+    $pass = $true
+    $t0 = [DateTime]::UtcNow
+
+    # A stand-in process object: only StartTime is read, and only its UTC value matters.
+    function New-FakeProc([datetime]$startUtc) {
+        [pscustomobject]@{ StartTime = $startUtc.ToLocalTime() }
+    }
+
+    # Stand-in process objects. Only StartTime is read, and only its UTC value matters, so a
+    # plain object with one property is a faithful double — no real process is touched.
+    $fakeAfter   = [pscustomobject]@{ StartTime = $t0.AddSeconds(4).ToLocalTime() }
+    $fakeBefore  = [pscustomobject]@{ StartTime = $t0.AddSeconds(-90).ToLocalTime() }
+    $fakeAt      = [pscustomobject]@{ StartTime = $t0.ToLocalTime() }
+
+    $cases = @(
+        [pscustomobject]@{ name = 'created AFTER our launch';       owner = $fakeAfter;  pid = 4242; at = $t0;   want = 'ours' },
+        [pscustomobject]@{ name = 'created BEFORE our launch';      owner = $fakeBefore; pid = 1111; at = $t0;   want = 'stale' },
+        [pscustomobject]@{ name = 'created AT our launch instant';  owner = $fakeAt;     pid = 4242; at = $t0;   want = 'ours' },
+        [pscustomobject]@{ name = 'no attributable owner (pid 0)';  owner = $null;       pid = 0;    at = $t0;   want = 'unknown' },
+        [pscustomobject]@{ name = 'owner vanished before we read';  owner = $null;       pid = 4242; at = $t0;   want = 'unknown' },
+        [pscustomobject]@{ name = 'no launch time to compare';      owner = $fakeAfter;  pid = 4242; at = $null; want = 'unknown' }
+    )
+    foreach ($c in $cases) {
+        $got = Test-ApiIdentity -OwnerPid $c.pid -LaunchedAtUtc $c.at -OwnerProcess $c.owner
+        if ($got -eq $c.want) {
+            Write-Host "   OK  $($c.name) -> $got" -ForegroundColor Green
+        } else {
+            Write-Host "   FAIL $($c.name) -> got $got, want $($c.want)" -ForegroundColor Red
+            $pass = $false
+        }
+    }
+
+    # ⚠️ The REAL port must still resolve to an owner on this host, or the whole check silently
+    # becomes 'unknown' everywhere and guards nothing. Read-only: no build, nothing stopped.
+    $realPid = Get-PortOwnerPid -Port 3201
+    if ($realPid -gt 0) {
+        Write-Host "   OK  live port 3201 owner resolves to pid $realPid" -ForegroundColor Green
+    } else {
+        Write-Host "   NOTE no owner on 3201 right now — acceptable only if the API is genuinely down" -ForegroundColor Yellow
+    }
+
+    if ($pass) { Write-Ok 'API IDENTITY SELFTEST PASSED'; exit 0 }
+    Write-Host '   API IDENTITY SELFTEST FAILED' -ForegroundColor Red
+    exit 1
+}
 if ($LockSelfTest) {
     # Both directions, fabricated states — no build runs, the API is never touched.
     Write-Step 'LOCK SELFTEST — refuse a LIVE holder, take over a DEAD one'
@@ -425,6 +586,8 @@ try {
             CurrentDirectory         = $nestDir
             ProcessStartupInformation = $startup
         } -ErrorAction Stop
+    # The instant we launched, used by Assert-ApiUp to tell OUR api from an older one (#1240).
+    $apiLaunchedAtUtc = [DateTime]::UtcNow
     if ($created.ReturnValue -eq 0 -and $created.ProcessId) {
         Start-Sleep -Milliseconds 250
         $apiProc = Get-Process -Id $created.ProcessId -ErrorAction Stop
@@ -434,6 +597,7 @@ try {
     Write-Host "   ⚠ WMI launch unavailable ($($_.Exception.Message)) — falling back to Start-Process." -ForegroundColor Yellow
 }
 if (-not $apiProc) {
+    $apiLaunchedAtUtc = [DateTime]::UtcNow   # same identity stamp on the fallback path (#1240)
     $apiProc = Start-Process -FilePath 'node' -ArgumentList 'dist/src/main.js' `
         -WorkingDirectory $nestDir `
         -RedirectStandardOutput $outLog `
@@ -444,12 +608,13 @@ if (-not $apiProc) {
 Write-Ok "API starting in the background (node dist/src/main.js, PID $($apiProc.Id))."
 
 # The post-restart assertion (#933): a REAL request must answer, or the script fails LOUDLY.
-# ⚠️ 180s, not 60s (2026-11-05). MEASURED: the API blocks in `app.listen()` for ~90-120s while its
-# module-init hooks run (directive seed, 51 protocol readiness passes, first scoring pass — Tick #1
-# alone was measured at 86.8s). At 60s this printed "API IS DOWN … the process did not bind the
+# ⚠️ 180s, not 60s (2026-11-05). At 60s this printed "API IS DOWN … the process did not bind the
 # port" and exited 1 while /api/version answered 30 seconds later. The explicit value here is the
 # one that actually applies; the function default only covers callers that omit it.
-$healthy = Assert-ApiUp -Port 3201 -TimeoutSeconds 180 -Proc $apiProc
+# ⚠️ CORRECTED 2026-11-07: the "blocks in `app.listen()` for ~90-120s" mechanism in the original
+# note is STALE — with the audits deferred (`void this.runBootDiagnostics()`) boot is 5–19.6 s and
+# the 86.6 s audit runs after the port is already open. See Assert-ApiUp's note above.
+$healthy = Assert-ApiUp -Port 3201 -TimeoutSeconds 180 -Proc $apiProc -LaunchedAtUtc $apiLaunchedAtUtc
 
 # ⚠️ DROPS OUR REFERENCE ONLY. The API is a separate process and is NOT stopped by this.
 $apiProc.Dispose()

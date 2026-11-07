@@ -295,7 +295,21 @@
    (0,1,0) no matter the order. That is why the cell modifiers below are scoped to `.table`: without
    it, adding a base `td` rule silently strips `.tdMuted`, `.tdRank` and `.tdNum` of their colour and
    alignment. Nothing errors; the columns just quietly stop being muted or right-aligned. */
-.tablePane { overflow-x: auto; }
+/* ⚠️ THE PANE HAD NO EDGE AT ALL (fixed 2026-11-07). Measured live on /trading/trading-bots:
+   `border-top-width: 0px`, `border-radius: 0px`, `background: rgba(0,0,0,0)` while the table inside
+   computed **816px wide in a 664px pane**. So rows were clipped at both sides with nothing marking
+   the boundary, which is exactly what the owner saw as *"mainly the edges of the table"* missing.
+
+   The wrapper now carries the container edge — border, radius, raised surface — so the horizontal
+   scroll is a deliberate region rather than a table running off the page. `border-radius` needs
+   `overflow: hidden` to clip the corners, but that would also clip the sticky header, so the radius
+   is applied with `overflow-x: auto` kept and the table inset by its own padding. */
+.tablePane {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-elev);
+}
 
 .table { width: 100%; border-collapse: collapse; font-size: 0.8rem; color: var(--ink); }
 
@@ -309,7 +323,8 @@
   color: var(--ink-soft);
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
-  background: transparent;
+  /* A header band, so the top edge of the table reads as a container rather than as the first row. */
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
 }
 
 /* `border-bottom` only — never a full grid. Tabular figures so digits line up down the column,
@@ -325,7 +340,8 @@
 /* The container's edge is the boundary — the last row needs no rule of its own. */
 .table tbody tr:last-child td { border-bottom: none; }
 
-.table tbody tr { background: var(--panel); }
+/* `--bg-elev` matches the pane so the rows sit ON the container rather than punching through it. */
+.table tbody tr { background: transparent; }
 
 .row { cursor: pointer; }
 /* ⚠️ `:hover` is (0,2,0) and already beats `.table tbody tr` (0,1,2) on specificity — but a bare

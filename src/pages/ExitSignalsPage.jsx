@@ -8,11 +8,11 @@ import Notice from '../components/Notice';
 import './exit-signals.css';
 
 const URGENCY_COLORS = {
-  CRITICAL: '#dc2626',
-  HIGH: '#ef4444',
-  MEDIUM: '#f59e0b',
-  LOW: '#22c55e',
-  NONE: '#6b7280',
+  CRITICAL: 'var(--color-loss)',
+  HIGH: 'var(--color-warning)',
+  MEDIUM: 'var(--color-warning)',
+  LOW: 'var(--color-profit)',
+  NONE: 'var(--color-muted)',
 };
 
 const URGENCY_LABELS = {
@@ -134,7 +134,10 @@ export default function ExitSignalsPage() {
             if (groups[g]) groups[g].push(s); else groups.NONE.push(s);
           }
           const groupOrder = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'NONE'];
-          const groupLabels = { CRITICAL: '⚠️ Critical — Exit Now', HIGH: '▲ High — Consider Exit', MEDIUM: '◆ Medium — Monitor', LOW: '✅ Low — Strong Hold', NONE: '— No Signal' };
+          // ⚠️ ICONS REMOVED 2026-11-07 (owner: *"the triangle icon tells me nothing"*). A ▲ beside
+          // "Consider Exit" was decoration that had to be decoded; the severity word already says it,
+          // and the count is the only fact the header carries that the cards below do not.
+          const groupLabels = { CRITICAL: 'Critical — Exit Now', HIGH: 'High — Consider Exit', MEDIUM: 'Medium — Monitor', LOW: 'Low — Strong Hold', NONE: 'No Signal' };
 
           return groupOrder.map((level) => {
             const items = groups[level];
@@ -149,24 +152,43 @@ export default function ExitSignalsPage() {
                   {items.map((sig, i) => (
                     <motion.div
                       key={sig.symbol || sig.ticker || i}
-                      className="es-card"
+                      className={`es-card${sig.urgency === 'CRITICAL' ? ' es-card--critical' : sig.urgency === 'HIGH' ? ' es-card--high' : ''}`}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.04 }}
                     >
                       <div className="es-card-header">
-                        <div className="es-symbol-row">
+                        <div className="es-card-title">
                           <span className="es-symbol">{sig.symbol || sig.ticker}</span>
-                          {sig.bot && <span className="es-bot">{sig.bot}</span>}
+                          {/* ⚠️ ALWAYS RENDERED (2026-11-07). Owner: *"bits like es-pnl are in
+                              different places on every card as some have a sentence too es-bot and
+                              others don't"*. An absent bot used to remove the element entirely, so
+                              every field after it shifted left. A slot that is always present keeps
+                              the header geometry identical across cards, and "no owner" is itself
+                              information — a position nothing owns is one nothing is managing. */}
+                          <span className={`es-bot${sig.bot ? '' : ' es-bot--none'}`}>
+                            {sig.bot || 'no owner recorded'}
+                          </span>
+                        </div>
+                        <div className="es-card-figures">
                           {sig.pnlPct != null && (
                             <span className={`es-pnl ${sig.pnlPct >= 0 ? 'positive' : 'negative'}`}>
                               {sig.pnlPct >= 0 ? '+' : ''}{sig.pnlPct.toFixed(1)}%
                             </span>
                           )}
-                        </div>
-                        <span className="es-urgency-badge" style={{ background: (URGENCY_COLORS[sig.urgency] || URGENCY_COLORS.NONE) + '20', color: URGENCY_COLORS[sig.urgency] || URGENCY_COLORS.NONE }}>
+                        {/* ⚠️ `color + '20'` ONLY WORKS ON A HEX LITERAL. `var(--color-loss)20` is
+                            invalid CSS and silently yields no background — ui-standards rule 4. The
+                            tints are colour values now, so the alpha has to come from color-mix. */}
+                        <span
+                          className="es-urgency-badge"
+                          style={{
+                            background: `color-mix(in srgb, ${URGENCY_COLORS[sig.urgency] || URGENCY_COLORS.NONE} 14%, transparent)`,
+                            color: URGENCY_COLORS[sig.urgency] || URGENCY_COLORS.NONE,
+                          }}
+                        >
                           {URGENCY_LABELS[sig.urgency] || sig.urgency}
                         </span>
+                        </div>
                       </div>
 
                       <div className="es-card-body">

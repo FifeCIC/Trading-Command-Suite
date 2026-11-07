@@ -73,13 +73,13 @@
   border-color: var(--color-accent-blue);
 }
 
-/* Source badge on cards */
+/* Source badge on cards — a tinted chip off the accent, not a fixed violet (#a78bfa / rgba(139,92,246)) */
 .pm-pos-source {
   font-size: 0.6rem;
   padding: 1px 6px;
   border-radius: 3px;
-  background: rgba(139,92,246,0.12);
-  color: #a78bfa;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
   text-transform: uppercase;
   font-weight: 600;
 }
@@ -101,54 +101,80 @@
   gap: 12px;
 }
 
+/*
+ * ⚠️ FULL COLOURED BORDER, NOT A LEFT STRIPE (2026-11-07).
+ *
+ * Owner, verbatim: *"These bloody cards are styled using a styling I asked to be completely removed
+ * from the entire app because I'm starting to hate it … the left hand coloured border is rubbish.
+ * The layout of all the information within the cards is terrible too. I like cards with a full
+ * coloured border and a more clever design for the contents."*
+ *
+ * ui-standards.instructions.md has disfavoured `border-left` as a state carrier since 2026-09-18 and
+ * this file was one of the three named in "Do not copy this into a new component". The state now
+ * colours the WHOLE edge, which reads as part of the card rather than a stripe bolted on the side.
+ *
+ * ⚠️ The surface is `--bg-elev` (themed raised surface), not `--panel`: `--panel` is #000000 in this
+ * pack, and a black card on a black page has no edge for the coloured border to sit against.
+ */
 .pm-pos-card {
-  background: var(--panel);
+  background: var(--bg-elev);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 10px 14px;
+  border-radius: 10px;
+  padding: 12px 16px;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
+.pm-pos-card:hover { box-shadow: var(--shadow-card); }
 
-/* Win/loss left border */
-.pm-pos-card.pm-win { border-left: 3px solid var(--color-profit); }
-/* ⚠️ SYMMETRIC WITH THE WIN ACCENT ABOVE. The loss state was a class heavier than the win state
-   (`border-left: 3px` on loss only), so a winning card and a losing card did not read as the same
-   component in two states. Both are 3px left accents now. */
-.pm-pos-card.pm-lose { border-left: 3px solid var(--color-loss); }
+.pm-pos-card.pm-win { border-color: var(--color-profit); }
+.pm-pos-card.pm-lose { border-color: var(--color-loss); }
+.pm-pos-card.pm-pos-card--highlight { box-shadow: 0 0 0 2px var(--accent); }
 
-.pm-option { border-color: #8b5cf6; }
+.pm-option { border-color: var(--accent); }
 
+/* ── header: symbol on the left, P&L on the right, chips beneath ── */
 .pm-pos-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
 }
 
 .pm-pos-title {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .pm-pos-title strong {
-  font-size: 1rem;
+  font-size: 1.1rem;
+  letter-spacing: 0.01em;
 }
 
 .pm-pos-pnl-group {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+  flex: 0 0 auto;
 }
 
 .pm-pos-pnl {
-  font-weight: 700;
-  font-size: 1rem;
+  font-weight: 800;
+  font-size: 1.15rem;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
 }
 
 .pm-pos-pnl-pct {
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   opacity: 0.85;
+  font-variant-numeric: tabular-nums;
 }
 
 .pm-profit { color: var(--color-profit); }
@@ -161,37 +187,48 @@
   gap: 6px;
   margin-bottom: 10px;
   font-size: 0.82rem;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: var(--font-mono, 'JetBrains Mono', 'Fira Code', monospace);
+  color: var(--ink-soft);
 }
 
 .pm-price-entry { color: var(--color-muted); }
 .pm-price-arrow { color: var(--color-muted); }
 .pm-price-current { font-weight: 600; }
 
+/* ── details: a labelled two-column grid, not a run of inline pairs ──────────
+   The previous layout put label and value on one line at a 110px minimum, so a long value
+   ("TCS guardian · stop via trailing") pushed its own label out of alignment with the row above.
+   Now each cell is label-above-value, which keeps every value on a shared baseline no matter how
+   long it is, and values get tabular figures so numbers in a column line up. */
 .pm-pos-details {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 4px 6px;
-  margin-bottom: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px 14px;
+  margin-bottom: 10px;
 }
 
 .pm-pos-details div {
   display: flex;
-  flex-direction: row;
-  align-items: baseline;
-  gap: 4px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
 }
 
 .pm-pos-details span:first-child {
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   color: var(--color-muted);
   text-transform: uppercase;
+  letter-spacing: 0.05em;
   white-space: nowrap;
 }
 
 .pm-pos-details span:last-child {
-  font-size: 0.82rem;
-  font-weight: 500;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 .pm-buy { color: var(--color-buy); }
@@ -199,10 +236,12 @@
 
 .pm-warning {
   padding: 6px 10px;
-  background: #451a03;
-  border: 1px solid #78350f;
+  /* Was `#451a03` on `#78350f` — two fixed brown hexes, so the warning ignored the theme. The notice
+     vocabulary already has a themed warning pair; use it. */
+  background: var(--notice-warning-bg);
+  border: 1px solid var(--notice-warning-border);
   border-radius: 6px;
-  color: var(--color-warning);
+  color: var(--notice-warning-text);
   font-size: 0.8rem;
   margin-bottom: 10px;
 }
@@ -229,11 +268,14 @@
   top: 1px;
   left: 8px;
   font-size: 0.68rem;
-  color: #fff;
-  font-weight: 600;
+  /* ⚠️ `#fff` + `mix-blend-mode: difference` was a trick to stay legible over an arbitrary fill
+     colour. It renders white-on-white over a pale fill. The fill is now a themed `--risk-*` token,
+     so plain `--ink` with a shadow-free contrast is correct and works in light mode too. */
+  color: var(--ink);
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--bg) 85%, transparent);
+  font-weight: 700;
   z-index: 1;
   cursor: help;
-  mix-blend-mode: difference;
   line-height: 14px;
 }
 

@@ -3,10 +3,36 @@ import { useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import PageInfoPopover from '../components/PageInfoPopover';
 import './positions-monitor.css';
 
+/**
+ * num2() — a money/price cell, or an em dash.
+ *
+ * ⚠️ `pos.sl != null ? \`$${Number(pos.sl).toFixed(2)}\` : '—'` PRINTED "$NaN" ON A LIVE CARD
+ * (measured 2026-11-07 on /trading/positions-monitor, FTAD). `Number(undefined)` is NaN, and
+ * `NaN != null` is TRUE — so the null check passed and the formatter rendered the NaN. The broker
+ * reports some fields as NaN rather than omitting them, so "present but not a number" is a real
+ * state here and must render as "cannot judge", not as a number.
+ */
+function num2(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? `$${n.toFixed(2)}` : '—';
+}
+
+/**
+ * RiskBar — the exposure bar on a position card.
+ * ⚠️ Was three hardcoded hex literals (`#ef4444` / `#f59e0b` / `#22c55e`) chosen in JS, so the bar
+ * ignored the theme. ui-standards:use the THEMED `--risk-*` scale for a severity ramp — it is the
+ * app's only themed multi-step severity palette. Same thresholds (10 / 20) as the marker line the
+ * CSS draws, so the colour and the line cannot disagree.
+ */
 function RiskBar({ pct, label }) {
-  const color = pct > 20 ? '#ef4444' : pct > 10 ? '#f59e0b' : '#22c55e';
+  const color = pct > 20
+    ? 'var(--risk-high, var(--color-loss))'
+    : pct > 10
+      ? 'var(--risk-elevated, var(--color-warning))'
+      : 'var(--risk-normal, var(--color-profit))';
   const displayPct = Math.min(Math.max(pct || 0, 0), 100);
   return (
     <div className="pm-risk-bar" title={`${label}: portion of portfolio value at risk. ${pct > 20 ? 'Above 20% threshold — consider reducing.' : pct > 10 ? 'Moderate risk — monitor closely.' : 'Within acceptable range.'}`}>
@@ -95,9 +121,17 @@ function CFDPosition({ pos, index, onClose, isClosing, highlight }) {
           <span>Owner</span>
           {/* The loud case is the ABSENT one. A position no mechanism owns is one nothing will
               manage — the broker stop is all that stands, and that is how 0.10 lots sat unattended
-              for 2h20m while 26 guardian warnings went to a log nobody reads. */}
-          <span className={pos.owner ? '' : 'pm-loss'}>
-            {pos.owner ? pos.owner.strategyName : '★ UNOWNED — nothing is managing this'}
+              for 2h20m while 26 guardian warnings went to a log nobody reads.
+
+              ⚠️ SHORTENED 2026-11-07. The sentence "nothing is managing this" made this tile three
+              lines tall in a two-column grid, which pushed every row below it out of alignment — the
+              exact complaint the restructure was for. The wording is now the tooltip; the loud part
+              ("★ UNOWNED") stays visible, and the summary strip counts them. */}
+          <span
+            className={pos.owner ? '' : 'pm-loss'}
+            title={pos.owner ? undefined : 'No strategy, guardian or bot owns this position — nothing but the broker\'s own stop is managing it.'}
+          >
+            {pos.owner ? pos.owner.strategyName : '★ UNOWNED'}
           </span>
         </div>
         <div>
@@ -111,13 +145,13 @@ function CFDPosition({ pos, index, onClose, isClosing, highlight }) {
         <div><span>Direction</span><span className={pos.direction === 'BUY' ? 'pm-buy' : 'pm-sell'}>{pos.direction}</span></div>
         <div><span>Volume</span><span>{pos.volume}</span></div>
         <div><span>Leverage</span><span>{pos.leverage || '—'}</span></div>
-        <div><span>Margin</span><span>${Number(pos.margin)?.toFixed(2) || '—'}</span></div>
+        <div><span>Margin</span><span>{num2(pos.margin)}</span></div>
         <div><span>Days Held</span><span>{pos.daysHeld}d</span></div>
         {pos.allocation != null && (
           <div><span>Allocation</span><span>{pos.allocation.toFixed(1)}%</span></div>
         )}
-        <div><span>Stop Loss</span><span>{pos.sl != null ? `$${Number(pos.sl).toFixed(2)}` : '—'}</span></div>
-        <div><span>Take Profit</span><span>{pos.tp != null ? `$${Number(pos.tp).toFixed(2)}` : '—'}</span></div>
+        <div><span>Stop Loss</span><span>{num2(pos.sl)}</span></div>
+        <div><span>Take Profit</span><span>{num2(pos.tp)}</span></div>
         {/* THE PEAK AND WHAT IT GAVE BACK (2026-11-05). A position that touched +0.35% and is now
             −0.60% is a different problem from one that never moved: the first had profit and lost
             it, the second never had any. `peakProfitPct` is the high-water mark maintained by
@@ -217,7 +251,11 @@ function CFDPosition({ pos, index, onClose, isClosing, highlight }) {
 
 function OptionPosition({ pos }) {
   const daysToExpiry = pos.daysToExpiry || 30;
-  const urgencyColor = daysToExpiry < 3 ? '#ef4444' : daysToExpiry < 7 ? '#f59e0b' : '#64748b';
+  const urgencyColor = daysToExpiry < 3
+    ? 'var(--risk-high, var(--color-loss))'
+    : daysToExpiry < 7
+      ? 'var(--risk-elevated, var(--color-warning))'
+      : 'var(--color-muted)';
   return (
     <div className="pm-pos-card pm-option">
       <div className="pm-pos-header">
@@ -262,6 +300,25 @@ function SummaryBanner({ positions }) {
   // above it is the point of drawing it; until now the line was on every card and counted nowhere.
   const aboveRiskLine = positions.filter(p => (p.riskPct || 0) > 20).length;
   const oldest = positions.reduce((a, b) => ((b.daysHeld || 0) > (a.daysHeld || 0) ? b : a), positions[0]);
+
+  // ── Second batch of derived stats (owner request 2026-11-07: "consider some additional statistics
+  //    using existing data"). Same rule as above — every figure comes from fields already on the
+  //    cards, so a reader can reconcile it against the row below it. Nothing new is fetched.
+  //
+  //    UNMANAGED is the aggregate of the loudest per-card warning: a position with no owner is one
+  //    nothing will manage, and until now that fact existed only one row at a time. It is the number
+  //    most worth seeing at a glance, so it is a tile rather than a sentence.
+  //    MARGIN and FEES are sums of fields the cards already show; they answer "how much of the book
+  //    is committed" and "what is this costing to hold", which no single card can.
+  //    AVG HOLD is a mean over `daysHeld`, rounded — a derived number, so it carries its own label
+  //    rather than being dressed up as a position.
+  const unmanaged = positions.filter(p => !p.owner).length;
+  const marginInUse = positions.reduce((s, p) => s + (Number(p.margin) || 0), 0);
+  const feesPerDay = positions.reduce((s, p) => s + (Number(p.overnightFee) || 0), 0);
+  const avgHold = positions.length > 0
+    ? positions.reduce((s, p) => s + (Number(p.daysHeld) || 0), 0) / positions.length
+    : 0;
+  const gaveBack = positions.filter(p => (p.peak?.giveBackPct || 0) >= 0.25 && (p.peak?.peakProfitPct || 0) > 0).length;
 
   if (positions.length === 0) return null;
 
@@ -322,6 +379,42 @@ function SummaryBanner({ positions }) {
         <div className="pm-summary-stat">
           <span className="pm-summary-label">Worst</span>
           <span className="pm-summary-value pm-loss">{worst.symbol} {worst.pnl?.toFixed(2)}</span>
+        </div>
+      )}
+      {/* ── second batch (2026-11-07) ── */}
+      <div className="pm-summary-stat">
+        <span className="pm-summary-label">Unmanaged</span>
+        <span
+          className={`pm-summary-value ${unmanaged > 0 ? 'pm-loss' : 'pm-profit'}`}
+          title="Positions no strategy, guardian or bot owns. Nothing but the broker's own stop is managing these."
+        >
+          {unmanaged}
+        </span>
+      </div>
+      <div className="pm-summary-stat">
+        <span className="pm-summary-label">Margin in use</span>
+        <span className="pm-summary-value" title="Sum of the Margin field on every card — how much of the book is committed right now.">
+          ${marginInUse.toFixed(2)}
+        </span>
+      </div>
+      <div className="pm-summary-stat">
+        <span className="pm-summary-label">Fees / day</span>
+        <span className={`pm-summary-value ${feesPerDay > 0 ? 'pm-loss' : ''}`} title="Sum of the overnight fees the cards report. What holding this book costs per day.">
+          ${feesPerDay.toFixed(2)}
+        </span>
+      </div>
+      <div className="pm-summary-stat">
+        <span className="pm-summary-label">Avg hold</span>
+        <span className="pm-summary-value" title="Mean daysHeld across every position, rounded to one decimal.">
+          {avgHold.toFixed(1)}d
+        </span>
+      </div>
+      {gaveBack > 0 && (
+        <div className="pm-summary-stat">
+          <span className="pm-summary-label">Gave back</span>
+          <span className="pm-summary-value pm-loss" title="Positions that reached a peak and have since given back 0.25% or more — the per-card warning below, counted.">
+            {gaveBack}
+          </span>
         </div>
       )}
     </motion.div>
@@ -578,23 +671,30 @@ export default function PositionsMonitorPage() {
   return (
     <div className="pm-page" aria-live="polite" aria-atomic="true">
       <header className="pm-header">
-        <h1>Positions Monitor</h1>
-        <p>Combined view of all open positions across brokers.</p>
-        {/* ⚠️ NETTING vs HEDGING IS THE ANSWER TO A QUESTION THIS PAGE KEEPS PROVOKING.
-            On a netting account a second order on a symbol the bot already holds MERGES into the
-            existing position (size averaged, entry price rewritten) — so "two buys" appear as ONE
-            row with a bigger volume. On a hedging account the broker opens a genuine second ticket.
-            Without this line the only visible difference is a position count that does not go up,
-            which reads exactly like a lost order.
-            Rendered only when a broker reported, so a failed fan-out does not invent models. */}
-        {mt5Query.data?.brokers?.length > 0 && (
-          <p className="pm-account-models">
-            {mt5Query.data.brokers.map((b) => {
-              const model = POSITION_MODELS[b.positionModel] || POSITION_MODELS.unknown;
-              return `${b.label || `broker ${b.brokerId}`} — ${model.label}`;
-            }).join('  ·  ')}
-          </p>
-        )}
+        <h1>
+          Positions Monitor
+          <PageInfoPopover label="About Positions Monitor">
+            <p>Combined view of all open positions across brokers.</p>
+            {/* ⚠️ NETTING vs HEDGING IS THE ANSWER TO A QUESTION THIS PAGE KEEPS PROVOKING.
+                On a netting account a second order on a symbol the bot already holds MERGES into the
+                existing position (size averaged, entry price rewritten) — so "two buys" appear as ONE
+                row with a bigger volume. On a hedging account the broker opens a genuine second ticket.
+                Without this line the only visible difference is a position count that does not go up,
+                which reads exactly like a lost order.
+                ⚠️ It moved from a `<p>` under the title into this popover on 2026-11-07 (owner:
+                *"move <p.pm-account-models> to an information popout using the i icon as used on
+                other pages"*) and is rendered only when a broker reported — a failed fan-out must
+                not invent models. */}
+            {mt5Query.data?.brokers?.length > 0 && (
+              <p className="pm-account-models">
+                {mt5Query.data.brokers.map((b) => {
+                  const model = POSITION_MODELS[b.positionModel] || POSITION_MODELS.unknown;
+                  return `${b.label || `broker ${b.brokerId}`} — ${model.label}`;
+                }).join('  ·  ')}
+              </p>
+            )}
+          </PageInfoPopover>
+        </h1>
       </header>
 
       {/* Portfolio Summary Banner */}

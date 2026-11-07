@@ -838,19 +838,20 @@ export class OutcomeTrackerService {
     };
   }
 
-  /**
-   * Trim raw outcomes older than retentionDays.
-   */
-  async trimOldOutcomes(retentionDays = 90): Promise<number> {
-    if (!this.prisma.isAvailable) return 0;
-
-    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
-    const result = await this.prisma.directiveOutcome.deleteMany({
-      where: { predictedAt: { lt: cutoff } },
-    });
-    if (result.count > 0) {
-      this.logger.log(`Trimmed ${result.count} old outcomes (older than ${retentionDays}d)`);
-    }
-    return result.count;
-  }
+  // ── DEAD PRUNER REMOVED (2026-11-07, #1241) ───────────────────────────────────────────────────
+  //
+  // `trimOldOutcomes(retentionDays = 90)` used to live here. It was a second prune path for
+  // `directiveoutcome`, and it had TWO defects that only matter because nobody could see them:
+  //
+  //   1. NOTHING CALLED IT. `grep -rn "trimOldOutcomes" nest/src` returned exactly one hit — this
+  //      definition. A pruner that is never invoked reads, in a code review, exactly like retention.
+  //   2. IT DELETED ON A DIFFERENT COLUMN. It bounded `predictedAt`, while `retention.config.ts`
+  //      declares `directiveoutcome.dateCol = 'createdAt'`. Two windows on two columns is how a
+  //      table ends up bounded by neither.
+  //
+  // ⚠️ DELETED RATHER THAN WIRED. `DataRetentionService` already bounds this table from the declared
+  // config, on the declared column. Wiring a second implementation would have created the exact
+  // technical debt `development-status` warns about: two copies that drift, only one of which gets
+  // the next fix. The measured evidence that the canonical path works is in #1241 — every table sits
+  // at or inside its declared window.
 }

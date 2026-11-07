@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **571** backend source files (specs excluded). Two access paths, because one
+Scanned **566** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -68,7 +68,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 ### `trade`
 
 - **writers (5):** `automation-loop.service.ts`, `paper-trading.service.ts`, `mt5.controller.ts`, `position-sync.service.ts`, `trade-recorder.service.ts`
-- **readers (23):** `ab-test.service.ts`, `experiment-review.service.ts`, `backtest.controller.ts`, `paper-trading.service.ts`, `performance.service.ts`, `progression.service.ts`, `position-sync.service.ts`, `research-overview.service.ts`, `risk.controller.ts`, `decision-chain.service.ts`, `edge-statistics.service.ts`, `pnl-statistics.service.ts`, `stack-performance.service.ts`, `screener.service.ts`, `signal-envelope.service.ts`, `symbols.service.ts`, `bot-performance.service.ts`, `duplicate-guard.service.ts`, `execution-feasibility.service.ts`, `mt5-trading.service.ts`, `trade-history.controller.ts`, `trade-recorder.service.ts`, `trading-strategy.service.ts`
+- **readers (24):** `ab-test.service.ts`, `experiment-review.service.ts`, `backtest.controller.ts`, `paper-trading.service.ts`, `performance.service.ts`, `progression.service.ts`, `position-sync.service.ts`, `research-overview.service.ts`, `risk.controller.ts`, `decision-chain.service.ts`, `edge-statistics.service.ts`, `pnl-statistics.service.ts`, `stack-performance.service.ts`, `screener.service.ts`, `signal-envelope.service.ts`, `symbols.service.ts`, `bot-performance.service.ts`, `duplicate-guard.service.ts`, `execution-feasibility.service.ts`, `exit-quality-bars.ts`, `mt5-trading.service.ts`, `trade-history.controller.ts`, `trade-recorder.service.ts`, `trading-strategy.service.ts`
 
 ### `order`
 
@@ -81,11 +81,11 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**571** source files · **3171** declarations · **383** ratio sites · **1678** nodes · **175** unreferenced
+**566** source files · **3190** declarations · **386** ratio sites · **1696** nodes · **175** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
-| `exact` | the identical computation after normalisation | 46 |
+| `exact` | the identical computation after normalisation | 47 |
 | `coarse` | the identical **shape**, different constants | 45 |
 | `idiom` | `(A−B)` **and** `(B−A)` in one expression | 1 |
 
@@ -93,7 +93,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 **This is the #1069 shape.** The computation is identical after normalisation, but the sites disagree about the conditions they apply — a different sign test, a different guard, or a different value when the computation cannot run. Read the `conditions:` and `guarded by:` lines: that is where two copies stop agreeing.
 
-### 28 sites — `((V1-V2)/V2)*100`
+### 30 sites — `((V1-V2)/V2)*100`
 
 - `nest/src/modules/backtest/backtest.controller.ts:815` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
@@ -103,6 +103,8 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
 - `nest/src/modules/backtest/backtest.service.ts:3629` — `runDirectiveCoverage()` → `ret10d`
   - `((bar10d.close-currentBar.close)/currentBar.close)*100`
+- `nest/src/modules/backtest/backtest.service.ts:4784` — `entryPnlPct()` → `raw`
+  - `((future-current)/current)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:46` — `calculate()` → `distance`
   - `((longExit-lastClose)/lastClose)*100`
 - `nest/src/modules/directives/implementations/gap-scanner.directive.ts:112` — `evaluateGap()` → `gapPct`
@@ -110,23 +112,21 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:134` — `calculate()` → `dist20`
   - `sma20>0?((lastClose-sma20)/sma20)*100:0`
   - guarded by: `sma20>0`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:182` — `calculate()` → `pctAbove`
-  - `((lastPrice-s50)/s50)*100`
-- … and 20 more
+- … and 22 more
 
 ### 27 sites — `(V1/V2)*100`
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:598` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
-- `nest/src/modules/automation/automation-loop.service.ts:3049` — `capturePortfolioSnapshot()`
+- `nest/src/modules/automation/automation-loop.service.ts:3082` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
   - guarded by: `totalCost>0`
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
   - `result.maxPossible>0?(result.score/result.maxPossible)*100:0`
   - guarded by: `result.maxPossible>0`
-- `nest/src/modules/automation/stop-guardian.service.ts:2164` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:2186` — `observeExhaustion()`
   - `(recent/entry)*100`
-- `nest/src/modules/automation/stop-guardian.service.ts:2165` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:2187` — `observeExhaustion()`
   - `(prior/entry)*100`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
@@ -211,7 +211,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 7 sites — `((V1-V2)/V1)*100`
 
-- `nest/src/modules/automation/stop-guardian.service.ts:2141` — `observeExhaustion()` → `decelPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:2163` — `observeExhaustion()` → `decelPct`
   - `((prior-recent)/prior)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:37` — `calculate()` → `distance`
   - `((lastClose-shortExit)/lastClose)*100`
@@ -225,7 +225,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/risk/monte-carlo.service.ts:143` — `simulate()` → `drawdown`
   - `peak>0?((peak-equity)/peak)*100:0`
   - guarded by: `peak>0`
-- `nest/src/modules/trading/trade-history.controller.ts:274` — `(anonymous)()` → `dd`
+- `nest/src/modules/trading/trade-history.controller.ts:348` — `(anonymous)()` → `dd`
   - `peak>0?((peak-cum)/peak)*100:0`
   - guarded by: `peak>0`
 
@@ -234,20 +234,20 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/automation/ab-test.service.ts:449` — `dispatchSideTrade()` → `sl`
   - `sideDir==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `sideDir==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:822` — `dispatchTrade()` → `sl`
+- `nest/src/modules/automation/automation-loop.service.ts:832` — `dispatchTrade()` → `sl`
   - `side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `side==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:2782` — `confirmAction()` → `sl`
+- `nest/src/modules/automation/automation-loop.service.ts:2792` — `confirmAction()` → `sl`
   - `entryPrice>0?action.side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100):0`
   - conditions: `action.side==='BUY'`
   - guarded by: `entryPrice>0`
-- `nest/src/modules/automation/automation-loop.service.ts:2891` — `recordPaperTrade()` → `sl`
+- `nest/src/modules/automation/automation-loop.service.ts:2901` — `recordPaperTrade()` → `sl`
   - `side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `side==='BUY'`
-- `nest/src/modules/automation/stop-guardian.service.ts:2045` — `observeSimulatedTsl()` → `triggerPrice`
+- `nest/src/modules/automation/stop-guardian.service.ts:2067` — `observeSimulatedTsl()` → `triggerPrice`
   - `isBuy?best*(1-distancePct/100):best*(1+distancePct/100)`
   - conditions: `isBuy`
-- `nest/src/modules/automation/stop-guardian.service.ts:2265` — `protectiveSl()` → `protective`
+- `nest/src/modules/automation/stop-guardian.service.ts:2287` — `protectiveSl()` → `protective`
   - `side==='BUY'?entry*(1-slPct/100):entry*(1+slPct/100)`
   - conditions: `side==='BUY'`
 - `nest/src/modules/backtest/backtest.service.ts:1782` — `run()` → `trailStop`
@@ -287,15 +287,15 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/performance/performance.service.ts:245` — `computeStrategyStats()`
   - `losses.length>0?Math.round((totalLoss/losses.length)*100)/100:0`
   - guarded by: `losses.length>0`
-- `nest/src/modules/trading/trade-history.controller.ts:95` — `pnlOf()`
+- `nest/src/modules/trading/trade-history.controller.ts:98` — `pnlOf()`
   - `Math.round((total/n)*100)/100`
 
 ### 4 sites — `(((C?V1-V2:V2-V1))/V2)*100`
 
-- `nest/src/modules/automation/stop-guardian.service.ts:2032` — `observeSimulatedTsl()` → `profitPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:2054` — `observeSimulatedTsl()` → `profitPct`
   - `((isBuy?pos.priceCurrent-pos.priceOpen:pos.priceOpen-pos.priceCurrent)/pos.priceOpen)*100`
   - conditions: `isBuy`
-- `nest/src/modules/automation/stop-guardian.service.ts:2150` — `observeExhaustion()` → `profitPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:2172` — `observeExhaustion()` → `profitPct`
   - `((isBuy?pos.priceCurrent-entry:entry-pos.priceCurrent)/entry)*100`
   - conditions: `isBuy`
 - `nest/src/modules/scoring/exit-consensus.service.ts:373` — `assessOne()` → `profitPct`
@@ -312,14 +312,14 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/automation/ab-test.service.ts:450` — `dispatchSideTrade()` → `tp`
   - `sideDir==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `sideDir==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:823` — `dispatchTrade()` → `tp`
+- `nest/src/modules/automation/automation-loop.service.ts:833` — `dispatchTrade()` → `tp`
   - `side==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `side==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:2785` — `confirmAction()` → `tp`
+- `nest/src/modules/automation/automation-loop.service.ts:2795` — `confirmAction()` → `tp`
   - `entryPrice>0?action.side==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100):0`
   - conditions: `action.side==='BUY'`
   - guarded by: `entryPrice>0`
-- `nest/src/modules/automation/automation-loop.service.ts:2892` — `recordPaperTrade()` → `tp`
+- `nest/src/modules/automation/automation-loop.service.ts:2902` — `recordPaperTrade()` → `tp`
   - `side==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `side==='BUY'`
 
@@ -346,7 +346,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/scoring/outcome-tracker.service.ts:276` — `getRecordingStats()`
   - `considered>0?Math.round((identity/considered)*1000)/10:0`
   - guarded by: `considered>0`
-- `nest/src/modules/trading/trade-history.controller.ts:93` — `pnlOf()`
+- `nest/src/modules/trading/trade-history.controller.ts:96` — `pnlOf()`
   - `Math.round((wins/n)*1000)/10`
 
 ### 3 sites — `round1((100*V1)/V2)`
@@ -360,6 +360,15 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/scoring/protocol-gating.controller.ts:418` — `(anonymous)()`
   - `reachableCapacity>0?round1((100*p.peak)/reachableCapacity):null`
   - guarded by: `reachableCapacity>0`
+
+### 2 sites — `(C?((V1-V2)/V1)*100:((V3-V1)/V1)*100)`
+
+- `nest/src/modules/backtest/backtest.service.ts:1745` — `run()` → `adversePct`
+  - `isLong?((currentClose-fb.low)/currentClose)*100:((fb.high-currentClose)/currentClose)*100`
+  - conditions: `isLong`
+- `nest/src/modules/trading/exit-quality-bars.ts:97` — `refreshBarMax()` → `pct`
+  - `Number(r.shortf)===1?((entry-lo)/entry)*100:((hi-entry)/entry)*100`
+  - conditions: `Number(r.shortf)===1`
 
 ### 2 sites — `(C?((V1-V2)/V2)*100:V3)`
 
@@ -375,7 +384,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/backtest/break-even.ts:183` — `med()`
   - `sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2`
   - conditions: `sorted.length%2`
-- `nest/src/modules/trading/trade-history.controller.ts:863` — `median()`
+- `nest/src/modules/trading/trade-history.controller.ts:937` — `median()`
   - `s.length%2?s[m]:(s[m-1]+s[m])/2`
   - conditions: `s.length%2`
 
@@ -405,21 +414,13 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - `ssTot===0?0:Math.max(0,1-ssRes/ssTot)`
   - guarded by: `ssTot===0`
 
-### 2 sites — `Math.min(100,Math.max(0,(V1/V2)*100))`
-
-- `nest/src/modules/scoring/scoring.service.ts:506` — `rankAll()` → `normalizedScorePct`
-  - `maxPossibleScore>0?Math.min(100,Math.max(0,(seasonAdjustedScore/maxPossibleScore)*100)):0`
-  - guarded by: `maxPossibleScore>0`
-- `nest/src/modules/scoring/stack-performance.service.ts:222` — `computeMetaStackRating()` → `normalizedEffectiveness`
-  - `Math.min(100,Math.max(0,(effectivenessRate/EFFECTIVENESS_ANCHOR_PER_HOUR)*100))`
-
-_… and 1 further group(s)._
+_… and 2 further group(s)._
 
 ## Q3a — the same maths in more than one place
 
 Identical after normalisation: variable names differ, the computation does not.
 
-### 28 sites — `((V1-V2)/V2)*100`
+### 30 sites — `((V1-V2)/V2)*100`
 
 - `nest/src/modules/backtest/backtest.controller.ts:815` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
@@ -429,6 +430,8 @@ Identical after normalisation: variable names differ, the computation does not.
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
 - `nest/src/modules/backtest/backtest.service.ts:3629` — `runDirectiveCoverage()` → `ret10d`
   - `((bar10d.close-currentBar.close)/currentBar.close)*100`
+- `nest/src/modules/backtest/backtest.service.ts:4784` — `entryPnlPct()` → `raw`
+  - `((future-current)/current)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:46` — `calculate()` → `distance`
   - `((longExit-lastClose)/lastClose)*100`
 - `nest/src/modules/directives/implementations/gap-scanner.directive.ts:112` — `evaluateGap()` → `gapPct`
@@ -436,23 +439,21 @@ Identical after normalisation: variable names differ, the computation does not.
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:134` — `calculate()` → `dist20`
   - `sma20>0?((lastClose-sma20)/sma20)*100:0`
   - guarded by: `sma20>0`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:182` — `calculate()` → `pctAbove`
-  - `((lastPrice-s50)/s50)*100`
-- … and 20 more
+- … and 22 more
 
 ### 27 sites — `(V1/V2)*100`
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:598` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
-- `nest/src/modules/automation/automation-loop.service.ts:3049` — `capturePortfolioSnapshot()`
+- `nest/src/modules/automation/automation-loop.service.ts:3082` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
   - guarded by: `totalCost>0`
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
   - `result.maxPossible>0?(result.score/result.maxPossible)*100:0`
   - guarded by: `result.maxPossible>0`
-- `nest/src/modules/automation/stop-guardian.service.ts:2164` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:2186` — `observeExhaustion()`
   - `(recent/entry)*100`
-- `nest/src/modules/automation/stop-guardian.service.ts:2165` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:2187` — `observeExhaustion()`
   - `(prior/entry)*100`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
@@ -519,7 +520,7 @@ Identical after normalisation: variable names differ, the computation does not.
   - `Math.max(0,Math.min(1,(v-inMin)/(inMax-inMin)))`
 - `nest/src/modules/directives/implementations/atr-dip.directive.ts:56` — `mapRange()` → `t`
   - `Math.max(0,Math.min(1,(v-inMin)/(inMax-inMin)))`
-- `nest/src/modules/directives/implementations/cad-usd-oil-correlation.directive.ts:45` — `mapRange()` → `t`
+- `nest/src/modules/directives/implementations/cad-usd-oil-correlation.directive.ts:56` — `mapRange()` → `t`
   - `Math.max(0,Math.min(1,(v-inMin)/(inMax-inMin)))`
 - `nest/src/modules/directives/implementations/cci.directive.ts:42` — `mapRange()` → `t`
   - `Math.max(0,Math.min(1,(v-inMin)/(inMax-inMin)))`
@@ -617,7 +618,7 @@ Identical after normalisation: variable names differ, the computation does not.
 
 ### 7 sites — `((V1-V2)/V1)*100`
 
-- `nest/src/modules/automation/stop-guardian.service.ts:2141` — `observeExhaustion()` → `decelPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:2163` — `observeExhaustion()` → `decelPct`
   - `((prior-recent)/prior)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:37` — `calculate()` → `distance`
   - `((lastClose-shortExit)/lastClose)*100`
@@ -631,19 +632,19 @@ Identical after normalisation: variable names differ, the computation does not.
 - `nest/src/modules/risk/monte-carlo.service.ts:143` — `simulate()` → `drawdown`
   - `peak>0?((peak-equity)/peak)*100:0`
   - guarded by: `peak>0`
-- `nest/src/modules/trading/trade-history.controller.ts:274` — `(anonymous)()` → `dd`
+- `nest/src/modules/trading/trade-history.controller.ts:348` — `(anonymous)()` → `dd`
   - `peak>0?((peak-cum)/peak)*100:0`
   - guarded by: `peak>0`
 
-_… and 36 further group(s)._
+_… and 37 further group(s)._
 
 ## Q3b — the same shape, differing constants
 
 Numeric literals blanked. **This is where divergent maths hides** — same structure, a different number doing the work.
 
-### 38 sites — `((VN-VN)/VN)*N`
+### 40 sites — `((VN-VN)/VN)*N`
 
-- `nest/src/modules/automation/stop-guardian.service.ts:2141` — `observeExhaustion()` → `decelPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:2163` — `observeExhaustion()` → `decelPct`
   - `((prior-recent)/prior)*100`
 - `nest/src/modules/backtest/backtest.controller.ts:815` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
@@ -653,13 +654,13 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
 - `nest/src/modules/backtest/backtest.service.ts:3629` — `runDirectiveCoverage()` → `ret10d`
   - `((bar10d.close-currentBar.close)/currentBar.close)*100`
+- `nest/src/modules/backtest/backtest.service.ts:4784` — `entryPnlPct()` → `raw`
+  - `((future-current)/current)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:37` — `calculate()` → `distance`
   - `((lastClose-shortExit)/lastClose)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:46` — `calculate()` → `distance`
   - `((longExit-lastClose)/lastClose)*100`
-- `nest/src/modules/directives/implementations/confluence-reversal.directive.ts:186` — `calculate()` → `dist`
-  - `((currentPrice-nearestSupport)/currentPrice)*100`
-- … and 30 more
+- … and 32 more
 
 ### 36 sites — `(VN-VN)/VN`
 
@@ -687,15 +688,15 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:598` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
-- `nest/src/modules/automation/automation-loop.service.ts:3049` — `capturePortfolioSnapshot()`
+- `nest/src/modules/automation/automation-loop.service.ts:3082` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
   - guarded by: `totalCost>0`
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
   - `result.maxPossible>0?(result.score/result.maxPossible)*100:0`
   - guarded by: `result.maxPossible>0`
-- `nest/src/modules/automation/stop-guardian.service.ts:2164` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:2186` — `observeExhaustion()`
   - `(recent/entry)*100`
-- `nest/src/modules/automation/stop-guardian.service.ts:2165` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:2187` — `observeExhaustion()`
   - `(prior/entry)*100`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
@@ -740,7 +741,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `Math.max(0,Math.min(1,(v-inMin)/(inMax-inMin)))`
 - `nest/src/modules/directives/implementations/atr-dip.directive.ts:56` — `mapRange()` → `t`
   - `Math.max(0,Math.min(1,(v-inMin)/(inMax-inMin)))`
-- `nest/src/modules/directives/implementations/cad-usd-oil-correlation.directive.ts:45` — `mapRange()` → `t`
+- `nest/src/modules/directives/implementations/cad-usd-oil-correlation.directive.ts:56` — `mapRange()` → `t`
   - `Math.max(0,Math.min(1,(v-inMin)/(inMax-inMin)))`
 - `nest/src/modules/directives/implementations/cci.directive.ts:42` — `mapRange()` → `t`
   - `Math.max(0,Math.min(1,(v-inMin)/(inMax-inMin)))`
@@ -874,10 +875,10 @@ A difference and its mirror in one expression. **This is the tier that finds a c
 - `nest/src/common/trading/peak.ts:96` — `profitPctFor()` → `raw`
   - `isShort?(entry-px)/entry:(px-entry)/entry`
   - conditions: `isShort`
-- `nest/src/modules/automation/stop-guardian.service.ts:2032` — `observeSimulatedTsl()` → `profitPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:2054` — `observeSimulatedTsl()` → `profitPct`
   - `((isBuy?pos.priceCurrent-pos.priceOpen:pos.priceOpen-pos.priceCurrent)/pos.priceOpen)*100`
   - conditions: `isBuy`
-- `nest/src/modules/automation/stop-guardian.service.ts:2150` — `observeExhaustion()` → `profitPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:2172` — `observeExhaustion()` → `profitPct`
   - `((isBuy?pos.priceCurrent-entry:entry-pos.priceCurrent)/entry)*100`
   - conditions: `isBuy`
 - `nest/src/modules/scoring/exit-consensus.service.ts:373` — `assessOne()` → `profitPct`
@@ -918,14 +919,14 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/automation/ab-test.service.ts:316 getActiveTest`
 - `nest/src/modules/automation/ab-test.service.ts:375 isActive`
 - `nest/src/modules/automation/ab-test.service.ts:606 summarize`
-- `nest/src/modules/automation/automation-loop.service.ts:1996 evalSide`
-- `nest/src/modules/automation/automation-loop.service.ts:2417 getClose`
+- `nest/src/modules/automation/automation-loop.service.ts:2006 evalSide`
+- `nest/src/modules/automation/automation-loop.service.ts:2427 getClose`
 - `nest/src/modules/automation/automation-loop.service.ts:526 read`
-- `nest/src/modules/automation/automation-loop.service.ts:581 getWatchlistSymbols`
+- `nest/src/modules/automation/automation-loop.service.ts:591 getWatchlistSymbols`
 - `nest/src/modules/automation/automation.controller.ts:731 safe`
 - `nest/src/modules/automation/experiment-review.service.ts:32 norm`
-- `nest/src/modules/automation/stop-guardian.service.ts:2125 progress`
-- `nest/src/modules/automation/stop-guardian.service.ts:607 flat`
+- `nest/src/modules/automation/stop-guardian.service.ts:2147 progress`
+- `nest/src/modules/automation/stop-guardian.service.ts:629 flat`
 - `nest/src/modules/backtest/affordable-size.ts:146 floorToStep`
 - `nest/src/modules/backtest/backtest.controller.ts:710 mapResult`
 - `nest/src/modules/backtest/backtest.service.ts:3897 chartTime`
@@ -1014,7 +1015,6 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/averaging-scorer.ts:56 getPolicy`
 - `nest/src/modules/scoring/averaging-scorer.ts:60 evaluate`
 - `nest/src/modules/scoring/exit-consensus.service.ts:264 assessAll`
-- `nest/src/modules/scoring/outcome-tracker.service.ts:844 trimOldOutcomes`
 - `nest/src/modules/scoring/pnl-statistics.service.ts:165 empty`
 - `nest/src/modules/scoring/pnl-statistics.service.ts:237 inPopulation`
 - `nest/src/modules/scoring/protocol-db.service.ts:1099 protocolNeedsEurUsd`
@@ -1023,7 +1023,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/protocol-gating.controller.ts:570 isIncluded`
 - `nest/src/modules/scoring/protocol-gating.controller.ts:575 effectiveMax`
 - `nest/src/modules/scoring/protocol-gating.service.ts:1691 worker`
-- `nest/src/modules/scoring/protocol-health.service.ts:558 getLast`
+- `nest/src/modules/scoring/protocol-health.service.ts:652 getLast`
 - `nest/src/modules/scoring/protocols.controller.ts:70 recordActivity`
 - `nest/src/modules/scoring/protocols.controller.ts:924 norm`
 - `nest/src/modules/scoring/score-history.service.ts:116 richness`
@@ -1037,11 +1037,11 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/strategy-derivation.service.ts:674 text`
 - `nest/src/modules/scoring/strategy-derivation.service.ts:675 flag`
 - `nest/src/modules/screener/screener.service.ts:183 bump`
-- `nest/src/modules/signals/signal-envelope.service.ts:1868 isRouteable`
-- `nest/src/modules/signals/signal-envelope.service.ts:2053 q`
-- `nest/src/modules/signals/signal-envelope.service.ts:2061 first`
-- `nest/src/modules/signals/signal-envelope.service.ts:303 has`
-- `nest/src/modules/signals/signal-envelope.service.ts:617 newestOfTf`
+- `nest/src/modules/signals/signal-envelope.service.ts:1905 isRouteable`
+- `nest/src/modules/signals/signal-envelope.service.ts:2090 q`
+- `nest/src/modules/signals/signal-envelope.service.ts:2098 first`
+- `nest/src/modules/signals/signal-envelope.service.ts:320 has`
+- `nest/src/modules/signals/signal-envelope.service.ts:634 newestOfTf`
 - `nest/src/modules/signals/signal-queue.service.ts:264 getQueue`
 - `nest/src/modules/strategies/strategies.service.ts:56 calculateScore`
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:166 note`
@@ -1055,22 +1055,23 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/trading/bot-performance.service.ts:362 empty`
 - `nest/src/modules/trading/bot-performance.service.ts:438 readAll`
 - `nest/src/modules/trading/duplicate-guard.service.ts:200 isBlocked`
+- `nest/src/modules/trading/exit-quality.ts:238 sortByN`
 - `nest/src/modules/trading/position-sizing.ts:83 bad`
 - `nest/src/modules/trading/position-sizing.ts:87 pos`
-- `nest/src/modules/trading/trade-history.controller.ts:1165 distOf`
-- `nest/src/modules/trading/trade-history.controller.ts:1169 consensusOf`
-- `nest/src/modules/trading/trade-history.controller.ts:1174 sorted`
-- `nest/src/modules/trading/trade-history.controller.ts:1175 pct`
-- `nest/src/modules/trading/trade-history.controller.ts:1292 slPctOf`
-- `nest/src/modules/trading/trade-history.controller.ts:533 round2`
-- `nest/src/modules/trading/trade-history.controller.ts:735 readAll`
-- `nest/src/modules/trading/trade-history.controller.ts:760 resolveProtocol`
-- `nest/src/modules/trading/trade-history.controller.ts:85 pnlOf`
-- `nest/src/modules/trading/trade-history.controller.ts:859 median`
-- `nest/src/modules/trading/trade-history.controller.ts:865 r2`
+- `nest/src/modules/trading/trade-history.controller.ts:1239 distOf`
+- `nest/src/modules/trading/trade-history.controller.ts:1243 consensusOf`
+- `nest/src/modules/trading/trade-history.controller.ts:1248 sorted`
+- `nest/src/modules/trading/trade-history.controller.ts:1249 pct`
+- `nest/src/modules/trading/trade-history.controller.ts:1366 slPctOf`
+- `nest/src/modules/trading/trade-history.controller.ts:607 round2`
+- `nest/src/modules/trading/trade-history.controller.ts:809 readAll`
+- `nest/src/modules/trading/trade-history.controller.ts:834 resolveProtocol`
+- `nest/src/modules/trading/trade-history.controller.ts:88 pnlOf`
+- `nest/src/modules/trading/trade-history.controller.ts:933 median`
+- `nest/src/modules/trading/trade-history.controller.ts:939 r2`
 - `nest/src/modules/trading/trade-recorder.service.ts:187 reject`
 - `nest/src/modules/trading/trading-strategy.service.ts:1322 shape`
-- `nest/src/modules/trading/trading-strategy.service.ts:2798 evaluateAllActive`
+- `nest/src/modules/trading/trading-strategy.service.ts:2809 evaluateAllActive`
 - `nest/src/modules/trading/trading-strategy.service.ts:306 num`
 - `nest/src/modules/trend/trend-read.math.ts:173 round1`
 - `nest/src/modules/trend/trend-read.math.ts:174 round3`

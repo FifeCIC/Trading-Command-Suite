@@ -7,7 +7,7 @@ import { APP_VERSION } from './version';
 import { QueueConfigService } from './config/queue-config.service';
 import { LoggingValidationPipe } from './common/pipes/validation.pipe';
 import { PrismaService } from './database/prisma.service';
-import { ApiActivityService } from './modules/api-activity/api-activity.service';
+import { ApiActivityService, shouldRecordActivity } from './modules/api-activity/api-activity.service';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { SlowRequestInterceptor } from './common/interceptors/slow-request.interceptor';
 import { NoticeExceptionFilter } from './common/notices/notice.filter';
@@ -76,14 +76,23 @@ async function bootstrap() {
         return;
       }
 
+      const normalised = endpoint.replace(/^\/api/, '') || '/';
+
+      // ⚠️ NOT EVERY REQUEST DESERVES A ROW (#1241). The frontend polls ~130k times a day for its own
+      // display — 22% of this database's write volume — and none of it is diagnostic. `shouldRecordActivity`
+      // keeps every failure and every non-GET; see its docblock for the measured split and the reason
+      // `/trading/mt5/candles` is deliberately NOT skipped.
+      if (!shouldRecordActivity({ endpoint: normalised, method: req.method, statusCode: res.statusCode })) {
+        return;
+      }
+
       void apiActivity.record({
-        endpoint: endpoint.replace(/^\/api/, '') || '/',
+        endpoint: normalised,
         method: req.method,
         statusCode: res.statusCode,
         durationMs: Date.now() - startedAt,
         responseSize,
-      });
-    });
+      });    });
 
     next();
   });

@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 220,
+  "count": 223,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -108,7 +108,9 @@
       "category": "audit",
       "purpose": "the filtered-rate check for #825.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "audit-protocol-copies.cjs",
@@ -232,7 +234,9 @@
       "category": "audit",
       "purpose": "READ the owner's Page Walkthrough verdicts (`uiScore` + \"Preferred",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "check-backtest-determinism.cjs",
@@ -300,7 +304,9 @@
       "category": "database",
       "purpose": "trim OPERATIONAL HISTORY, never measurement history.",
       "selfTest": true,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "db-schema.cjs",
@@ -380,7 +386,9 @@
       "category": "tool",
       "purpose": "measure a tightening stop against the SAME window, one declared difference.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "agent-claim.cjs",
@@ -424,7 +432,9 @@
       "category": "tool",
       "purpose": "the shipped three, measured on the canonical window.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "batch-audit-directives.cjs",
@@ -536,7 +546,9 @@
       "category": "tool",
       "purpose": "prove `verify-view-meta-routes.cjs` can actually fail.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "classify-open-positions.cjs",
@@ -552,7 +564,9 @@
       "category": "tool",
       "purpose": "remove UNREFERENCED imports and dead import names.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "cleanup-canonical.cjs",
@@ -602,7 +616,9 @@
       "category": "tool",
       "purpose": "Cleanup/repair tooling for removing a directive.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "delete-views.cjs",
@@ -610,7 +626,9 @@
       "category": "tool",
       "purpose": "(no header comment)",
       "selfTest": true,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "detect-circular-work.cjs",
@@ -701,7 +719,9 @@
       "category": "tool",
       "purpose": "Find `session-open-effect` occurrences that sit inside a RISK-GATE group.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "fix-collation-fk-pair.cjs",
@@ -805,7 +825,9 @@
       "category": "tool",
       "purpose": "\"which column holds which identity?\", measured rather than assumed.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "init-schema.cjs",
@@ -1039,7 +1061,9 @@
       "category": "tool",
       "purpose": "one-off for issue #619.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "quarantine-phantom-closes.cjs",
@@ -1047,7 +1071,9 @@
       "category": "tool",
       "purpose": "flag trade rows that are NOT trades (#931).",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "rank-strategies-scale-free.cjs",
@@ -1079,7 +1105,9 @@
       "category": "tool",
       "purpose": "One-off mechanical removal of a directive id from protocols-seed-data.ts.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "repair-starved-bars.cjs",
@@ -1087,7 +1115,9 @@
       "category": "tool",
       "purpose": "force a provider import for symbols the refresh service reports as starved (#1179).",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "repair-unaligned-bars.cjs",
@@ -1123,7 +1153,9 @@
       "category": "tool",
       "purpose": "\"which experiments are finished, and what do I DO about it?\"",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "report-first-passage.cjs",
@@ -1134,10 +1166,30 @@
       "reaches": null
     },
     {
+      "name": "report-protocol-pair.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "judge a DECLARED copy against its control, the same way every time.",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
       "name": "report-rule-inventory.cjs",
       "where": "nest",
       "category": "tool",
       "purpose": "every rule between \"a bot has an opinion\" and \"an order is placed\",",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "report-score-persistence.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "does \"scoring\" mean it WROTE anything?",
       "selfTest": true,
       "reaches": [
         "npm"
@@ -1804,6 +1856,17 @@
       ]
     },
     {
+      "name": "validate-schema-facts.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "the architecture documentation must not describe a table that is not there.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
       "name": "validate-schema-safety.cjs",
       "where": "nest",
       "category": "validator",
@@ -1990,7 +2053,9 @@
       "category": "validator",
       "purpose": "LOUD GUARD: a \"closed\" trade with no fill must not read as valid (#931).",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "validate-trailing-claims.cjs",
@@ -2077,7 +2142,9 @@
       "category": "verification",
       "purpose": "one-off verification for issue #619.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "verify-t212-holdings.cjs",

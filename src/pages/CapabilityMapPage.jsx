@@ -6,6 +6,7 @@ import { feedUnavailable } from '../core/api/feed-state.js';
 import { NAV_TREE } from '../core/nav-tree';
 import { PAGE_DATA_STATUS } from '../core/page-data-status';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import PageInfoPopover from '../components/PageInfoPopover';
 import './capability-map.css';
 
 import { KNOWN_FEATURES } from '../data/known-features';
@@ -457,15 +458,30 @@ export default function CapabilityMapPage() {
   const completeLoop = allRows.filter((r) => r.dataPersistence === 'stored' && r.uiSurfaces > 0 && (r.pipelineIntegration === 'scoring' || r.pipelineIntegration === 'trading' || r.pipelineIntegration === 'both') && r.devCompletion === 'complete').length;
   const completeDev = allRows.filter((r) => r.devCompletion === 'complete').length;
 
-  if (allRows.length === 0) return <div className="cm-page"><LoadingSkeleton variant="table" rows={20} cols={5} /></div>;
+  if (allRows.length === 0) return <div className="capmap-page"><LoadingSkeleton variant="table" rows={20} cols={5} /></div>;
 
   return (
-    <div className="cm-page">
+    <div className="capmap-page">
       <motion.header className="cm-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1>🗺️ Capability Map</h1>
-        <p className="cm-subtitle">
-          Unified inventory of {allRows.length} capabilities — {dbCapabilities.length > 0 ? `${dbCapabilities.length} from DB` : 'built from live system scan'}. New capabilities added via POST /api/capabilities.
-        </p>
+        <h1>
+          🗺️ Capability Map
+          {/* ⚠️ MOVED INTO THE ℹ POPOVER (owner, 2026-11-07). The subtitle stated the inventory size
+              and then explained the POST endpoint that adds to it — a method note above the thing it
+              describes. The count stays on screen in the Summary strip immediately below, so nothing
+              measurable was lost by hiding this. */}
+          <PageInfoPopover label="About the Capability Map">
+            <p>
+              Unified inventory of {allRows.length} capabilities —{' '}
+              {dbCapabilities.length > 0
+                ? `${dbCapabilities.length} from DB`
+                : 'built from live system scan'}.
+            </p>
+            <p>New capabilities are added via <code>POST /api/capabilities</code>.</p>
+            {feedUnavailable(capabilitiesQuery) && (
+              <p><strong>The DB register could not be read</strong> — rows are from the live scan.</p>
+            )}
+          </PageInfoPopover>
+        </h1>
       </motion.header>
 
       {/* ⚠️ The rows below are built from a DIFFERENT source when the DB read fails (#782). Saying so
@@ -479,16 +495,16 @@ export default function CapabilityMapPage() {
       )}
 
       {/* ── Summary ── */}
-      <div className="cm-summary">
-        <div className="cm-summary-item"><span className="cm-summary-value">{allRows.length}</span><span className="cm-summary-label">total capabilities</span></div>
-        <div className="cm-summary-item" title="Features where data is stored (not ephemeral), has at least 1 UI surface, is integrated into scoring/trading, and is marked complete">
-          <span className="cm-summary-value" style={{color: completeLoop > completeDev * 0.3 ? '#22c55e' : '#f59e0b'}}>{completeLoop}/{completeDev}</span>
-          <span className="cm-summary-label">complete loops</span>
+      <div className="capmap-summary">
+        <div className="capmap-summary-item"><span className="capmap-summary-value">{allRows.length}</span><span className="capmap-summary-label">total capabilities</span></div>
+        <div className="capmap-summary-item" title="Features where data is stored (not ephemeral), has at least 1 UI surface, is integrated into scoring/trading, and is marked complete">
+          <span className="capmap-summary-value" style={{color: completeLoop > completeDev * 0.3 ? '#22c55e' : '#f59e0b'}}>{completeLoop}/{completeDev}</span>
+          <span className="capmap-summary-label">complete loops</span>
         </div>
         {categories.map((cat) => (
-          <div key={cat} className="cm-summary-item">
-            <span className="cm-summary-value">{totals[cat] || 0}</span>
-            <span className="cm-summary-label">{cat}</span>
+          <div key={cat} className="capmap-summary-item">
+            <span className="capmap-summary-value">{totals[cat] || 0}</span>
+            <span className="capmap-summary-label">{cat}</span>
           </div>
         ))}
       </div>
@@ -511,7 +527,7 @@ export default function CapabilityMapPage() {
       </div>
 
       {/* ── Unified Table ── */}
-      <div className="cm-table-wrap">
+      <div className="capmap-table-wrap">
         <table className="cm-table">
           <thead>
             <tr>

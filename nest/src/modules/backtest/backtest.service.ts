@@ -3937,7 +3937,7 @@ export class BacktestService {
     }));
 
     // Generate signals from directive scoring on the full window
-    const signals: Array<{ time: string | number; type: string; score: number; label: string; price: number; pnl?: number }> = [];
+    const signals: Array<{ time: string | number; type: string; side?: 'long' | 'short'; score: number; label: string; price: number; pnl?: number }> = [];
     const windowSize = 100;
 
     for (let day = windowSize; day < rows.length; day++) {
@@ -3957,16 +3957,26 @@ export class BacktestService {
       const { composite: score, signal } = await this.fullScore(symbol, window, protocolId, timeframe);
 
       const currentClose = window[window.length - 1].close;
+      const side = classifyEntrySide(signal);
 
-      if (signal === 'BUY' || signal === 'STRONG_BUY') {
-        const future10 = rows[day + 10]?.close;
-        const pnl = future10 ? Number(((Number(future10) - currentClose) / currentClose * 100).toFixed(2)) : undefined;
+      if (side) {
+        // ⚠️ THE SIDE DECIDES THE SIGN (#1231). `(future - current) / current` is a LONG return; a
+        // short's is its negation. Emitting one arithmetic for both draws a marker whose P&L is
+        // confidently wrong, which is worse than the empty overlay this replaces.
+        //
+        // ⚠️ The side comes from the SIGNAL THAT FIRED, never from the protocol's `directionMode`.
+        // A stored run can predate a protocol's direction change, and the marker must describe the
+        // bar in front of it. `signal` is the observation; `directionMode` is configuration.
+        const pnl = entryPnlPct(side, currentClose, rows[day + 10]?.close);
 
         signals.push({
           time: chartTime(window[window.length - 1].timestamp),
           type: 'entry',
+          side,
           score: Number(score.toFixed(1)),
-          label: `Entry: score ${score.toFixed(0)}`,
+          // The long label is deliberately unchanged — 224 stored runs render `Entry: score N` and
+          // the criterion for this fix is that they are not disturbed.
+          label: side === 'long' ? `Entry: score ${score.toFixed(0)}` : `Entry (short): score ${score.toFixed(0)}`,
           price: currentClose,
           pnl,
         });
@@ -4737,4 +4747,40 @@ export class BacktestService {
     for (const r of rows) summary[r.verdict] = (summary[r.verdict] ?? 0) + 1;
     return { rows, summary, computedAt: new Date().toISOString() };
   }
+}
+// ── Entry-marker arithmetic — the side, and the sign that follows from it (#1231) ──────────────
+//
+// ⚠️ EXPORTED AND PURE ON PURPOSE. The defect these replace was a predicate that only knew about
+// longs, and a P&L expression that assumed them. Neither could be tested without a full backtest, so
+// neither was. A pure function is the thing a test can actually pin.
+
+/** Which side a signal classifies, or null for a signal that takes no position. */
+export function classifyEntrySide(signal: string): 'long' | 'short' | null {
+  if (signal === 'BUY' || signal === 'STRONG_BUY') return 'long';
+  if (signal === 'SELL' || signal === 'STRONG_SELL') return 'short';
+  return null;
+}
+
+/**
+ * The percentage return from an entry, 10 bars later, for the side that was actually taken.
+ *
+ * ⚠️ THE SIGN IS THE WHOLE POINT. `(future - current) / current` is a LONG return. A short entry
+ * makes money when the price FALLS, so its return is the negation. Emitting the long arithmetic for a
+ * short marker produces a number that looks entirely plausible and has the wrong sign — this repo
+ * keeps finding that shape, and it is worse than drawing nothing at all.
+ *
+ * ⚠️ A missing or zero future price returns `undefined`, NOT 0 — which matches the previous behaviour
+ * for longs exactly (`future10 ? … : undefined`), so the 224 stored long runs are undisturbed.
+ */
+export function entryPnlPct(
+  side: 'long' | 'short',
+  currentClose: number,
+  futureClose: number | string | null | undefined,
+): number | undefined {
+  if (!futureClose) return undefined;
+  const current = Number(currentClose);
+  const future = Number(futureClose);
+  if (!Number.isFinite(current) || !Number.isFinite(future) || current === 0) return undefined;
+  const raw = ((future - current) / current) * 100;
+  return Number((side === "long" ? raw : -raw).toFixed(2));
 }

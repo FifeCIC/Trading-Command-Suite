@@ -5,18 +5,6 @@
 .sm-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem; }
 .sm-header h1 { margin: 0; font-size: 1.5rem; }
 .sm-subtitle { margin: 4px 0 0; font-size: 0.85rem; color: var(--ink-soft); }
-.sm-loop-badge { padding: 4px 12px; border-radius: 14px; font-size: 0.72rem; font-weight: 600; }
-
-/* Tabs */
-.sm-tabs { display: flex; gap: 2px; margin-bottom: 1rem; border-bottom: 1px solid var(--line); }
-.sm-tab {
-  padding: 0.5rem 1.2rem; border: none; background: none;
-  color: var(--ink-soft); cursor: pointer; font-size: 0.82rem;
-  border-bottom: 2px solid transparent; transition: all 0.15s;
-  margin-bottom: -1px;
-}
-.sm-tab:hover { color: var(--ink); }
-.sm-tab-active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 .sm-tab-content { padding-top: 0.25rem; }
 
 /* Stat grid */
@@ -26,8 +14,14 @@
   border-radius: 8px; padding: 0.6rem 1.2rem; text-align: center;
   min-width: 80px;
 }
-.sm-stat-val { font-size: 1.3rem; font-weight: 800; display: block; }
+/* Tabular figures so a 1-digit and a 3-digit value occupy the same width — the cards sat at 80px
+   against 86px purely because of glyph width, which read as "the text size is different". */
+.sm-stat-val { font-size: 1.3rem; font-weight: 800; display: block; font-variant-numeric: tabular-nums; }
 .sm-stat-label { font-size: 0.65rem; color: var(--ink-soft); }
+/* A broker chip puts a NAME in the value slot, not a number. At the numeric size (1.3rem/800) a
+   label like "🟢 MT5" set the card's width and dominated the row, which is the second half of the
+   "one card looks different" report. A name gets name metrics. */
+.sm-stat--broker .sm-stat-val { font-size: 0.85rem; font-weight: 700; line-height: 1.5rem; }
 
 .sm-mt5-banner {
   padding: 6px 12px; border-radius: 6px; margin-bottom: 0.75rem;
@@ -58,7 +52,9 @@
 .sm-pnl-up { color: var(--color-profit); }
 .sm-pnl-down { color: var(--color-loss); }
 
-.sm-monitor-note { font-size: 0.72rem; color: var(--ink-soft, #999); }
+/* Removed 2026-11-07 with the element it styled — the note moved to the page's info popover, and the
+   loop badge moved to the topbar status popout. A rule for a class nothing renders is a claim that
+   the class exists. */
 
 /* Live-state section head (2026-09-25). The TABLE styling is not here on purpose - it comes from
    strategies-list.module.css, which this page already imports, so the app has ONE table vocabulary

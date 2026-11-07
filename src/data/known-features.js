@@ -970,4 +970,26 @@ export const KNOWN_FEATURES = {
   //    in production instead of always taking the primary fallback; and
   //    `assess-global-risk-limits.spec.ts` holds 18 tests, 5 of them the routed-book cases.
     'Per-account portfolio-at-risk cap': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  // ── batch #50 (2026-11-07) — 9 capabilities from 15 handoffs (6 were Notes, QA only, so they carry
+  //    no capability). Theme: each of these makes the app STOP LYING — an empty feed is not an empty
+  //    result, a shutdown market is not a stalled experiment, a missing table is not "no FAQs yet",
+  //    and three modules that existed but were never wired now answer. uiSurfaces: 0 is a FINDING,
+  //    not a blank — 2 of these have no surface at all (a feed and an audit).
+    'Feed-state truthfulness (no fabricated empty)': { dataPersistence: 'none', uiSurfaces: 25, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Money (currency) take-profit per bot': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Positions Monitor — peak and give-back per position': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Out-of-sample survival verdict + survivor ranking': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Strategy identity v2 + protocol signal-capacity preview': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Fast API boot + non-blocking protocol-health diagnostics': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Discord public signal feed': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'automation', devCompletion: 'complete' },
+    'FAQ (help content)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Source-shape audit and ratchet': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // ── batch #51 (2026-11-07) — 4 capabilities from 5 handoffs (1 was a Note, QA only, so it carries
+  //    no capability). Theme: the app MEASURES what it was guessing — exit quality derived from
+  //    prices, whether a supervisor can actually see its own API, and why a page broke.
+  //    uiSurfaces: 0 is a FINDING, not a blank — none of these four has zero.
+    'Exit quality — profit reached vs profit kept': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Honest API supervision + observable data retention': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'In-app bug report with diagnostics': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Trading Area — themed surfaces and card vocabulary': { dataPersistence: 'localStorage', uiSurfaces: 16, pipelineIntegration: 'none', devCompletion: 'partial' },
 };

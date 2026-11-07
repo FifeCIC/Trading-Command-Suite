@@ -1,4 +1,4 @@
-/* ── PLANNED IN #1228 ──
+/* ── PLANNED IN #1235 ──
  * MISSING:  reachability. Nothing in src/ or nest/src/ names this file — no import, no route,
  *           no dynamic load. Either it is dead code, or it is a capability nobody wired up, and
  *           those two need opposite responses.

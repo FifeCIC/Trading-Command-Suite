@@ -91,6 +91,7 @@ const DATA_FILES = new Map([
   ['src/data/qa-checklist.js', 'QA checklist entries — appended by the handoff batch tooling; fix the generator, not the file'],
   ['src/pages/architecture-framework.data.js', 'human-facing architecture page data — SLICE/route declarations, one line per fact'],
   ['src/core/architecture-reference.js', 'AI-readable architecture reference — a declaration table; its risk is DIVERGENCE from the page (guarded by validate-duplication), not decomposition'],
+  ['src/core/architecture-route-contracts.js', 'SINGLE SOURCE for the 268 route contracts (#1246) — one object per route, one line of prose each. It is a declaration TABLE, so its risk is staleness (a route the controllers no longer serve), not decomposition; splitting it would recreate the two-surface drift it was created to end. Guarded by validate-arch-surfaces.cjs, which now reads its routes through this file.'],
 ]);
 
 /**

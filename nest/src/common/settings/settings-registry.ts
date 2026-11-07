@@ -208,6 +208,39 @@ export const SETTINGS: SettingDefinition[] = [
   // MT5_MAX_DAILY_LOSS=100), so the enforced numbers are identical across the migration and the
   // change is provably behaviour-neutral. See the handoff for the before/after measurement.
   {
+    // ── DECISION (2026-11-07, owner) ──
+    // WHAT:      a `development` profile relaxes the two caps that actually bind
+    //            (`risk.maxPortfolioRisk`, `risk.maxPerSymbol`) to 0.95 while the book is a DEMO,
+    //            so the pipeline can open as many positions as the venue allows.
+    // WHY:       owner — *"it might be that we need some parameters for development mode that
+    //            relaxes things and allows us to create as much positions as we can — we are only
+    //            in demos afterall."* The demo book's product is TRADES TO MEASURE, and a cap that
+    //            refuses them costs data rather than money.
+    // INSTEAD OF: editing the two numbers again (which is what 2026-11-07's earlier 0.6 did). That
+    //            leaves no way back to live-shaped caps except remembering the old values, and the
+    //            setting then claims a number that is not the number enforced.
+    // REVERSE BY: set `risk.profile` to `live` — the profile is a setting, so this is one write, and
+    //            it restores every cap to the value declared above with no loss of config.
+    // REGISTER:  docs/SETTLED-DECISIONS.md row 161
+    // GUARD:     `validate-risk-profile.cjs` + `risk-profile-rules.spec.ts` (development relaxes,
+    //            live does not, an unknown value must NOT relax). 🔴 The demo-vs-real ACCOUNT check
+    //            is still #1153 — `accountKind` is published and read by nothing, so this profile is
+    //            a manual switch, not an automatic one.
+    key: 'risk.profile',
+    type: 'string',
+    defaultValue: 'development',
+    class: 'runtime',
+    owner: 'trading',
+    label: 'Risk profile',
+    description:
+      'Which cap set is ENFORCED. `development` relaxes risk.maxPortfolioRisk and risk.maxPerSymbol ' +
+      'to 0.95 (demo book: maximise trades to measure). `live` uses the declared values as-is. ' +
+      '⚠️ Any other value falls back to `live` — an unreadable profile must never relax a cap. ' +
+      'The effective values are reported by GET /api/risk/limits, so the API always says which set ' +
+      'is in force rather than leaving you to infer it from the stored number.',
+    userChangeable: true,
+  },
+  {
     key: 'risk.maxPositionSize',
     type: 'number',
     defaultValue: 1.0,

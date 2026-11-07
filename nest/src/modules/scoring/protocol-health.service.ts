@@ -300,6 +300,11 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
     if (!this.prisma) return issues;
 
     let rows: any[] = [];
+    // ⚠️ #1239 — the cost of this audit is LOGGED, not assumed. It was ~77 s per boot before the
+    // aggregate replaced the correlated subqueries, and it is ~2.6 s after. The line at the end of
+    // this method reports the measured duration, so a future change that reintroduces the shape
+    // shows up as a number instead of as "the API feels slow again".
+    const startedAt = Date.now();
     try {
       // ⚠️ COLLATION IS LOAD-BEARING HERE — verified against information_schema:
       //
@@ -358,40 +363,64 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
       // 09-27 (89 days). ⚠️ The window is not even stable — for `xau-speed-m15-long` the `score` maximum
       // was 55 when #999 was written and 32 when this was fixed, against a TRUE all-history maximum
       // of 638. A number that moves is not "EVER", and it cannot be the basis of a definite error.
-      rows = await this.prisma.$queryRawUnsafe(`
-        SELECT ts.protocolId,
-               p.slug                AS slug,
-               MAX(ts.minComposite)  AS required,
-               COUNT(DISTINCT ts.id) AS bots,
-               (SELECT MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.rawComposite')) AS DECIMAL(10,2))
-                           / NULLIF(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.configuredSignalMax')) AS DECIMAL(10,2)), 0) * 100)
-                  FROM score s
-                 WHERE s.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS ceilingPct,
-               (SELECT MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.rawComposite')) AS DECIMAL(10,2)))
-                  FROM score s
-                 WHERE s.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS ceilingRaw,
-               (SELECT MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.configuredSignalMax')) AS DECIMAL(10,2)))
-                  FROM score s
-                 WHERE s.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS capacity,
-               (SELECT COUNT(*) FROM score s2
-                 WHERE s2.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS samples,
-               -- The ACTUAL range read, so the message can name it rather than say "EVER".
-               (SELECT MIN(s.timestamp) FROM score s
-                 WHERE s.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS windowFrom,
-               -- ⚠️ The falsification test: a LONGER history, from the table the pipeline writes.
-               (SELECT MAX(ss.composite) FROM score_snapshot ss
-                 WHERE ss.protocolId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS snapshotMax,
-               (SELECT COUNT(*) FROM score_snapshot ss
-                 WHERE ss.protocolId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS snapshotSamples,
-               (SELECT MAX(ss.snappedAt) FROM score_snapshot ss
-                 WHERE ss.protocolId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS snapshotNewest
-          FROM trading_strategy ts
-          JOIN protocol p
-            ON (p.id COLLATE utf8mb4_0900_ai_ci = ts.protocolId COLLATE utf8mb4_0900_ai_ci
-                OR p.slug COLLATE utf8mb4_0900_ai_ci = ts.protocolId COLLATE utf8mb4_0900_ai_ci)
-         WHERE ts.active = 1
-         GROUP BY ts.protocolId, p.slug
-      `);
+      // ⚠️ #1239 — ONE AGGREGATE, NOT EIGHT CORRELATED SUBQUERIES PER PROTOCOL.
+      //
+      // This query used to carry eight `(SELECT … FROM score WHERE s.strategyId = p.slug)` subqueries
+      // in its SELECT list. MySQL cannot decorrelate those against a non-unique, differently-collated
+      // key, so it re-ran every one of them for every protocol row. Measured on the live database
+      // 2026-11-07: **77,435 ms**. The same snapshot with the pre-aggregated derived tables below
+      // measured **2,591 ms** — ~30× — and the result set is byte-identical: both forms were run
+      // inside ONE `REPEATABLE READ` transaction and every column of all 42 rows was diffed.
+      //
+      // ⚠️ Comparing the two outside a transaction is what produced the first "difference": `samples`
+      // read 3203 vs 3206 because the scoring loop writes to `score` continuously and the statements
+      // ran 79 s apart. Two moving snapshots measure time, not semantics.
+      //
+      // ⚠️ THE TWO COALESCEs ARE LOAD-BEARING, not tidiness. `COUNT(*)` as a correlated subquery
+      // returns **0** for a protocol with no history; a `LEFT JOIN` onto a derived table with no such
+      // group returns **NULL**. The derivation below normalises both (`Number(row.samples ?? 0)`), so
+      // the ISSUES would be identical either way — but "the consumer currently forgives it" is not a
+      // contract, and the next reader of this query should not need to know the difference survives.
+      // 0 means "zero readings"; NULL means "nobody looked".
+      rows = await this.prisma.$queryRawUnsafe(`
+        SELECT ts.protocolId,
+               p.slug                AS slug,
+               MAX(ts.minComposite)  AS required,
+               COUNT(DISTINCT ts.id) AS bots,
+               agg.ceilingPct, agg.ceilingRaw, agg.capacity,
+               COALESCE(agg.samples, 0) AS samples, agg.windowFrom,
+               snap.snapshotMax,
+               COALESCE(snap.snapshotSamples, 0) AS snapshotSamples, snap.snapshotNewest
+          FROM trading_strategy ts
+          JOIN protocol p
+            ON (p.id COLLATE utf8mb4_0900_ai_ci = ts.protocolId COLLATE utf8mb4_0900_ai_ci
+                OR p.slug COLLATE utf8mb4_0900_ai_ci = ts.protocolId COLLATE utf8mb4_0900_ai_ci)
+          -- One pass over score, grouped by the key the join needs.
+          LEFT JOIN (
+              SELECT s.strategyId COLLATE utf8mb4_0900_ai_ci AS slugKey,
+                     MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.rawComposite')) AS DECIMAL(10,2))
+                         / NULLIF(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.configuredSignalMax')) AS DECIMAL(10,2)), 0) * 100) AS ceilingPct,
+                     MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.rawComposite')) AS DECIMAL(10,2))) AS ceilingRaw,
+                     MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.configuredSignalMax')) AS DECIMAL(10,2))) AS capacity,
+                     COUNT(*)         AS samples,
+                     MIN(s.timestamp) AS windowFrom
+                FROM score s
+               GROUP BY s.strategyId
+          ) agg ON agg.slugKey = p.slug COLLATE utf8mb4_0900_ai_ci
+          -- One pass over score_snapshot: the longer history used only to VETO a verdict.
+          LEFT JOIN (
+              SELECT ss.protocolId COLLATE utf8mb4_0900_ai_ci AS slugKey,
+                     MAX(ss.composite)  AS snapshotMax,
+                     COUNT(*)           AS snapshotSamples,
+                     MAX(ss.snappedAt)  AS snapshotNewest
+                FROM score_snapshot ss
+               GROUP BY ss.protocolId
+          ) snap ON snap.slugKey = p.slug COLLATE utf8mb4_0900_ai_ci
+         WHERE ts.active = 1
+         GROUP BY ts.protocolId, p.slug,
+                  agg.ceilingPct, agg.ceilingRaw, agg.capacity, agg.samples, agg.windowFrom,
+                  snap.snapshotMax, snap.snapshotSamples, snap.snapshotNewest
+      `);
     } catch (err) {
       // ⚠️ Log the FULL error, not just `.message` — an empty message here once
       // meant a collation failure took ten minutes to find. Fail loud.
@@ -486,6 +515,13 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
       }
     }
 
+    // ⚠️ #1239 — a measured number, so the next reader does not have to trust this file's prose.
+    // Before the aggregate: ~77 s per boot (`score` correlated 8× per protocol). After: ~2.6 s.
+    // If this line starts reporting tens of seconds again, the correlated shape has come back.
+    this.logger.log(
+      `Measured-ceiling audit: ${rows.length} protocol row(s), ${issues.length} issue(s) in ${Date.now() - startedAt}ms`,
+    );
+
     return issues;
   }
 
@@ -561,12 +597,54 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
 
   /** Log config faults once at boot so they're visible in the backend log too. */
   async onApplicationBootstrap() {
+    // ── ⚠️ NOTHING HERE MAY GATE `listen()` (2026-11-07, #1232) ─────────────────────────────────
+    //
+    // Both diagnostics below were AWAITED here until today, and together they kept the HTTP port
+    // closed for **~93 s of a ~107 s boot** (measured 2026-11-07 from this API's own log timestamps:
+    // module init + routes ~14 s, `validateAll()` ~31 s, `auditMeasuredCeilings()` ~62 s,
+    // `listen()` +46 ms). Nest does not bind the port until `onApplicationBootstrap` resolves, so
+    // the process logged cron jobs and alerts normally while `curl :3201/api/health` answered
+    // nothing — which two agents read as "wedged" and killed at 30-55 s, and which the app's own
+    // frontend turned into a start-storm (#1233).
+    //
+    // The argument is ALREADY MADE 20 lines below, for `checkBotSymbolCoverage()`:
+    // *"Deliberately NOT awaited... A diagnostic must never delay boot."* That rule was right and it
+    // was applied to one of three diagnostics. It now applies to all three.
+    //
+    // ⚠️ What this does NOT change: the findings are still produced and still logged, seconds later
+    // rather than before the port opens. Nothing is skipped, downgraded or guarded — in particular
+    // the #905 rule holds in `auditMeasuredCeilings()` (no `isAvailable` guard that would convert
+    // "cannot run yet" into "found nothing").
+    void this.runBootDiagnostics();
+
+    // ── Bot ↔ protocol symbol coverage (#970) ───────────────────────────────
+    // ⚠️ Deliberately NOT awaited. This spawns a child process that itself reads MySQL by CLI;
+    // awaiting it would make API READINESS depend on that read. A diagnostic must never delay boot,
+    // and it must never be fatal — every path below resolves.
+    void this.checkBotSymbolCoverage();
+  }
+
+  /**
+   * runBootDiagnostics() — the two history-reading audits, off the boot path (#1232).
+   *
+   * Sequential on purpose: `auditMeasuredCeilings()` runs AFTER `validateAll()` so `lastIssues`
+   * keeps the config findings and the ceiling findings are appended, giving one health call that
+   * reports both. Running them in parallel would make `lastIssues` race.
+   *
+   * Every failure path resolves — a diagnostic must never be fatal.
+   */
+  private async runBootDiagnostics(): Promise<void> {
+    // ⚠️ SILENCE MUST BE DISTINGUISHABLE FROM "NEVER RAN" (#1232). Before this line, a clean audit
+    // and an audit that never started produced the SAME log — nothing — because the per-issue loop
+    // and the summary both emit only when issues exist. That is the "plausible output, no error"
+    // shape in its quietest form, and it made the deferred path unverifiable: after moving these off
+    // the boot path, "did it run?" could not be answered from the log at all.
+    const startedAt = Date.now();
+    this.logger.log('Protocol health: running deferred diagnostics (the HTTP port is already open)');
     try {
       const configIssues = await this.validateAll();
 
       // Evidence-based check: can each active bot actually reach its threshold?
-      // Run AFTER validateAll so `lastIssues` keeps the config findings; the
-      // ceiling findings are appended so a single health call reports both.
       let ceilingIssues: ProtocolHealthIssue[] = [];
       try {
         ceilingIssues = await this.auditMeasuredCeilings();
@@ -586,16 +664,15 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
       }
       if (issues.length > 0) {
         this.logger.warn(`Protocol health: ${issues.length} config issue(s) across ${new Set(issues.map(i => i.protocolId)).size} protocol(s)`);
+      } else {
+        // An empty result is INFORMATION and must be reported as such — otherwise a clean run and a
+        // run that never happened are the same two silent lines (see the note at the top).
+        this.logger.log('Protocol health: no issues found');
       }
+      this.logger.log(`Protocol health: deferred diagnostics finished in ${Date.now() - startedAt}ms`);
     } catch (err) {
       this.logger.warn(`Protocol health validation failed: ${(err as Error).message}`);
     }
-
-    // ── Bot ↔ protocol symbol coverage (#970) ───────────────────────────────
-    // ⚠️ Deliberately NOT awaited. This spawns a child process that itself reads MySQL by CLI;
-    // awaiting it would make API READINESS depend on that read. A diagnostic must never delay boot,
-    // and it must never be fatal — every path below resolves.
-    void this.checkBotSymbolCoverage();
   }
 
   /**

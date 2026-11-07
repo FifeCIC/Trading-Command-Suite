@@ -30,6 +30,7 @@ describe('AutomationLoopService.persistDecisions — order rows are attempts (#8
     (svc as any).logger = { debug: jest.fn(), warn: jest.fn(), log: jest.fn() };
     (svc as any).state = { decisionLogSuppressed: 0, decisionLogPersisted: 0 };
     (svc as any).lastDecisionWrite = new Map();
+    (svc as any).lastDecisionWriteAt = new Map();
     return { svc, orderCreate, decisionCreateMany };
   }
 
@@ -124,6 +125,7 @@ describe('AutomationLoopService.persistDecisions — unit-explicit scores (#909)
     (svc as any).logger = { debug: jest.fn(), warn: jest.fn(), log: jest.fn() };
     (svc as any).state = { decisionLogSuppressed: 0, decisionLogPersisted: 0 };
     (svc as any).lastDecisionWrite = new Map();
+    (svc as any).lastDecisionWriteAt = new Map();
     return { svc, decisionCreateMany };
   }
 
@@ -176,5 +178,70 @@ describe('AutomationLoopService.persistDecisions — unit-explicit scores (#909)
     // A 0 would read as a real measurement in either unit; absence is the honest value.
     expect(row.compositeRaw).toBeNull();
     expect(row.compositePct).toBeNull();
+  });
+});
+
+/**
+ * #1244 follow-up — suppression must be BOUNDED IN TIME, because `decision_log` is the loop heartbeat.
+ *
+ * ⚠️ THE MEASURED FALSE ALARM. Suppression compared a signature and never re-wrote an unchanged
+ * decision, with no time bound. In a stable market every bot repeats itself for hours, so the table
+ * went quiet while the loop was healthy — and `audit-bot-activation.cjs`, which uses
+ * `MAX(decision_log.timestamp)` as the heartbeat (deliberately: it reads the DB so it works when
+ * `:3201` is down), declared **LOOP-DOWN against all 75 bots** (`0 OK, 66 ACTIVE BUT BLOCKED`) while
+ * `/api/automation/status` reported `tickCount 51`, a tick two minutes earlier, and both bridges
+ * `orderReady: true`.
+ */
+describe('persistDecisions — a repeat is suppressed only for a bounded time', () => {
+  function make() {
+    const svc = Object.create(AutomationLoopService.prototype) as AutomationLoopService;
+    const decisionCreateMany = jest.fn(() => Promise.resolve({ count: 1 }));
+    (svc as any).prisma = {
+      isAvailable: true,
+      order: { create: jest.fn(async () => ({})) },
+      decisionLog: { createMany: decisionCreateMany },
+    };
+    (svc as any).logger = { debug: jest.fn(), warn: jest.fn(), log: jest.fn() };
+    (svc as any).state = { decisionLogSuppressed: 0, decisionLogPersisted: 0 };
+    (svc as any).lastDecisionWrite = new Map();
+    (svc as any).lastDecisionWriteAt = new Map();
+    return { svc, decisionCreateMany };
+  }
+
+  const flush = () => new Promise((r) => setImmediate(r));
+  const obs = () => ({
+    timestamp: new Date().toISOString(),
+    strategyId: 'bot-1',
+    symbol: 'XAUUSD',
+    decision: 'OBSERVED',
+    compositePct: 71,
+    signal: 'BUY',
+    brokerId: 'mt5',
+  });
+
+  it('still suppresses an identical decision on the very next tick', async () => {
+    const { svc, decisionCreateMany } = make();
+    (svc as any).persistDecisions([obs()], 1);
+    await flush();
+    (svc as any).persistDecisions([obs()], 2);
+    await flush();
+    // The noise reduction is what suppression is for — the fix must not remove it.
+    expect(decisionCreateMany).toHaveBeenCalledTimes(1);
+    expect((svc as any).state.decisionLogSuppressed).toBe(1);
+  });
+
+  it('writes it again once the floor has passed, so the heartbeat cannot go stale', async () => {
+    const { svc, decisionCreateMany } = make();
+    (svc as any).persistDecisions([obs()], 1);
+    await flush();
+
+    // Pretend that write was 6 minutes ago (floor 5 min, the audit threshold 10 min).
+    const map = (svc as any).lastDecisionWriteAt as Map<string, number>;
+    for (const k of map.keys()) map.set(k, Date.now() - 6 * 60_000);
+
+    (svc as any).persistDecisions([obs()], 2);
+    await flush();
+
+    expect(decisionCreateMany).toHaveBeenCalledTimes(2);
   });
 });

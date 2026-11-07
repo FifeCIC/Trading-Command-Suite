@@ -48,7 +48,7 @@ import { BOT_BAR_DEFAULT } from '../../common/utils/style-thresholds';
 import { BOT_RULES, NON_BEHAVIOURAL_COLUMNS } from './bot-rules';
 import { resolveEffectiveRole } from '../../common/utils/signal-direction';
 import { RiskService } from '../risk/risk.service';
-import { buildRiskProfile } from '../risk/risk-profile-rules';
+import { buildRiskProfile, applyRiskProfile } from '../risk/risk-profile-rules';
 import {
   estimatePositionMargin,
   describeMargin,
@@ -2269,10 +2269,21 @@ export class TradingStrategyService {
     // failure would be swallowed by the catch — which logs "proceeding with caution" and lets the
     // order through. That would turn a broken settings read into a SILENTLY DISABLED risk cap, which
     // is the exact defect shape this file keeps producing. Outside, it is visible here. (#865)
-    const maxPerSymbol = await this.settings.get<number>('risk.maxPerSymbol');
+    const maxPerSymbolStored = await this.settings.get<number>('risk.maxPerSymbol');
     const maxDrawdown = await this.settings.get<number>('risk.maxDrawdown');
     // #900 — live since 2026-09-19; declared with NO READER ANYWHERE before that (see the register).
-    const maxPortfolioRisk = await this.settings.get<number>('risk.maxPortfolioRisk');
+    const maxPortfolioRiskStored = await this.settings.get<number>('risk.maxPortfolioRisk');
+
+    // ⚠️ 2026-11-07 — `risk.profile` decides which caps are ENFORCED. Resolved HERE, at the gate that
+    // refuses orders, so the engine and GET /api/risk/limits cannot disagree about the number in
+    // force. An unknown profile resolves to `live` (see applyRiskProfile) — a typo must never relax
+    // a limit. `maxDrawdown` is passed through by design: it is a breaker, not a sizing cap.
+    const profiled = applyRiskProfile(
+      { maxPerSymbol: maxPerSymbolStored, maxPortfolioRisk: maxPortfolioRiskStored, maxDrawdown },
+      await this.settings.get<string>('risk.profile'),
+    );
+    const maxPerSymbol = profiled.values.maxPerSymbol;
+    const maxPortfolioRisk = profiled.values.maxPortfolioRisk;
 
     // ⚠️ FAIL CLOSED ON AN UNREADABLE CAP (2026-09-17).
     //

@@ -228,6 +228,70 @@ export function riskEnforcementCounts() {
   }, {});
 }
 
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// RISK PROFILE — `development` relaxes the caps that bind; `live` uses the declared values.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+//
+// ── DECISION (2026-11-07, owner) ──
+// WHAT:      two named cap sets instead of one. `development` raises the two caps that actually
+//            refuse orders to 0.95 so a DEMO book can open as many positions as the venue allows.
+// WHY:       owner — *"we need some parameters for development mode that relaxes things and allows
+//            us to create as much positions as we can — we are only in demos afterall."* Measured
+//            basis: `risk.maxPortfolioRisk` is the ONLY cap that has ever refused an order on this
+//            book (1,306 refusals on 2026-11-06, every one citing 20.2–22.8% against the then-20%
+//            cap). Refusing those costs DATA, not money, on a demo account.
+// INSTEAD OF: editing the two stored numbers again. That leaves no way back except remembering the
+//            old values, and the setting then claims a number that is not the number enforced — the
+//            exact "config lies" defect this file exists to prevent.
+// REVERSE BY: write `risk.profile = 'live'`. One setting, no loss of configuration.
+//
+// ⚠️ THREE THINGS THIS DELIBERATELY DOES NOT DO:
+//   1. It does not touch `maxDrawdown` (0.25). A blended drawdown BREAKER is what keeps the demo
+//      account alive; a relaxed cap plus a relaxed breaker reaches zero balance faster, and a
+//      wiped account produces no data at all. Different mechanisms, different jobs.
+//   2. It does not touch `maxOpenPositions`. Measured 2026-11-07: it has refused **0** orders, so
+//      it does not bind — and the BRIDGES cache `MT5_MAX_OPEN_POSITIONS` from `nest/.env` at
+//      import (#901), so raising it here alone would make the app and the bridge disagree and the
+//      lower would silently win.
+//   3. It is NOT automatic. `accountKind` ('demo' | 'real' | …) is published by the bridge and read
+//      by NOTHING (#1153), so this is an operator switch. Do not make it depend on a value no code
+//      reads — that is how a real account would silently inherit demo caps.
+//
+// ⚠️ An UNRECOGNISED profile value returns `live` caps. The failure direction is the expensive one:
+// a typo must never relax a limit.
+
+export type RiskProfileName = 'development' | 'live';
+
+/** The caps each profile pins, and the value it pins them to. Anything absent is passed through. */
+export const PROFILE_CAP_OVERRIDES: Record<RiskProfileName, Partial<Record<string, number>>> = {
+  development: { maxPortfolioRisk: 0.95, maxPerSymbol: 0.95 },
+  live: {},
+};
+
+/**
+ * applyRiskProfile() — resolve the caps that are ACTUALLY enforced for the named profile.
+ *
+ * Returns the effective values plus what changed, so a caller can report the difference instead of
+ * leaving a reader to compare a stored setting against their memory of it.
+ */
+export function applyRiskProfile<T extends { maxPerSymbol: number; maxPortfolioRisk: number }>(
+  values: T,
+  profile: string | null | undefined,
+): { values: T; profile: RiskProfileName; overridden: Array<{ field: string; from: number; to: number }> } {
+  const name: RiskProfileName = profile === 'development' ? 'development' : 'live';
+  const overrides = PROFILE_CAP_OVERRIDES[name];
+  const next = { ...values };
+  const overridden: Array<{ field: string; from: number; to: number }> = [];
+  for (const [field, to] of Object.entries(overrides)) {
+    if (typeof to !== 'number') continue;
+    const from = (next as any)[field];
+    if (from === to) continue;
+    (next as any)[field] = to;
+    overridden.push({ field, from, to });
+  }
+  return { values: next, profile: name, overridden };
+}
+
 /**
  * buildRiskProfile() — THE ONLY PLACE a `PortfolioRisk` literal may be constructed.
  *

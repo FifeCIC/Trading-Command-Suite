@@ -7,8 +7,7 @@
 import { Controller, Get, Post, Put, Body, Param, Query, Logger } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RiskService, PortfolioRisk, PositionSizeType, StopLossType, TakeProfitType } from './risk.service';
-import { buildRiskProfile } from './risk-profile-rules';
-import {
+import { buildRiskProfile, applyRiskProfile } from './risk-profile-rules';import {
   resolveIntent,
   summariseExposure,
   overrideKey,
@@ -187,13 +186,29 @@ export class RiskController {
    * copies across four files (#865). Now there is one builder and one source per value.
    */
   private async readRiskCapValues() {
-    return {
+    const stored = {
       maxOpenPositions: await this.settings.get<number>('risk.maxOpenPositions'),
       maxPerSymbol: await this.settings.get<number>('risk.maxPerSymbol'),
       maxDrawdown: await this.settings.get<number>('risk.maxDrawdown'),
       // Live since #900 (2026-09-19) — declared since the beginning with no reader anywhere.
       maxPortfolioRisk: await this.settings.get<number>('risk.maxPortfolioRisk'),
     };
+    // `risk.profile` decides which caps are ENFORCED (2026-11-07). Resolved here, at the one reader,
+    // so every endpoint that reports limits reports the same numbers the engine uses.
+    const resolved = applyRiskProfile(stored, await this.settings.get<string>('risk.profile'));
+    return resolved.values;
+  }
+
+  /** The active profile and what it changed — carried on GET /limits so the API never implies a cap it is not enforcing. */
+  private async readRiskProfileReport() {
+    const stored = {
+      maxOpenPositions: await this.settings.get<number>('risk.maxOpenPositions'),
+      maxPerSymbol: await this.settings.get<number>('risk.maxPerSymbol'),
+      maxDrawdown: await this.settings.get<number>('risk.maxDrawdown'),
+      maxPortfolioRisk: await this.settings.get<number>('risk.maxPortfolioRisk'),
+    };
+    const { profile, overridden } = applyRiskProfile(stored, await this.settings.get<string>('risk.profile'));
+    return { profile, overridden };
   }
 
   /**
@@ -489,7 +504,14 @@ export class RiskController {
     // ⚠️ `defaultValue` in settings-registry.ts is the DECLARED default; this returns the EFFECTIVE
     // value (a DB override wins). Those two differing is normal and is why the response is now read
     // live rather than echoed from a literal. Provenance per value: GET /api/system/settings/registry
-    return buildRiskProfile(await this.readRiskCapValues());
+    //
+    // ⚠️ 2026-11-07 — the EFFECTIVE value now also depends on `risk.profile`. `profile` and
+    // `profileOverrides` are returned WITH the caps so a reader can see that, for example,
+    // `risk.maxPortfolioRisk` is stored as 0.6 while 0.95 is enforced. Without them the numbers in
+    // this response would disagree with the settings page and neither would look wrong.
+    const limits = await buildRiskProfile(await this.readRiskCapValues());
+    const profileReport = await this.readRiskProfileReport();
+    return { ...limits, ...profileReport };
   }
 
   // ── Weekend Gap Risk ──────────────────────────────────

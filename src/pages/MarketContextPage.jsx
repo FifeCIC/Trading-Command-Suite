@@ -146,6 +146,21 @@ export default function MarketContextPage() {
       const posCount = regionPositions.length;
       const totalPnl = regionPositions.reduce((sum, p) => sum + (p.unrealizedPnl || p.pnl || 0), 0);
 
+      // ── Owner request 2026-11-07: *"we could display … even fancy statistics such as profit on
+      //    trades done within that market"*. Everything below is derived from `positions` — already
+      //    fetched for this page — so no new request and every figure is reconcilable against the
+      //    Portfolio page.
+      //
+      //    ⚠️ `bestPos` / `worstPos` are the BEST and WORST OPEN position in the session, not a
+      //    historical win/loss record. Closed-trade statistics would need per-trade timestamps mapped
+      //    onto session windows, which this page does not have; labelling an open-position extreme as
+      //    "profit on trades done" would be a different claim wearing the same words.
+      const byPnl = [...regionPositions].sort(
+        (a, b) => ((b.unrealizedPnl ?? b.pnl ?? 0) - (a.unrealizedPnl ?? a.pnl ?? 0)),
+      );
+      const bestPos = byPnl.length ? { symbol: byPnl[0].symbol || byPnl[0].ticker, pnl: byPnl[0].unrealizedPnl ?? byPnl[0].pnl ?? 0 } : null;
+      const worstPos = byPnl.length ? { symbol: byPnl[byPnl.length - 1].symbol || byPnl[byPnl.length - 1].ticker, pnl: byPnl[byPnl.length - 1].unrealizedPnl ?? byPnl[byPnl.length - 1].pnl ?? 0 } : null;
+
       // Scoring: avg of scores for symbols in this region
       const regionScores = runScores.filter((sc) => {
         const sym = (sc.ticker || sc.symbol || '').toUpperCase();
@@ -169,6 +184,8 @@ export default function MarketContextPage() {
         ...s,
         posCount,
         totalPnl,
+        bestPos,
+        worstPos,
         avgScore,
         timingScore,
         combined,
@@ -356,14 +373,67 @@ export default function MarketContextPage() {
                 </div>
                 <div className="mc-indicator mc-ind-combined" title="Weighted combined strength score">
                   <span className="mc-ind-label">Strength</span>
+                  {/* ⚠️ `#22c55e20` is hex-plus-alpha: it only works on a literal and it ignores the
+                      theme entirely (ui-standards rule 4). Mapped onto the themed `--risk-*` scale,
+                      which is the app's only themed severity ramp. */}
                   <span className="mc-ind-value mc-ind-strength" style={{
-                    background: s.combined >= 60 ? '#22c55e20' : s.combined >= 30 ? '#f59e0b20' : '#ef444420',
-                    color: s.combined >= 60 ? '#22c55e' : s.combined >= 30 ? '#f59e0b' : '#ef4444',
+                    background: s.combined >= 60
+                      ? 'color-mix(in srgb, var(--risk-normal) 14%, transparent)'
+                      : s.combined >= 30
+                        ? 'color-mix(in srgb, var(--risk-watch) 14%, transparent)'
+                        : 'color-mix(in srgb, var(--risk-high) 14%, transparent)',
+                    color: s.combined >= 60
+                      ? 'var(--risk-normal)'
+                      : s.combined >= 30
+                        ? 'var(--risk-watch)'
+                        : 'var(--risk-high)',
                   }}>
                     {s.combined}
                   </span>
                 </div>
               </div>
+              {/* ── Session P&L, share of book, and the extremes (2026-11-07) ────────────────
+                  Owner: *"even fancy statistics such as profit on trades done within that market"*.
+                  Open P&L used to be a 0.6rem suffix tucked inside the Positions cell, where it was
+                  effectively a footnote. It is the number the request was about, so it gets its own
+                  labelled row, beside the extremes that explain it. `—` is used wherever there is no
+                  position, never a zero: "no exposure here" and "flat" are different facts. */}
+              <div className="mc-session-pnl-row">
+                <span className="mc-ind-label">Open P&amp;L</span>
+                {s.posCount > 0 ? (
+                  <span
+                    className={`mc-session-pnl ${s.totalPnl >= 0 ? 'mc-pnl-up' : 'mc-pnl-down'}`}
+                    title={`Summed unrealised P&L of the ${s.posCount} open position(s) in this session's currency region.`}
+                  >
+                    {s.totalPnl >= 0 ? '+' : ''}{s.totalPnl.toFixed(2)}
+                  </span>
+                ) : (
+                  <span className="mc-ind-none" title="No open position in this session's currencies — this is an absence, not a flat result.">—</span>
+                )}
+                {s.posCount > 0 && positions.length > 0 && (
+                  <span className="mc-session-share" title={`${s.posCount} of ${positions.length} open positions are in this session's currencies.`}>
+                    {Math.round((s.posCount / positions.length) * 100)}% of book
+                  </span>
+                )}
+              </div>
+              {s.bestPos && (
+                <div className="mc-session-extremes">
+                  <span className="mc-ext" title="Best-performing OPEN position in this session's currencies. Not a closed-trade record.">
+                    Best <strong>{s.bestPos.symbol}</strong>{' '}
+                    <span className={s.bestPos.pnl >= 0 ? 'mc-pnl-up' : 'mc-pnl-down'}>
+                      {s.bestPos.pnl >= 0 ? '+' : ''}{s.bestPos.pnl.toFixed(2)}
+                    </span>
+                  </span>
+                  {s.worstPos && s.worstPos.symbol !== s.bestPos.symbol && (
+                    <span className="mc-ext" title="Worst-performing OPEN position in this session's currencies.">
+                      Worst <strong>{s.worstPos.symbol}</strong>{' '}
+                      <span className={s.worstPos.pnl >= 0 ? 'mc-pnl-up' : 'mc-pnl-down'}>
+                        {s.worstPos.pnl >= 0 ? '+' : ''}{s.worstPos.pnl.toFixed(2)}
+                      </span>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

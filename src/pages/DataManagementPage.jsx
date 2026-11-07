@@ -146,7 +146,11 @@ export default function DataManagementPage() {
                     </td>
                     <td>
                       <span className={`dm-row-count ${isLarge ? 'dm-count-large' : ''}`}>
-                        {info.sizeEstimate || info.count?.toLocaleString() || '0'}
+                        {/* ⚠️ `~` means the server said the count is an ESTIMATE (#1244). InnoDB's
+                        TABLE_ROWS said 162,456 for a table that held 97,118 — a number on this row
+                        must not look exact when it is not. */}
+                    {info.countIsApprox ? '~' : ''}
+                    {info.sizeEstimate || info.count?.toLocaleString() || '0'}
                       </span>
                     </td>
                     <td className="dm-cell-date">

@@ -39,6 +39,18 @@ const NEST_ROOT = path.resolve(__dirname, '..');
 const ENTRY = path.join(NEST_ROOT, 'dist', 'src', 'main.js');
 
 /**
+ * ⚠️ THE SHARED BUILD LOCK (#1240). `build:api` holds `logs/build-api.lock` for the WHOLE of its
+ * run — build, `rimraf dist`, `prisma generate`, the API start, and the health check — and releases
+ * it only after `Assert-ApiUp` passes. A start that ignores that lock races the build: it can bind
+ * port 3201 first, serve the OLD build (Windows keeps the mapping alive after `rimraf` deletes the
+ * files), and make `build:api` report "API healthy" for a build that never took effect.
+ *
+ * So this script now REFUSES while a live build holds the lock. It does not queue and it does not
+ * retry: a boot is 5-20 s and a build ~40 s, so "wait and ask again" is the honest instruction.
+ */
+const LOCK = path.resolve(NEST_ROOT, '..', 'logs', 'build-api.lock');
+
+/**
  * preflight(entryExists) — PURE, so both directions are testable without touching a real build.
  *
  * @returns {{ ok: boolean, message?: string }}
@@ -61,6 +73,43 @@ function preflight(entryExists) {
   };
 }
 
+/**
+ * lockRefusal() — PURE. Returns the refusal message, or null to proceed.
+ *
+ * ⚠️ THREE STATES, NOT TWO. "No lock file" and "a lock file whose holder is gone" both mean PROCEED
+ * (the build script itself takes over a stale lock, so refusing on one would wedge every agent
+ * behind a killed build). "A lock file whose holder is ALIVE" means REFUSE. Collapsing the stale
+ * case into "refuse" is the defect that makes one killed build block the whole machine.
+ */
+function lockRefusal(holder, holderAlive) {
+  if (!holder || !holder.pid) return null;
+  if (!holderAlive) return null; // stale — the build script takes it over; do not block on a ghost
+  const since = holder.startedUtc ? ` since ${holder.startedUtc}` : '';
+  return (
+    `A build holds the API lock (pid ${holder.pid}${since}).\n\n` +
+    `  Starting a second API now could bind port 3201 first, serve the OLD build, and make the\n` +
+    `  build report "API healthy" for a build that never took effect. So this start is refused.\n\n` +
+    `  Wait, then start again — a boot is 5-20 s and a full build is ~40 s.\n` +
+    `  Check the build, or read a stale lock:\n` +
+    `    npm --prefix nest run build:preflight\n`
+  );
+}
+
+/** Read the lock file and its liveness. Never throws: an unreadable lock is reported as absent. */
+function readLock() {
+  try {
+    if (!fs.existsSync(LOCK)) return { holder: null, holderAlive: false };
+    const holder = JSON.parse(fs.readFileSync(LOCK, 'utf8'));
+    let alive = false;
+    if (holder && holder.pid) {
+      try { process.kill(Number(holder.pid), 0); alive = true; } catch { alive = false; }
+    }
+    return { holder, holderAlive: alive };
+  } catch {
+    return { holder: null, holderAlive: false };
+  }
+}
+
 function selfTest() {
   const bad = [];
 
@@ -76,13 +125,25 @@ function selfTest() {
   // Direction 4 — an EXISTING build must start, or the guard is just "everything refuses".
   if (!preflight(true).ok) bad.push('4 an existing build must be allowed to start');
 
+  // ── #1240 lock cases, BOTH directions ─────────────────────────────────────────────────────────
+  if (lockRefusal(null, false) !== null) bad.push('5 no lock file must PROCEED');
+  if (lockRefusal({ pid: 999999, startedUtc: 'x' }, false) !== null) {
+    bad.push('6 a STALE lock (holder gone) must PROCEED — refusing on it wedges every agent behind a killed build');
+  }
+  const liveRefusal = lockRefusal({ pid: 4242, startedUtc: '2026-11-07T15:00:00Z' }, true);
+  if (!liveRefusal) bad.push('7 a LIVE lock must REFUSE');
+  if (liveRefusal && !/4242/.test(liveRefusal)) bad.push('8 the refusal must NAME the holder pid');
+  if (liveRefusal && !/OLD build/.test(liveRefusal)) {
+    bad.push('9 the refusal must say WHY — the stale-build race, not just "busy"');
+  }
+
   if (bad.length) {
     console.error(`\n❌ self-test: ${bad.length} case(s) FAILED:`);
     for (const b of bad) console.error(`   ${b}`);
     return 1;
   }
-  console.log('✅ self-test: 4 cases — a missing build REFUSES and the message names `build:api` and warns');
-  console.log('   against `db push`; an existing build is allowed to start.');
+  console.log('✅ self-test: 9 cases — a missing build REFUSES (naming `build:api`, warning off `db push`) and an');
+  console.log('   existing build starts; and the #1240 lock PROCEEDS when absent or stale, REFUSES when live.');
   return 0;
 }
 
@@ -92,6 +153,14 @@ function main() {
   const check = preflight(fs.existsSync(ENTRY));
   if (!check.ok) {
     console.error(`\n❌ ${check.message}`);
+    process.exit(1);
+  }
+
+  // #1240 — refuse while a live build holds the lock, rather than racing it.
+  const { holder, holderAlive } = readLock();
+  const refusal = lockRefusal(holder, holderAlive);
+  if (refusal) {
+    console.error(`\n❌ ${refusal}`);
     process.exit(1);
   }
 

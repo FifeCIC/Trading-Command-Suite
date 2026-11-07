@@ -117,6 +117,60 @@ function checkRegister(text) {
   return { errors, rows };
 }
 
+/**
+ * RULE D — row numbers must be CONTIGUOUS from 1 to their maximum.
+ *
+ * ⚠️ Why a gap is a defect and not tidiness. Register rows are cited BY NUMBER from code:
+ * `report-buffers.js` cites row 140, `settings-registry.ts` cites 155 and 161,
+ * `stop-guardian.service.ts` cites 156, `discord.channel.ts` cites 152. A citation is a raw
+ * integer in a comment — nothing resolves it, so nothing notices when it points at nothing.
+ *
+ * Measured 2026-11-07: the register ran 1..161 with **row 133 absent entirely**. It was found by
+ * hand twice (handoff `…-1248-…` and a separate sweep) and by no guard — `checkRegister` catches
+ * DUPLICATES but a hole is invisible to it. A later agent adding a decision will take the next
+ * free number; if that number is inside the hole, an existing citation silently repoints to a
+ * different decision. That is the same failure class as the U+FFFD status and the unnumbered row:
+ * a reference that resolves to the wrong thing, with no error.
+ *
+ * ⚠️ Deliberately a SEPARATE pure function rather than part of `checkRegister`, because the
+ * self-test's fixtures are single rows numbered 30 — folding this in would make every one of them
+ * report a false gap and train the next reader to ignore the guard.
+ *
+ * DECISION (2026-11-07, primary)
+ * WHAT:      a hole in the register's row numbering FAILS the build, and holes are never renumbered.
+ * WHY:       rows are cited as bare integers from code comments that resolve nothing, so a hole is
+ *            a slot a later agent can fill with an unrelated decision, silently repointing a live
+ *            citation. Measured: row 133 was absent and no guard noticed.
+ * REVERSE BY: deleting the `checkNumbering` call from `main()` and register row 162.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 162
+ * GUARD:     this function's `--self-test` cases (24 total; 4 for RULE D, both directions).
+ */
+function checkNumbering(text) {
+  const errors = [];
+  const nums = [...text.matchAll(/^\|\s*(\d+)\s*\|/gm)].map((m) => Number(m[1]));
+  if (!nums.length) return { errors, missing: [] };
+  const max = Math.max(...nums);
+  const seen = new Set(nums);
+  const missing = [];
+  for (let i = 1; i <= max; i++) if (!seen.has(i)) missing.push(i);
+  if (missing.length) {
+    // Collapse runs so a large hole is one line, not forty.
+    const runs = [];
+    for (const n of missing) {
+      const last = runs[runs.length - 1];
+      if (last && last[1] === n - 1) last[1] = n;
+      else runs.push([n, n]);
+    }
+    const shown = runs.map(([a, b]) => (a === b ? `${a}` : `${a}-${b}`)).join(', ');
+    errors.push(
+      `SETTLED-DECISIONS.md: row number(s) ${shown} MISSING — the register runs 1..${max} with ${missing.length} hole(s). ` +
+      'Rows are cited by number from code comments, which resolve nothing: fill the hole with the decision that belongs there, ' +
+      'or if it was deliberately retired add a row recording that. Do NOT renumber — every citation above the hole would break.',
+    );
+  }
+  return { errors, missing };
+}
+
 /** RULE B — find well-formed DECISION markers. Pure: the self-test calls this with injected text. */
 function checkMarkers(files) {
   const errors = [];
@@ -265,6 +319,14 @@ function selfTest() {
     ['RULE C: a declaration whose term appears in NO settling row (STALE, guards nothing)', () => checkReopen('## 🔒 Settled subjects\n| Subject | Terms | Settled by |\n| the question | `netting` | row 23 |\n| 23 | **Settled** | nothing relevant here | #1 | 🟢 gated |').errors, true],
     ['RULE C: a declaration naming a row that does not exist', () => checkReopen('## 🔒 Settled subjects\n| Subject | Terms | Settled by |\n| the question | `netting` | row 99 |\n| 23 | **Settled** | netting applies | #1 | 🟢 gated |').errors, true],
     ['RULE C: a register with NO declaration table is not an error', () => checkReopen('| 23 | **Settled** | netting applies | #1 | 🟢 gated |').errors, false],
+
+    // ── RULE D — contiguity. Canaried in BOTH directions, and the real 2026-11-07 defect is the
+    //    failing case: a hole in the middle of an otherwise complete register.
+    ['RULE D: a contiguous register runs 1..N', () => checkNumbering('| 1 | **a** | b | #1 | 🟢 ok |\n| 2 | **c** | d | #1 | 🟡 partial |\n| 3 | **e** | f | #1 | 🔴 unguarded |').errors, false],
+    ['RULE D: a HOLE in the middle (the real 2026-11-07 gap at 133)', () => checkNumbering('| 1 | **a** | b | #1 | 🟢 ok |\n| 3 | **e** | f | #1 | 🔴 unguarded |').errors, true],
+    ['RULE D: a hole only at the END is still a hole (a row was deleted, not retired)', () => checkNumbering('| 1 | **a** | b | #1 | 🟢 ok |\n| 3 | **e** | f | #1 | 🔴 unguarded |\n| 5 | **g** | h | #1 | 🟡 partial |').errors, true],
+    ['RULE D: starts at 1 even when there is only one row', () => checkNumbering('| 1 | **a** | b | #1 | 🟢 ok |').errors, false],
+    ['RULE D: a register with no rows is not this rule\'s error', () => checkNumbering('# empty').errors, false],
   ];
 
   let bad = 0;
@@ -279,7 +341,7 @@ function selfTest() {
     console.log(`\n  ✗ ${bad} self-test case(s) misbehaved — the rules are not doing what this file claims.`);
     return 1;
   }
-  console.log(`  ✅ self-test: ${cases.length} cases — both rules were observed to fail, valid input was observed to pass, and prose was observed NOT to fire.`);
+  console.log(`  ✅ self-test: ${cases.length} cases — every rule was observed to fail, valid input was observed to pass, and prose was observed NOT to fire.`);
   return 0;
 }
 
@@ -298,7 +360,8 @@ function main() {
   const reg = checkRegister(registerText);
   const mk = checkMarkers(collectFiles());
   const ro = checkReopen(registerText);
-  const errors = [...reg.errors, ...mk.errors, ...ro.errors];
+  const num = checkNumbering(registerText);
+  const errors = [...reg.errors, ...mk.errors, ...ro.errors, ...num.errors];
 
   if (args.includes('--report')) {
     console.log('\n  REGISTER — guard status per row\n');
@@ -325,6 +388,7 @@ function main() {
   const tally = MARKS.map((mk) => `${mk} ${byMark(mk)}`).join(' · ');
   console.log(`  [decisions] ✅ ${reg.rows} register rows all carry a guard status (${tally}) · ${mk.markers} well-formed DECISION marker(s)`);
   console.log(`  [decisions] ✅ ${ro.subjects} settled subject(s) declared; no row names one without citing the row that settled it`);
+  console.log(`  [decisions] ✅ row numbers are contiguous 1..${reg.rows} — no hole a citation could quietly fall into`);
   console.log(`  [decisions] ⚠️  this checks WELL-FORMEDNESS and RE-OPEN only — it cannot know whether a decision was recorded at all.`);
   process.exit(0);
 }

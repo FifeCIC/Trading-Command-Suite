@@ -107,7 +107,7 @@
 .mt5u-offline-icon { font-size: 3.5rem; margin-bottom: 1rem; }
 .mt5u-offline-full h2 { font-size: 1.4rem; color: var(--ink); margin: 0 0 0.5rem; }
 .mt5u-offline-full > p { color: var(--ink-soft); font-size: 0.95rem; margin: 0 0 1.25rem; max-width: 480px; }
-.mt5u-offline-full code { background: #1e1e2e; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.85rem; color: #a5b4fc; }
+.mt5u-offline-full code { background: var(--bg-elev); padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.85rem; color: var(--accent); }
 .mt5u-offline-retry {
   padding: 0.6rem 1.5rem;
   background: var(--color-accent-blue);
@@ -121,7 +121,7 @@
   font-family: inherit;
   margin-top: 0.5rem;
 }
-.mt5u-offline-retry:hover { background: #2563eb; }
+.mt5u-offline-retry:hover { background: color-mix(in srgb, var(--color-accent-blue) 82%, var(--ink)); }
 .mt5u-offline-error { color: var(--color-loss); font-size: 0.85rem; margin-top: 0.75rem; max-width: 480px; }
 .mt5u-offline-hint { color: var(--color-muted); font-size: 0.78rem; margin-top: 1rem; }
 
@@ -140,7 +140,7 @@
   align-items: center;
   gap: 0.6rem;
   font-size: 0.85rem;
-  color: #cbd5e1;
+  color: var(--ink-soft);
   padding: 0.4rem 0.6rem;
   background: rgba(30, 30, 46, 0.6);
   border-radius: 6px;
@@ -175,7 +175,7 @@
 .mt5u-positions-area { background: var(--panel, var(--panel)); border: 1px solid var(--line, var(--line)); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
 .mt5u-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line, var(--line)); align-items: center; }
 .mt5u-tab { padding: 0.55rem 1rem; background: none; border: none; color: var(--ink-soft, var(--ink-soft)); cursor: pointer; font-size: 0.82rem; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
-.mt5u-tab.active { color: var(--accent, #93c5fd); border-bottom-color: var(--accent, var(--color-accent-blue)); }
+.mt5u-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 .mt5u-close-all { margin-left: auto !important; margin-right: 0.5rem; padding: 0.3rem 0.6rem; font-size: 0.7rem; background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3); border-radius: 5px; color: var(--color-loss); cursor: pointer; font-weight: 600; }
 .mt5u-close-all:hover { background: rgba(239,68,68,.25); }
 

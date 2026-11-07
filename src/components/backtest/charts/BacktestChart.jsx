@@ -158,14 +158,25 @@ export default function BacktestChart({ data, symbol, loading, showSignalsOnly =
 
     // Signal markers
     if (data.signals?.length) {
-      const markers = data.signals.map((s) => ({
-        time: s.time,
-        position: s.type === 'entry' ? 'belowBar' : 'aboveBar',
-        color: s.type === 'entry' ? '#22c55e' : '#ef4444',
-        shape: s.type === 'entry' ? 'arrowUp' : 'arrowDown',
-        text: s.label,
-        size: 2,
-      }));
+      // ⚠️ THE MARKER IS SIDE-AWARE (#1231). Every entry used to draw as a GREEN UP-ARROW BELOW the
+      // bar — long-only styling for a marker that can now be a short. A short entry marks a top, so
+      // it belongs above the bar with a down arrow, which is also what makes the two readable without
+      // reading the label. Long rendering is unchanged, deliberately: it is the existing surface.
+      const markers = data.signals.map((s) => {
+        // A short entry marks a TOP, so it belongs above the bar with a down arrow; everything else
+        // keeps exactly the styling it had. `s.side` is absent on older stored overlays, which must
+        // therefore continue to render as longs — the behaviour they had when they were written.
+        const shortEntry = s.type === 'entry' && s.side === 'short';
+        const below = s.type === 'entry' && !shortEntry;
+        return {
+          time: s.time,
+          position: below ? 'belowBar' : 'aboveBar',
+          color: below ? '#22c55e' : '#ef4444',
+          shape: below ? 'arrowUp' : 'arrowDown',
+          text: s.label,
+          size: 2,
+        };
+      });
       // ⚠️ v5 REMOVED `series.setMarkers()`. The old code guarded it with a `typeof` check, so it did
       // not throw — it silently rendered NO markers at all, which is the "buried ability" shape:
       // a feature that exists, is called, and cannot be seen. `createSeriesMarkers` is the v5 API.

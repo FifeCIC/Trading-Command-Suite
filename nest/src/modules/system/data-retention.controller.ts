@@ -11,6 +11,17 @@ export class DataRetentionController {
     return this.retention.getStats();
   }
 
+  /**
+   * GET /api/system/data-retention/report — what the next prune WOULD delete, per table.
+   *
+   * ⚠️ Read-only, and it is the answer to "did retention work?" without letting it delete anything
+   * first. The prune was previously only observable by running it (#1241).
+   */
+  @Get('report')
+  getReport() {
+    return this.retention.getRetentionReport();
+  }
+
   /** POST /api/system/data-retention/prune?table=directiveoutcome&days=30 — prune a single table */
   @Post('prune')
   async pruneTable(@Query('table') table?: string, @Query('days') days?: string) {

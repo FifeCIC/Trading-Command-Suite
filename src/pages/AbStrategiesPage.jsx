@@ -938,14 +938,43 @@ export default function AbStrategiesPage() {
                 </button>
               </div>
             </div>
-            <p className={styles.listMeta}>
-              {totalPairs} eligible {totalPairs === 1 ? 'pair' : 'pairs'} · every pair trades ONE
-              symbol — the playbook is what may differ · {view === 'table'
-                ? 'ordered by realised profit difference (B − A) — click Δ to flip'
+            {/* ⚠️ MOVED INTO THE ℹ POPOVER (2026-11-07). Owner: *"Move <p.listMeta>115 eligible pairs ·
+                every pair trades ONE symbol… to an information popout like we have on many other
+                pages now"*. The count is still on screen in the group headings below and in the
+                pair list itself; this paragraph was three clauses of method (one-symbol rule, the
+                current ordering, the shown/total split) sitting above the thing it described.
+                `aria-live` keeps the ordering announcement audible while it is behind a trigger —
+                without it, changing the sort would give a screen-reader user no feedback at all. */}
+            <p className="sr-only" aria-live="polite">
+              {totalPairs} eligible {totalPairs === 1 ? 'pair' : 'pairs'}. {view === 'table'
+                ? 'Ordered by realised profit difference.'
                 : listSort === 'different'
-                  ? `ordered by configuration difference — most different first (${listGroups.length} of ${pairGroups.length} symbols shown)`
-                  : `ordered by configuration difference — closest first (${listGroups.length} of ${pairGroups.length} symbols shown)`}
+                  ? 'Ordered most different first.'
+                  : 'Ordered closest first.'}
             </p>
+            <div className={styles.listMetaBar}>
+              <span className={styles.listMetaCount}>
+                {totalPairs} eligible {totalPairs === 1 ? 'pair' : 'pairs'}
+                {' · '}
+                {listGroups.length} of {pairGroups.length} symbols shown
+              </span>
+              <PageInfoPopover label="How this list is worked out">
+                <p>
+                  <strong>Every pair trades ONE symbol</strong> — the playbook is what may differ.
+                  A pair is two strategies on the same symbol, so the comparison is like-for-like.
+                </p>
+                <p>
+                  {view === 'table'
+                    ? 'Ordered by realised profit difference (B − A). Click Δ to flip the direction.'
+                    : listSort === 'different'
+                      ? 'Ordered by configuration difference — most different first.'
+                      : 'Ordered by configuration difference — closest first.'}
+                </p>
+                <p>
+                  {listGroups.length} of {pairGroups.length} symbols are shown, after any filter.
+                </p>
+              </PageInfoPopover>
+            </div>
             {view === 'table' ? (
               <PairTable
                 pairs={sortedPairs}

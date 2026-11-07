@@ -80,6 +80,23 @@ export interface SignalEnvelope {
    *  must skip it, and must be able to SEE it to do so. Added 2026-10-16 — its absence is what
    *  let `gated.signal` be assigned here untyped. */
   signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL' | 'NO_DATA';
+  /**
+   * TRUE when nothing was MEASURED — no symbol row, no bars, or an unreadable tick (#1236).
+   *
+   * ⚠️ WHY THIS IS A DECLARED FIELD AND NOT AN `as any` READ. `buildBestLadder`'s counter tests
+   * `(env as any).noData === true || env.signal === 'NO_DATA'` before counting a symbol as scored.
+   * The `emptyEnvelope()` path omitted BOTH, so every symbol the pipeline merely *looked at* was
+   * counted as a score: `leverage-v2-long` reported `symbolsScored: 79` with 68 of its 79 tickers
+   * absent from the symbol registry and ZERO rows written to `score`/`score_snapshot`, ever
+   * (measured 2026-11-07). Typing the field is what stops the next empty path omitting it silently.
+   *
+   * A consumer deciding whether to ACT must skip a `noData` envelope — and must be able to see it
+   * to do so. Absence and a HOLD are different claims: `[]` is information, `null` is the absence
+   * of information, and an error is a third thing.
+   */
+  noData?: boolean;
+  /** Why nothing was measured. Present whenever `noData` is true. */
+  noDataReason?: string;
   confidence: number;            // 0-100 confidence score
   rarity: string | null;         // e.g. "Exceptional", "Strong"
   rarityColor: string | null;
@@ -1402,12 +1419,32 @@ export class SignalEnvelopeService {
     return { blockers, notice: botGate.notice };
   }
 
+  /**
+   * emptyEnvelope() — NOTHING WAS MEASURED. It must say so.
+   *
+   * ⚠️ `noData: true` is the load-bearing line (#1236, measured 2026-11-07). This path is taken
+   * when the symbol has no row in `symbol` or no bars on its base cadence — i.e. this pipeline
+   * looked and found nothing. `buildBestLadder` counts a symbol as scored unless
+   * `env.noData === true || env.signal === 'NO_DATA'`, and this envelope previously satisfied
+   * NEITHER: it returned `signal: 'HOLD'` with no `noData` key at all. Measured consequence:
+   * `leverage-v2-long` reported `symbolsScored: 79` while 68 of its tickers were absent from the
+   * registry and it had written zero rows to either history table, ever.
+   *
+   * ⚠️ `composite: 50` below is NOT a score. It is the neutral placeholder this envelope has
+   * always carried, and `buildBestLadder` filters `composite === 50 && confidence === 0` so it is
+   * never displayed. It is left as-is deliberately: changing a number that some consumer may
+   * compare is a separate decision, while adding the MISSING flag is a defect fix.
+   */
   private emptyEnvelope(symbol: string): SignalEnvelope {
     return {
       symbol,
       composite: 50,
       maxPossible: 100,
       signal: 'HOLD',
+      noData: true,
+      noDataReason:
+        'Nothing measured for this symbol — it is absent from the symbol registry, or it has no ' +
+        'bars on its base cadence (#1236). This is an ABSENCE, not a HOLD score.',
       confidence: 0,
       rarity: null,
       rarityColor: null,

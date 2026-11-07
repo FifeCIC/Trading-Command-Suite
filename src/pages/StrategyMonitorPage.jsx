@@ -194,9 +194,11 @@ export default function StrategyMonitorPage() {
     return { total: stratList.length, active: active.length, trading: trading.length, scoring: scoring.length, avgScore };
   }, [stratList]);
 
-  const loopRunning = autoStatus?.loopEnabled;
-  const tickCount = autoStatus?.tickCount || 0;
-  const lastTickMs = autoStatus?.lastTickMs || 0;
+  // ── Loop state (#52 tick telemetry) moved to the topbar status popout on 2026-11-07 ──
+  // Owner: *"Remove sm-loop-badge … and add the stat to the top right status menu"*. It was one
+  // number about the whole machine sitting inside one page's header. The topbar already polls
+  // `/api/automation/status` for the same payload, so this page no longer needs its own copy of
+  // the three fields — `autoStatus` below is still used for `brokerStates`.
 
   // ── Monitored set: active trading strategies only (this is a Monitor view) ──
   const monitoredStrats = useMemo(
@@ -235,9 +237,6 @@ export default function StrategyMonitorPage() {
             {overview.active} active · {overview.trading} trading · {overview.scoring} scoring · avg score {overview.avgScore}
           </p>
         </div>
-        <div className="sm-loop-badge" style={{ background: loopRunning ? 'color-mix(in srgb, var(--color-profit) 9%, transparent)' : 'color-mix(in srgb, var(--color-muted) 9%, transparent)', color: loopRunning ? 'var(--color-profit)' : 'var(--color-muted)' }}>
-          {loopRunning ? '🟢 Loop Active' : '⚫ Loop Stopped'} · Tick #{tickCount} · {lastTickMs}ms
-        </div>
       </motion.header>
 
       {/* Single merged view: stats → filters → cards */}
@@ -255,7 +254,7 @@ export default function StrategyMonitorPage() {
           {brokerChips.map(bc => (
             <div
               key={bc.brokerId}
-              className="sm-stat"
+              className="sm-stat sm-stat--broker"
               title={bc.account ? `${bc.label} · ${bc.account} · ${bc.status}` : `${bc.label} · ${bc.status}`}
             >
               <span className="sm-stat-val" style={{ color: bc.color }}>{bc.icon} {bc.label}</span>
@@ -283,10 +282,6 @@ export default function StrategyMonitorPage() {
             reachable from here instead of duplicated here. */}
         <div className="sm-live-head">
           <h2>Live state</h2>
-          <span className="sm-monitor-note">
-            What is happening now. Configuration lives on{' '}
-            <Link to="/trading/trading-bots">Trading Bots</Link>.
-          </span>
         </div>
 
         {stratError ? (

@@ -126,6 +126,53 @@ gh pr view <number>
 ```
 
 Never ask the user to manually copy/paste GitHub issue content — fetch it directly.
+### 🛑 GITHUB PROJECTS need their OWN scope — issues do not (#1246)
+
+**Measured 2026-11-07.** The machine's single `gh` login (`gho_` token, keyring) carries
+`gist, read:org, repo, workflow`. Issues, PRs, releases and file writes all work. **Projects v2 does
+not**, and the failure is easy to misread:
+
+```
+The 'projectsV2' field requires one of the following scopes: ['read:project'],
+but your token has only been granted the: ['gist', 'read:org', 'repo', 'workflow'] scopes.
+```
+
+⚠️ **The confusing part:** `{viewer{projectsV2{totalCount}}}` **succeeds** — it answered `5` on this
+machine — while asking for `title`/`number` fails. So a probe that only asks for the COUNT reports
+"Projects work", and the next field asked for 404s. **Probe with `title`, not `totalCount`.**
+
+Two ways to grant it. **Both are one action by the owner**; neither can be done by an agent, because
+`gh auth refresh` opens a browser and a PAT has to be created by a human:
+
+| Fix | Command / action | Scope of the change |
+|---|---|---|
+| **A — widen the shared login** | `gh auth refresh -s project,read:project` | every agent, every repo on this machine |
+| **B — a per-machine token** | create a token with **Projects: read & write**, put it in `C:\wamp64\www\.secrets\credentials.env` as `GITHUB_TOKEN=…` | only this file, and only callers that read it |
+
+⚠️ **`scripts/gh-wrapper.ps1` already loads `GITHUB_TOKEN` from that file**, so Fix B needs no code
+change and no restart — the next `pwsh -File scripts/gh-wrapper.ps1 …` picks it up. It only sets the
+variable when a REAL value is present (a `<value>` placeholder is ignored), because setting
+`GH_TOKEN` to an empty string would override the working keyring login and break issue/PR commands
+that work today.
+
+⚠️ Raw `gh` (not the wrapper) reads your shell environment, so export it there or keep using the
+wrapper. The wrapper also appends a one-line diagnosis when a Projects call is refused, instead of
+leaving the same three-paragraph error repeated once per requested field.
+
+**Not needed for Projects:** more agents, a bot account, or a GitHub App. One token with the right
+scope serves every agent on the machine, exactly like `repo` already does.
+⚠️ **GraphQL through the WRAPPER mangles quoted string literals.** Measured 2026-11-07: the wrapper
+passes args through `cmd /c`, so `-f query='{organization(login:"FifeCIC"){…}}'` arrives with the
+quotes stripped and fails with `Argument 'login' … has an invalid value (FifeCIC)`. **Use raw `gh`
+for any GraphQL query containing a string literal**, and the wrapper for everything else (its value is
+the JSON/encoding handling, which `gh project` and simple queries do not need). A query with no
+literal — `{viewer{projectsV2(first:1){totalCount}}}` — works through either.
+
+**What already exists on this machine (measured 2026-11-07, read-only):** `viewer.projectsV2` **5**,
+`organization(FifeCIC).projectsV2` **0**, and repo-linked projects unreadable for want of the scope.
+So there is no org board yet — the count of 5 is the personal account's projects. Decide which owner
+the board should live under BEFORE granting the scope, because a repo-linked Project and a
+user-owned Project are different objects with different URLs.
 
 ## 🛑 Committing — the git index is SHARED between agents
 
@@ -325,6 +372,291 @@ Treat "another agent started a node process just before my request vanished" as 
 and **say you could not isolate it** rather than blaming the endpoint. Recovery is the same either way:
 start the API again and re-issue the request once.
 
+---
+
+## 🛑 `build:api` KILLS EVERY AGENT'S API, NOT JUST YOURS — announce it (2026-11-07)
+
+**Confirmed with the command line, after a session of chasing "the API keeps dying".**
+`build-api.ps1` stops every `node dist/src/main.js` as its **first step**, matching on the command line,
+not on the port. So one session's `build:api` kills:
+
+- the live API on 3201,
+- every other agent's API that is **still booting**,
+- throwaway instances on any port.
+
+Captured by polling for new `cmd.exe`/`pwsh.exe` every 150 ms during a boot:
+
+```
+cmd.exe 27428: cmd.exe /d /s /c pwsh -File ../scripts/build-api.ps1
+pwsh.exe 14052: pwsh -File ../scripts/build-api.ps1
+```
+
+The API died at ~23 s — the same second those appeared. Reproduced three times (16 s, 23 s, 133 s);
+**every** death coincided with a `build-api.ps1` start. The `exit -1` with **empty stdout/stderr** that
+reads as a crash is this kill, not a crash and not a wedge.
+
+⚠️ **The boot is now 5–19.6 s (was ~107 s), so the race window is small but the kill is still total.** Before
+the two `ProtocolHealthService` audits were made fire-and-forget, a `build:api` almost always won the race
+and the API looked permanently broken.
+
+### 🛑 THREE DIFFERENT NUMBERS — do not merge them (2026-11-07)
+
+They bracket one change, and conflating them invents a contradiction that does not exist.
+
+| Number | What it measures | How it was obtained |
+|---|---|---|
+| **~107 s** | time from route mapping to `successfully started`, **BEFORE** the audits were made deferred | log evidence, **one pid throughout** (32628): routes mapped 01:24:43 → `validateAll()` ends 01:25:14 → `auditMeasuredCeilings()` ends 01:26:16 → started 01:26:16 |
+| **5–19.6 s** | time from process spawn to the **first `200` on `/api/health`**, AFTER the change | six independent boots across two sessions, port-polled rather than log-watched. The compiled `onApplicationBootstrap` is `void this.runBootDiagnostics()`, so neither audit gates `listen()` |
+| **86.6 s** | the AUDIT'S OWN COST, **measured to completion**: `deferred diagnostics finished in 86567ms`, 34 issues across 29 protocols | start line 15:24:51 → finished line 15:26:18, on the SAME pid, with `/api/health` answering `200` throughout |
+
+⇒ **107 s and 5–19.6 s are two measurements of the same file either side of one change — not a disagreement.**
+⇒ **86.6 s is not boot time at all, and the audit did not get slower.** It was ~93 s before the change (31 s +
+62 s, also measured to completion) and 86.6 s after: **the cost is unchanged, only its position moved** — it
+no longer sits in front of `listen()`.
+
+🛑 **A PREVIOUS VERSION OF THIS SECTION SAID "> 4 MIN 30 s" AND THAT WAS WRONG — the error is worth keeping.**
+It came from a run with a start line and **no `finished` line** 4½ minutes later, read as "still running". It
+was not running: **the process had died.** A log that stops is a dead writer, not a slow one — and the person
+who wrote it had spent the day applying that exact rule to everyone else's instruments. **Absence of a
+completion line is not a measurement of duration.**
+
+### The deadline, stated correctly
+
+| Build you have | Safe deadline | Because |
+|---|---|---|
+| **Pre-change** (audits awaited — no `void` in `dist`) | **no short deadline is safe** | route mapping → `started` was ~107 s with the audits inside that window, so a kill at 30–60 s killed a healthy boot |
+| **Post-change** (`void this.runBootDiagnostics()` present in `dist`) | **20 s is safe** | the whole measured distribution is 5–19.6 s, and the 86.6 s audit is not in that window at all |
+
+⚠️ **Earlier versions of this entry said "never kill a booting API — not wait N seconds and then kill it" as a
+blanket rule. That is too strong for a post-change build:** 20 s is a real, measured deadline. The blanket form
+was only ever right because the pre-change boot had no safe one.
+
+⇒ So: **identify the build first (the three-branch check below), then apply that row's deadline.** "Never
+kill" without that distinction would leave a genuinely dead API holding a stale process forever.
+
+🛑 **A BARE `curl` RETURNING `000` DOES NOT TELL YOU WHICH REGIME YOU ARE IN.** A closed port can mean
+*booting on an idle database* (5–19.6 s), *booting on a loaded one* (~107 s under the OLD code), *killed a
+second ago* or *never started*. The missing input is **which build is running**, and it is one command:
+
+```powershell
+# Does the RUNNING dist defer its boot diagnostics? (i.e. is it the fast-boot build?)
+# ⚠️ THREE states, not two. "File missing" is NOT "marker absent" — `Select-String` on a missing path
+# prints an error and returns nothing, and a hurried reader takes that as the PRE-CHANGE branch,
+# whose advice is "wait, never kill". A missing dist means there is NOTHING TO BOOT, which is the
+# opposite conclusion. (A failed `build:api` deletes dist as its first act, so this is not theoretical.)
+$p = 'nest\dist\src\modules\scoring\protocol-health.service.js'
+if (-not (Test-Path $p)) {
+  'NO BUILD — dist is missing; no API is booting. Run build:api (API is already down, so nothing is lost).'
+} elseif (Select-String -Path $p -Pattern '^\s*void this\.runBootDiagnostics\(\);' -Quiet) {
+  'POST-CHANGE — port opens in seconds, so a 000 after ~20 s means NOT RUNNING.'
+} else {
+  'PRE-CHANGE BUILD — a 000 can still be a healthy boot in progress. Wait; never kill.'
+}
+```
+
+So: **poll the port, then answer the build question, then apply that build's deadline from the table above.**
+Never from the `000` alone, and never from a wait chosen by feel rather than by the table.
+
+> ⚠️ **A check that cannot read its input must ERROR, never pass** — which is why the missing-file case is its
+> own branch above. The one-line grep that used to sit here was canaried against a *present* file only, so it
+> was verified in the state where it works and untested in the state that actually occurs after a failed build.
+
+### 🛑 `State -eq 'Listen'` IS NOT A RELIABLE OWNER LOOKUP ON THIS HOST — key on "no remote peer"
+
+**Measured 2026-11-07.** This is why `process-manager.controller.ts` and `api-tasks.php` both reported an
+answering API as `running: false`, and why `tcs-stop.ps1` could not stop one.
+
+```powershell
+# WRONG — see the table: for a node listener this returns NOTHING, and where it returns rows on a
+# python bridge they name no process, so a live service reads as "not running" either way
+Get-NetTCPConnection -LocalPort 3201 | Where-Object { $_.State -eq 'Listen' }
+
+# RIGHT — a listener is the socket with NO remote peer, whatever its state says
+Get-NetTCPConnection -LocalPort 3201 | Where-Object { $_.RemotePort -eq 0 -and $_.OwningProcess -gt 0 }
+```
+
+| Port | Rows on the port | `State -eq 'Listen'` | …of those, **with a real owner** | no-peer + real owner |
+|---|---|---|---|---|
+| 3201 (node API) | 18 | **0** | 0 | **1 → pid 23540** ✅ |
+| 5173 (node/Vite) | 13–14 | **0** | 0 | **1 → pid 27328** ✅ |
+| 5000 (python bridge) | 279–325 | **2–7** | **0** (`OwningProcess = 0`) | **1 → pid 16556** ✅ |
+| 5001 (python bridge) | 307–341 | **5–6** | **0** (`OwningProcess = 0`) | **1 → pid 924** ✅ |
+
+⚠️ **THE DANGER IS NOT THAT `Listen` NEVER APPEARS — IT IS THAT `Listen` CAN APPEAR AND STILL NOT TELL YOU
+WHO OWNS THE PORT.** Two readers measured this the same minute and disagreed because they were counting
+different columns: the `Listen` rows exist on the bridges, and **every one of them carries
+`OwningProcess = 0`**. So a reader on `Where-Object State -eq 'Listen'` will **find** the bridge on 5000/5001,
+conclude it has the process, and hand `Stop-Process -Id 0` the same failure this section is about — while
+feeling that the query worked. That is worse than finding nothing, because finding nothing invites a second
+look.
+
+⚠️ **AND NEVER `Select-Object -First 1` ON A PORT.** Most rows on a busy port are stale — measured 18–19 rows
+on 3201, **14 of them `OwningProcess 0`** — so an unordered first row picks a released `TIME_WAIT` socket and
+`Stop-Process -Id 0` is what follows. `scripts/tcs-stop.ps1` did exactly this and printed *"Port 3201 is held
+by PID 0 — requires admin to free"*, which reads as a permissions problem and is not one. Fixed 2026-11-07
+with three tiers (`Listen` → no-peer → any real owner), never pid 0 — and the fix is safe *because* `$conns`
+has already excluded `OwningProcess -eq 0`, so a pid-0 `Listen` row cannot win tier 1.
+
+### 🛑 A **BIND** PROBE ON LOOPBACK IS NOT A PORT-OPEN TEST — `isPortOpen()` said "free" about a serving API
+
+**Measured 2026-11-07 with the API answering `200` on 3201.** Four probes, one truth:
+
+| Probe | Result | Reads as |
+|---|---|---|
+| bind `127.0.0.1` | **SUCCEEDED** | "port is free" ❌ |
+| bind `::1` | **SUCCEEDED** | "port is free" ❌ |
+| bind `0.0.0.0` | **SUCCEEDED** | "port is free" ❌ |
+| bind `::` | **FAILED `EADDRINUSE`** | "port is taken" ✅ — the only one that saw it |
+| connect `127.0.0.1` | CONNECTED | ✅ |
+| connect `::1` | CONNECTED | ✅ |
+
+The API binds the **IPv6 wildcard `::`**, which on Windows does not conflict with a *loopback* bind. So
+`isPortOpen()` — a bind test on `127.0.0.1` first — **succeeded and returned "open" before its `::1`
+fallback ever ran**, and `process-manager` reported a serving API as `running: false`.
+
+⇒ **Ask the port a CONNECTION question, not a BINDING one.** "Can I take this address" and "is something
+serving this port" are different questions, and loopback is a different address from the wildcard. A connect
+probe on **both** loopback families is the cheap correct test: `127.0.0.1` catches a `0.0.0.0` bind (which
+does NOT answer on `::1`), `::1` catches a `::` bind. Both, not a fallback chain — a fallback stops at the
+first "no" and reports free.
+
+⚠️ **THE SECOND HALF IS SHARPER, AND IT IS THE `netstat` TRAP.** `netstat -ano | findstr :3201` returned
+**25 rows, every one a client socket** (`TIME_WAIT` / `FIN_WAIT_2`), and **not one row** for the bound
+`[::]:3201`. The old `getPortOwner()` filtered for the literal string `LISTENING`, matched nothing, and
+returned `pid: 0`. Then the `issue` guard tested `&& listenerPid` — and **`0` is falsy** — so the
+"cannot judge" branch was **skipped** and `issue` stayed `null`. A confident negative, silently, on the
+field that exists to say "cannot judge".
+
+⇒ **A pid of `0` is a value, not an absence.** Compare `listenerPid -gt 0`, never truthiness. And when the
+port answers but no owner can be named, that is `port_in_use_unknown_owner` — a REPORTED state, not silence.
+
+⚠️ **The consequence is not cosmetic:** with the bind probe reporting "free", `startTask()`'s *"already
+running"* guard did not fire either, so the manager could spawn a **second API on a port already served**.
+A mis-detection that only affects a status display is a bug; the same mis-detection gating a start is a
+cause of overlapping starts.
+
+### 🛑 FILTERING PROCESSES BY COMMAND LINE FINDS **YOURSELF** — and it reads as a finding
+
+**Measured 2026-11-07, by me, while diagnosing a build.** Asked "is a build running?", this filter
+answered **yes, since 17:17:09** — and the "build" was *the diagnostic command doing the checking*, whose
+own command line contained the string `build-api.ps1` because it was grepping that file:
+
+```powershell
+# WRONG — matches the shell running this very query
+Get-CimInstance Win32_Process -Filter "Name='pwsh.exe'" |
+  Where-Object { $_.CommandLine -match 'build-api\.ps1' }
+
+# RIGHT — exclude yourself, and match the INVOCATION, not a mention of the filename
+Get-CimInstance Win32_Process -Filter "Name='pwsh.exe' OR Name='node.exe'" |
+  Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -match '-File\s+.*build-api\.ps1' }
+```
+
+The false positive cost a whole diagnostic thread: it produced a **27-second "unlocked window" before lock
+acquisition** that does not exist. The real build (pid 25876) started at **17:17:36** and the lock file was
+written the **same second** — and `Enter-BuildLock` sits before every destructive step in the script. With
+the self-match removed, the observation dissolved.
+
+⇒ **Same shape as the three others in this repo's history** (a correction quoting the dead path it removed,
+a grep whose "no match" meant "no file", a mutator canary whose edit never landed). **A query that names the
+thing it is looking for will find its own name.** Whenever a process/string search returns more than
+expected, the first question is *"is one of these me?"* — answered with an explicit `-ne $PID`, not by
+reading the command line and hoping.
+
+### 🔒 THE BUILD LOCK IS THE ONE COORDINATION MECHANISM THAT EXISTS — and since 2026-11-07 the start/stop paths respect it
+
+`scripts/build-api.ps1` takes `logs/build-api.lock` (a file carrying the holder's PID) **before its first
+step** and releases it **only after `Assert-ApiUp` passes** — so it covers the build, `rimraf dist`,
+`prisma generate`, the API start AND the health check. A second `build:api` refuses while the holder is
+alive; a lock whose holder is gone is taken over, so a killed build can never wedge the machine.
+Canaries: `-LockSelfTest` (refuse/takeover) and `-ApiIdentitySelfTest` (below).
+
+As of 2026-11-07 **three more paths consult that same lock and REFUSE while a live build holds it**:
+
+| Path | Behaviour under a live build lock |
+|---|---|
+| `npm --prefix nest run start` (`scripts/start-api.cjs`) | refuses, exit 1, naming the holder pid |
+| `scripts/tcs-stop.ps1` | refuses, exit 1 — stopping mid-build makes the build fail for an unrelated reason |
+| `scripts/tcs-launch.ps1` | refuses, exit 1 — it kills what is on 3201, i.e. the API being health-checked |
+
+⚠️ **A STALE lock must never block a start or a stop.** All three refuse only on a holder whose pid is
+still running. Refusing on a stale lock would make the machine un-startable after one killed build.
+⚠️ **Nothing queues.** There is no "already starting" answer yet — you are told to wait and ask again. That
+is deliberate: a boot is 5–20 s and a build ~40 s, so retrying shortly is cheaper than building a queue.
+
+### 🛑 `Assert-ApiUp` NOW REFUSES WHEN *SOMEONE ELSE'S* API ANSWERS (2026-11-07, #1240)
+
+It used to return `$true` on **any** 200. If another agent's bare `nest run start` bound 3201 inside the
+rebuild window, it served the OLD build (Windows keeps the mapping alive after `rimraf dist` deletes the
+files) and `build:api` printed **"API healthy"**, exited 0, and the API actually running was not the new
+build. A false success is worse than a false failure here, because nobody goes looking.
+
+The fix compares **creation time, not pid**: the WMI launch path starts `cmd.exe` which spawns `node`, so
+`$Proc.Id` is the cmd pid and can never equal the port owner. A process created *before* our launch cannot
+be ours, whichever shell spawned it. Three outcomes, never two:
+
+| Outcome | Meaning | Verdict |
+|---|---|---|
+| `ours` | owner started at/after our launch | healthy |
+| `stale` | owner started BEFORE our launch | **FAIL**, naming both pids — "the build did NOT take effect" |
+| `unknown` | no attributable owner, no launch time, or the start time is unreadable | **accepted, and said out loud** |
+
+⚠️ `unknown` is accepted rather than failed on purpose: the port answers, and refusing on an unreadable
+start time would break the normal path. It is *reported*, so "cannot judge" is never silent.
+Canary: `pwsh -File scripts/build-api.ps1 -ApiIdentitySelfTest` — 6 fabricated cases plus a live read of
+port 3201. Inverting the comparison fails exactly the `stale` case.
+
+🛑 **AND DO NOT LET A QUIET-PORT TEST BLESS IT.** The old one-liner is **not always wrong** — it is wrong
+*only when the port is busy*, which is why the bug survived so long and why "I tried it, it worked" is not
+evidence against it. Measured end to end on a throwaway listener 2026-11-07:
+
+| Port at measurement | Rows | Rows with `OwningProcess 0` | `Select-Object -First 1` picks |
+|---|---|---|---|
+| a freshly opened port | 1 | 0 | the listener — **correct, by luck** |
+| **3201 in normal use** | 18–19 | **14** | a `TimeWait` row → **pid 0** |
+
+So a freshly opened port has no client sockets and the unordered first row happens to be the listener. **A
+test run in the quiet state certifies nothing about the busy one** — the same rule as the canaries above,
+applied to a defect rather than to a guard: exercise it in the state where it fails, or do not claim it passes.
+
+**The protocol, because a restart is 17 s and one line costs nothing:**
+
+| Do | Don't |
+|---|---|
+| Post one line naming the reason before running `build:api` / `nest run build` | Run it silently and let three sessions try to diagnose "the API died" |
+| Give a health poll **20 s** before concluding the API failed | Conclude "down" from a `000` on the first try |
+| Use root `npm run build` for frontend work — **Vite only, touches no API process** | Use `build:api` to "fix" a slow API; slowness is no longer the boot |
+| `nest run build:preflight` to check the engine lock without building | Stop every `dist/src/main.js` by hand to "clean up" |
+
+🛑 **CORRECTED 2026-11-07 — THIS PARAGRAPH NAMED A CAUSE THAT WAS NEVER MEASURED, AND IT WAS WRONG.**
+It used to say the frontend "generates overlapping starts on its own", so "a browser left on a failing page
+is a second source of restarts". **It is not.** The call is real and does fire on every page load that
+cannot reach `/api`, but it targets a task id the runner does not have, and it is a **NO-OP**:
+
+```
+GET  /api/processes                               → {"tasks":[{"id":"tradercore:all", ...}]}  ← the only task
+POST /api/processes/tradercore%3Aapi%3A3201/start → HTTP 200 {"success":false,"message":"Unknown task: tradercore:api:3201"}
+```
+
+So it starts nothing. **The overlapping starts that session actually suffered came from elsewhere** — the
+Intranet runner (`api-tasks.php`, which *does* know `tradercore:all`) or another session's own launch. Two
+separate defects were live at once, only one was harmful, and conflating them pointed the investigation the
+wrong way.
+
+What the call DID expose, worth keeping because it is the house shape *plausible output, no error*:
+
+- `App.jsx` logged **"Start command sent"** regardless of the response body, so a no-op reported that it had
+  acted. Fixed: the body is read and `success:false` is logged as a refusal.
+- The re-fire guard was a React **`ref`**, so it died on every reload — which is why every page load fired
+  again. Fixed: a 180 s `localStorage` cooldown, stamped before the request.
+
+⚠️ **Do not "fix" this by registering `tradercore:api:3201` as a real task.** That turns a harmless no-op
+into a working process-starter fired from a render path — an operator action with no operator. **#1233**
+requires both halves together.
+
+**The lesson, because this file repeats it and I still walked into it:** "the console shows the call and the
+API died" is a correlation. The response body was available the whole time and nobody read it. **Read the
+response before writing a cause into a durable document.**
+
 Other useful forms:
 
 ```powershell
@@ -462,6 +794,40 @@ Measured 2026-09-29: `logs/` **191 files / 12.6 MB**, `nest/logs/` **62 files / 
 173–572 KB, and the cause is repetition: **4,800 identical `bridge[2] GET /symbols FAILED`** lines
 plus 1,738 for one symbol's quotes. Nothing deduplicates, rate-limits or summarises repeated
 identical warnings.
+
+### ⚠️ `logTail` IS NOT LIVE STATUS — and its file lives in ANOTHER PROJECT (measured 2026-11-07)
+
+`GET /api/processes` returns a `logTail` per task. It is the last N lines of a **file**, so it is a
+**record of the last launcher run**, not the current state. Measured: the tail still carried
+
+```
+Services are LISTENING, but NOT under the processes this launcher started
+  port 3201 answers, but the process we started (PID 31372) and all its children have exited …
+```
+
+while the API had been healthy for over two hours — that text was from a `tcs-launch.ps1` run at
+**15:02:35**, and the API answering at the time was pid **44568**, started at 17:20:34. ⇒ **Do not read
+`logTail` as a live alarm; read `running` / `listenerPid` / `issue` for state.** A stale warning in a log
+tail is the field doing its job, and treating it as current sends you chasing a service that is fine.
+
+⚠️ **`LOG_DIR` is a hardcoded absolute path into a SIBLING PROJECT:**
+
+```ts
+// nest/src/modules/system/process-manager.service.ts:42
+const LOG_DIR = 'C:\\wamp64\\www\\intranet\\task-runner';
+```
+
+Two consequences, both silent:
+
+| On this machine | On any other machine |
+|---|---|
+| writes and reads `C:\wamp64\www\intranet\task-runner\<task>.pid.log` | the directory does not exist, `fs.existsSync` is false, and `readLogTail` returns `''` |
+
+⇒ **`''` is "cannot judge" being rendered as "there is no log"** — the §7 defect, in a diagnostic field.
+It is also the `external-systems-are-data` family: a path belonging to one deployment is a literal in
+source. **Not fixed here** — it is a shared file another agent was working in, and a diagnostic tail does
+not meet the bar for an issue on its own. Recorded so the next reader does not mistake an empty tail for
+an empty log, and so the hardcoded path is not re-discovered as a mystery.
 
 ### 🧹 Root `logs/` — agent WORKING SCRATCH, gitignored, and named one way (2026-10-10)
 

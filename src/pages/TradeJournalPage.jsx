@@ -9,6 +9,7 @@ import { decisionScore } from '../core/decision-score';
 // #1093 — the optional in-app prompt + button for closed trades with no recorded exit. Renders
 // only while the gap exists; it is the app-side replacement for the MT5 terminal ritual (R48).
 import ExitDataRecoveryNotice from '../components/ExitDataRecoveryNotice';
+import PageInfoPopover from '../components/PageInfoPopover';
 import './trade-journal-page.css';
 // ⚠️ RENAMED from execution-queue.css (2026-10-02). The Execution Queue page was DELETED — its
 // Live Events feed moved here, its Protocol Queue tab to /protocols/protocol-queue and its Scheduled
@@ -80,30 +81,41 @@ function mapTradeToEntry(t) {
 // surface that showed a BLOCKED signal — a symbol that was scored and then REFUSED. Deleting it
 // without moving this feed would have removed the ability to see a refusal, which is precisely the
 // case where nothing else in the app reports anything at all.
+// ⚠️ TOKENS, NOT HEX (2026-11-07). These maps were literal hex, so every badge kept one fixed palette
+// whatever theme the reader had chosen — the same defect as the hardcoded `#0d1117` panels in the
+// stylesheet. `var(--color-*)` inside an inline style resolves against the live theme, so a badge now
+// follows a theme change like any class-based rule. The app's semantic tones are static tokens by
+// design (ui-standards: only `--panel`/`--ink`/`--bg-elev`/`--risk-*` are themed), so these keep their
+// meaning and simply stop being literals.
+const tint = (c) => `color-mix(in srgb, ${c} 14%, transparent)`;
+
 const STATUS_COLORS = {
-  queued: '#f59e0b', running: '#3b82f6', complete: '#22c55e', failed: '#ef4444', cancelled: '#94a3b8',
-  success: '#22c55e', error: '#ef4444', info: '#3b82f6', warning: '#f59e0b',
-  EXECUTED: '#22c55e', FAILED: '#ef4444', SCORED: '#8b5cf6', SKIP: '#94a3b8', BLOCKED: '#ef4444',
+  queued: 'var(--color-warning)', running: 'var(--color-accent-blue)',
+  complete: 'var(--color-profit)', failed: 'var(--color-loss)', cancelled: 'var(--color-muted)',
+  success: 'var(--color-profit)', error: 'var(--color-loss)',
+  info: 'var(--color-accent-blue)', warning: 'var(--color-warning)',
+  EXECUTED: 'var(--color-profit)', FAILED: 'var(--color-loss)',
+  SCORED: 'var(--accent)', SKIP: 'var(--color-muted)', BLOCKED: 'var(--color-loss)',
   // #971 — an observation (no consumer). Same muted slate as SKIP: it states an absence of action,
   // and it must not read as a signal that did something.
-  OBSERVED: '#94a3b8',
+  OBSERVED: 'var(--color-muted)',
 };
 
 const EVENT_TYPE_STYLE = {
-  automation: { bg: '#3b82f618', border: '#3b82f6', label: 'Tick', icon: '⟳' },
-  decision: { bg: '#8b5cf618', border: '#8b5cf6', label: 'Decision', icon: '⚡' },
-  protocol: { bg: '#f59e0b18', border: '#f59e0b', label: 'Protocol', icon: '🏗' },
+  automation: { tone: 'var(--color-accent-blue)', label: 'Tick', icon: '⟳' },
+  decision: { tone: 'var(--accent)', label: 'Decision', icon: '⚡' },
+  protocol: { tone: 'var(--color-warning)', label: 'Protocol', icon: '🏗' },
 };
 
 /** One row of the absorbed Live Events feed. Markup unchanged from the Execution Queue page. */
 function ActivityRow({ event }) {
   const style = EVENT_TYPE_STYLE[event.type] || EVENT_TYPE_STYLE.automation;
-  const statusColor = STATUS_COLORS[event.status] || '#94a3b8';
+  const statusColor = STATUS_COLORS[event.status] || 'var(--color-muted)';
   return (
     <div className="eq-event-row">
-      <div className="eq-event-left" style={{ borderColor: style?.border }}>
-        <span className="eq-event-type-badge" style={{ background: style?.bg, color: style?.border }}>
-          {style?.icon} {style?.label}
+      <div className="eq-event-left">
+        <span className="eq-event-type-badge" style={{ background: tint(style.tone), color: style.tone }}>
+          {style.icon} {style.label}
         </span>
         <span className="eq-event-time">{timeAgo(event.timestamp)}</span>
         {event.symbol && <span className="eq-event-symbol">{event.symbol}</span>}
@@ -134,7 +146,11 @@ function ActivityRow({ event }) {
 const ALERT_LEVEL_SEVERITY = {
   critical: 'high', high: 'high', warning: 'medium', medium: 'medium', info: 'low', low: 'low',
 };
-const SEVERITY_COLORS = { high: '#ef4444', medium: '#f59e0b', low: '#64748b' };
+const SEVERITY_COLORS = {
+  high: 'var(--color-loss)',
+  medium: 'var(--color-warning)',
+  low: 'var(--color-muted)',
+};
 
 /** Category → fallback route when an alert has no ticker and no link of its own. */
 const ALERT_FALLBACKS = {
@@ -168,9 +184,14 @@ function compactAlerts(list) {
 function AlertRow({ alert, onSeen, onOpen, acking }) {
   const sev = ALERT_LEVEL_SEVERITY[alert.level] || 'low';
   return (
-    <div className="eq-event-row" style={{ borderLeft: `3px solid ${SEVERITY_COLORS[sev]}` }}>
+    /* ⚠️ LEFT-HAND COLOURED STRIPE REMOVED 2026-11-07. Owner: *"the entries … also use the left side
+       border styling I'm about to lose my mind over"*. ui-standards has disfavoured `border-left` as a
+       state carrier since 2026-09-18 and asks for a FULL coloured border. A row is not a card, so the
+       severity now rides on the border of the whole row (1px, rounded by CSS) AND on the badge — two
+       signals instead of one stripe, and neither of them assumes the row is a card. */
+    <div className="eq-event-row eq-event-row--alert" style={{ borderColor: SEVERITY_COLORS[sev] }}>
       <div className="eq-event-left">
-        <span className="eq-event-type-badge" style={{ background: SEVERITY_COLORS[sev] + '22', color: SEVERITY_COLORS[sev] }}>
+        <span className="eq-event-type-badge" style={{ background: tint(SEVERITY_COLORS[sev]), color: SEVERITY_COLORS[sev] }}>
           ⚑ {alert.category || 'alert'} · {sev}
         </span>
         <span className="eq-event-time">{timeAgo(alert.time || alert.timestamp)}</span>
@@ -242,6 +263,14 @@ export default function TradeJournalPage() {
     queryKey: ['journal-automation-status'],
     queryFn: () => apiGet('/api/automation/status').catch(() => null),
     refetchInterval: 15_000,
+  });
+
+  // #1149 — did positions close before reaching what they showed? The endpoint does the maths, so
+  // the figure is recomputed from the database rather than from anything this page holds.
+  const exitQualityQuery = useQuery({
+    queryKey: ['exit-quality'],
+    queryFn: () => apiGet('/api/trading/exit-quality?days=365'),
+    staleTime: 5 * 60 * 1000,
   });
 
   const events = eventsQuery.data?.events || [];
@@ -344,10 +373,11 @@ export default function TradeJournalPage() {
   return (
     <div className="tj-page">
       <header className="tj-header">
-        <h2>Trade Journal</h2>
-        <p>Reconciled trades from the app's own audit trail — includes externally-opened and manually-closed positions.</p>
-        <p>Every closed trade now names <strong>who closed it</strong> — stop loss, take profit, time stop, the app, or the desktop terminal — taken from the broker's closing deal (#916).</p>
-        <p className="tj-privacy">Source: <strong>database</strong> (live MT5 deals are shown on Trade History).</p>
+        <PageInfoPopover label="About the Trade Journal">
+          <p>Reconciled trades from the app's own audit trail — includes externally-opened and manually-closed positions.</p>
+          <p>Every closed trade now names <strong>who closed it</strong> — stop loss, take profit, time stop, the app, or the desktop terminal — taken from the broker's closing deal (#916).</p>
+          <p className="tj-privacy">Source: <strong>database</strong> (live MT5 deals are shown on Trade History).</p>
+        </PageInfoPopover>
       </header>
 
       <ExitDataRecoveryNotice />
@@ -404,6 +434,146 @@ export default function TradeJournalPage() {
           {stats.reasonSummary && (
             <p><strong>Closed by:</strong> {stats.reasonSummary} — the actor, from the broker's closing deal (#916).</p>
           )}
+        </div>
+      )}
+      {/* ── EXIT QUALITY — "did we leave profit on the table?" (#1149) ────────────────────────────
+          The owner's question from the start of this work: are positions being closed before they
+          reach what they showed? Answered from the trades themselves — `peakProfitPct` against a
+          realised percentage derived from entry/exit prices, NEVER against `pnl`, which is currency.
+
+          ⚠️ EVERY FIGURE HERE IS OVER THE TRADES THAT HAVE THE MEASUREMENT, not over the total. The
+          tracker only started recording peaks in October 2026, so `withPeak` is shown beside `n` and
+          a reader who assumes otherwise draws a conclusion from a third of the data. */}
+      {exitQualityQuery.data && (
+        <div className="tj-ai-summary">
+          <h3>Exit quality — profit reached vs profit kept</h3>
+          {(() => {
+            const o = exitQualityQuery.data.overall;
+            if (!o || !o.nWithPeak) {
+              return (
+                <p className="muted">
+                  No trades in this window carry a recorded peak yet, so this cannot be judged.
+                  The tracker records peaks from October 2026 onward.
+                </p>
+              );
+            }
+            return (
+              <>
+                <p>
+                  <strong>{o.nWithPeak}</strong> of {o.n} closed trades have a recorded peak.
+                  Average peak <strong>{o.avgPeakPct}%</strong>, average realised{' '}
+                  <strong>{o.avgRealisedPct}%</strong> — a give-back of{' '}
+                  <strong>{o.avgGiveBackPct} pp</strong>.
+                </p>
+                <p>
+                  <strong>{o.peakedThenLost}</strong> reached a profit and closed at or below
+                  break-even; <strong>{o.capturedUnderHalf}</strong> kept less than half of what they
+                  showed.
+                </p>
+                <p>
+                  <strong>{o.reached}</strong> of {o.nWithPeak} ever moved more than{' '}
+                  {exitQualityQuery.data.thresholdPct}% in their favour
+                  {o.reachedPct != null ? ` (${o.reachedPct}%)` : ''} — the rest barely moved at all.
+                </p>
+                <table className="tj-eq-table">
+                  <thead>
+                    <tr>
+                      <th>Closed by</th>
+                      <th>Trades</th>
+                      <th>With peak</th>
+                      <th>Avg peak %</th>
+                      <th>Avg realised %</th>
+                      <th>Give-back pp</th>
+                      <th>Reached</th>
+                      <th>Bars max %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {exitQualityQuery.data.byCloseReason
+                      .filter((b) => b.nWithPeak > 0)
+                      .slice(0, 6)
+                      .map((b) => (
+                        <tr key={b.closeReason}>
+                          <td>{b.closeReason}</td>
+                          <td>{b.n}</td>
+                          <td>{b.nWithPeak}</td>
+                          <td>{b.avgPeakPct ?? '—'}</td>
+                          <td>{b.avgRealisedPct ?? '—'}</td>
+                          <td className={(b.avgGiveBackPct ?? 0) > 0 ? 'tj-red' : ''}>
+                            {b.avgGiveBackPct ?? '—'}
+                          </td>
+                          <td>{b.reachedPct != null ? `${b.reachedPct}%` : '—'}</td>
+                          <td>{b.avgBarMaxPct ?? '—'}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+                {/* ⚠️ THE STRATEGY SPLIT IS THE ACTIONABLE ONE. Measured 2026-11-07: the trades that
+                    reached a real move came from two strategies on two symbols, while the session
+                    bots produced none across ~24 measured trades. Shown here so the number is
+                    recomputed from the database rather than quoted from a message. */}
+                <table className="tj-eq-table">
+                  <thead>
+                    <tr>
+                      <th>Strategy</th>
+                      <th>With peak</th>
+                      <th>Reached {exitQualityQuery.data.thresholdPct}%</th>
+                      <th>Avg peak %</th>
+                      <th>Reached by bars</th>
+                      <th>Bars max %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {exitQualityQuery.data.byStrategy
+                      .filter((b) => b.nWithPeak > 0 || b.nWithBarMax > 0)
+                      .sort((a, b) => (b.reachedBarsPct ?? b.reachedPct ?? 0) - (a.reachedBarsPct ?? a.reachedPct ?? 0))
+                      .slice(0, 8)
+                      .map((b) => (
+                        <tr key={b.strategy}>
+                          <td>{b.strategy}</td>
+                          <td>{b.nWithPeak}</td>
+                          <td className={(b.reachedPct ?? 0) > 0 ? 'tj-green' : ''}>
+                            {b.reachedPct != null ? `${b.reachedPct}%` : '—'}
+                          </td>
+                          <td>{b.avgPeakPct ?? '—'}</td>
+                          <td className={(b.reachedBarsPct ?? 0) > 0 ? 'tj-green' : ''}>
+                            {b.reachedBarsPct != null ? `${b.reachedBarsPct}%` : '—'}
+                          </td>
+                          <td>{b.avgBarMaxPct ?? '—'}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+                <p className="muted">
+                  Realised % is derived from the trade's own entry and exit prices, in the same unit
+                  as the peak. `pnl` is currency and is deliberately not used here.{' '}
+                  {exitQualityQuery.data.exclusions.pnlInvalid} trade(s) were excluded as
+                  invalid-P&L rows.
+                </p>
+                {/* ⚠️ THE STORED PEAK IS A SAMPLED HIGH-WATER MARK AND UNDERSTATES ON FAST
+                    INSTRUMENTS. Measured 2026-11-07 against `marketbar` on 40 trades: 19 understated
+                    by more than 0.1pp, 0 overstated. VIX read 1.04% where the bars showed 8.52%;
+                    GER40 and GBPUSD agreed to 0.05pp. So the two columns are shown together on
+                    purpose — the stored figure is the RECORD, the bar figure is the MEASUREMENT, and
+                    only the second can be compared across instruments. */}
+                <p className="muted">
+                  <strong>Reached</strong> uses the recorded peak; <strong>Reached by bars</strong>{' '}
+                  uses the high/low the position actually traded through
+                  {exitQualityQuery.data.barMeasured != null
+                    ? ` (bars available for ${exitQualityQuery.data.barMeasured} trade(s))`
+                    : ''}
+                  . A recorded peak can only ever understate the true high — it is sampled — so the
+                  bar column is the one to compare across instruments.
+                  {exitQualityQuery.data.barStatus === 'computing' && (
+                    <> The bar measurement is being computed now (it takes ~25 s, so it is not done on request); reload in a minute.</>
+                  )}
+                  {exitQualityQuery.data.barStatus === 'error' && (
+                    <> ⚠️ The bar measurement FAILED — {exitQualityQuery.data.barError}. The bar columns are empty because it could not be measured, not because nothing moved.</>
+                  )}
+                </p>
+              </>
+            );
+          })()}
         </div>
       )}
       {/* View switcher — the journal now carries TWO kinds of row: reconciled trades (its own data)

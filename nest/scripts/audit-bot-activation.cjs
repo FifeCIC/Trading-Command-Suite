@@ -64,6 +64,36 @@ const path = require('path');
 const http = require('http');
 
 const NEST_ROOT = path.resolve(__dirname, '..');
+const REPO_ROOT = path.resolve(NEST_ROOT, '..');
+
+let SCORE_ONLY_PROTOCOLS = new Set();
+
+/**
+ * SCORE_ONLY_COPY_PROTOCOLS — protocol slugs a maths experiment runs WITHOUT a trading path.
+ *
+ * 📌 Read from `scripts/protocol-copies.json` (`scoreOnly: true`), which is the SAME manifest
+ * `audit-protocol-copies.cjs` makes mandatory for every `-copy` protocol. So a score-only arm has to
+ * declare itself once, in the file that already answers "which comparison does this copy serve?" —
+ * and this audit reads that declaration instead of inventing a second list.
+ *
+ * ⚠️ NOT an allowlist for `NO-SUBSCRIPTION`. It applies only to a slug that is declared as a copy
+ * AND scored `scoreOnly`; an undeclared bot with no subscription still blocks (self-test case 6c).
+ */
+function loadScoreOnlyProtocols() {
+  const out = new Set();
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'protocol-copies.json'), 'utf8'));
+    for (const [slug, entry] of Object.entries(manifest)) {
+      if (slug.startsWith('__')) continue;
+      if (entry && entry.scoreOnly === true) out.add(slug);
+    }
+  } catch {
+    // A missing/unreadable manifest must not block: it means "no declared score-only arms", and the
+    // audit then reports NO-SUBSCRIPTION as it always did. Failing the audit here would punish a
+    // run for a file that has nothing to do with the bots it judges.
+  }
+  return out;
+}
 
 /**
  * How long a symbol may go without a NEW score before it is reported STALE-SCORE.
@@ -165,9 +195,17 @@ function classifyFaults(i) {
     faults.push(`CAP-UNEVALUABLE(${i.capBlocked}x)`);
   }
 
+  // #642 — the PROTOCOL is paused by the readiness gate. Placed with the environment faults because
+  // that is what it is: nothing about this bot's own configuration can clear it.
+  if (i.protocolPaused) {
+    faults.push(`PROTOCOL-PAUSED(${i.protocolPaused})`);
+  }
+
   // ── Configuration faults ──
   if (!i.active) faults.push('INACTIVE');
-  if (i.subs === 0) faults.push('NO-SUBSCRIPTION');
+  // ⚠️ `scoreOnly` (#1243): a copy whose subscriptions were DELETED ON PURPOSE so it can score but
+  // never queue an order. Reported, not judged — see REPORTED_NOT_BLOCKING.
+  if (i.subs === 0) faults.push(i.scoreOnly ? 'SCORE-ONLY(by design)' : 'NO-SUBSCRIPTION');
   if (i.bars === 0) faults.push('NO-BARS');
 
   // ── Freshness of the LAST SCORE ──
@@ -228,12 +266,17 @@ function classifyFaults(i) {
  *   • NON-MT5-VENUE      — an MT5 floor/`tradeMode` does not apply to a symbol routed elsewhere.
  *   • STALE-SCORE        — this script cannot tell "market shut" from "symbol starved" (see above).
  *   • NO-SCORE-EVER      — same ambiguity, so reported with the same restraint.
+ *   • SCORE-ONLY         — a DECLARED score-only copy (#1243): subscriptions were removed on
+ *                          purpose so the arm scores and can never queue. A missing subscription
+ *                          here is the design, not a defect — and it is declared in
+ *                          `scripts/protocol-copies.json`, so this is not a blanket exemption.
  */
-const REPORTED_NOT_BLOCKING = ['INACTIVE', 'NON-MT5-VENUE', 'STALE-SCORE', 'NO-SCORE-EVER'];
+const REPORTED_NOT_BLOCKING = ['INACTIVE', 'NON-MT5-VENUE', 'STALE-SCORE', 'NO-SCORE-EVER', 'SCORE-ONLY'];
 
 /** A prefix of a blocking fault — used only for RENDERING. `isBlocked()` is the authority. */
 const BLOCKING_PREFIXES = ['LOOP-DOWN', 'LOOP-UNKNOWN', 'CAP-UNEVALUABLE', 'NO-SUBSCRIPTION',
-  'NO-BARS', 'BRIDGE-UNAVAILABLE', 'NOT-TRADEABLE-HERE', 'BROKER-HAS-NO-SYMBOL', 'BELOW-FLOOR'];
+  'NO-BARS', 'BRIDGE-UNAVAILABLE', 'NOT-TRADEABLE-HERE', 'BROKER-HAS-NO-SYMBOL', 'BELOW-FLOOR',
+  'PROTOCOL-PAUSED'];
 
 function isBlocked(active, faults) {
   return active && faults.some((f) =>
@@ -263,7 +306,12 @@ function formatAge(minutes) {
  */
 function selfTest() {
   const bad = [];
+  // ⚠️ The count is MEASURED, not typed. It used to be the literal "26 cases" and adding two cases
+  // left it claiming 26 — a self-test reporting its own coverage wrongly is the same defect class as
+  // an age printed under the wrong heading. `ran` cannot drift from the cases that actually ran.
+  let ran = 0;
   const check = (label, got, want) => {
+    ran++;
     const g = got.join(' ');
     if (g !== want) bad.push(`${label}\n     want: ${want}\n      got: ${g}`);
   };
@@ -303,6 +351,35 @@ function selfTest() {
   // 6 — and a healthy bot must be silent, or the rule is just "everything fails".
   check('6 a healthy bot must report nothing',
     classifyFaults({ ...base, nonMt5: null, listLoaded: true, tradeMode: 4, volumeMin: 0.01 }), '');
+
+  // 6b — #1243. A DECLARED score-only copy must NOT be reported as a missing subscription.
+  //      Measured 2026-11-07: the gold experiment arm's subscriptions were deleted ON PURPOSE so it
+  //      can score but never queue an order, and the audit printed it under "ACTIVE BUT BLOCKED"
+  //      — i.e. a deliberate design read as a fault. Declared in `protocol-copies.json` as
+  //      `scoreOnly: true`, the reason travels with the config instead of living in a chat thread.
+  check('6b a DECLARED score-only arm with no subscriptions is not a fault',
+    classifyFaults({ ...base, subs: 0, scoreOnly: true, nonMt5: null, listLoaded: true, tradeMode: 4, volumeMin: 0.01 }),
+    'SCORE-ONLY(by design)');
+
+  // 6c — direction check: an UNDECLARED bot with no subscriptions must still block, or 6b would
+  //      have removed the check for everyone.
+  check('6c an undeclared bot with no subscriptions must still block',
+    classifyFaults({ ...base, subs: 0, scoreOnly: false, nonMt5: null, listLoaded: true, tradeMode: 4, volumeMin: 0.01 }),
+    'NO-SUBSCRIPTION');
+
+  // 6d — #642. A bot whose PROTOCOL is paused cannot trade, however perfect its own config is.
+  //      Measured 2026-11-07: WTI Tick Scalp Bot read as BELOW-FLOOR (a size problem) when the real
+  //      blocker was a beta directive pausing its protocol — a fix applied to the size would have
+  //      left it exactly as blocked.
+  check('6d a paused protocol must block an otherwise-healthy bot',
+    classifyFaults({ ...base, nonMt5: null, listLoaded: true, tradeMode: 4, volumeMin: 0.01,
+      protocolPaused: 'cad-usd-oil-correlation (beta)' }),
+    'PROTOCOL-PAUSED(cad-usd-oil-correlation (beta))');
+
+  // 6e — and an unpaused bot must NOT inherit it, or the fault would fire for everyone.
+  check('6e an unpaused protocol adds nothing',
+    classifyFaults({ ...base, nonMt5: null, listLoaded: true, tradeMode: 4, volumeMin: 0.01, protocolPaused: null }),
+    '');
 
   // ── #983 cases. Each one is a fault this audit printed `OK` for on 2026-09-23. ──
 
@@ -385,16 +462,21 @@ function selfTest() {
   if (formatAge(372) !== '6h12m') bad.push(`24 formatAge(372) must be '6h12m', got '${formatAge(372)}'`);
   if (formatAge(2880) !== '2d00h') bad.push(`25 formatAge(2880) must be '2d00h', got '${formatAge(2880)}'`);
   if (formatAge(null) !== 'n/a') bad.push(`26 formatAge(null) must be 'n/a', got '${formatAge(null)}'`);
+  ran += 3; // the three formatAge cases above push directly rather than through check()
 
   if (bad.length) {
     console.error(`\n\u274c self-test: ${bad.length} case(s) FAILED:`);
     for (const b of bad) console.error(`   ${b}`);
     return 1;
   }
-  console.log('\u2705 self-test: 26 cases across four families:');
+  console.log(`\u2705 self-test: ${ran} cases across five families:`);
   console.log('   \u2022 the ORIGINAL claims still hold \u2014 a genuine below-floor bot, a tradeMode=0 and a');
   console.log('     genuinely-absent symbol each still FAIL; a non-MT5 venue is still skipped; a healthy');
   console.log('     bot is still silent.');
+  console.log('   \u2022 #1243 \u2014 a DECLARED score-only arm with no subscriptions is reported, not blocked');
+  console.log('     (6b), while an UNDECLARED bot with no subscriptions still blocks (6c).');
+  console.log('   \u2022 #642 \u2014 a PAUSED protocol blocks an otherwise-healthy bot (6d), and an unpaused one');
+  console.log('     inherits nothing (6e).');
   console.log('   \u2022 #983 \u2014 a DOWN loop, an UNREADABLE loop and an unevaluable cap each BLOCK, and none');
   console.log('     of them can render as OK.');
   console.log('   \u2022 the OVER-FIRING CORRECTION \u2014 cases 13/14 assert that a stale or never-scored symbol');
@@ -415,6 +497,17 @@ function selfTest() {
  * when it is most needed, and a failed probe is one step away from being reported as OK. The loop's
  * own heartbeat is its newest `decision_log` row, which the DB holds whether or not `:3201` is up.
  *
+ * ⚠️⚠️ BUT "THE LOOP IS DOWN" AND "THE LOOP HAS NOTHING TO SAY" ARE THE SAME ROW IN THAT TABLE
+ * (measured 2026-11-07). `decision_log` only receives rows when a strategy produces a decision, so a
+ * CLOSED MARKET writes nothing at all — and the audit declared `LOOP-DOWN` against **all 75 bots**
+ * (`0 OK, 66 ACTIVE BUT BLOCKED`) while `/api/automation/status` reported `tickCount 2`,
+ * `lastTickAt` 20:19:18 and `persisted=0, suppressed=0`. The loop was ticking every two minutes into
+ * an empty market. A fleet-wide outage that did not exist, on a Saturday evening.
+ *
+ * So the order is now: ASK THE API FIRST (it knows its own tick), FALL BACK to `decision_log` when
+ * the API does not answer — which preserves the original reason for reading the DB, because a dead
+ * `:3201` is precisely the case the fallback handles.
+ *
  * Returns { loop, loopAgeMin, loopWhy, capBlockedBySymbol, scoreAgeBySymbol, scoreNewestBySymbol }.
  *   loop === true   — the heartbeat is within LOOP_DOWN_MINUTES
  *   loop === false  — it is not; every bot is unable to trade
@@ -428,25 +521,74 @@ async function probeEnvironment(prisma) {
     capBlockedBySymbol: new Map(),
     scoreAgeBySymbol: new Map(),
     scoreNewestBySymbol: new Map(),
+    pausedProtocol: new Map(),
   };
 
-  // ── 1. Loop heartbeat ──
+  // ── 0. Protocol-level PAUSE — the blocker this audit could not see (#642, measured 2026-11-07) ──
+  //
+  // `protocol_score_status.state = 'paused'` means the #627 readiness gate refuses to SCORE the whole
+  // protocol because it contains at least one non-ready (beta) directive. Every bot on that protocol
+  // is therefore not trading — and this audit used to report them as `OK` (or blocked for some other
+  // reason entirely), because a pause lives in the protocol, not in the bot.
+  //
+  // ⚠️ MEASURED CONSEQUENCE: `WTI Tick Scalp Bot` was reported as `BELOW-FLOOR(0.01<1)` with the
+  // advice "raise baseSize to 1". Acting on that would have changed a size and left the bot exactly
+  // as blocked — the protocol was paused by `cad-usd-oil-correlation (beta)`, a directive whose own
+  // docblock says non-CAD symbols score 0. A blocker that is invisible is worse than one that looks
+  // unfixable: it sends the reader to edit the wrong field and then conclude the tool is broken.
+  //
+  // A read failure adds NOTHING. A pause we cannot read must not be invented any more than it must be
+  // hidden — the bot-level faults still apply.
   try {
     const rows = await prisma.$queryRawUnsafe(
-      'SELECT MAX(timestamp) AS newest FROM decision_log',
+      `SELECT protocolId, reason FROM protocol_score_status WHERE state = 'paused'`,
     );
-    const newest = rows && rows[0] ? rows[0].newest : null;
-    if (!newest) {
-      env.loop = false;
-      env.loopWhy = 'decision_log is empty — the loop has never run';
-    } else {
-      env.loopAgeMin = (Date.now() - new Date(newest).getTime()) / 60000;
-      env.loop = env.loopAgeMin <= LOOP_DOWN_MINUTES;
-      if (!env.loop) env.loopWhy = `last heartbeat ${String(newest)}`;
+    for (const r of rows) {
+      const why = String(r.reason ?? '').replace(/^Non-ready directives:\s*/i, '').trim();
+      env.pausedProtocol.set(String(r.protocolId), why || 'protocol paused (no reason recorded)');
     }
-  } catch (err) {
-    env.loop = null;
-    env.loopWhy = `cannot read decision_log: ${String(err.message).split('\n')[0]}`;
+  } catch { /* table absent/unreadable — report nothing rather than guess */ }
+
+
+  // ── 1. Loop heartbeat ──
+  //
+  // Try the API's own tick clock first: only it distinguishes "down" from "nothing to decide".
+  let fromApi = null;
+  try {
+    const res = await fetch('http://127.0.0.1:3201/api/automation/status', {
+      signal: AbortSignal.timeout(4000),
+    });
+    if (res.ok) {
+      const body = await res.json();
+      if (body && body.lastTickAt) {
+        fromApi = new Date(body.lastTickAt);
+        env.loopAgeMin = (Date.now() - fromApi.getTime()) / 60000;
+        env.loop = env.loopAgeMin <= LOOP_DOWN_MINUTES;
+        if (!env.loop) env.loopWhy = `API reports its last tick at ${fromApi.toISOString()}`;
+      }
+    }
+  } catch {
+    // API not answering — that is what the decision_log fallback is for.
+  }
+
+  if (env.loop == null) {
+    try {
+      const rows = await prisma.$queryRawUnsafe(
+        'SELECT MAX(timestamp) AS newest FROM decision_log',
+      );
+      const newest = rows && rows[0] ? rows[0].newest : null;
+      if (!newest) {
+        env.loop = false;
+        env.loopWhy = 'decision_log is empty and :3201 did not answer — the loop has never run';
+      } else {
+        env.loopAgeMin = (Date.now() - new Date(newest).getTime()) / 60000;
+        env.loop = env.loopAgeMin <= LOOP_DOWN_MINUTES;
+        if (!env.loop) env.loopWhy = `last decision_log heartbeat ${String(newest)} and :3201 did not answer`;
+      }
+    } catch (err) {
+      env.loop = null;
+      env.loopWhy = `cannot read decision_log: ${String(err.message).split('\n')[0]}`;
+    }
   }
 
   // ── 2. Per-symbol: could the cap be evaluated? ──
@@ -503,6 +645,7 @@ async function probeEnvironment(prisma) {
 async function main() {
   if (process.argv.slice(2).includes('--self-test')) process.exit(selfTest());
   loadEnv();
+  SCORE_ONLY_PROTOCOLS = loadScoreOnlyProtocols();
   const { map: portByBroker, ids: brokerIds } = portByBrokerMap();
 
   let prisma = null;
@@ -625,6 +768,10 @@ async function main() {
       active, subs, bars, nonMt5, listLoaded, tradeMode,
       volumeMin: c?.volumeMin ?? null, size, port,
       unavailable: listUnavailable.get(port),
+      // #1243 — a declared score-only copy's missing subscriptions are the design, not a fault.
+      scoreOnly: SCORE_ONLY_PROTOCOLS.has(String(b.protocolId ?? '')),
+      // #642 — a PAUSED protocol blocks every bot on it, whatever the bot's own config says.
+      protocolPaused: env.pausedProtocol.get(String(b.protocolId ?? '')) ?? null,
       // ⚠️ #983 — the environment. A bot is judged on whether anything can ACT, not only on whether
       // it is configured. `loop` is null when the heartbeat could not be read, which must render as
       // UNKNOWN rather than as a healthy loop.
@@ -744,10 +891,19 @@ async function main() {
   if (activeBlocked.length) {
     console.log('\nACTIVE BUT BLOCKED — these are configured to trade and cannot:');
     for (const r of activeBlocked) {
-      console.log(`  ${r.ticker.padEnd(8)} ${r.name} — ${r.faults.join(' ')}` +
-        (r.faults.some((f) => f.startsWith('BELOW-FLOOR'))
-          ? `  → raise baseSize to ${r.floor} (the broker minimum)`
-          : ''));
+      // ⚠️ `raise baseSize` is only advice when SIZE is the binding blocker (#1243, measured
+      // 2026-11-07). Two SPY bots printed "→ raise baseSize to 1" while their broker reports
+      // `tradeMode 0` — trading DISABLED for that symbol — so no size change could ever help, and
+      // the advice sent the reader to edit a field that was not the problem. Advice that cannot
+      // fix the blocker is worse than none: it converts a real finding into busywork.
+      const disabled = r.faults.some((f) => f === 'NOT-TRADEABLE-HERE');
+      const belowFloor = r.faults.some((f) => f.startsWith('BELOW-FLOOR'));
+      const advice = belowFloor && !disabled
+        ? `  → raise baseSize to ${r.floor} (the broker minimum)`
+        : belowFloor && disabled
+          ? '  → size is below the floor, but this broker has TRADING DISABLED for the symbol — a size change cannot help'
+          : '';
+      console.log(`  ${r.ticker.padEnd(8)} ${r.name} — ${r.faults.join(' ')}${advice}`);
     }
   }
   if (inactive.length) {

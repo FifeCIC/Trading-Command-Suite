@@ -557,6 +557,14 @@ export function resolveAbArmAccounts(controlCfg: any, variantCfg: any): AbArmAcc
   return { ok: true, accountA: a, accountB: b, refusal: null };
 }
 
+/**
+ * The longest a repeated decision may be SUPPRESSED before it must be written again.
+ *
+ * ⚠️ MUST STAY BELOW the audit threshold that reads `MAX(decision_log.timestamp)` as the loop
+ * heartbeat — `AUDIT_LOOP_DOWN_MINUTES`, default 10. Five minutes leaves room for one slow tick.
+ */
+const MAX_DECISION_SUPPRESS_MS = 5 * 60_000;
+
 @Injectable()
 export class AutomationLoopService implements OnModuleInit {
   private readonly logger = new Logger(AutomationLoopService.name);
@@ -567,6 +575,8 @@ export class AutomationLoopService implements OnModuleInit {
   private lastSymbolTrade = new Map<string, number>();
   /** #704 — last-persisted decision signature per strategy|symbol (write-on-change). */
   private lastDecisionWrite = new Map<string, string>();
+  /** When each (strategy|symbol) last actually wrote a row — the floor that keeps the heartbeat alive. */
+  private lastDecisionWriteAt = new Map<string, number>();
   /** #695 — last paper-trade signature per strategy|symbol (dry-run dedupe). */
   private lastPaperSig = new Map<string, string>();
   /** #714 Stage 3 — bot pacing: last queue-driven trade per strategy + globally. */
@@ -2917,14 +2927,37 @@ export class AutomationLoopService implements OnModuleInit {
     if (!this.prisma.isAvailable) return;
 
     const significant = new Set(['EXECUTED', 'FAILED', 'BLOCKED', 'QUEUED']);
+    const nowMs = Date.now();
     const keep: TickDecision[] = [];
     for (const d of decisions) {
       const key = `${d.strategyId}|${d.symbol}`;
       // Both typed slots in the signature: a unit that changes between ticks is a real change
       // and must not be suppressed as a repeat.
       const sig = `${d.decision}|${d.signal ?? ''}|${d.compositeRaw ?? ''}|${d.compositePct ?? ''}`;
-      if (significant.has(d.decision) || this.lastDecisionWrite.get(key) !== sig) {
+      const lastAt = this.lastDecisionWriteAt.get(key) ?? 0;
+
+      // ⚠️⚠️ A REPEAT IS SUPPRESSED ONLY FOR A BOUNDED TIME (#1244 follow-up, measured 2026-11-07).
+      //
+      // Suppression was unbounded: the signature was compared and, if unchanged, nothing was ever
+      // written again. In a stable market every bot repeats the same decision for hours, so
+      // `decision_log` went quiet while the loop was perfectly healthy.
+      //
+      // That broke `audit-bot-activation.cjs`, which uses **`MAX(decision_log.timestamp)` as the
+      // loop's heartbeat** (deliberately — it reads the DB so it still works when `:3201` is down).
+      // Measured on this host: the loop reported `tickCount 51`, `lastTickAt` two minutes ago and
+      // both bridges `orderReady: true`, while the audit printed `LOOP-DOWN(13.4m)` against
+      // **all 75 bots** — `0 OK, 66 ACTIVE BUT BLOCKED`. A fleet-wide outage that did not exist.
+      //
+      // A liveness signal must be unconditional. This keeps the de-duplication (the noise it was
+      // built for) and adds a FLOOR: one row per (strategy, symbol) every
+      // `MAX_DECISION_SUPPRESS_MS`, so the newest row can never age past the audit's 10-minute
+      // threshold while the loop is alive. The row SHAPE is unchanged — nothing that reads
+      // `decision_log` sees a value it did not see before.
+      const overdue = nowMs - lastAt >= MAX_DECISION_SUPPRESS_MS;
+
+      if (significant.has(d.decision) || this.lastDecisionWrite.get(key) !== sig || overdue) {
         this.lastDecisionWrite.set(key, sig);
+        this.lastDecisionWriteAt.set(key, nowMs);
         keep.push(d);
       } else {
         this.state.decisionLogSuppressed++;

@@ -274,6 +274,19 @@ export const UI_PATTERNS = [
 
   // ── Containers ────────────────────────────────────────────────────────────────────────────────────
   {
+    id: 'notice-family',
+    family: 'container',
+    name: 'Notice family — four semantic tones',
+    what: 'One notice component in four tones (success, warning, critical, info), each a tinted surface with a matching border and a tone-coloured icon. The tone is the message; the wording sits inside it. Defined once in index.css as `.app-notice--{success|warning|critical|info}` over the `--notice-*` token set, so a page picks a tone rather than inventing colours.',
+    bestFor: 'Any state a reader must notice before reading on — a failed read, a position needing attention, a degraded service',
+    sources: [{ view: '/trading/exit-signals', score: null }],
+    elements: ['.app-notice--critical', '.app-notice--warning', '.app-notice--success', '.app-notice--info'],
+    owner: '"The actual notice .app-notice.app-notice--critical is well styled and should be part of a range of notice styling so ensure it is in the Appearance section."',
+    // ⚠️ `score: null` ON PURPOSE. The owner approved the CRITICAL notice by name; they did not give
+    // the page a UI score, and inventing one would be an agent's judgement dressed as a measurement.
+    state: 'strong',
+  },
+  {
     id: 'decision-card',
     family: 'container',
     name: 'Information-dense decision card',

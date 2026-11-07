@@ -157,6 +157,35 @@ function lineOf(text, index) {
   return line;
 }
 
+/**
+ * Does this file CALL feedState/feedUnavailable without importing it?
+ *
+ * ⚠️ RUN THE TEST ON THE STRIPPED SOURCE, NOT THE RAW SOURCE — and this is the whole point of the
+ * function existing separately. Written the obvious way (`/feedState\s*\(/.test(source)`), it fired
+ * on `src/core/architecture-reference.js`, which **names the helper in a documentation string** to
+ * explain the #782 rule. That file imports nothing and calls nothing; it was flagged for prose, and
+ * the shared build went red for a correct file with a message telling a reader to add an import to
+ * a docs module. Measured 2026-11-07, and it blocked every agent's `prebuild`.
+ *
+ * The same reasoning the file's own `stripComments` docblock gives for the swallow patterns applies
+ * here and was simply not applied: a guard that reads quotes as code is the false-positive kind that
+ * gets allowlisted.
+ *
+ * ⚠️ The `feed-state.js` IMPORT CHECK stays on the RAW source deliberately — an import path lives
+ * inside a string literal, so the stripped source has had it blanked along with everything else.
+ *
+ * The trade, stated plainly: a call written inside a `${…}` interpolation is blanked and missed.
+ * That direction is accepted — but it is the direction a `--self-test` case now covers so the choice
+ * is recorded rather than discovered.
+ */
+function needsImport(source, rel) {
+  // ⚠️ The module that DEFINES the helper obviously mentions it — exclude it, or the check reports
+  // itself and every run is red for a correct file.
+  if (rel.endsWith('core/api/feed-state.js')) return false;
+  if (!/feedUnavailable\s*\(|feedState\s*\(/.test(stripComments(source))) return false;
+  return !source.includes('feed-state.js');
+}
+
 function findInText(text) {
   const clean = stripComments(text);
   const hits = [];
@@ -200,12 +229,7 @@ function scan() {
     // success, `vite build` passed, and the page died with
     // `ReferenceError: feedUnavailable is not defined` — found only by opening it in a browser.
     // This scan makes that class of mistake a build failure instead of a page that will not load.
-    // ⚠️ The module that DEFINES the helper obviously mentions it — exclude it, or the check reports
-    // itself and every run is red for a correct file.
-    const isDefinitionModule = rel.endsWith('core/api/feed-state.js');
-    if (!isDefinitionModule && /feedUnavailable\s*\(|feedState\s*\(/.test(source) && !source.includes('feed-state.js')) {
-      missingImports.push(rel);
-    }
+    if (needsImport(source, rel)) missingImports.push(rel);
   }
   return { files, details, missingImports };
 }
@@ -266,6 +290,27 @@ function selfTest() {
   const shiftOk = shifted.length === 2 && shifted.map(h => h.line).join(',') === '3,4';
   if (!shiftOk) failures++;
   console.log(`  ${shiftOk ? '✔' : '✖'} line numbers survive a block comment — got ${shifted.map(h => h.line).join(',')} (expected 3,4)`);
+
+  // ⚠️ THE IMPORT CHECK HAD NO SELF-TEST — which is exactly why it could flag a docs file and turn
+  // the shared build red on 2026-11-07. Both directions, because the check has two ways to be wrong:
+  // missing a real crash, and reporting a correct file.
+  const importCases = [
+    // [label, source, rel, expected]
+    ['a real call with no import is a render crash', "const s = feedState(q);", 'src/pages/A.jsx', true],
+    ['feedUnavailable likewise', "feedUnavailable(e, 'x');", 'src/pages/A.jsx', true],
+    // ⚠️ THE FALSE POSITIVE THAT ACTUALLY HAPPENED — a docs-as-data module naming the helper.
+    ['the helper named in a single-quoted doc string', "const row = 'a page must use feedState() not []';", 'src/core/architecture-reference.js', false],
+    ['the helper named in a template literal', 'const row = `a page must use feedState() not []`;', 'src/core/architecture-reference.js', false],
+    ['the helper named in a comment', '// use feedState() here\nconst x = 1;', 'src/pages/A.jsx', false],
+    ['an import satisfies the check', "import { feedState } from '../core/api/feed-state.js';\nfeedState(q);", 'src/pages/A.jsx', false],
+    ['the definition module is never flagged', 'export function feedState(q) {}', 'src/core/api/feed-state.js', false],
+  ];
+  for (const [label, src, rel, expected] of importCases) {
+    const got = needsImport(src, rel);
+    const ok = got === expected;
+    if (!ok) failures++;
+    console.log(`  ${ok ? '✔' : '✖'} import — ${label} — expected ${expected}, got ${got}`);
+  }
 
   console.log(failures === 0 ? '\n✅ self-test passed' : `\n❌ ${failures} self-test case(s) failed`);
   process.exit(failures === 0 ? 0 : 1);

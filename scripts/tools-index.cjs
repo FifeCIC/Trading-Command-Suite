@@ -63,7 +63,24 @@ const SCAN_DIRS = [
   { dir: path.join(NEST, 'scripts'), label: 'nest' },
 ];
 
-/** Files we look at when asking "is this tool named anywhere a reader would look?". */
+/**
+ * Files we look at when asking "is this tool named anywhere a reader would look?".
+ *
+ * ⚠️ WIDENED 2026-11-07 (#1246). The old corpus was package.json + instruction files + `docs/`,
+ * which reported **83 orphans out of 231 tools**. That figure was largely an ARTEFACT of where it
+ * looked: spot-checking six of them found the tool named in a file this function never opened —
+ * `check-urls.mjs` in `src/data/external-urls.js`, `report-experiments.cjs` in
+ * `nest/src/modules/automation/experiment-review.service.ts`, `db-retention.cjs` and
+ * `repair-starved-bars.cjs` in `src/core/architecture-reference.js`, `clean-unused-imports.cjs` in
+ * the architecture page.
+ *
+ * A QA checklist entry that says "run `node scripts/x.cjs`" IS documentation — it is the procedure
+ * an agent follows. The architecture surfaces are documentation in data form. Excluding them made
+ * the number look like a backlog when most of it was a wrong denominator.
+ *
+ * ⚠️ The generated artefacts stay EXCLUDED (see the docs loop below): listing a tool inside the very
+ * index that lists tools would make every tool look referenced, which is the opposite error.
+ */
 function referenceFiles() {
   const out = [];
   const add = (p) => fs.existsSync(p) && out.push(p);
@@ -72,6 +89,11 @@ function referenceFiles() {
   add(path.join(NEST, 'package.json'));
   add(path.join(REPO_ROOT, '.github', 'AGENT-ATTENTION.md'));
   add(path.join(REPO_ROOT, 'NEXT-AGENT.md'));
+  // Docs-as-data + the two handbooks: where procedures actually live.
+  add(path.join(REPO_ROOT, 'src', 'data', 'qa-checklist.js'));
+  add(path.join(REPO_ROOT, 'src', 'data', 'known-features.js'));
+  add(path.join(REPO_ROOT, 'src', 'core', 'architecture-reference.js'));
+  add(path.join(REPO_ROOT, 'src', 'pages', 'architecture-framework.data.js'));
 
   // Instruction files + agents + skills: everything an agent actually loads.
   for (const sub of ['instructions', 'agents', 'skills', 'prompts']) {
@@ -210,6 +232,12 @@ function scan() {
       // ⚠️ The CANDIDATE name, not the bare name: `docs-facts.cjs` is referenced as
       // `../scripts/docs-facts.cjs` from nest, so a bare-name test would report a false ORPHAN —
       // and a diagnostic that cries wolf gets ignored, which is worse than none.
+      //
+      // ⚠️ A `lib/` HELPER IS REACHED BY ITS IMPORT PATH, not by its own filename (#1246). Measured
+      // 2026-11-07: `lib/discord-post.cjs`, `lib/handoff-parse.cjs`, `lib/self-test.cjs` and
+      // `lib/comment-stripper.cjs` are all imported by sibling scripts, and every one of them was
+      // reported as an orphan because no file repeats the bare filename. A helper's whole purpose is
+      // to be imported, so requiring the name to appear in prose is the wrong test.
       const referenced =
         refText.includes(name) ||
         prebuild.includes(name) ||

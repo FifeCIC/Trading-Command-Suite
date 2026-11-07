@@ -1,3 +1,25 @@
+/* ── PLANNED IN #1242 ──
+ * MISSING:  extraction. This is the strongest LIBRARY candidate in the repo, not merely an oversized
+ *           file — measured 2026-11-07: **1,496 lines of pure decision logic against 565 lines of IO
+ *           across only 3 IO methods**, and `protocolId` appears **0** times. `computeAtr()` already
+ *           takes `bars: {high,low,close}[]` and nothing else. A stranger building any trading bot
+ *           needs trailing stops, a protective SL, a money target and exhaustion exits.
+ * TODAY:    one file holding both halves. The PORTABLE half is the decision maths (`computeAtr`,
+ *           `protectiveSl`, `maybeCloseAtMoneyTarget`, `observeSimulatedTsl`, `observeExhaustion`,
+ *           `modifyBlockedReason`). The HOST half is everything that reads this app's own concepts —
+ *           `directive` appears 62 times, `trading_strategy` 7, and the file imports
+ *           `SettingsResolverService`, `TradingStrategyService`, `DirectivesService`, `PrismaService`.
+ * WHEN BUILT: extract the portable half to `nest/src/common/trading/exit-guardian/` with NO Nest
+ *           decorator and NO Prisma import, taking a small explicit port (`getBars`, `modifyStop`,
+ *           `close`). ⚠️ Prove behaviour BYTE-IDENTICAL first — this is a money path, so
+ *           `maths-change-requires-ab.instructions.md` applies; extraction and improvement are two
+ *           landings, never one.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 156
+ * ISSUE:     #1242 (extraction project) — the owner's framing, 2026-11-07: *"it's like a service or
+ *           library being built that can be shared with the open-source community on its own or at
+ *           least assigned to a developer/agent as a project."*
+ */
+
 /* ── PLANNED IN #1229 ──
  * MISSING:  decomposition. Measured 2,421 lines, 2 function(s) over
  *           60 lines (longest 484), comment ratio 50.2%.

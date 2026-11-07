@@ -141,6 +141,19 @@
   font-size: 0.72rem; transition: background 0.15s;
 }
 .eq-event-row:hover { background: rgba(128,128,128,0.03); }
+/* An alert row is a ROW, not a card — but it still carries severity, so it gets a full 1px coloured
+   border and a surface to sit on. ⚠️ NOT `border-left`: ui-standards disfavoured a left stripe as a
+   state carrier on 2026-09-18 (owner: *"left hand coloured bordered cards which I very much dislike"*)
+   and the owner re-raised it on the Alerts tab on 2026-11-07. The tinted badge carries the same
+   severity, so the colour is redundant on purpose. */
+.eq-event-row--alert {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-elev);
+  margin-bottom: 0.35rem;
+  padding: 0.45rem 0.6rem;
+}
+.eq-event-row--alert:last-child { margin-bottom: 0; }
 .eq-event-left {
   display: flex; align-items: center; gap: 0.35rem; min-width: 160px;
    padding-left: 0.35rem;

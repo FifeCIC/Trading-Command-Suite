@@ -52,8 +52,12 @@
      to read"* — about this class and `-sm` ("Delete") on /lab/backtest.
      `--ink` and `--panel` are BOTH set by the runtime in every mode (light, dark, black), so mixing
      them is correct everywhere; measured 10.4:1 in dark/void and 13.9:1 in light/core afterwards.
-     ⚠️ `--bg-elev` is NOT usable — it is not defined anywhere; see `validate-css-tokens.cjs --tokens`
-     before reaching for a surface token. */
+     ⚠️ `--bg-elev` IS a real token, but it is defined at RUNTIME, not in any .css file — so a CSS-only
+     grep finds nothing and the token validator lists it against `src/theme/adapters/vanilla.js`.
+     `registry.js` applies `adapter.transform(tokens)` and `useThemeRuntime` writes the result to `:root`,
+     where `--bg-elev` resolves to `bgElev ?? panel` — i.e. it is a valid surface token that MAY equal
+     `--panel`. (This line used to say it "is not defined anywhere", which was wrong and steered a reader
+     away from a token that works; verified 2026-11-07 by tracing registry.js → vanilla.js → useThemeRuntime.) */
   background: color-mix(in srgb, var(--ink) 12%, var(--panel));
   border: 1px solid color-mix(in srgb, var(--ink) 28%, var(--panel));
   border-radius: 6px;

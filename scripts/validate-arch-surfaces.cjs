@@ -54,6 +54,48 @@ const ROOT = path.resolve(__dirname, '..');
 const REF_FILE = path.join(ROOT, 'src', 'core', 'architecture-reference.js');
 const PAGE_FILE = path.join(ROOT, 'src', 'pages', 'architecture-framework.data.js');
 const ALLOWANCE_FILE = path.join(__dirname, 'arch-surface-allowance.json');
+const SHARED_ROUTE_FILE = path.join(ROOT, 'src', 'core', 'architecture-route-contracts.js');
+
+/**
+ * Resolve a surface's effective ROUTE source.
+ *
+ * ⚠️ Added 2026-11-07 (#1246). Until then both surfaces carried their own copy of
+ * `CURRENT_ROUTE_CONTRACTS` and this guard compared the two sets — which was the whole point of
+ * #902. They are now ONE array in `src/core/architecture-route-contracts.js`, imported by both, so
+ * reading the surface files alone yields ZERO routes. That is not a pass: the guard's own
+ * "a check that reads nothing must not pass" rule fires, correctly, and this function is what keeps
+ * it honest.
+ *
+ * ⚠️ BOTH SIDES MUST RESOLVE THE SAME WAY, and `assertSingleSource()` below enforces it. A
+ * half-migrated pair (one imports the shared module, the other still inlines) would give one side
+ * the shared routes and the other its own — a comparison of a thing with itself, which would pass
+ * while telling you nothing.
+ */
+function routeSourceOf(fileSource, label, failures) {
+  const importsShared = /architecture-route-contracts/.test(fileSource);
+  if (!importsShared) return fileSource;
+  if (!fs.existsSync(SHARED_ROUTE_FILE)) {
+    failures.push(`${label} imports architecture-route-contracts but that file does not exist — the routes it claims to carry cannot be read.`);
+    return fileSource;
+  }
+  return fs.readFileSync(SHARED_ROUTE_FILE, 'utf8');
+}
+
+/**
+ * A half-migrated pair is not a smaller version of the change — it is a broken one. Either both
+ * surfaces import the shared contract array, or neither does and each carries its own.
+ */
+function assertSingleSource(refSource, pageSource, failures) {
+  const refShared = /architecture-route-contracts/.test(refSource);
+  const pageShared = /architecture-route-contracts/.test(pageSource);
+  if (refShared !== pageShared) {
+    failures.push(
+      `HALF-MIGRATED route contracts: the ${refShared ? 'reference' : 'page'} imports architecture-route-contracts and the ${pageShared ? 'reference' : 'page'} does not. ` +
+        'Both must use the shared array, or neither — a comparison of two different sources proves nothing.',
+    );
+  }
+}
+
 
 const LAST_UPDATED_RE = /export const CONTRACT_REGISTER_LAST_UPDATED\s*=\s*'([^']*)'/;
 /**
@@ -149,8 +191,10 @@ function check(refSource, pageSource, allowance) {
   }
 
   // ---- fact 2: the route set ------------------------------------------------
-  const refRoutes = routesOf(refSource);
-  const pageRoutes = routesOf(pageSource);
+  // #1246 — each surface may resolve its routes through the shared contract array.
+  assertSingleSource(refSource, pageSource, failures);
+  const refRoutes = routesOf(routeSourceOf(refSource, 'architecture-reference.js', failures));
+  const pageRoutes = routesOf(routeSourceOf(pageSource, 'architecture-framework.data.js', failures));
 
   if (refRoutes.length === 0) failures.push('architecture-reference.js yielded ZERO routes — a check that reads nothing must not pass.');
   if (pageRoutes.length === 0) failures.push('architecture-framework.data.js yielded ZERO routes — a check that reads nothing must not pass.');
@@ -227,8 +271,8 @@ function run() {
 /** Rewrite the allowance from CURRENT reality. Deliberate, loud, for review. */
 function emitBaseline() {
   const { onlyInReference, onlyInPage } = compareRoutes(
-    routesOf(fs.readFileSync(REF_FILE, 'utf8')),
-    routesOf(fs.readFileSync(PAGE_FILE, 'utf8')),
+    routesOf(routeSourceOf(fs.readFileSync(REF_FILE, 'utf8'), 'reference', [])),
+    routesOf(routeSourceOf(fs.readFileSync(PAGE_FILE, 'utf8'), 'page', [])),
   );
   const reason = (side) => `Mirrored on the ${side} only — route-contract drift recorded by #902. Remove this entry the moment the other surface carries the route; the guard FAILS on a stale entry.`;
   const out = {

@@ -115,7 +115,12 @@
   border-radius: 12px;
   background: var(--bg-elev);
   padding: 16px 18px;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
+/* ⚠️ THE CARD SAYS IT IS INTERACTIVE (2026-11-07). Owner: *"it's not even obvious they can be clicked
+   on unless we hover the cursor over one bar"*. A shadow on hover plus a focus band on the header
+   gives the card a hover state a reader can see before touching it. */
+.card:hover { box-shadow: var(--shadow-card); }
 
 /* Full coloured border for an active strategy — mirrors the chip colour without a left bar. */
 .cardActive {
@@ -133,6 +138,58 @@
   align-items: baseline;
   gap: 10px;
   margin-bottom: 12px;
+  /* The header is the toggle, so it gets the affordance: a hover band, a focus ring, and padding
+     that is cancelled by a negative margin so the card's own padding is unchanged. */
+  cursor: pointer;
+  padding: 6px 10px;
+  margin: -6px -10px 12px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.cardHead:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+.cardHead:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The labelled expand control — a control, not a glyph. */
+.expandToggle {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--accent);
+  background: var(--bg-elev-2);
+  white-space: nowrap;
+}
+.cardHead:hover .expandToggle { border-color: var(--accent); }
+
+/* State + size, on the collapsed card. */
+.statePill {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--line);
+  color: var(--color-muted);
+  background: transparent;
+}
+.statePillOn {
+  color: var(--color-profit);
+  border-color: color-mix(in srgb, var(--color-profit) 45%, transparent);
+  background: color-mix(in srgb, var(--color-profit) 10%, transparent);
+}
+.botCount {
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
 }
 
 .key {

@@ -3,6 +3,7 @@ import {
   LIVE_RISK_CONSTANTS,
   NOT_LIVE_RISK_CONSTANTS,
   riskEnforcementCounts,
+  applyRiskProfile,
   buildRiskProfile,
 } from './risk-profile-rules';
 import { SETTINGS } from '../../common/settings/settings-registry';
@@ -177,6 +178,57 @@ describe('risk-profile-rules registry — the caps declared once', () => {
       for (const k of keys) {
         expect(`${k}=${typeof (profile as unknown as Record<string, unknown>)[k]}`).toBe(`${k}=number`);
       }
+    });
+  });
+
+  /**
+   * applyRiskProfile — the `development` profile (#2026-11-07, owner).
+   *
+   * The owner asked for a switch that lets a DEMO book open as many positions as the venue allows.
+   * The danger is the failure DIRECTION, so every case here is about which way a mistake falls:
+   * an unknown value must behave as `live`, and the two caps a typo could relax are the two that
+   * refuse orders.
+   */
+  describe('applyRiskProfile — development relaxes, everything else does not', () => {
+    const STORED = { maxPerSymbol: 0.2, maxPortfolioRisk: 0.6, maxDrawdown: 0.25 };
+
+    it('development raises the two caps that refuse orders', () => {
+      const r = applyRiskProfile(STORED, 'development');
+      expect(r.profile).toBe('development');
+      expect(r.values.maxPortfolioRisk).toBe(0.95);
+      expect(r.values.maxPerSymbol).toBe(0.95);
+      // …and REPORTS what it changed, so a reader cannot mistake the stored value for the enforced one.
+      expect(r.overridden.map((o) => o.field).sort()).toEqual(['maxPerSymbol', 'maxPortfolioRisk']);
+    });
+
+    it('development leaves the DRAWDOWN breaker alone — it keeps the demo account alive', () => {
+      expect(applyRiskProfile(STORED, 'development').values.maxDrawdown).toBe(0.25);
+    });
+
+    it('live returns the stored values untouched', () => {
+      const r = applyRiskProfile(STORED, 'live');
+      expect(r.profile).toBe('live');
+      expect(r.values).toEqual(STORED);
+      expect(r.overridden).toEqual([]);
+    });
+
+    // ⚠️ THE IMPORTANT ONE. A typo, a null from a missing row, or a future profile name must NOT
+    // relax a limit. The expensive direction of this mistake is permissiveness.
+    it.each([['developmnet'], [''], [null], [undefined], ['DEVELOPMENT'], ['DEMO']])(
+      'an unrecognised profile (%s) falls back to live, never to development',
+      (value) => {
+        const r = applyRiskProfile(STORED, value as any);
+        expect(r.profile).toBe('live');
+        expect(r.values.maxPortfolioRisk).toBe(0.6);
+        expect(r.values.maxPerSymbol).toBe(0.2);
+      },
+    );
+
+    it('is idempotent — applying it twice changes nothing further', () => {
+      const once = applyRiskProfile(STORED, 'development');
+      const twice = applyRiskProfile(once.values, 'development');
+      expect(twice.values).toEqual(once.values);
+      expect(twice.overridden).toEqual([]);
     });
   });
 });

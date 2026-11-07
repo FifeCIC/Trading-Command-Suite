@@ -13,10 +13,23 @@
     "active": false,
     "reason": "Created for the #929 tradeThreshold weighting comparison. That run (b50727ee) was cancelled 2026-10-07 after 11 v 6 closed trades, so the copy can never produce a verdict. Deactivated 2026-11-06 (#1201) and retained as evidence; its bot 'Gold Speed Copy Bot' (magic 234186) was deactivated the same day for the same reason."
   },
+  "xau-speed-v1-long-copy": {
+    "serves": null,
+    "active": true,
+    "reason": "DIRECTIVE-TRIM experiment (#1243, 2026-11-07): xau-speed-v1-long with 6 directives instead of 11. The FIVE removed were neutral on 100.0% of 882 readings across 5 weekdays (bollinger-band-squeeze 90, volatility-tools 90, volume-confirmation 100, gold-macro-correlation 100, gold-session-profile 90 = 470 capacity). liquidity-check is KEPT because it is the risk gate — a gate is neutral by design, and removing it would change safety as well as maths. Capacity 1010 -> 540, so the prediction is 1.87x the control's signalPct on identical bars; a ratio near 1.0 refutes capacity dilution. Twin bot 'Silver Speed Scalp Bot (copy) Bot' scores XAGUSD only and its subscriptions were DELETED, so it cannot queue an order — a scoring question must not spend demo money. Judged 2026-11-15 against 'Silver Speed Scalp Bot'.",
+    "control": "xau-speed-v1-long",
+    "scoreOnly": true
+  },
+  "xau-speed-v1-short-copy": {
+    "serves": null,
+    "active": false,
+    "reason": "Created 2026-11-07 as unavoidable collateral of the canonical duplicate() call for #1243: the source 'Silver Speed Scalp Bot' held TWO subscriptions (long + short), so the copy produced both protocol copies. This one carries NO experiment and no bot of its own, so it is deactivated to keep the pair to ONE variable. Deactivated 2026-11-07."
+  },
   "forex-session-v1-copy-core4-long": {
     "serves": null,
     "active": true,
-    "reason": "DIRECTIVE-COUNT experiment (#1184, owner 2026-11-06): forex-session-v1-long with 4 live directives instead of 9 — liquidity-check (risk gate) + rsi-oversold + ema-structure + macd-crossover. Capacity 430 vs the control's 815; group weights, risk gate and multipliers unchanged, so the directive set is the only variable. Twin bot 'GBPUSD Session Core4 Bot' (magic 234193) trades GBPUSD only, and the copy is assigned GBPUSD only, so scoring cost matches the one symbol under test. Judged 2026-11-13 against the control GBPUSD Session Bot."
+    "reason": "DIRECTIVE-COUNT experiment (#1184, owner 2026-11-06): forex-session-v1-long with 4 live directives instead of 9 — liquidity-check (risk gate) + rsi-oversold + ema-structure + macd-crossover. Capacity 430 vs the control's 815; group weights, risk gate and multipliers unchanged, so the directive set is the only variable. Twin bot 'GBPUSD Session Core4 Bot' (magic 234193) trades GBPUSD only, and the copy is assigned GBPUSD only, so scoring cost matches the one symbol under test. Judged 2026-11-13 against the control GBPUSD Session Bot.",
+    "control": "forex-session-v1-long"
   },
   "__orphanScoreHistory": {
     "__why": [

@@ -5,6 +5,7 @@ import { apiGet } from '../core/api/client';
 // message; the wording may change and the code must not. Hand-written error text also loses
 // everything structured about the failure.
 import NoticeBlock from '../components/NoticeBlock';
+import PageInfoPopover from '../components/PageInfoPopover';
 import { noticeFromError } from '../core/notices/from-error.js';
 import { notice } from '../core/notices/registry.js';
 import './stop-guardian-stats.css';
@@ -124,7 +125,11 @@ export default function StopGuardianStatsPage() {
     return (
       <div className="sg-page">
         <header className="sg-header">
-          <h2>Stop Guardian</h2>
+          <PageInfoPopover label="About Stop Guardian">
+            <p>Post-entry stop management, from the audit trail it already writes (<code>stop_adjustment</code>).</p>
+            <p>Mechanics only — how often it acts, how far it moves a stop, on what evidence, and whether the declared-distance floor held.</p>
+            <p><strong>No profitability claim:</strong> that needs an A/B copy.</p>
+          </PageInfoPopover>
         </header>
         <div className="sg-error" role="alert">
           <NoticeBlock notice={failure} />
@@ -156,12 +161,19 @@ export default function StopGuardianStatsPage() {
   return (
     <div className="sg-page">
       <header className="sg-header">
-        <h2>Stop Guardian</h2>
-        <p className="sg-sub">
-          Post-entry stop management, from the audit trail it already writes (<code>stop_adjustment</code>).
-          Mechanics only — how often it acts, how far it moves a stop, on what evidence, and whether the
-          declared-distance floor held. <strong>No profitability claim:</strong> that needs an A/B copy.
-        </p>
+        <PageInfoPopover label="About Stop Guardian">
+          <p>
+            Post-entry stop management, from the audit trail it already writes
+            (<code>stop_adjustment</code>).
+          </p>
+          <p>
+            Mechanics only — how often it acts, how far it moves a stop, on what evidence, and
+            whether the declared-distance floor held.
+          </p>
+          <p>
+            <strong>No profitability claim:</strong> that needs an A/B copy.
+          </p>
+        </PageInfoPopover>
       </header>
 
       <div className="sg-filters">

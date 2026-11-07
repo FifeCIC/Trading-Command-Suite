@@ -121,6 +121,20 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   // Owner, Scoring walkthrough: *"A/B Ladder (/scoring/ab-ladder) will be hidden from public"*. Kept
   // for the owner (amber in the rail) while the A/B comparison story is finished.
   '/scoring/ab-ladder',
+
+  // ── Pack 7: withheld from the Trading walkthrough (2026-11-07) ───────────────────────────────
+  // Three verdicts, all "not ready for other users" rather than "broken":
+  //   speed-scanner    — owner: *"I'm not even sure how useful it is or if it even works … hide in
+  //                      pending review and decision if it should be developed or not"*. It ships
+  //                      candle-pattern detection, which reads as a backtesting concern sitting in a
+  //                      live scanner. Nothing deleted; the route still resolves by URL.
+  //   strategy-comparison — *"pending development but this could also be a premium/member only page
+  //                      in future"*. Withheld, NOT declared `member`: it does not work yet, and
+  //                      `member` would claim a working feature is behind a paywall.
+  //   trading-plans    — *"as it is weak, it might also become member only page"*. Same reasoning.
+  '/trading/speed-scanner',
+  '/trading/strategy-comparison',
+  '/trading/trading-plans',
 ]);
 
 /**
@@ -314,14 +328,42 @@ function filterNavTree(tree, isHidden) {
  * group cannot leave a dangling heading.
  */
 export function filterHiddenViews(tree, hiddenRoutes, { keepWithheld = false } = {}) {
-  if (!hiddenRoutes || hiddenRoutes.size === 0) return tree;
+  /* ⚠️ AREA-LEVEL SUPPRESSION IS INDEPENDENT OF THE ROUTE SET, SO IT APPLIES FIRST (2026-11-07).
+     It used to sit inside the two branches below, which meant an area marked `hidden: true` was only
+     dropped when at least one route was also hidden — the early return below skipped it entirely.
+     Suppressing an AREA has nothing to do with which ROUTES are withheld, and a mechanism whose
+     behaviour depends on an unrelated collection being non-empty is a latent bug, not a shortcut.
+     `stripHiddenAreas` returns the SAME reference when no area is flagged, so the hot path (the nav
+     renders on every page) does not allocate for nothing. */
+  const scoped = stripHiddenAreas(tree);
+  if (!hiddenRoutes || hiddenRoutes.size === 0) return scoped;
   /* ⚠️ CURATOR MODE (owner, 2026-11-06): *"hiding pages is for other users only and I want to be able
      to see them"* … *"change the colour of the text in the menu for pages that will be hidden for
      other users so I know which ones still need work done to them."*
      So a withheld view is KEPT and TAGGED (`withheld: true`) rather than removed; the rail colours
      the tag. Nothing else about the tree changes. */
-  if (keepWithheld) return tagWithheld(tree, hiddenRoutes);
-  return filterNavTree(tree, (areaId, v) => hiddenRoutes.has(`/${areaId}/${v.id}`));
+  if (keepWithheld) return tagWithheld(scoped, hiddenRoutes);
+  return filterNavTree(scoped, (areaId, v) => hiddenRoutes.has(`/${areaId}/${v.id}`));
+}
+
+/**
+ * stripHiddenAreas(tree) — drop every area carrying `hidden: true`.
+ *
+ * Handles both tree shapes: an area is only ever suppressed in the `{ label, views }` OBJECT form,
+ * because the flat array form (`getNavStructure()`) has nowhere to hold the flag — which is exactly
+ * why `getNavStructure()` applies the same rule at its own derivation point.
+ *
+ * ⚠️ Returns the INPUT REFERENCE when nothing is flagged. The nav is on the render path of every
+ * page; an unconditional copy would churn identity and defeat the `useMemo` that wraps this call.
+ */
+function stripHiddenAreas(tree) {
+  let changed = false;
+  const out = {};
+  for (const [areaId, area] of Object.entries(tree)) {
+    if (!Array.isArray(area) && area?.hidden === true) { changed = true; continue; }
+    out[areaId] = area;
+  }
+  return changed ? out : tree;
 }
 
 /**

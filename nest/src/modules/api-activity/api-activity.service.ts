@@ -37,9 +37,52 @@ function inferProvider(endpoint: string): string | null {
   return match;
 }
 
+/**
+ * CHROME POLLERS — routes the frontend calls on a timer for its OWN display, whose rows carry no
+ * diagnostic value beyond "the app was open" (#1241).
+ *
+ * ⚠️ MEASURED 2026-11-06, one ordinary day: ~130,000 of 132,184 `apiactivitylog` rows were the
+ * frontend polling itself — `/alerts/active` 13,659, `/trading/mt5/candles` 13,980,
+ * `/scoring/protocols` 11,009, `/automation/status` 10,721, `/speed/scan` 10,272, `/health` 8,763.
+ * 58 MB a day, 22% of the database's total write volume, for observability noise.
+ *
+ * ⚠️ NARROW ON PURPOSE. `/trading/mt5/candles` is NOT in this list: it is the bridge call that says
+ * whether bars are actually being fetched, and its absence would hide a provider stall. A skip list
+ * that swallows real diagnostics is worse than the volume it saves.
+ */
+export const CHROME_POLLERS: readonly string[] = [
+  '/health',
+  '/alerts/active',
+  '/automation/status',
+  '/scoring/protocols',
+  '/speed/scan',
+  '/system/logs/status',
+];
+
+/**
+ * shouldRecordActivity() — is this request worth a database row?
+ *
+ * ⚠️ A FAILURE IS ALWAYS RECORDED, whatever the route. The whole value of `apiactivitylog` is the
+ * ability to see that something stopped working; dropping a 500 on `/health` because `/health` is a
+ * "chrome poller" would delete exactly the rows anyone would go looking for.
+ *
+ * ⚠️ Writes are never skipped either. A POST is not a poll, and the method filter is what stops this
+ * from quietly discarding a non-idempotent call someone was tracing.
+ */
+export function shouldRecordActivity(input: {
+  endpoint: string;
+  method: string;
+  statusCode: number;
+}): boolean {
+  if (input.statusCode >= 400) return true;
+  const method = (input.method || 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD') return true;
+  const path = input.endpoint.split('?')[0];
+  return !CHROME_POLLERS.some((p) => path === p || path.startsWith(`${p}/`));
+}
+
 @Injectable()
-export class ApiActivityService {
-  private readonly logger = new Logger(ApiActivityService.name);
+export class ApiActivityService {  private readonly logger = new Logger(ApiActivityService.name);
   private readonly fallbackRecords: ApiActivityRecord[] = [];
 
   constructor(private readonly prisma: PrismaService) {}

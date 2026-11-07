@@ -1,7 +1,7 @@
 {
-  "lastUpdated": "2026-11-05T03:18:49.603Z",
-  "totalFiles": 44,
-  "totalRows": 7321374,
+  "lastUpdated": "2026-11-07T18:23:18.425Z",
+  "totalFiles": 49,
+  "totalRows": 7444020,
   "entries": [
     {
       "id": "directiveoutcome-2026-06-11-to-2026-07-11",
@@ -442,6 +442,56 @@
       "fileSize": 24,
       "filePath": "directiveoutcome-2026-10-03-to-2026-11-02.json.gz",
       "createdAt": "2026-11-05T03:18:49.602Z"
+    },
+    {
+      "id": "directiveoutcome-2026-10-05-to-2026-11-04",
+      "table": "directiveoutcome",
+      "dateFrom": "2026-10-05",
+      "dateTo": "2026-11-04",
+      "rowCount": 47438,
+      "fileSize": 2587523,
+      "filePath": "directiveoutcome-2026-10-05-to-2026-11-04.json.gz",
+      "createdAt": "2026-11-07T17:57:24.507Z"
+    },
+    {
+      "id": "directiveoutcome-2026-10-05-to-2026-11-04",
+      "table": "directiveoutcome",
+      "dateFrom": "2026-10-05",
+      "dateTo": "2026-11-04",
+      "rowCount": 132,
+      "fileSize": 8114,
+      "filePath": "directiveoutcome-2026-10-05-to-2026-11-04.json.gz",
+      "createdAt": "2026-11-07T17:57:42.546Z"
+    },
+    {
+      "id": "directiveoutcome-2026-10-05-to-2026-11-04",
+      "table": "directiveoutcome",
+      "dateFrom": "2026-10-05",
+      "dateTo": "2026-11-04",
+      "rowCount": 957,
+      "fileSize": 57137,
+      "filePath": "directiveoutcome-2026-10-05-to-2026-11-04.json.gz",
+      "createdAt": "2026-11-07T18:15:20.133Z"
+    },
+    {
+      "id": "directiveoutcome-2026-10-05-to-2026-11-04",
+      "table": "directiveoutcome",
+      "dateFrom": "2026-10-05",
+      "dateTo": "2026-11-04",
+      "rowCount": 240,
+      "fileSize": 14586,
+      "filePath": "directiveoutcome-2026-10-05-to-2026-11-04.json.gz",
+      "createdAt": "2026-11-07T18:18:50.503Z"
+    },
+    {
+      "id": "directiveoutcome-2026-10-07-to-2026-11-06",
+      "table": "directiveoutcome",
+      "dateFrom": "2026-10-07",
+      "dateTo": "2026-11-06",
+      "rowCount": 73879,
+      "fileSize": 4115103,
+      "filePath": "directiveoutcome-2026-10-07-to-2026-11-06.json.gz",
+      "createdAt": "2026-11-07T18:23:18.424Z"
     }
   ]
 }

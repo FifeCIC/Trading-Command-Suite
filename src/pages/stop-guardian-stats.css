@@ -19,20 +19,16 @@
   max-width: 1200px;
 }
 
-.sg-header h2 {
-  margin: 0 0 0.35rem;
-  font-size: 1.35rem;
+/* The page title `<h2>` and the `.sg-sub` description were removed 2026-11-07 (owner walkthrough):
+   the breadcrumb already names the page, and the description now lives in the ℹ popover. Their
+   rules are deleted rather than left behind — a stylesheet entry for a class nothing renders is a
+   claim that the element exists. `.sg-muted code` survives because `.sg-muted` is still used. */
+.sg-header {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 0.5rem;
 }
 
-.sg-sub {
-  margin: 0 0 1.25rem;
-  color: var(--text-dim);
-  font-size: 0.86rem;
-  line-height: 1.5;
-  max-width: 78ch;
-}
-
-.sg-sub code,
 .sg-muted code {
   font-size: 0.82em;
   background: var(--panel);
@@ -65,15 +61,27 @@
   letter-spacing: 0.04em;
 }
 
+/* ⚠️ ONE HEIGHT FOR BOTH CONTROL TYPES (2026-11-07). Measured live: the `<select>` rendered 44px
+   tall against the `<input type="date">` at 31.19px with IDENTICAL font-size (13.6px) and padding
+   (5.6px 8px). The difference is not padding — it is that a global tap-target rule gives `select`
+   `min-height: 44px` while the date input's computed `min-height` stays `auto`. Owner report: *"this
+   menu needs to be the same height as the input"*.
+
+   ⚠️ SO THE FIX MAKES BOTH 44px, NOT BOTH 32px. 44px is WCAG 2.5.5 (AAA) and it is the floor this
+   app already applies to interactive controls — shrinking the select to match the input would have
+   made the row consistent by making it less accessible. Setting the floor explicitly on both means
+   neither can drift again, whatever a future global rule does. */
 .sg-filters select,
 .sg-filters input {
   background: var(--bg);
   color: var(--ink);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 0.35rem 0.5rem;
+  padding: 0 0.5rem;
   font-size: 0.85rem;
   min-width: 11rem;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .sg-filters button {

@@ -1,40 +1,83 @@
+/*
+ * trade-journal-page.css — the Trade Journal.
+ *
+ * ⚠️ DE-HARDCODED 2026-11-07 (owner: *"they are too dark"*, *"does not match the appearance areas
+ * accepted designs"*). This file carried 18 hex literals — `#0d1117` stat backgrounds, `#14532d`
+ * condition chips, `#3b0764` for the terminal — so the page kept a fixed dark palette no matter what
+ * theme the reader had chosen. That is the same defect `validate-css-tokens.cjs` exists to catch, in
+ * the form the validator cannot see: a hex literal IS a valid colour, it just never follows the theme.
+ *
+ * Every colour below is now either a theme token or a `color-mix()` tint of one, which is the
+ * vocabulary `.pl-badge-buy` and the notice family already use. A tint over `transparent` sits on
+ * whatever surface is beneath it, so these chips work on any background instead of assuming one.
+ */
 .tj-page { padding: 1.5rem; color: var(--ink); max-width: 900px; }
-.tj-header { margin-bottom: 1rem; }
-.tj-header h2 { margin: 0 0 0.25rem; color: var(--ink); font-size: 1.3rem; }
-.tj-header p { margin: 0; color: var(--ink-soft); font-size: 0.85rem; }
-.tj-privacy { font-size: 0.72rem !important; color: var(--color-muted) !important; margin-top: 0.3rem !important; }
+.tj-header { display: flex; justify-content: flex-end; margin-bottom: 0.5rem; }
+.tj-privacy { font-size: 0.72rem; color: var(--color-muted); }
+
+/* ── stat strip ── */
 .tj-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.5rem; margin-bottom: 1rem; }
-.tj-stat-card { padding: 0.5rem; border: 1px solid var(--color-grid); border-radius: 8px; background: #0d1117; text-align: center; }
-.tj-stat-num { display: block; font-size: 1.1rem; font-weight: 700; color: var(--ink); }
-.tj-stat-card span:last-child { font-size: 0.7rem; color: var(--color-muted); }
+.tj-stat-card {
+  padding: 0.5rem; text-align: center;
+  border: 1px solid var(--line); border-radius: 8px;
+  /* ⚠️ `--bg-elev`, NOT `--panel`, and NOT the `#0d1117` this used to be. Per
+     ui-standards.instructions.md the themed tokens are `--bg-elev`/`--bg-elev-2`; `--panel` is
+     themed too but is #000000 in this pack, which is the "too dark" the owner reported. `--bg-elev`
+     is the app's raised surface and is what the pinned toolbar buttons use. */
+  background: var(--bg-elev);
+}
+.tj-stat-num { display: block; font-size: 1.15rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tj-stat-card span:last-child { font-size: 0.7rem; color: var(--ink-soft); }
 .tj-green { color: var(--color-profit) !important; }
 .tj-red { color: var(--color-loss) !important; }
-.tj-ai-summary { padding: 0.75rem 1rem; border: 1px solid var(--color-accent-blue); border-radius: 8px; background: #1e3a5f22; margin-bottom: 1rem; font-size: 0.85rem; }
+
+/* ── AI summary panel — the info notice vocabulary, not a one-off blue ── */
+.tj-ai-summary {
+  padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.85rem;
+  border: 1px solid var(--notice-info-border); border-radius: 8px;
+  background: var(--notice-info-bg);
+}
 .tj-ai-summary h3 { margin: 0 0 0.5rem; color: var(--notice-info-text); font-size: 0.9rem; }
 .tj-ai-summary p { margin: 0.2rem 0; }
+
+/* ── trade cards ────────────────────────────────────────────────────────────
+   Full coloured border by outcome (owner: *"I like cards with a full coloured border"*), with the
+   border carrying the state and the card interior staying on the panel surface. Nothing here uses a
+   left-hand accent bar — that pattern was removed app-wide on 2026-11-06. */
 .tj-entries { display: flex; flex-direction: column; gap: 0.75rem; }
-.tj-card { border: 1px solid var(--color-grid); border-radius: 10px; padding: 0.75rem; }
+.tj-card {
+  border: 1px solid var(--line); border-left-width: 1px;
+  border-radius: 10px; padding: 0.75rem 0.9rem;
+  background: var(--bg-elev);
+}
 .tj-card.tj-win { border-color: var(--color-profit); }
 .tj-card.tj-loss { border-color: var(--color-loss); }
 .tj-card.tj-open { border-color: var(--color-accent-blue); }
-.tj-card-header { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.5rem; }
+
+.tj-card-header { display: flex; gap: 0.6rem; align-items: baseline; margin-bottom: 0.5rem; flex-wrap: wrap; }
 .tj-symbol { font-weight: 700; font-size: 1rem; color: var(--ink); }
 .tj-type { font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; }
-.tj-buy { background: #064e3b44; color: #6ee7b7; }
-.tj-sell { background: #7f1d1d44; color: var(--color-loss); }
-.tj-ticket { font-size: 0.72rem; color: var(--notice-info-text); font-family: ui-monospace, monospace; }
-.tj-origin { font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; background: var(--panel); color: #cbd5e1; }
-.tj-origin-external { background: #7c2d12; color: #fdba74; }
-.tj-origin-manual { background: #1e3a8a; color: #93c5fd; }
-.tj-origin-strategy { background: #14532d; color: #86efac; }
-/* Close-attribution chip (#916) — WHO closed the trade. Same palette family as the origin chip
-   so the eye reads both as "provenance"; colour separates the actor class, text names it. */
-.tj-closewhy { font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; background: var(--panel); color: #cbd5e1; }
-.tj-closewhy-sl { background: #7f1d1d; color: var(--color-loss); }
-.tj-closewhy-tp { background: #14532d; color: #86efac; }
-.tj-closewhy-system { background: #78350f; color: #fcd34d; }
-.tj-closewhy-app { background: #1e3a8a; color: #93c5fd; }
-.tj-closewhy-terminal { background: #3b0764; color: #d8b4fe; }
+.tj-buy { background: color-mix(in srgb, var(--color-buy) 14%, transparent); color: var(--color-buy); }
+.tj-sell { background: color-mix(in srgb, var(--color-sell) 14%, transparent); color: var(--color-sell); }
+.tj-ticket { font-size: 0.72rem; color: var(--ink-soft); font-family: var(--font-mono, ui-monospace, monospace); }
+
+/* ── provenance chips — origin and close-attribution share one shape, colour = actor class ── */
+.tj-origin,
+.tj-closewhy {
+  font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600;
+  background: color-mix(in srgb, var(--ink-soft) 12%, transparent);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.tj-origin-external { background: color-mix(in srgb, var(--color-warning) 14%, transparent); color: var(--color-warning); }
+.tj-origin-manual { background: color-mix(in srgb, var(--color-accent-blue) 14%, transparent); color: var(--color-accent-blue); }
+.tj-origin-strategy { background: color-mix(in srgb, var(--color-profit) 14%, transparent); color: var(--color-profit); }
+
+.tj-closewhy-sl { background: color-mix(in srgb, var(--color-loss) 14%, transparent); color: var(--color-loss); }
+.tj-closewhy-tp { background: color-mix(in srgb, var(--color-profit) 14%, transparent); color: var(--color-profit); }
+.tj-closewhy-system { background: color-mix(in srgb, var(--color-warning) 14%, transparent); color: var(--color-warning); }
+.tj-closewhy-app { background: color-mix(in srgb, var(--color-accent-blue) 14%, transparent); color: var(--color-accent-blue); }
+.tj-closewhy-terminal { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
 .tj-pnl { font-weight: 700; margin-left: auto; }
 .tj-details { display: flex; gap: 1rem; font-size: 0.78rem; color: var(--ink-soft); flex-wrap: wrap; }
 .tj-tags { display: flex; gap: 0.35rem; flex-wrap: wrap; margin: 0.4rem 0; }
@@ -43,7 +86,7 @@
 .tj-note-edit { display: flex; gap: 0.5rem; align-items: flex-start; }
 .tj-note-edit textarea { flex: 1; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-size: 0.8rem; }
 .tj-note-edit button, .tj-btn-sm { padding: 0.45rem 0.75rem; min-height: 44px; border-radius: 4px; border: 1px solid var(--line); background: var(--color-grid); color: var(--ink-soft); font-size: 0.75rem; cursor: pointer; }
-.tj-btn-ai { padding: 0.35rem 0.75rem; border-radius: 6px; border: 1px solid var(--color-accent-blue); background: #1e3a5f44; color: #93c5fd; font-size: 0.78rem; cursor: pointer; margin-top: 0.5rem; }
+.tj-btn-ai { padding: 0.35rem 0.75rem; border-radius: 6px; border: 1px solid var(--notice-info-border); background: var(--notice-info-bg); color: var(--notice-info-text); font-size: 0.78rem; cursor: pointer; margin-top: 0.5rem; }
 .tj-btn-ai:disabled { opacity: 0.5; }
 .tj-analysis { margin-top: 0.5rem; padding: 0.5rem; background: var(--bg); border-radius: 6px; font-size: 0.78rem; line-height: 1.5; }
 .tj-analysis pre { margin: 0; white-space: pre-wrap; font-family: inherit; color: var(--ink); }
@@ -52,4 +95,28 @@
 .tj-retry {
   background: none; border: none; padding: 0; font: inherit;
   color: var(--accent); text-decoration: underline; cursor: pointer;
+}
+.tj-eq-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.6rem;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+.tj-eq-table th,
+.tj-eq-table td {
+  text-align: right;
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+.tj-eq-table th:first-child,
+.tj-eq-table td:first-child {
+  text-align: left;
+}
+.tj-eq-table th {
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }

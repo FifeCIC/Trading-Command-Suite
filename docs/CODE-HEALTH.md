@@ -27,23 +27,23 @@ line counts change on every edit and a guard that fires during normal work gets 
 ⚠️ This tool measures SHAPE, not correctness. It never reads the logic. A file here is not "wrong" —
 it is expensive to review and risky to change.
 
-## Files needing attention (13)
+## Files needing attention (14)
 
 ### `critical`
 
 | File | Lines | Comments | Longest fn | Fns over 60 |
 |---|---|---|---|---|
-| `nest/src/modules/backtest/backtest.service.ts` | 4,740 | 40.1% | 1229 | 5 |
+| `nest/src/modules/backtest/backtest.service.ts` | 4,787 | 40.3% | 1229 | 5 |
+| `nest/src/modules/automation/automation-loop.service.ts` | 3,406 | 37.3% | 430 | 4 |
 | `nest/src/modules/trading/trading-strategy.service.ts` | 3,406 | 33.9% | 215 | 6 |
-| `nest/src/modules/automation/automation-loop.service.ts` | 3,373 | 36.9% | 430 | 4 |
 
 ### `high`
 
 | File | Lines | Comments | Longest fn | Fns over 60 |
 |---|---|---|---|---|
-| `nest/src/modules/automation/stop-guardian.service.ts` | 2,431 | 50.4% | 484 | 2 |
+| `nest/src/modules/automation/stop-guardian.service.ts` | 2,453 | 50.9% | 484 | 2 |
 | `nest/src/modules/scoring/protocol-gating.service.ts` | 2,290 | 49.2% | 65 | 1 |
-| `nest/src/modules/signals/signal-envelope.service.ts` | 2,194 | 33.3% | 181 | 3 |
+| `nest/src/modules/signals/signal-envelope.service.ts` | 2,231 | 34.2% | 181 | 3 |
 | `src/pages/DiagramsPage.jsx` | 2,097 | 2.4% | 204 | 1 |
 
 ### `warn`
@@ -55,6 +55,7 @@ it is expensive to review and risky to change.
 | `src/pages/MetaStackExplorerPage.jsx` | 1,695 | 15.0% | 1381 | 1 |
 | `nest/src/modules/providers/adapters/mt5.adapter.ts` | 1,536 | 32.4% | 195 | 1 |
 | `src/pages/ArchitectureFrameworkPage.jsx` | 1,513 | 0.8% | 1267 | 1 |
+| `nest/src/modules/trading/trade-history.controller.ts` | 1,512 | 26.9% | 413 | 4 |
 
 ### `large-but-structured`
 
@@ -63,44 +64,18 @@ it is expensive to review and risky to change.
 | `src/pages/BacktestPage.jsx` | 3,870 | 25.9% | 16 | 0 |
 
 
-## Unreferenced modules (32)
+## Unreferenced modules (6)
 
 ⚠️ **A name-reference scan, not a module graph.** A file loaded through `import.meta.glob` or a
 registry string that does not contain its filename reads as unreferenced here and is not. Treat each
 line as a QUESTION — delete / wire up / keep and explain — never as a delete list. Owner: #1228.
 
-- `nest/src/common/utils/http-client.ts`
 - `nest/src/modules/auth/guards/api-key.guard.ts`
-- `nest/src/modules/directives/data/session-patterns.ts`
-- `nest/src/modules/faq/faq.module.ts`
-- `nest/src/modules/import-jobs/import-jobs.processor.ts`
-- `nest/src/modules/macro/macro.service.ts`
-- `nest/src/modules/scoring/dto/ranked-symbols.dto.ts`
-- `nest/src/modules/strategies/dto/score-breakdown.dto.ts`
-- `src/components/BeginnerGuide.jsx`
-- `src/components/CenterPicker.jsx`
-- `src/components/DataFreshnessCard.jsx`
-- `src/components/ForexCalculator.jsx`
-- `src/components/GlobalSearch.jsx`
-- `src/components/GlossaryRichText.jsx`
-- `src/components/HealthStatusBar.jsx`
-- `src/components/RarityGauge.jsx`
-- `src/components/UnavailablePlaceholder.jsx`
-- `src/components/mt5/AccountSummary.jsx`
-- `src/core/fx/useFxRate.js`
-- `src/core/hooks/useQuoteWebSocket.js`
-- `src/core/sees/sees-engine.js`
 - `src/data/external-urls.js`
-- `src/data/watchlist-symbols.seed.js`
-- `src/data/xtrend-symbols.js`
-- `src/hooks/useFreshness.js`
 - `src/hooks/useKeyboardShortcuts.js`
 - `src/hooks/useSpeedTradingKeys.js`
-- `src/hooks/useStars.js`
 - `src/pages/AdvancedResearchPage.jsx`
-- `src/pages/FluffDetectorPage.jsx`
-- `src/pages/skeleton-handoff.js`
-- `src/theme/themeLabStandard.js`
+- `src/pages/directives-manager.seed.js`
 
 ## How to act on this
 

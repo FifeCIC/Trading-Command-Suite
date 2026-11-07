@@ -51,6 +51,13 @@ const ALLOWLIST = [
     why: 'READS closeReason for an aggregation query (GROUP BY attribution, closeReason). Never writes.',
   },
   {
+    file: 'modules/trading/exit-quality.ts',
+    why: 'READS closeReason to bucket exits by reason (type field + byCloseReason aggregate). ' +
+      'No prisma call and no Trade write anywhere in the file — verified 2026-11-07 when a new ' +
+      'reader tripped this guard while the API was down. ⚠️ If this file ever starts CLOSING a ' +
+      'trade, delete this entry rather than widening it: the guard is about writes, not mentions.',
+  },
+  {
     file: 'modules/trading/trade-recorder.service.ts',
     why: 'RECEIVES `strategy` as an explicit parameter (#884) — the parser belongs to its callers. ' +
       'If this ever becomes the ONLY file with a parser reference, the callers have regressed.',

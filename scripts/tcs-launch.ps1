@@ -11,6 +11,29 @@ param([switch]$SkipFrontend)
 $ROOT = 'C:\wamp64\www\trading-command-suite'
 $ErrorActionPreference = 'Continue'
 
+# ── ⚠️ REFUSE WHILE A BUILD OWNS THE API (#1240) ────────────────────────────────────────────────
+#
+# This launcher KILLS whatever is on 3201/5000/5001/5173 before starting. Running it during a build
+# therefore destroys the very API the build is about to health-check — so the build fails for a reason
+# that has nothing to do with the code, and reports it as if it did.
+#
+# ⚠️ A STALE lock must NOT block a launch (a killed build would make the machine un-launchable). Only a
+# holder whose pid is still running refuses.
+$apiBuildLock = Join-Path $ROOT 'logs\build-api.lock'
+if (Test-Path $apiBuildLock) {
+    $apiBuildHolder = $null
+    try { $apiBuildHolder = Get-Content $apiBuildLock -Raw | ConvertFrom-Json } catch { $apiBuildHolder = $null }
+    if ($apiBuildHolder -and $apiBuildHolder.pid -and (Get-Process -Id ([int]$apiBuildHolder.pid) -ErrorAction SilentlyContinue)) {
+        Write-Host "`n   REFUSING TO LAUNCH: a build holds the API lock (pid $($apiBuildHolder.pid))." -ForegroundColor Red
+        Write-Host "   This launcher kills what is on 3201, which is the API that build is about to health-check." -ForegroundColor Red
+        Write-Host "   Wait for it to finish (a build is ~40 s), then run this again." -ForegroundColor Yellow
+        exit 1
+    }
+    if ($apiBuildHolder) {
+        Write-Host "   Note: a STALE API lock (pid $($apiBuildHolder.pid), not running) is present — ignoring it." -ForegroundColor DarkGray
+    }
+}
+
 # ── Where console output goes (#1023) ───────────────────────
 #
 # ⚠️ ONE DIRECTORY FOR ALL PROCESS OUTPUT. Measured 2026-09-29: the API's console capture was
@@ -402,18 +425,29 @@ function Test-PortListening {
 # ⚠️ 2026-11-04 — THE NON-BRIDGE CUT-OFF WAS THE FALSE-FAILURE THE OWNER KEPT SEEING.
 # This loop used to stop waiting after 30s whenever a NON-bridge service was still down, and that
 # is what produced a window reading "Some services didn't start" while the API was booting, the
-# bridges were connected and the app then worked. MEASURED on this machine: the API prints its
-# bootstrap header and then blocks in `app.listen()` for ~90 SECONDS while its module init hooks
-# run (directive seed, 51 protocol readiness passes, first scoring pass) — so at 30s it is never
-# listening, and the old rule broke out at exactly the wrong moment.
+# bridges were connected and the app then worked. MEASURED on this machine AT THE TIME: the API
+# printed its bootstrap header and then did not answer for ~107 SECONDS, because its module init
+# hooks (directive seed, 51 protocol readiness passes, first scoring pass) were AWAITED in front of
+# `listen()` — so at 30s it was never listening, and the old rule broke out at exactly the wrong
+# moment.
+#
+# ⚠️ CORRECTED 2026-11-07 — the mechanism has since changed and this note used to describe it as
+# still current. The two ProtocolHealthService audits are now fire-and-forget in the compiled code
+# (`void this.runBootDiagnostics()`), so nothing gates `listen()` on them: the port answers in
+# **5–19.6 s** (six boots) and the audit runs ON AFTERWARDS for 86.6 s measured to completion. So a
+# 30s cut-off would usually be enough TODAY — but the cut-off below is still the right shape, for a
+# reason that does not depend on the boot time at all: 30s is a guess about a duration, and "is the
+# process alive" is a fact. A slow disk, a cold database or a future awaited hook re-breaks a fixed
+# number and says nothing about why. Do not lower it back to a count of seconds.
 #
 # The port is a PROXY for readiness. The process being alive is the fact that distinguishes
 # "still booting" from "died", so that is what the cut-off now tests:
 #   • non-bridge service whose process tree has EXITED  → real failure, stop immediately
 #   • non-bridge service alive but not listening yet    → keep waiting, say so
 #   • bridge down                                       → unchanged grace (they retry to 90s)
-# The ceiling is raised to 180s to cover a 90s API boot with margin; a service whose process died
-# is still reported within seconds, which is the case the short window was actually protecting.
+# The ceiling stays at 180s: it is a hang detector, not an estimate of boot time, and a service
+# whose process died is still reported within seconds — which is the case the short window was
+# actually protecting.
 $bridgeGraceStart = 15  # iterations (2s each) before bridge-only grace begins
 for ($i = 1; $i -le 90; $i++) {
     Start-Sleep -Seconds 2

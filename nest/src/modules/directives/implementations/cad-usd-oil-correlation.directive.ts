@@ -26,6 +26,17 @@
  * ── Symbol Coverage ──────────────────────────────────────
  * USDCAD, EURCAD, GBPCAD, AUDCAD, NZDCAD
  *
+ * ⚠️ READINESS `beta`, AND THAT HAS A CONSEQUENCE BEYOND THIS FILE (measured 2026-11-07, #642):
+ * the #627 readiness gate refuses to SCORE any protocol containing a non-ready directive, so
+ * including this one PAUSES the whole protocol — every bot on it stops, and the pause is reported
+ * in `protocol_score_status`, not at the bot. It was included in five protocols and **every one was
+ * out of this directive's scope** (whole-symbol sets: WTI, EURUSD, and three with no bot at all), so
+ * it scored 0 everywhere it was installed and paused all five. All five were cleared on 2026-11-07.
+ *
+ * **Do not add `cad-usd-oil-correlation` to a protocol whose symbols are not CAD pairs** — it cannot
+ * contribute direction there (see OUT OF SCOPE above) and its beta flag will silence the protocol.
+ * If a CAD-pair protocol needs it, promote the readiness first; do not install it as beta.
+ *
  * ── Data Sources ─────────────────────────────────────────
  * dxyValue or eurusdValue on DirectiveInput (DXY pipeline, wired in
  * `protocol-gating.service.ts`). `wtiValue` is NOT wired.

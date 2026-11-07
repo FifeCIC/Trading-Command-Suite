@@ -19,6 +19,39 @@
 
 export const EXPERIENCE_LEVELS = ['beginner', 'experienced', 'expert'];
 
+/**
+ * ── PLANNED — STRATEGY UNLOCKING BY PRACTICE (owner request, 2026-11-07) ───────────────────────
+ *
+ * Owner, Trading walkthrough on `/trading/strategy-library`:
+ *
+ *   > "I also want an update to the user progression system - strategies will be unlocked over time
+ *   >  in-line with what the user needs to have practiced first, this is low priority though so just
+ *   >  do the update and make it clear that it is only going to be implemented when we have strong
+ *   >  profiting strategies"
+ *
+ * ⚠️ DELIBERATELY NOT IMPLEMENTED. This is the intended shape recorded where the level matrix
+ * lives, so the next person meets the requirement before they touch gating — not a mechanism that
+ * runs today.
+ *
+ * | | |
+ * |---|---|
+ * | **What** | The Strategy Library unlocks strategies progressively, keyed to behaviour the user has actually practised, rather than to a settings toggle. |
+ * | **Blocked on** | **There are no proven profitable strategies yet.** Gating a library on performance is meaningless until the library contains something worth unlocking — and it would ship a progression wall in front of unvalidated content. |
+ * | **Not the same thing** | `EXPERIENCE_MATRIX.nav` below hides whole PAGES by declared level. This proposal gates CONTENT WITHIN one page by demonstrated practice. Two different axes; do not implement this by adding strategy ids to the nav matrix. |
+ *
+ * ⚠️ **The three states must stay distinct when it is built** (`development-status` §7): *locked —
+ * not yet practised*, *available*, and *cannot judge — the performance evidence is too thin to
+ * justify a lock* are three different answers. Collapsing "we do not know yet" into "locked" would
+ * hide content on the strength of a missing measurement.
+ *
+ * ⚠️ **It must not be a paywall.** A separate decision already exists that Trading Plans and Bot
+ * Comparison may become MEMBER-only pages; strategy unlocking is a PRACTICE gate, not an
+ * entitlement, and the two must not be conflated (`hidden-views.js` — `member` vs `withheld`).
+ *
+ * Filed: see the Strategy Library progression note in the Trading walkthrough issue trail. The
+ * precondition — a strategy with a demonstrated profitable record — has no owner yet.
+ */
+
 export const EXPERIENCE_MATRIX = {
   // ── Navigation: entire sidebar pages ──────────────
   // ⚠️ ADMISSION RULE FOR `beginner: false` (2026-11-03): a page earns it when the owner's own UI

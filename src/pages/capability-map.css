@@ -1,6 +1,6 @@
 /* Capability Map — capability-map.css */
 
-.cm-page {
+.capmap-page {
   max-width: none;
   width: 100%;
   margin: 0;
@@ -17,21 +17,21 @@
   font-size: 1.5rem;
 }
 
-.cm-subtitle {
+.capmap-subtitle {
   color: var(--ink-soft, var(--ink-soft));
   font-size: 0.82rem;
   margin: 0;
 }
 
 /* ── Summary ── */
-.cm-summary {
+.capmap-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
 
-.cm-summary-item {
+.capmap-summary-item {
   background: var(--panel, #141a2e);
   border: 1px solid var(--line, #1e2a45);
   border-radius: 10px;
@@ -39,14 +39,14 @@
   text-align: center;
 }
 
-.cm-summary-value {
+.capmap-summary-value {
   display: block;
   font-size: 1.6rem;
   font-weight: 800;
   color: var(--accent, var(--accent));
 }
 
-.cm-summary-label {
+.capmap-summary-label {
   display: block;
   font-size: 0.72rem;
   color: var(--ink-soft, var(--ink-soft));
@@ -72,9 +72,30 @@
   font-size: 0.82rem;
   min-width: 220px;
   font-family: inherit;
+  /* ⚠️ THE CHIPS NOW SHARE THIS LINE INSTEAD OF DROPPING BELOW IT (owner, 2026-11-07: *"Make
+     <button.cm-filter-chip.active>All positioned just after <input.cm-search>"*).
+     Before: the search was a fixed-width item and the chip group was a single flex item wide enough
+     to exceed the row, so `flex-wrap` pushed the WHOLE group — including the active "All" chip — onto
+     the next line. The active filter therefore sat nowhere near the control that scopes it.
+     Now the search takes only what it needs and the chip group takes the rest of the row and wraps
+     WITHIN itself, so "All" always lands directly after the input. */
+  flex: 0 1 auto;
 }
 .cm-search:focus { outline: none; border-color: var(--accent); }
-.cm-filter-chips { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.cm-filter-chips {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  /* ⚠️ `flex: 1 1 0`, NOT `1 1 auto`. With `flex-basis: auto` the group's hypothetical width is its
+     FULL content width (~7 chips), which exceeds the row, so `flex-wrap` on `.cm-controls` moved the
+     whole group to the next line BEFORE it ever got the chance to shrink — measured at 1100px: search
+     at y=580, chips at y=636, full width. Basis 0 makes its hypothetical width zero, so it stays on
+     the search's line and grows into the remaining space, wrapping its own chips inside itself. */
+  flex: 1 1 0;
+  /* A floor, so the group cannot collapse to nothing and push every chip to a second row on a
+     narrow window — it wraps inside itself instead. */
+  min-width: 12rem;
+}
 .cm-filter-chip {
   padding: 0.2rem 0.6rem;
   border: 1px solid var(--line);
@@ -166,7 +187,17 @@
 
 /* ── Badges ── */
 .cm-badge {
-  display: inline-block;
+  /* ⚠️ `inline-flex` + `nowrap`, NOT `inline-block` (owner, 2026-11-07: *"is messy when the text is
+     long because the text drops to a new line leaving the icon on a line of its own"*).
+     An `inline-block` badge with `white-space: normal` breaks between the emoji and the label, so
+     "💨 localStorage" became a lone 💨 above the word — the badge looked broken, not long.
+     `inline-flex` with a gap keeps the icon and label one unbreakable pair, and `max-width: 100%`
+     lets the CELL truncate rather than the badge splitting. */
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  max-width: 100%;
+  white-space: nowrap;
   font-size: 0.62rem;
   font-weight: 700;
   padding: 0.1rem 0.45rem;
@@ -228,7 +259,7 @@
 }
 
 /* ── Tables ── */
-.cm-table-wrap {
+.capmap-table-wrap {
   overflow-x: auto;
   width: 100%;
 }undefined { min-width: 100%; table-layout: auto; }/* ── API grid ── */

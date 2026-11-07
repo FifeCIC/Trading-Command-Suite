@@ -192,7 +192,16 @@ export const NAV_TREE = {
       // (/api/trading/trade-history) and is now the surface that names WHO closed a trade
       // (#916 close attribution) — a first-class view, not a legacy page.
       { id: 'trade-journal', label: 'Trade Journal', icon: '▤' },
-      { kind: 'section-header', id: 'legacy-strategies', label: '— Legacy Strategy Pages —', icon: '' },
+      // ── The "— Legacy Strategy Pages —" section header was REMOVED 2026-11-07 ────────────────
+      // Owner, in three separate requests on the same walkthrough: *"Move Market Context out of
+      // '— Legacy Strategy Pages —' to the top half of the menu"*, the same for Strategy Library,
+      // and then simply *"just remove"* the header on Trading Performance.
+      //
+      // ⚠️ The header was the thing making the judgement, so removing it removes the claim. These
+      // four were never legacy: Market Context is live session data, Strategy Library is the
+      // protocol catalogue, and Trading Performance reads `/api/trading/strategy-comparison`. The
+      // label dated from when they were superseded in name only — it told a reader to expect dead
+      // pages and then showed them working ones.
       { id: 'market-context', label: 'Market Context', icon: '🌐' },
       { id: 'strategy-library', label: 'Strategy Library', icon: '📚' },
       { id: 'performance-lab', label: 'Trading Performance', icon: '📊' },
@@ -213,8 +222,27 @@ export const NAV_TREE = {
   //   automation-rules      → Settings ("/settings/automation", section #rules)
   //   alert-center          → the Trade Journal (Alerts)
   // "Automation" named a MECHANISM, not a subject — which is why nothing is left for it to own.
+  /*
+   * ⚠️ THE WHOLE AREA IS HIDDEN (owner direction, 2026-11-07).
+   *
+   * Owner, Status walkthrough: *"Hide the Education area - this will be a massive project in
+   * itself."* Not one page — the area. Education is deferred wholesale rather than page by page,
+   * which is a different statement from every other hide in this file.
+   *
+   * `hidden: true` is an AREA-LEVEL flag, honoured by `hidden-views.js` in BOTH branches
+   * (`filterNavTree` and `tagWithheld`), so the area leaves the top nav and the left rail whichever
+   * of those is active. It is deliberately NOT the per-route `DEFAULT_HIDDEN_ROUTES` mechanism:
+   * that one hides leaf by leaf and leaves the area sitting in the nav with amber children, which
+   * is the opposite of what was asked for.
+   *
+   * ⚠️ NOTHING IS DELETED. Both routes still resolve by URL and their components, view-meta entries
+   * and CSS are untouched — only the nav entry is suppressed. Un-hiding is deleting this one line.
+   * ⚠️ Do NOT "tidy up" by deleting `views` while the flag is set: the flag is the reversal
+   * switch, and an empty array would make restoring the area a re-typing exercise.
+   */
   education: {
     label: 'Education',
+    hidden: true,
     views: [
       { id: 'glossary', label: 'Glossary', icon: '📖' },
       // ⚠️ HIDDEN 2026-10-02 (owner, Page Walkthrough — hide now). Both are wanted (importance H,
@@ -519,10 +547,20 @@ export const QUICK_MENU = PRIMARY_PAGES;
 /**
  * Derive the legacy flat NAV_STRUCTURE shape for backward compat with App.jsx.
  * Returns { [areaKey]: [{ id, label }] }
+ *
+ * ⚠️ AREA-LEVEL SUPPRESSION HAPPENS HERE, NOT ONLY IN `hidden-views.js` (2026-11-07).
+ * `NAV_TREE` is `{ area: { label, hidden?, views } }` but this function returns `{ area: [views] }`
+ * — and the array form has **nowhere to put a flag**, so an area marked `hidden: true` was dropped
+ * from the TOP NAV (which reads `NAV_TREE` directly) and kept in the LEFT RAIL (which reads this).
+ * Measured while hiding Education: the two navigation surfaces disagreed, which is the exact failure
+ * the comment in App.jsx warns about — *"the sidebar and the top bar must never disagree about which
+ * areas exist"*. Deriving it here means the flat structure cannot carry an area the object tree has
+ * already dropped.
  */
 export function getNavStructure() {
   const structure = {};
   for (const [key, area] of Object.entries(NAV_TREE)) {
+    if (area?.hidden === true) continue;
     structure[key] = area.views;
   }
   return structure;

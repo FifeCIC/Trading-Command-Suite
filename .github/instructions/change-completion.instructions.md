@@ -169,6 +169,47 @@ sentence is written. The guard has to be a precondition on the claim, not a note
 the one whose value does not depend on the attribution being right. That is the argument for
 preferring **symptom** guards over **cause** guards when the cause is not understood.
 
+### 🛑 A canary must prove its own INPUT matched — silence is not evidence, in either direction
+
+**Measured 2026-11-07, three times in one session.** A guard can be verified in the state where it works
+and be untested in the state that actually occurs:
+
+| Guard | Canaried against | What it could not see |
+|---|---|---|
+| a `Select-String` on `dist/…/protocol-health.service.js` | a **present** file | **`dist` missing** — `Select-String` errors and returns nothing, so "no match" fell into the permissive branch ("pre-change build, wait") when the truth was "there is no build at all". `build-api.ps1` deletes `dist` as its first act, so this is the *common* broken state |
+| the same file's grep for `void this.runBootDiagnostics` | the real file | **Nothing, in THIS file — measured 2026-11-07: exactly 1 occurrence, the call itself, 0 inside comments.** The hazard is real in general (a docblock that quotes the call would satisfy an unanchored grep, and the check would then be reading prose), so the pattern is now anchored — `^\s*void this\.runBootDiagnostics\(\);` — and canaried against a comment line, which the unanchored form matches and the anchored form does not. ⚠️ Recorded as a **latent hazard, not a present defect**: do not go looking for a live bug here |
+| `validate-agent-docs.cjs` dangling-reference canary | a **bare** path | `PATH_RE` only matches `` `backticked` `` paths, so the canary never entered the check. It reported "no warning", which looked exactly like **a broken guard** |
+
+The third is the expensive one: the obvious repair for "the guard did not fire" is *to fix the guard*, and
+the guard was correct. **A canary must assert that its own injection landed** — the path was really added,
+the pattern really matched, the state really changed — **before** it interprets the silence.
+
+#### 🛑 …and a MUTATOR canary must prove its EDIT landed — the write-side twin
+
+**Measured 2026-11-07, same session, by a concurrent agent.** A canary that *mutates* a source line to prove
+a test then fails reported **"4 passed"**, which reads as *"the guard is broken"* — and it was meaningless.
+The search string carried **8 spaces where the file has 6**, so the replacement never applied, and the suite
+correctly passed **against unmodified code**. The green result pointed at the wrong repair: rewrite a test
+that was fine.
+
+The read-side rule above cannot catch this. A read-side canary is silent because it found nothing; a
+mutator canary is *loud and wrong* — it reports a pass, which reads as a verdict.
+
+| Rule | Because |
+|---|---|
+| Count the replacements and **require > 0** before running the test | a substitution that matched nothing is an unrun experiment wearing a result |
+| If the mutation cannot be applied, report **`CANARY INVALID`** — never `PASSED`, never `MISSED` | the two failure modes are "the guard works" and "the canary never ran", and they are indistinguishable from the output |
+| Restore, and **verify the restore** by re-reading the file | a canary that leaves the tree modified is worse than no canary (also `development-philosophy` §5) |
+| Re-apply with a **verified anchor** — assert the anchor is present before substituting | an anchor is a claim about the file's current bytes; whitespace is part of it |
+
+⚠️ **The generalisation, and it is the same sentence as the read-side rule:** *a canary is a claim about a
+state change, and the claim needs its own observation.* "I applied the mutation" is exactly as unverified
+as "the pattern matched" — and in both cases the unverified version returns a clean, plausible result.
+
+**Corollary, for every check written in a document or a script:** ask *"in which state would this check
+return nothing, and what would a hurried reader conclude from that nothing?"* If the answer is a permissive
+branch, the check is worse than absent — it converts "cannot judge" into "fine".
+
 
 An **upsert-only** seeder cannot delete. So a removal or move in a config file is silently a
 no-op in the database, and re-seeding cannot converge them. **Any config edit that removes or

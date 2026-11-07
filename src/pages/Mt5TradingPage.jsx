@@ -111,10 +111,28 @@ export default function Mt5TradingPage() {
   }, []);
 
   // ── Refresh All ──
-  const refreshAll = useCallback(() => {
-    setLoading(true);
-    fetchAccounts();
-    fetchData();
+  //
+  // ⚠️ THE FLICKER WAS THIS LINE (fixed 2026-11-07). `refreshAll` ran on a 10s interval and began
+  // with `setLoading(true)` — and `loading` gates a FULL-PAGE spinner (`if (loading) return
+  // <spinner>`), so every poll tore the whole view down and rebuilt it. Owner: *"the entire view
+  // flashes, I assume it's the refresh of information but the flicker is highly annoying"*. It was
+  // the refresh, exactly.
+  //
+  // The spinner is only meaningful when there is nothing on screen yet, so `loading` is set for the
+  // FIRST load alone; background polls now update state in place. `inFlight` stops a slow poll from
+  // stacking on the next interval tick, which would otherwise double the request rate on a bad link.
+  const hasLoadedRef = useRef(false);
+  const inFlightRef = useRef(false);
+  const refreshAll = useCallback(async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+    if (!hasLoadedRef.current) setLoading(true);
+    try {
+      await Promise.all([fetchAccounts(), fetchData()]);
+      hasLoadedRef.current = true;
+    } finally {
+      inFlightRef.current = false;
+    }
   }, [fetchAccounts, fetchData]);
 
   useEffect(() => {
@@ -387,17 +405,31 @@ export default function Mt5TradingPage() {
                 </option>
               ))}
             </select>
-            {accounts.map((a) => (
-              <button
-                key={`rm-${a.number}`}
-                type="button"
-                className="mt5u-remove-btn"
-                onClick={() => handleRemoveAccount(a.number)}
-                title={`Remove ${a.login}`}
-              >
-                ✕
-              </button>
-            ))}
+            {/*
+              ⚠️ ONE REMOVE CONTROL, NOT ONE PER ACCOUNT (fixed 2026-11-07).
+
+              This used to call `accounts.map(...)` a SECOND time and render a `✕` button for every
+              account — eight of them, in a row, with no label and no visible connection to the
+              dropdown above them. Owner: *"We have rows of X … there is about 8 and no clear
+              purpose."* The purpose existed; the affordance did not say which account it would
+              remove, and a mis-click was silent.
+
+              Now a single button acts on the SELECTED account, names it in its tooltip and its
+              accessible label, and is disabled when there is nothing selected. `handleRemoveAccount`
+              is unchanged, so behaviour is identical — only the number of triggers changed.
+            */}
+            <button
+              type="button"
+              className="mt5u-remove-btn"
+              onClick={() => handleRemoveAccount(activeAccountNum)}
+              disabled={!activeAccountNum}
+              title={activeAccountNum
+                ? `Remove account ${activeAccountNum} from this page (does not close it at the broker)`
+                : 'Select an account first'}
+              aria-label={activeAccountNum ? `Remove account ${activeAccountNum}` : 'Remove account — select one first'}
+            >
+              ✕ Remove
+            </button>
           </div>
         )}
 

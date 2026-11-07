@@ -141,6 +141,10 @@
   border: 1px solid var(--border-strong);
   color: var(--ink-soft);
   white-space: nowrap;
+  /* "active" and "inactive" differ in width, which moved the pill's left edge between rows even
+     once the columns were stable. A minimum width pins it. */
+  min-width: 58px;
+  text-align: center;
 }
 
 .statusOn {
@@ -295,6 +299,20 @@
   color: var(--ink-soft);
 }
 
+/* The replacement for the removed `listMeta` paragraph (2026-11-07): the count stays visible, the
+   method moves into a popover. A row, not a paragraph, so the ℹ trigger sits on the same line as the
+   number it explains. */
+.listMetaBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.listMetaCount {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
 .listNotice {
   margin: 0 0 14px;
   padding: 8px 12px;
@@ -343,7 +361,20 @@
 
 .pairRow {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  /*
+   * ⚠️ THE THIRD COLUMN WAS `auto`, AND THAT IS WHAT PUSHED "B" AROUND (fixed 2026-11-07).
+   *
+   * Owner: *"The pill is different for each row and it pushes the middle information B to the left
+   * so all the status are not aligned for either A or B and it looks poor."* Exactly right: the tail
+   * holds `≠ 1 · pyramid` on one row and `≠ 3 · tradeThreshold, pyramid, timeframe` on the next, so
+   * an `auto` column made columns 1 and 2 a different width on every row. The 1fr sides then had
+   * nothing to align to.
+   *
+   * A FIXED tail width makes the two 1fr sides identical on every row, so A's and B's status pills
+   * sit on one vertical line down the whole list. `minmax(0, 1fr)` is required — plain `1fr` refuses
+   * to shrink below content width, which reintroduces the drift as soon as a name is long.
+   */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 210px;
   gap: 8px 14px;
   align-items: center;
   padding: 9px 12px;
@@ -355,7 +386,7 @@
 
 @media (max-width: 980px) {
   .pairRow {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -401,6 +432,9 @@
   align-items: center;
   gap: 10px;
   justify-self: end;
+  justify-content: flex-end;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .diffChip {
@@ -411,6 +445,13 @@
   padding: 2px 8px;
   white-space: nowrap;
   cursor: help;
+  /* The field list can be long ("≠ 3 · tradeThreshold, pyramid, timeframe"). It is clipped rather
+     than allowed to widen the column, and the full list is in the tooltip — so the chip can no
+     longer resize the grid and shift the A/B columns above. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .testRow {

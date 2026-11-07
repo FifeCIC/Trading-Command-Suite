@@ -1,8 +1,21 @@
-/* ProgressionPanel (#1193) — the earned level and the active-bot ceiling.
+/*
+ * ProgressionPanel (#1193) — the earned level and the active-bot ceiling.
  *
  * ⚠️ EVERY COLOUR IS A TOKEN. `validate-css-literals.cjs` fails the build on a literal colour, and
  * the reason is not tidiness: a literal tuned against the dark theme is simply wrong on the light
  * one, and this panel is read by a first-time operator who has never seen either.
+ *
+ * ⚠️ BUT NOT EVERY TOKEN IS THEMED — corrected 2026-11-07. This file passed that guard while still
+ * mis-theming, because `--color-panel` / `--color-border` / `--color-text-dim` / `--color-input-bg`
+ * are all STATIC (declared once in index.css, never rewritten by the theme adapter). So the panel
+ * rendered dark navy on every theme, and its warn state rendered a mustard tint on top of it — the
+ * owner's report: *"I saw it change from a yellow to a dark blue maybe, neither looked good for the
+ * current theme settings"*. Both observations were the same defect.
+ *
+ * Per ui-standards "TOKENS: STATIC vs THEMED", surfaces and text now use the THEMED column
+ * (`--bg-elev`, `--line`, `--ink-soft`, `--bg`), which the theme adapter rewrites on every change.
+ * The semantic states keep `--notice-*`, which is the app's canonical notice vocabulary rather than
+ * a second palette invented here.
  *
  * Prefix `prg-` is file-anchored: `progression-panel.css` owns it and nothing else may use it.
  */
@@ -13,8 +26,8 @@
   gap: var(--space-sm);
   padding: var(--space-md);
   margin-bottom: var(--space-md);
-  background: var(--color-panel, var(--panel));
-  border: 1px solid var(--color-border, var(--line));
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
 }
 
@@ -39,7 +52,7 @@
   font-size: var(--text-md);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-wide);
-  color: var(--color-text-dim);
+  color: var(--ink-soft);
   text-transform: uppercase;
 }
 
@@ -67,8 +80,8 @@
   height: 8px;
   width: 100%;
   max-width: 520px;
-  background: var(--color-input-bg, var(--line));
-  border: 1px solid var(--color-border, var(--line));
+  background: var(--bg);
+  border: 1px solid var(--line);
   border-radius: var(--radius-pill);
   overflow: hidden;
 }
@@ -117,7 +130,7 @@
 .prg-table th,
 .prg-table td {
   padding: var(--space-xs) var(--space-sm);
-  border-bottom: 1px solid var(--color-border, var(--line));
+  border-bottom: 1px solid var(--line);
   text-align: left;
 }
 
@@ -125,7 +138,7 @@
   font-size: var(--text-xs);
   letter-spacing: var(--tracking-wider);
   text-transform: uppercase;
-  color: var(--color-text-dim);
+  color: var(--ink-soft);
 }
 
 .prg-num {
@@ -142,14 +155,14 @@
   caption-side: top;
   text-align: left;
   font-size: var(--text-xs);
-  color: var(--color-text-dim);
+  color: var(--ink-soft);
   padding-bottom: var(--space-xs);
 }
 
 .prg-detail {
   margin: 0;
   font-size: var(--text-xs);
-  color: var(--color-text-dim);
+  color: var(--ink-soft);
 }
 
 .prg-retry {

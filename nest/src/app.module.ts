@@ -38,6 +38,14 @@ import { JournalModule } from './modules/journal/journal.module';
 import { CalibrationModule } from './modules/calibration/calibration.module';
 import { IndicatorsModule } from './modules/indicators/indicators.module';
 import { MacroModule } from './modules/macro/macro.module';
+// ── #1228 (2026-11-07) — this import IS the fix, and it is not cosmetic ──────────────────────
+// `src/pages/FaqPage.jsx` has always called `GET /api/faq` and `GET /api/faq/categories`, and the
+// nav offers the page. `FaqModule` existed, complete, with `controllers: [FaqController]` — and was
+// never imported, so BOTH endpoints 404ed in the running API. The page rendered its error state
+// against a service that was working the whole time. A module that exists but is not imported is
+// indistinguishable from one that does not exist; the only reliable detector is a name-reference
+// scan, which is how this was found.
+import { FaqModule } from './modules/faq/faq.module';
 import { TradingModule } from './modules/trading/trading.module';
 import { ApiActivityModule } from './modules/api-activity/api-activity.module';
 import { IsaModule } from './modules/isa/isa.module';
@@ -115,6 +123,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     CalibrationModule,
     IndicatorsModule,
     MacroModule,
+    FaqModule,
     TradingModule,
     ApiActivityModule,
     IsaModule,

@@ -45,6 +45,8 @@
 New rows appear when there is **something to look at or a genuine fork**, not before.
 ---
 
+| **R68** | ✅ **ANSWERED 2026-11-07 ("work through all of that in your recommended order")** — item 1 landed, items 2 and 3 measured and both premises corrected. **Ranked manageability plan measured (#1246) — and item 1 is measured-safe: GENERATE `architecture-reference.js` from the page instead of hand-editing both.** `ref-only` exports = **0**, so the page is a strict superset; the 10 shared exports could be generated with the `--write`/`--check` pattern used by `tools-index` / `docs-facts` / `PIPELINE-MAP`, retiring the `#902` divergence class and the 2,123 banked duplication windows. Measured cost of the status quo: doing it by hand in batch #50 took **four consecutive failures** (wrong anchor, glued register line, misplaced block, syntax error). Ranked next: 244 open issues (**115 in the 30–90d band**, unordered) then 83 orphan tools. Deliberately last: the money-path splits (#1229) and the library extractions (#1242). | `.github/instructions/agent-handoff.instructions.md` · #1246 | Which do you want started first — the generated reference (safe, removes a per-batch tax), or the issue triage (larger, unblocks direction)? |
+
 ## DONE — with the owner's verdict (2026-09-23)
 
 | id | verdict / what happened |

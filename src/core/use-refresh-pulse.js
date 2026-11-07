@@ -29,6 +29,19 @@
  * widget board polls. Those two readings cannot both be right, and tuning against a dead backend
  * would bake in a wrong rule. The mechanism is sound (bar, gradient, `--pulse`, title); the SELECTION
  * needs re-measuring once /api/health answers. Filed rather than guessed at.
+ *
+ * ✅ RESOLVED LATER THE SAME DAY, and the reason is worth keeping: the app CHROME polls on EVERY page
+ * (`health` 30s, `api-activity-summary-nav` 15s, `mt5-diag-header` 30s, six `market-tape/*` 30-120s,
+ * four `so-*` 30-60s), so the shortest of those won and the bar appeared everywhere. Measured through
+ * a dev-only `window.__queryClient` handle (main.jsx) and excluded by prefix — SHELL_QUERY_PREFIXES.
+ * Re-measured across five routes once the API answered:
+ *   /education/glossary       no bar — polls nothing of its own                  ✅
+ *   /lab/charts-lab           bar — its own lab-quote / lab-candles @300s        ✅
+ *   /research/notes           bar — its own 30s poller                           ✅
+ *   /scoring/symbols-ladder   bar — its own sl-automation @60s (not the 15s chrome) ✅
+ *   /settings/data-management no `.breadcrumbs-current` on settings, so no bar   (expected)
+ * ⚠️ /dashboard also renders no `.breadcrumbs-current`, so the Dashboard gets no bar. That is a
+ * breadcrumb gap rather than a cadence bug — recorded, not worked around.
  */
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
