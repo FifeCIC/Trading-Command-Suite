@@ -58,6 +58,15 @@ const queryClient = new QueryClient({
 
 registerSW({ immediate: true });
 
+/**
+ * ⚠️ DEV-ONLY DEBUG HANDLE (added 2026-11-07). The breadcrumb refresh bar derives its cadence from
+ * the query cache, and deciding WHICH cadence it should show cannot be done from the rendered page —
+ * the answer is in the cache: which queries poll, at what interval, and how many observers each has.
+ * Exposing the client in development makes that measurable (`window.__queryClient.getQueryCache()`);
+ * it is stripped from production builds, so it cannot become a supported API by accident.
+ */
+if (import.meta.env.DEV) window.__queryClient = queryClient;
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>

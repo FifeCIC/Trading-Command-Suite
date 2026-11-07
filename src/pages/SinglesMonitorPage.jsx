@@ -60,9 +60,14 @@ export default function SinglesMonitorPage() {
    * (`?symbol=XAUUSD&protocol=…`) and the picker owns that parameter, so a local default would fight
    * the picker and leave the URL disagreeing with the screen. `replace: true` keeps it out of history.
    */
+  // ⚠️ NO `.catch(() => [])` HERE (#782 guard, `validate-query-empty-fallback.cjs`).
+  // A failed request resolved to `[]` is indistinguishable from "nothing was recently scored",
+  // which is a claim about the DATA rather than about the REQUEST. The effect below already
+  // treats `undefined` as "no pick", so letting the error through changes nothing it does and
+  // keeps `isError` available to render.
   const recentQuery = useQuery({
     queryKey: ['singles-monitor-recent'],
-    queryFn: () => apiGet('/api/scoring/recently-analysed?limit=10').catch(() => []),
+    queryFn: () => apiGet('/api/scoring/recently-analysed?limit=10'),
     enabled: !symbol,
     staleTime: 30_000,
   });

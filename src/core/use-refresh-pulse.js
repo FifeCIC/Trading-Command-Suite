@@ -32,32 +32,37 @@
  */
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-
-const TICK_MS = 500;
-
-/**
- * SHELL_QUERY_PREFIXES — pollers that belong to the app CHROME, not to the page.
- *
- * ⚠️ MEASURED, AND IT CHANGED THE DESIGN (2026-11-07): the market tape, the loop controls and the
- * progression panel poll on EVERY page, so counting them made the bar appear on pages that never
- * refresh their own content — /research/notes showed a countdown for the ticker. A countdown that is
- * always there is the clutter the owner asked to remove, so the shell's cadences are excluded and the
- * bar reflects only what the PAGE is waiting on.
- */
 const SHELL_QUERY_PREFIXES = [
+  'health',
+  'api-activity',
+  'mt5-diag',
   'market-tape',
+  'so-',
   'loop-controls',
   'market-context-widget',
   'progression',
   'setup-status',
-  'so-notif',
   'data-freshness',
 ];
 
+/**
+ * isShellQuery — does this query belong to the app chrome rather than the page?
+ *
+ * ⚠️ MEASURED across three pages 2026-11-07 via `window.__queryClient` (dev-only handle in main.jsx).
+ * The chrome polls on EVERY page: `health` 30s, `api-activity-summary-nav` 15s, `mt5-diag-header` 30s,
+ * six `market-tape/*` 30-120s, four `so-*` 30-60s. A first version denylisted only `market-tape`, so
+ * /research/notes — which polls nothing of its own — showed a countdown, and /scoring/symbols-ladder
+ * counted the chrome's 15s instead of its own `sl-automation` 60s. Prefix matching on the first key
+ * segment covers the `so-` family and future `market-tape` additions without listing every key.
+ */
 const isShellQuery = (queryKey) => {
   const first = Array.isArray(queryKey) ? queryKey[0] : null;
-  return typeof first === 'string' && SHELL_QUERY_PREFIXES.includes(first);
+  return typeof first === 'string' && SHELL_QUERY_PREFIXES.some((p) => first.startsWith(p));
 };
+
+const TICK_MS = 500;
+
+
 
 export function useRefreshPulse() {
   const queryClient = useQueryClient();

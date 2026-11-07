@@ -1106,3 +1106,85 @@ State: API UP on the winning build (PID 19420, includes #1101 + the #879 sweep).
 `Position sync: … 3 closed` — the three frozen rows were finalised with real exits/P&L/`user:manual`
 and backdated closedAt; `position` rows deleted. The 19:14 race's EPERM damage (deleted dist window)
 is fully recovered by that build.
+
+---
+
+## 2026-11-07 01:22Z — three agents thrashed the API restart. The LOCK worked; the AMPLIFIER did not.
+
+**State at time of writing:** `logs/build-api.lock` held by PID 35324 (`build:api`, started
+01:22:07Z). API **DOWN** on :3201 while it runs. If you are reading this and the lock is live, the
+holder owns the restart — do not start a second build.
+
+**What actually went wrong is not the lock.** The lock refused the second and third runs exactly as
+designed (measured: two refusals, `!! Another build:api is RUNNING (PID 29596 …)`). The thrash came
+from the ORDER inside `build-api.ps1`:
+
+    acquire lock -> STOP THE API -> run prebuild validators -> rimraf dist -> tsc -> restart API
+
+`build:api` **stops the API BEFORE the validators run.** So any validator that fails leaves the API
+down, the build red, and no owner for the restart — and the next agent, seeing a dead API, starts
+another build. Measured today: `validate-no-empty-swallow.cjs` failed on
+`src/pages/SinglesMonitorPage.jsx` (`.catch(() => [])`, another agent's in-flight edit, file mtime
+moving 01:11 -> 01:18), which aborted the build AFTER the API stop. Every retry cost another
+stopped API. **One unrelated in-flight file turned into a three-agent outage.**
+
+**Proposed fix, for whoever next touches `scripts/build-api.ps1`:** run the validator chain BEFORE
+the API-stop step. The validators read the tree and touch no engine DLL, so they do not need the API
+down; only `prisma generate` does. Order should be:
+
+    acquire lock -> validators (API stays UP) -> stop API -> rimraf + prisma generate + tsc -> restart
+
+That makes a failing validator a cheap "no", instead of an outage that invites a retry storm. Canary
+both directions: a deliberately broken validator must abort with the API still serving `/api/version`.
+
+**Protocol until that lands:** if you see "Another build:api is RUNNING", wait for health on :3201 —
+and if it stays down for more than one build cycle, check `nest/logs/console-build-api.log` and
+`logs/build-api.lock` before doing anything. Deleting a live lock is what turns a queue into a race.
+
+**Also observed, one line, no action taken:** `node scripts/validate-no-empty-swallow.cjs` run from
+the REPO ROOT reports `✅ 0 site(s) across 0 file(s)` — a vacuous pass. It reports truthfully only
+from `nest/` (prebuild's cwd). A verifier that cannot read its input must ERROR, never pass.
+
+## 2026-11-07
+
+### 🛑 API RESTART PROTOCOL — three agents, one working tree, one port
+
+- **Confirmed (measured 2026-11-07 01:20–01:45Z):** `:3201` and `:5173` were DOWN with three sessions live in this tree (`Strategies`, `UI - UX`, `Librarian`). `build:api` was run by more than one of them. A failed `build:api` **leaves the API stopped on purpose**, so every gate failure took the app down for everyone, and a `dist/src/main.js` process (PID 22296, started 01:21) appeared from an unrelated agent while another was mid-verification.
+- **The rule — effective now, all agents:**
+  1. **Only `npm run build:api` may start or stop the API.** Do not run `nest run start`, `tcs-launch.ps1` (that is the owner's), or kill port 3201 by hand.
+  2. `build:api` **already serialises itself** — it refuses with `Another build:api is RUNNING (PID n)`. If you see that line, WAIT. Never bypass it.
+  3. **Announce before you build.** Say so in your own session and, if another agent is mid-verification, wait for their release. A build kills any in-flight HTTP request silently (empty body, no stack trace).
+  4. **When your build fails on a gate, you own the unblock.** The API stays down until a build succeeds — completing the build is not optional.
+- **Two gates were blocking everyone and are fixed:** `src/pages/SinglesMonitorPage.jsx` had `.catch(() => [])` that `validate-query-empty-fallback.cjs` refuses (#782 — a failed query resolving to `[]` is a claim about the data, not the request), and `docs/PIPELINE-MAP.json`/`.md` were stale from a line-number shift. `node scripts/generate-pipeline-map.cjs --write` regenerates them; **do not regenerate from a second agent concurrently** or the two writes race.
+- **Verified by:** `node scripts/validate-query-empty-fallback.cjs` → `✅ no new site` and `node scripts/generate-pipeline-map.cjs --write` → `wrote docs\PIPELINE-MAP.json and docs\PIPELINE-MAP.md`.
+- **Agent:** Strategies (2026-11-07), coordinating with UI - UX and Librarian.
+
+**RESOLVED 2026-11-07 01:26Z** — the build at PID 35324 completed: `OK Build succeeded`, API restarted
+detached (PID 32388), `/api/version` = **0.156.0**, health 200, lock released. The abort cause had
+already been cleared by the agent editing `SinglesMonitorPage.jsx`, so the retry went straight
+through and nothing had to be reverted. **The ordering point above still stands** — it is a latent
+amplifier, not a one-off, and it fires again the next time any validator disagrees with an in-flight
+file.
+
+---
+
+## 2026-11-07 01:31Z — CORRECTION to the entry above: the "vacuous pass" was MY error, not the tool's
+
+I wrote above that `validate-no-empty-swallow.cjs` "reports ✅ 0 site(s) across 0 file(s) from the
+repo root — a vacuous pass … it reports truthfully only from `nest/`". **That is wrong and I am
+retracting it.**
+
+Re-measured: the guard reports `✅ 0 site(s) across 0 file(s)` from **both** the repo root and
+`nest/` — identical. `ROOT` is `path.resolve(__dirname, '..')`, so the cwd was never a variable. The
+real explanation is simpler and was one grep away: `src/pages/SinglesMonitorPage.jsx` **was fixed by
+another agent at 01:18:59**, and now carries `// ⚠️ NO \`.catch(() => [])\` HERE (#782 guard …)`. My
+failed build was at 01:19 — against the file as it was; my "from the root" run came after the fix.
+
+**The lesson, which is the same one this file already carries twice:** two things changed between my
+two measurements (the working directory *and* the file), the symptom went away, and I credited the
+one with a story attached. I did not isolate it before writing it into a durable document. The guard
+is fine. **No fix is needed and none was made.**
+
+So today's outage has exactly ONE cause, not two: `build-api.ps1` stopping the API before the
+validators run, which turned one genuinely-failing validator into a three-agent retry storm. The
+ordering fix below still stands on its own merits.
