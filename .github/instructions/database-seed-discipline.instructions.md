@@ -95,8 +95,8 @@ Delete the row, run the seeder, verify it comes back **identical**:
 
 ```powershell
 # capture → DELETE the row → run the seeder → compare
-$env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
-$env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"; npx ts-node prisma/seed-symbol-onboarding.ts
+# DATABASE_URL comes from `nest/.env` — never paste a credential here (#1252).
+npx ts-node prisma/seed-symbol-onboarding.ts
 ```
 
 A seeder that *runs* is not a seeder that *restores*. Only the delete-and-rebuild

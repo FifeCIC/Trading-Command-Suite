@@ -7,7 +7,8 @@
  * stale maxScores and confuse the maxScore audit.
  */
 
-process.env.DATABASE_URL = 'mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs';
+// Prisma reads the connection from here; the value comes from `nest/.env`, never a literal (#1252).
+process.env.DATABASE_URL = require('../../scripts/lib/mysql-cli.cjs').databaseUrl();
 const fs = require('fs');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');

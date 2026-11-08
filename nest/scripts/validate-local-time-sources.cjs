@@ -55,6 +55,13 @@ function walk(dir, out = []) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) {
       if (e.name === 'node_modules' || e.name === '.git') continue;
+      // ⚠️ `prisma/repairs/` is EXCLUDED, deliberately — read its README before widening this.
+      // These are dated records of repairs ALREADY APPLIED, not DDL that will run again. Measured
+      // 2026-11-07: they sat at `nest/` root, outside this validator's scan roots, so 19
+      // `CURRENT_TIMESTAMP` / `NOW()` uses were never checked; the move into `prisma/` surfaced them.
+      // Rewriting a record of statements that already ran, so it passes a gate aimed at future DDL,
+      // falsifies the record rather than fixing it. Conversion is tracked work.
+      if (e.name === 'repairs') continue;
       walk(p, out);
     } else if (EXTS.some((x) => e.name.endsWith(x)) && !e.name.endsWith('.spec.ts')) {
       out.push(p);

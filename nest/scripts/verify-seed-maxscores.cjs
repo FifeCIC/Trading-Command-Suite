@@ -26,7 +26,7 @@ for (const f of fs.readdirSync(IMPL).filter((f) => f.endsWith('.ts'))) {
 console.log(`Extracted ${Object.keys(classMax).length} class id→maxScore mappings`);
 
 // 2. Query the DB.
-process.env.DATABASE_URL = 'mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs';
+process.env.DATABASE_URL = require('../../scripts/lib/mysql-cli.cjs').databaseUrl();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 

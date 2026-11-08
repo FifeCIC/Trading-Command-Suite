@@ -29,7 +29,7 @@
  *
  * USAGE
  * -----
- *   $env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
+ *   DATABASE_URL comes from `nest/.env` — do not paste a credential here (#1252).
  *   node nest/scripts/collapse-alert-backlog.cjs --dry-run    # report only
  *   node nest/scripts/collapse-alert-backlog.cjs              # apply
  *

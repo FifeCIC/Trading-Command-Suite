@@ -381,7 +381,7 @@ curl.exe -s "http://localhost:3201/api/scoring/runs?limit=20"
 curl.exe -s "http://localhost:3201/api/scoring/gated/thresholds"
 
 # the history rows behind a card (schema: score, score_snapshot)
-C:\wamp64\bin\mysql\mysql9.1.0\bin\mysql.exe -utradingcs -ptradingcs_dev_2026 -D tradingcs -e "SELECT value, JSON_UNQUOTE(JSON_EXTRACT(breakdown,'$.signal')) sig, JSON_EXTRACT(breakdown,'$.directionalEvidence') de, timestamp FROM score WHERE strategyId='btc-speed-v1' ORDER BY timestamp DESC LIMIT 10;"
+C:\wamp64\bin\mysql\mysql9.1.0\bin\mysql.exe -utradingcs -D tradingcs   # put your password in MYSQL_PWD, not argv (#1252) -e "SELECT value, JSON_UNQUOTE(JSON_EXTRACT(breakdown,'$.signal')) sig, JSON_EXTRACT(breakdown,'$.directionalEvidence') de, timestamp FROM score WHERE strategyId='btc-speed-v1' ORDER BY timestamp DESC LIMIT 10;"
 ```
 
 ---

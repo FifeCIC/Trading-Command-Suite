@@ -93,3 +93,39 @@ scripts/mt5-bridge/*.log.*
 # the last 33 tracked files were removed from the index; the folder is fully unversioned.
 logs/
 
+
+# ── SESSION SCRATCH AT A PACKAGE ROOT — the class, not one instance (2026-11-07) ────────────────
+#
+# Owner, 2026-11-07: *"Look at nest/ … it contains a mix of completely different files … If that was
+# another developer's project it wouldn't give me confidence in their tidiness."*
+#
+# Measured that day at nest/ (a Node package root), ALL of it TRACKED, in a PUBLIC repo:
+#   5 × *.txt              session probe output; ti.txt is 10.8 KB of Prisma stack trace
+#   1 × canary-<md5>.bak   151 KB backup of backtest.service.ts from a canary that never restored
+#   3 × prisma.config.*    compiled .js / .js.map / .d.ts beside its own .ts source
+#   13 × *.sql             one-off repairs sitting next to package.json
+#   3 × check-* / test-insert.js / tmp-macd-test.ts / seed-*.cjs — with nest/scripts/ holding 135
+#
+# ⚠️ AND THE COMPILED-OUTPUT RULE ALREADY EXISTED — for nest/prisma/ only (#897, above). The exact
+# same defect was sitting one directory up. That is why this block is by PATTERN and why the gate is
+# scripts/validate-repo-hygiene.cjs: an ignore rule is a declaration about files git has never seen;
+# the script is what catches a file that was already added with `git add -f`.
+
+# Compiled output beside its own source. Never executed, never the build artefact — only a copy that
+# can silently disagree with the .ts next to it.
+nest/*.js
+nest/*.js.map
+nest/*.d.ts
+
+# Scratch classes. A backup, an .old copy or a tmp- file is session material: it belongs in logs/.
+*.bak
+*.orig
+*.old
+*.rej
+*.save
+*.tmp
+tmp-*
+temp-*
+
+# Session output saved as .txt. Real data files are named in .github/instructions/repository-layout.
+nest/*.txt

@@ -16,7 +16,7 @@
  * costs — it is NOT a spread-free figure, and the endpoint says so.
  *
  * Usage (repo root):
- *   $env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
+ *   DATABASE_URL comes from `nest/.env` — do not paste a credential here (#1252).
  *   npx --prefix nest ts-node nest/scripts/backfill-trade-costs.ts
  */
 import { PrismaClient } from '@prisma/client';

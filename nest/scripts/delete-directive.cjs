@@ -7,7 +7,7 @@
  * group lists, suitability registry, seed data, controller maps).
  *
  * Usage:
- *   $env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
+ *   DATABASE_URL comes from `nest/.env` — do not paste a credential here (#1252).
  *   node scripts/delete-directive.cjs <directiveId>
  *
  * DB tables cleaned:

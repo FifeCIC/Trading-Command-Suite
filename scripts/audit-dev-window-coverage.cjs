@@ -25,7 +25,10 @@
 const { execFileSync } = require('node:child_process');
 
 const MYSQL = 'C:\\wamp64\\bin\\mysql\\mysql9.1.0\\bin\\mysql.exe';
-const DB_ARGS = ['--user=tradingcs', '--password=tradingcs_dev_2026', '--host=127.0.0.1', '--database=tradingcs', '--skip-column-names', '--raw'];
+// ⚠️ The password goes in MYSQL_PWD, never argv — argv is visible in the process list, which is
+// the rule `scripts/lib/mysql-cli.cjs` already states. Sourced from `nest/.env` (#1252).
+const DB_PASS = require('./lib/mysql-cli.cjs').parseMysqlUrl(require('./lib/mysql-cli.cjs').databaseUrl()).password;
+const DB_ARGS = ['--user=tradingcs', '--host=127.0.0.1', '--database=tradingcs', '--skip-column-names', '--raw'];
 const DEFAULT_SYMBOLS = ['XAUUSD', 'XAGUSD', 'VIX', 'SPY', 'US500', 'BTC', 'EURUSD'];
 const DEFAULT_TIMEFRAMES = ['5m', '15m', '1h'];
 
@@ -106,7 +109,7 @@ const sql = `
 
 let out;
 try {
-  out = execFileSync(MYSQL, [...DB_ARGS, '--execute=' + sql], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  out = execFileSync(MYSQL, [...DB_ARGS, '--execute=' + sql], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, env: { ...process.env, MYSQL_PWD: DB_PASS } });
 } catch (err) {
   console.error(`[dev-window] ✖ ABORT: could not read marketbar — ${err?.message ?? err}`);
   process.exit(2);

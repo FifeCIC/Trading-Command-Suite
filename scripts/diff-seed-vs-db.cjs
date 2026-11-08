@@ -53,7 +53,11 @@ const { execFileSync } = require('node:child_process');
 const REPO_ROOT = path.resolve(__dirname, '..');
 const SEED = path.join(REPO_ROOT, 'nest', 'src', 'modules', 'scoring', 'protocols-seed-data.ts');
 const MYSQL = 'C:\\wamp64\\bin\\mysql\\mysql9.1.0\\bin\\mysql.exe';
-const DB_ARGS = ['-u', 'tradingcs', '-ptradingcs_dev_2026', 'tradingcs', '-N', '-B'];
+// ⚠️ The password goes in MYSQL_PWD, never argv (visible in the process list). Sourced from
+// `nest/.env` via the ONE credential reader — see scripts/lib/mysql-cli.cjs (#1252).
+const { parseMysqlUrl, databaseUrl } = require('./lib/mysql-cli.cjs');
+const DB_PASS = parseMysqlUrl(databaseUrl()).password;
+const DB_ARGS = ['-u', 'tradingcs', 'tradingcs', '-N', '-B'];
 
 const onlyIdx = process.argv.indexOf('--protocol');
 const ONLY = onlyIdx >= 0 ? process.argv[onlyIdx + 1] : null;
@@ -128,7 +132,7 @@ function parseSeed() {
 
 function query(sql) {
   try {
-    const out = execFileSync(MYSQL, [...DB_ARGS, '-e', sql], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    const out = execFileSync(MYSQL, [...DB_ARGS, '-e', sql], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], env: { ...process.env, MYSQL_PWD: DB_PASS } });
     return out
       .split('\n')
       .map((l) => l.trim())

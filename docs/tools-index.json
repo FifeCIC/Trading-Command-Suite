@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 223,
+  "count": 224,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -247,14 +247,6 @@
       "reaches": null
     },
     {
-      "name": "check-breakdown.cjs",
-      "where": "repo",
-      "category": "check",
-      "purpose": "(no header comment)",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
       "name": "check-bundle-budget.mjs",
       "where": "repo",
       "category": "check",
@@ -317,6 +309,14 @@
       "reaches": [
         "docs"
       ]
+    },
+    {
+      "name": "seed-arch.cjs",
+      "where": "nest",
+      "category": "database",
+      "purpose": "Quick seed: reads the backup data file and inserts sections/entries into DB.",
+      "selfTest": false,
+      "reaches": null
     },
     {
       "name": "seed-capabilities.cjs",
@@ -1795,6 +1795,17 @@
       "where": "repo",
       "category": "validator",
       "purpose": "readiness must come from `tradeReadiness()`, not from",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-repo-hygiene.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a tracked file must belong where it sits.",
       "selfTest": true,
       "reaches": [
         "prebuild",

@@ -171,12 +171,37 @@ function selfTest() {
   return runCases(cases);
 }
 
+/**
+ * The DSN, for callers that need a URL rather than connection pieces (Prisma's
+ * `datasources.db.url`, a `createConnection()` call).
+ *
+ * ⚠️ THIS EXISTS SO NO SCRIPT NEEDS A LITERAL CREDENTIAL. Measured 2026-11-07 (#1252): the dev
+ * password appeared as a literal in **21 tracked files** in a PUBLIC repo, in five different shapes
+ * — a `??` fallback here, an `= 'mysql://…'` overwrite there, a `--password=` argv, a `MYSQL_PWD`
+ * env literal, and a comment showing how to run the thing. The password has ONE home (`nest/.env`),
+ * and this is the only function that reads it.
+ *
+ * Order: `process.env.DATABASE_URL` first (so a shell can override), then `nest/.env`. It **throws**
+ * rather than falling back to a guess — `connect()` already applies that rule to the pieces, and a
+ * caller that invents a default is how the literals spread in the first place.
+ */
+function databaseUrl() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  if (!fs.existsSync(ENV_PATH)) {
+    throw new Error(`DATABASE_URL is not set and ${ENV_PATH} does not exist — refusing to guess credentials`);
+  }
+  const url = databaseUrlFromEnv(fs.readFileSync(ENV_PATH, 'utf8'));
+  if (!url) throw new Error(`DATABASE_URL is not set in ${ENV_PATH} — refusing to guess credentials`);
+  return url;
+}
+
 module.exports = {
   REPO_ROOT,
   ENV_PATH,
   assertIdentifier,
   assertPattern,
   databaseUrlFromEnv,
+  databaseUrl,
   parseMysqlUrl,
   findMysqlClient,
   query,
@@ -184,3 +209,9 @@ module.exports = {
   throws,
   selfTest,
 };
+
+// ⚠️ A LIBRARY THAT SILENTLY IGNORES `--self-test` REPORTS A PASS IT NEVER RAN. Before this guard,
+// `node scripts/lib/mysql-cli.cjs --self-test` defined the exports and exited 0 having tested
+// nothing — and `docs/TOOLS-INDEX.md` advertises a self-test for this file. Same defect the repo
+// names everywhere else: a check that inspects nothing and reports OK is worse than no check.
+if (require.main === module && process.argv.includes('--self-test')) process.exit(selfTest());

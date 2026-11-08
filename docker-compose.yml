@@ -4,10 +4,13 @@ services:
   mysql:
     image: mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: root_dev_2026
+      # ⚠️ No literal credentials (#1252). Provide them in a `.env` beside this file (gitignored) or
+      # export them. `:?` makes compose FAIL BY NAME rather than start a database with a default
+      # password — a silent default here is a database anyone who reads the repo can log into.
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env or the shell}
       MYSQL_DATABASE: tradingcs
       MYSQL_USER: tradingcs
-      MYSQL_PASSWORD: tradingcs_dev_2026
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env or the shell}
     ports:
       - "3306:3306"
     volumes:

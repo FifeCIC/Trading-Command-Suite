@@ -66,8 +66,10 @@ ensure_env() {
         warn ".env.docker not found — creating from template"
         cat > .env.docker << 'EOF'
 # Docker Environment
-MYSQL_ROOT_PASSWORD=rootpassword
-MYSQL_PASSWORD=tradingcs_dev_2026
+# ⚠️ Placeholders, not credentials (#1252). This template is COPIED to .env.docker and tracked
+# setup scripts must never seed a real password — measure once, then choose your own.
+MYSQL_ROOT_PASSWORD=changeme
+MYSQL_PASSWORD=changeme
 ALPACA_API_KEY=
 ALPACA_API_SECRET=
 QUEUE_MODE=off

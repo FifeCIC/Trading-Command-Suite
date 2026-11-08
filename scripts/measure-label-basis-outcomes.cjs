@@ -36,6 +36,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const MYSQL = 'C:\\wamp64\\bin\\mysql\\mysql9.1.0\\bin\\mysql.exe';
+// ⚠️ The password goes in MYSQL_PWD, never argv (visible in the process list). Sourced from
+// `nest/.env` via the ONE credential reader — see scripts/lib/mysql-cli.cjs (#1252).
+const DB_PASS = require('./lib/mysql-cli.cjs').parseMysqlUrl(require('./lib/mysql-cli.cjs').databaseUrl()).password;
 const API = process.env.TCS_API || 'http://localhost:3201';
 const DIR = path.join(__dirname, '..', 'nest', 'src', 'modules', 'directives', 'implementations');
 
@@ -125,9 +128,9 @@ async function gateGroups() {
 
 function query(sql) {
   return execFileSync(MYSQL, [
-    '--user=tradingcs', '--password=tradingcs_dev_2026', '--host=127.0.0.1',
+    '--user=tradingcs', '--host=127.0.0.1',
     '--database=tradingcs', '--skip-column-names', '--raw', '--execute=' + sql,
-  ], { maxBuffer: 1024 * 1024 * 1024, encoding: 'latin1' });
+  ], { maxBuffer: 1024 * 1024 * 1024, encoding: 'latin1', env: { ...process.env, MYSQL_PWD: DB_PASS } });
 }
 
 (async () => {

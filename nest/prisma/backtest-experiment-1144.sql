@@ -6,7 +6,7 @@
 -- database cannot drift apart in silence.
 --
 -- Apply with:
---   & "C:\wamp64\bin\mysql\mysql9.1.0\bin\mysql.exe" -utradingcs -ptradingcs_dev_2026 -D tradingcs < nest\prisma\backtest-experiment-1144.sql
+--   & "C:\wamp64\bin\mysql\mysql9.1.0\bin\mysql.exe" -utradingcs -D tradingcs   -- password from MYSQL_PWD, never argv (#1252) < nest\prisma\backtest-experiment-1144.sql
 -- then, with the API stopped so the query-engine DLL is free:
 --   npm --prefix nest run build:api
 --

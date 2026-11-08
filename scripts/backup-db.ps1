@@ -28,7 +28,11 @@ $BACKUP_ROOT = "G:\My Drive\Project Management\Live\Trading-Command-Suite-Docume
 $MYSQL_BIN   = "C:\wamp64\bin\mysql\mysql9.1.0\bin"
 $DB_NAME     = "tradingcs"
 $DB_USER     = "tradingcs"
-$DB_PASS     = "tradingcs_dev_2026"
+# ⚠️ No literal credential. Sourced from `nest/.env` by the ONE reader — see
+# scripts/lib/mysql-credential.ps1 (#1252). It throws by name rather than defaulting.
+. "$PSScriptRoot\lib\mysql-credential.ps1"
+$dbCred      = Get-TcsDbCredential
+$DB_PASS     = $dbCred.Password
 $DB_HOST     = "localhost"
 $DB_PORT     = "3306"
 

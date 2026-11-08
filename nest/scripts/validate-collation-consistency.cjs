@@ -63,6 +63,13 @@ function walk(dir, out = []) {
     const full = path.join(dir, e.name);
     if (e.isDirectory()) {
       if (e.name === 'node_modules' || e.name === 'dist' || e.name === '__pycache__') continue;
+      // ⚠️ `prisma/repairs/` is EXCLUDED, deliberately — read its README before widening this.
+      // These are dated records of repairs ALREADY APPLIED, not install-path DDL. Measured
+      // 2026-11-07: they sat at `nest/` root, outside this validator's scan root, and were never
+      // checked; moving them into `prisma/` surfaced 1 CREATE TABLE with no ENGINE. Rewriting a
+      // record of statements that already ran, so it passes a gate aimed at future DDL, falsifies
+      // the record rather than fixing anything. Conversion is tracked work.
+      if (e.name === 'repairs') continue;
       walk(full, out);
     } else if (EXTS.has(path.extname(e.name))) {
       // ⚠️ Exclude THIS file. Its own docstring explains the rule with example DDL, and a

@@ -184,7 +184,7 @@ export const ROUTE_CONTRACTS = [
         permission: 'Authenticated operator access',
         owner: 'TradeHistoryController / computeExitQuality()',
         contract:
-          'NEW (#1149). Peak excursion against a REALISED percentage derived from entry and exit prices — never from `pnl`, which is currency. Returns coverage (`nWithPeak` of `n`) and `pnlInvalid` counted separately, so an incomplete picture cannot read as a complete one. Measured first run: 400 trades, 139 with a peak, 47% reached a profit then closed at or below break-even.',
+          'NEW (#1149). Peak excursion against a REALISED percentage derived from entry and exit prices — never from `pnl`, which is currency. Returns coverage (`nWithPeak` of `n`) and `pnlInvalid` counted separately, so an incomplete picture cannot read as a complete one. Measured first run: 400 trades, 139 with a peak, 47% reached a profit then closed at or below break-even. CHANGED (#1149b, 2026-11-08): reports a BAR-DERIVED maximum beside the sampled one — `nWithBarMax`, `avgBarMaxPct`, `reachedBars`, `reachedBarsPct`, `avgTrueGiveBackPct` — from `exit-quality-bars.ts`, which computes once and caches for 6 h because the range join over 1.61M `marketbar` rows costs 14-34 s. `barStatus` is `ready | computing | error` with `barError`, so an empty bar column never renders as "nothing moved". The bar side keeps its OWN denominators and never folds into the stored-peak ones: the stored `peakProfitPct` is a SAMPLED lower bound and stays the record, while the bar figure is the measurement.',
         status: 'active',
       },
       {

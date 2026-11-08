@@ -291,7 +291,8 @@ foreach ($i in 0..($activeBrokers.Count - 1)) {
 # ── Start NestJS API ────────────────────────────────────────
 
 Write-Host "  Starting NestJS API (port 3201)…" -ForegroundColor Cyan
-$env:DATABASE_URL = 'mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs'
+# The value comes from `nest/.env` (already parsed into $envVars above), never a literal (#1252).
+$env:DATABASE_URL = $envVars['DATABASE_URL']
 $nestLog = Join-Path $LOG_DIR 'console-api.log'
 $nestErr = Join-Path $LOG_DIR 'console-api-err.log'
 # Detached for the same reason as the bridges (#765): a child started with `-NoNewWindow`

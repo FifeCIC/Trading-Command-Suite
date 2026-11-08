@@ -68,7 +68,9 @@ signal that anything went wrong. Same shape as the invariants in
 ### Adding a column (the common case)
 
 ```powershell
-$env:MYSQL_PWD='tradingcs_dev_2026'
+# ⚠️ The credential comes from `nest/.env` — never paste it here (#1252).
+. .\scripts\lib\mysql-credential.ps1
+$env:MYSQL_PWD = (Get-TcsDbCredential).Password
 & "C:\wamp64\bin\mysql\mysql9.1.0\bin\mysql.exe" -u tradingcs tradingcs -e `
   "ALTER TABLE protocol ADD COLUMN myColumn VARCHAR(50) NULL;"
 

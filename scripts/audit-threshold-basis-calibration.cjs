@@ -44,7 +44,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const MYSQL = 'C:\\wamp64\\bin\\mysql\\mysql9.1.0\\bin\\mysql.exe';
-const DB = 'mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs';
+// ⚠️ The password goes in MYSQL_PWD, never argv (visible in the process list). Sourced from
+// `nest/.env` via the ONE credential reader — see scripts/lib/mysql-cli.cjs (#1252).
+const DB_PASS = require('./lib/mysql-cli.cjs').parseMysqlUrl(require('./lib/mysql-cli.cjs').databaseUrl()).password;
+const DB = require('./lib/mysql-cli.cjs').databaseUrl();
 const BASIS_SRC = path.join(__dirname, '..', 'nest', 'src', 'modules', 'scoring', 'signal-threshold-basis.ts');
 /** A protocol that returns a real payload; used only to read the declared constant back. */
 const API = process.env.TCS_API || 'http://localhost:3201';
@@ -236,9 +239,9 @@ function readTicks(days) {
     'ORDER BY sc.timestamp',
   ].join(' ');
   const out = execFileSync(MYSQL, [
-    '--user=tradingcs', '--password=tradingcs_dev_2026', '--host=127.0.0.1',
+    '--user=tradingcs', '--host=127.0.0.1',
     '--database=tradingcs', '--skip-column-names', '--raw', '--execute=' + sql,
-  ], { maxBuffer: 512 * 1024 * 1024, encoding: 'latin1' });
+  ], { maxBuffer: 512 * 1024 * 1024, encoding: 'latin1', env: { ...process.env, MYSQL_PWD: DB_PASS } });
   const ticks = [];
   for (const line of out.split('\n')) {
     if (!line.trim()) continue;

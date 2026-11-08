@@ -45,7 +45,8 @@ const { execFileSync } = require('node:child_process');
 const MYSQL = 'C:\\wamp64\\bin\\mysql\\mysql9.1.0\\bin\\mysql.exe';
 function query(sql) {
   const out = execFileSync(MYSQL, ['-u', 'tradingcs', 'tradingcs', '-N', '-B', '-e', sql], {
-    env: { ...process.env, MYSQL_PWD: 'tradingcs_dev_2026' },
+    // Sourced from `nest/.env` via the ONE credential reader — never a literal (#1252).
+    env: { ...process.env, MYSQL_PWD: require('./lib/mysql-cli.cjs').parseMysqlUrl(require('./lib/mysql-cli.cjs').databaseUrl()).password },
     encoding: 'utf8',
     maxBuffer: 512 * 1024 * 1024,
   });

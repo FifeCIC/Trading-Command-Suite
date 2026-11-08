@@ -992,4 +992,9 @@ export const KNOWN_FEATURES = {
     'Honest API supervision + observable data retention': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
     'In-app bug report with diagnostics': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
     'Trading Area — themed surfaces and card vocabulary': { dataPersistence: 'localStorage', uiSurfaces: 16, pipelineIntegration: 'none', devCompletion: 'partial' },
+  // ── batch #52 (2026-11-08) — 3 capabilities from 3 handoffs. Theme: the app stopped keeping TWO
+  //    COPIES of the same fact. Every one of the three was a duplicate that had already drifted.
+    'Exit quality — sampled record vs true excursion': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Single-sourced architecture facts': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Repository layout gate': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
 };
