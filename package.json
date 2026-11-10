@@ -1,6 +1,7 @@
 {
   "name": "tradingcs",
   "version": "0.158.0",
+  "releaseStage": "alpha",
   "private": true,
   "license": "AGPL-3.0",
   "author": "Ryan Bayne (https://ryanbayne.uk)",
@@ -28,7 +29,7 @@
     "audit:unregistered-directives": "node scripts/why-unregistered.cjs",
     "audit:unregistered-directives:self-test": "node scripts/why-unregistered.cjs --self-test",
     "build": "vite build",
-    "prebuild": "node scripts/validate-no-notice-bar.cjs",
+    "prebuild": "node scripts/validate-no-notice-bar.cjs && node scripts/validate-arch-card-shapes.cjs",
     "build:guard": "npm run build && npm run check:bundle",
     "canary:arch-docs": "node ./scripts/canary-architecture-docs.cjs",
     "canary:bridge-5002": "pwsh -File scripts/mt5-bridge/canary-5002-bounded-connect.ps1",

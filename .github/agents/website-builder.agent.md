@@ -1,6 +1,8 @@
 ---
 description: Public website builder for Trading Command Suite. Use when: designing, building or publishing the project site on GitHub Pages, writing release notes for the public, or producing any outward-facing page. Owns the website, not the app.
-argumentHint: What public page or site change is needed?
+tools: [read, search, edit, web, github, execute, todo]
+user-invocable: true
+argument-hint: "What public page or site change is needed?"
 ---
 
 # Website Builder — Trading Command Suite

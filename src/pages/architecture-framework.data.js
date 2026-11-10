@@ -949,12 +949,32 @@ export const CONTRACT_CARDS = [
       'Controls that trigger work must call approved endpoints or queue actions and then render explicit status.',
     ],
   },
+];
+
+/**
+ * WHY these three things are settled — prose, not cards (#1253).
+ *
+ * ⚠️ THESE THREE STRINGS USED TO SIT INSIDE `CONTRACT_CARDS`, AND THEY TOOK THE WHOLE APP DOWN.
+ * Measured 2026-11-08: the page threw `item.items is not iterable` at load and the shell fell back
+ * to "App Failed to Load". `CONTRACT_CARDS` is consumed twice — `CardGrid cards={CONTRACT_CARDS}`
+ * and `CONTRACT_CARDS.flatMap((item) => [...item.items])` in the search terms — and BOTH require
+ * every entry to be an object with `title`, `summary` and an `items` array. A bare string has none
+ * of them, so a prose append does not degrade one section: it breaks every page that imports this
+ * module.
+ *
+ * The reasoning is the valuable part, so it is kept verbatim — in an array whose shape says what
+ * it is. `ArchitectureFrameworkPage` renders it under "Why these are settled".
+ */
+export const CONTRACT_CARDS_RATIONALE = [
   'How this handbook and the machine-readable reference stay in step. Both of them used to carry their own written-out copy of the route contracts, the table list, the domain map and the system spine. When someone checked, all four copies had already disagreed with each other. The route guard was only comparing route NAMES, so a contract that had gone stale still looked fine. Each of the four now comes from a single file that both surfaces import, and the build refuses to continue if the two sides stop agreeing about any of them. Note that the newer copy was not always on the same side: for the routes the reference was ahead, for the other three this page was.',
   'Why the settled-decisions register is numbered without gaps. Other code points at its rows by number, in comments, so nothing can check those pointers. One number in the middle of the register pointed at nothing at all for some time and no test complained, because the existing check only looked for repeats. Had the next author of a decision taken that number, they would have quietly redirected a citation that was already in use somewhere else. The register is now required to count up one at a time with no gaps, and a gap is filled with the missing decision rather than closed by shifting everything below it.',
   'What belongs at the top of a package folder. The backend folder had collected output from debug sessions as text files, a backup left behind by a mutation test, three compiled copies of a config file sitting beside its own TypeScript, and thirteen one-off SQL repairs — every one of them committed, in a repository anyone can read. The mess was the smaller problem. Those SQL files fell outside both database validators, purely because of the folder they were in, so relocating them revealed a table created without an engine and nineteen timestamps taken from the server clock that had never been examined. A gate now enforces the layout, and a password anywhere other than the local env file fails the build.',
+  'Where a bot gets its symbols, which is not where it gets its orders. Two tables look interchangeable and are not: the subscription table decides which orders may be placed, and the assignment table decides which symbols actually get scored. The short leg of every paired bot had no assignment at all, so it was scored by nobody, and the resulting state read exactly like a market that simply had nothing to say. Three assignments were added, and two legs of the same bot are no longer allowed to share a priority.',
+  'Two backtest settings that were previously guessed at. Equity mode is now declared: flat sizing recalculates every trade from the opening balance, compound sizing uses the running balance, and both are echoed back so one can never be mistaken for the other. Separately, a backtest no longer writes anything into the live tables at all. The expectation that removing that write would halve a five-minute run turned out to be wrong, and is recorded as wrong: the time goes into scoring each bar, not into the write.',
+  'Comparing two backtests properly. A Contrast is a pair of runs over identical bars that differ in exactly one declared input, which is a different thing from a live A/B (two arms running forward in time) and from a single backtest. A script enforces the single difference, and a glossary defines the three words. The first two runs are instructive: tightening an exit to trail closely made results worse, because it closed winners early, while lowering an entry threshold multiplied both the trade count and the net. Note that the one-difference rule is described but not yet enforced in code, so a careless comparison is still possible.',
 ]
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-11-08 (batch #52: 3 handoffs). This round was about duplicates — every one of the three changes was a fact or a file that existed in two places, and in every case the two copies had already stopped agreeing. Two of the four shared architecture facts were being kept in THIS page and two in the machine-readable reference; they are now imported into both from one home each. The decision register gained a numbering rule, and the backend folder lost fourteen committed debug artefacts while gaining a gate that also refuses to let a password into the codebase.';;
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-11-09 (batch #53). Three write-ups from 2026-11-03 were recovered from the scratch folder and recorded properly for the first time. They describe a wiring boundary that looked interchangeable and was not, two backtest settings that were previously guessed at, and the naming of a comparison method with one declared difference per pair.';;
 
 // ── SINGLE SOURCE (2026-11-07, #1246) — see src/core/architecture-route-contracts.js ────────────
 // This page used to carry its own 2,780-line copy of the 268 route contracts. It drifted from the

@@ -997,4 +997,11 @@ export const KNOWN_FEATURES = {
     'Exit quality — sampled record vs true excursion': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
     'Single-sourced architecture facts': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
     'Repository layout gate': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // ── batch #53 (2026-11-09) — 3 handoffs written 2026-11-03 into logs/ because `G:` was unmounted.
+  //    They were never recorded until now: their QA entries existed (the author added them), but no
+  //    capability row and no slice entry did. Theme: a wiring boundary that LOOKS interchangeable.
+    'Paired long/short bot legs (live scoring + per-leg results)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'Protocol focus rank': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Contrast runs (backtest comparison)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Trade-exit decision-moment observation': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'partial' },
 };

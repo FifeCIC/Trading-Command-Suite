@@ -78,7 +78,7 @@ if not, it is a small change.
 - **Lesson:** a raw render reaching `main` fails EVERY agent's build. Build-time is late for a fix
   with this blast radius — worth a pre-commit hook if it recurs.
 - **Agent:** Copilot (2026-09-23), during the requires:pro burn-down.
-### �️ `build:api` was failing THREE ways — fixed; here is the new contract
+### ⚠️ `build:api` was failing THREE ways — fixed; here is the new contract
 
 - **Found live** while closing #933: two `build:api` runs stalled with the API down for 12+ minutes.
   The process tree ended in **`Notepad.exe` holding `npm.ps1`** — the old restart ran
@@ -159,7 +159,7 @@ if not, it is a small change.
   error). An `unattributed` count now separates "cannot attribute" from "has not traded yet".
 - **Agent:** Copilot (2026-09-23). Handoff: `2026-09-23-929-ab-runnable.md`.
 
-### �🛑 `seedDefaults()` NOW CONVERGES — an out-of-date seed file is DESTRUCTIVE
+### ⚠️🛑 `seedDefaults()` NOW CONVERGES — an out-of-date seed file is DESTRUCTIVE
 
 - **What changed (#833, closed):** `POST /api/trading/strategies/seed` no longer skips bots that
   already exist. It now compares each seeded field and **writes the seed's value over the database**.

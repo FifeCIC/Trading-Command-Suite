@@ -861,7 +861,19 @@ price, `price` came back `0`, and the per-symbol cap refused:
    * (`"TCS X"` vs `"X 119"`) render as two strategies. Do not hand-roll a second parse.
    * @see nest/src/modules/trading/mt5-trading.service.ts placeOrder() line ~98
    */
-  async closePosition(ticket: number): Promise<{ success: boolean; error?: string }> {
+  async closePosition(
+    ticket: number,
+    /**
+     * Why this close happened. Defaults to `user:manual` — the per-trade operator close.
+     *
+     * ⚠️ A BULK sweep MUST pass its own reason (#2026-11-09). `closeProfitable()` closed ten winners
+     * in 660 ms and every row recorded `user:manual`, so 64% of that day's profit looked like a
+     * strategy result in the trade table. A caller that sweeps the book is answering "bank what is
+     * green", which is a decision about the book, not about the signal — and only the reason column
+     * can say which happened.
+     */
+    closeReason: string = CLOSE_REASONS.USER_MANUAL,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       // ⚠️ #1033 — SEND THE CLOSE TO THE BRIDGE THAT HOLDS THE TICKET, not to the primary.
       // Before this, a broker-3 position was closed by asking broker 2, which has never heard of
@@ -942,7 +954,7 @@ price, `price` came back `0`, and the per-symbol cap refused:
           // ⚠️ #884 — the strategy must ride the close too. It was parsed 50 lines above and
           // then DROPPED here: rows closed through this branch kept strategy=NULL forever, which
           // is why the Strategy Comparison page showed 2 phantom rows out of 155 closes.
-          await this.tradeRecorder.close(existing.id, exitPrice, pnl, CLOSE_REASONS.USER_MANUAL, strategyFromComment);
+          await this.tradeRecorder.close(existing.id, exitPrice, pnl, closeReason, strategyFromComment);
         } else {
           await this.tradeRecorder.record({
             symbol: pos.symbol,
@@ -1045,7 +1057,9 @@ price, `price` came back `0`, and the per-symbol cap refused:
     let closed = 0;
     let failed = 0;
     for (const pos of unique) {
-      const result = await this.closePosition(pos.ticket);
+      // #2026-11-09 — a SWEEP of the whole book. Same reasoning as closeProfitable(): a bulk close
+      // must not be recorded as if a person chose this trade.
+      const result = await this.closePosition(pos.ticket, CLOSE_REASONS.USER_CLOSE_PROFITABLE);
       result.success ? closed++ : failed++;
     }
     return { closed, failed, brokers: [...new Set(all.map((p) => p.brokerId))].sort() };
@@ -1080,7 +1094,10 @@ price, `price` came back `0`, and the per-symbol cap refused:
     const closedTickets: { ticket: number; symbol: string; profit: number }[] = [];
 
     for (const pos of profitable) {
-      const result = await this.closePosition(pos.ticket);
+      // #2026-11-09 — a SWEEP, not a per-trade close. See CLOSE_REASONS.USER_CLOSE_PROFITABLE:
+      // recording this as `user:manual` made £91.14 of one day's profit indistinguishable from a
+      // strategy result in the trade table.
+      const result = await this.closePosition(pos.ticket, CLOSE_REASONS.USER_CLOSE_PROFITABLE);
       if (result.success) {
         closed++;
         totalPnl += pos.profit;

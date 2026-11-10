@@ -8416,6 +8416,28 @@ const QA_CHECKLIST = [
         priority: 'high',
         versionNote: '2026-11-08 - batch #52 (#1252). 14 tracked scratch files removed from nest/ root in a PUBLIC repo. Location was not cosmetic: 13 SQL files were outside every DDL validator because of where they sat, so moving them in surfaced 1 missing ENGINE and 19 local-time defaults for the first time.',
       },
+      {
+        id: 'qa-exitobserver-001',
+        area: 'Trading',
+        system: 'nest/src/modules/trading/stop-guardian.service.ts + strategy-seed-data.ts + trading-strategy.service.ts + sim_tsl_event / exhaustion_event',
+        name: 'The sim-TSL observer is armed, survives a re-seed, and records without acting',
+        procedure: "SELECT name, active, simTslEnabled, simTslActivationPct FROM trading_strategy WHERE name IN ('Silver Speed Scalp','Tokyo USDJPY Session','Tech Giants - NVDA'). Then set one row's simTslEnabled to 0 and POST /api/trading/strategies/seed?dryRun=true, then POST it again to apply.",
+        expected: 'All three show active = 0 and simTslEnabled = 1. After the deliberate break, the dry run reports updated: 1 with fields ["simTslEnabled","simTslActivationPct","simTslDistancePct"], and applying it restores 1 / 0.5 / 0.25. sim_tsl_event staying at 0 rows is EXPECTED while no bot is active, not a failure. WARNING: the slot was first written into the create block only, so a re-seed reported unchanged: 3 and left simTslEnabled = 0 — a seeder that can insert a slot but can never repair one.',
+        category: 'Trading',
+        priority: 'high',
+        versionNote: '2026-11-09 - batch #53 (#1188, recorded 2026-11-03). Record-only observers: both write a row with action hardcoded "recorded" and place nothing. The actuator is deliberately NOT built — it is a maths change needing a copied configuration.',
+      },
+      {
+        id: 'qa-contrast-001',
+        area: 'Trading',
+        system: 'scripts/run-contrast.cjs + POST /api/backtest/run + docs/GLOSSARY.md',
+        name: 'A contrast changes exactly ONE input and its verdict is attributable',
+        procedure: 'From the repo root run node scripts/run-contrast.cjs, then read the live record: SELECT COUNT(*), SUM(pnl>0), ROUND(SUM(pnl),2) FROM trade WHERE status=\'closed\' AND pnlInvalid=0 AND strategy LIKE \'Tokyo USDJPY%\'.',
+        expected: 'The script prints "declared difference(s): 1 (stopPlan)" and a verdict. The trade COUNT is identical (38) because a stop change alters exits, not entries — measured 2026-11-03: baseline +2,438 / variant -334.91, so the trailing stop is REFUTED. WARNING: the live record for that beam is 5 trades / 4 wins / +40.18, which is 80% against the backtest 84% — that is agreement, NOT contradiction. The fleet 30-day figure (29.5% / -575.66) is a different population and must never be compared with a single bot.',
+        category: 'Trading',
+        priority: 'medium',
+        versionNote: '2026-11-09 - batch #53 (#1188). The one-declared-difference rule is stated and used but NOT machine-enforced: compareRuns() reports comparability warnings and not the count of differing inputs (register row 145, unguarded).',
+      },
     ];
 
 export default QA_CHECKLIST;

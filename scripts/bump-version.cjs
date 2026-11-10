@@ -78,6 +78,33 @@ function versionsAgree(a, b) {
 }
 
 /**
+ * stageBlocks(next, stage) — does moving to `next` contradict the DECLARED release stage?
+ *
+ * ⚠️ WHY THIS EXISTS. Owner, 2026-11-09: *"I've decided the project is still in alpha so lets not
+ * move onto 1.0.0 just yet."* That is a decision, and a decision nobody can violate by running the
+ * normal command is not recorded — it is a preference. `bump-version.cjs` was the exact command that
+ * could undo it, silently, in one word (`major`).
+ *
+ * SemVer already says what `1.0.0` means: *"the public API"*. While the stage is `alpha`, the app is
+ * in `0.y.z`, where *"anything MAY change"* — so a bump to `1.0.0` is a CLAIM the project is not
+ * making, not a bigger increment.
+ *
+ * `stage` comes from `package.json` → `"releaseStage"`. Absent means `alpha`: **fail closed**, because
+ * a missing declaration must never read as permission to ship 1.0.0.
+ */
+function stageBlocks(next, stage) {
+  const declared = String(stage || 'alpha').trim().toLowerCase();
+  if (declared === 'stable') return null;
+  const major = Number(/^(\d+)\./.exec(String(next))?.[1]);
+  if (!Number.isFinite(major) || major < 1) return null;
+  return (
+    `refusing to go to ${next}: the declared release stage is "${declared}" (package.json releaseStage), ` +
+    'and 1.0.0 is the semver claim that the public API is stable. Set `"releaseStage": "stable"` in ' +
+    'package.json deliberately, with the owner, before crossing 1.0.0.'
+  );
+}
+
+/**
  * writeVersion(text, version) — set the version, preserving the file's own formatting.
  * Deliberately not a JSON round-trip: these package.json files are hand-formatted, and a
  * re-serialise would reformat every line, burying a one-line change in a whole-file diff.
@@ -138,6 +165,16 @@ function selfTest() {
   check('agree on equal', () => eq(versionsAgree('0.114.0', '0.114.0'), true));
   check('DISAGREE on different', () => eq(versionsAgree('0.114.0', '0.113.0'), false));
 
+  // ── The release-stage gate, canaried BOTH ways. The failing case is the owner's 2026-11-09
+  //    decision: the project is alpha, and `major` was one word away from crossing it.
+  check('stage: alpha BLOCKS 1.0.0', () => eq(stageBlocks('1.0.0', 'alpha') !== null, true));
+  check('stage: alpha BLOCKS an exact 2.0.0', () => eq(stageBlocks('2.0.0', 'alpha') !== null, true));
+  check('stage: alpha ALLOWS 0.159.0', () => eq(stageBlocks('0.159.0', 'alpha'), null));
+  check('stage: alpha ALLOWS 0.99.99', () => eq(stageBlocks('0.99.99', 'alpha'), null));
+  check('stage: stable ALLOWS 1.0.0', () => eq(stageBlocks('1.0.0', 'stable'), null));
+  check('stage: an ABSENT declaration is alpha (fails closed, never permits)', () => eq(stageBlocks('1.0.0', undefined) !== null, true));
+  check('stage: a nonsense stage is not permission', () => eq(stageBlocks('1.0.0', 'whatever') !== null, true));
+
   // ⚠️ The INDENTED shape, matching the real files. The first draft passed only a column-1
   // version key, which no real package.json has — so this case is the one that matters.
   check('writeVersion replaces an INDENTED top-level key', () =>
@@ -181,7 +218,7 @@ function readVersions() {
     try { parsed = JSON.parse(text); }
     catch (e) { throw new Error(`${f} is not valid JSON: ${e.message}`); }
     if (typeof parsed.version !== 'string') throw new Error(`no top-level "version" in ${f}`);
-    return { file: f, rel: path.relative(ROOT, f), text, version: parsed.version };
+    return { file: f, rel: path.relative(ROOT, f), text, version: parsed.version, releaseStage: parsed.releaseStage };
   });
 }
 
@@ -230,6 +267,14 @@ function main() {
   let next;
   try { next = nextVersion(root.version, arg); }
   catch (e) { console.error(`  ✖  ${e.message}`); process.exit(2); }
+
+  // ⚠️ BEFORE any file is written. A gate that runs after the write is a report, not a gate.
+  const blocked = stageBlocks(next, root.releaseStage ?? nest.releaseStage);
+  if (blocked) {
+    console.error(`  ✖  ${blocked}`);
+    console.error(`      current: ${root.version} (releaseStage: ${root.releaseStage || 'unset → alpha'})`);
+    process.exit(2);
+  }
 
   if (root.version === next && nest.version === next) {
     console.log(`  ✅ both files already at ${next} — nothing to do.`);

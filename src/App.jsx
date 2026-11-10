@@ -851,6 +851,7 @@ function AppShell({ directContent = null, directArea = null, directView = null }
                       {/* ⚠️ Each link is a BLOCK with vertical padding: measured 2026-11-07, a bare
                           inline anchor here was 18px tall — under the 24px WCAG 2.2 target minimum, and
                           a help menu is exactly where a frustrated user misclicks. */}
+                      <li><a style={{ display: 'block', padding: '0.35rem 0' }} href="https://www.youtube.com/channel/UCCQaPo0PH_DlRUx2MyHu3LA" target="_blank" rel="noreferrer">Watch the walkthroughs (YouTube)</a></li>
                       <li><a style={{ display: 'block', padding: '0.35rem 0' }} href="https://github.com/FifeCIC/Trading-Command-Suite/issues/new/choose" target="_blank" rel="noreferrer">Report a problem</a></li>
                       <li><a style={{ display: 'block', padding: '0.35rem 0' }} href="https://github.com/FifeCIC/Trading-Command-Suite/discussions" target="_blank" rel="noreferrer">Ask a question</a></li>
                       <li><a style={{ display: 'block', padding: '0.35rem 0' }} href="https://discord.gg/8gRFkhbbfg" target="_blank" rel="noreferrer">Discord — quickest answer</a></li>

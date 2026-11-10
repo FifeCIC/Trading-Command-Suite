@@ -59,6 +59,15 @@ const SCAN_ROOTS = [
   'scripts',
   '.github',
   'docs',
+  // ⚠️ ADDED 2026-11-09. These two are the PUBLIC surfaces — `wiki/*.md` is published to the GitHub
+  // wiki by `scripts/publish-public-docs.cjs`, and `site/` IS the GitHub Pages deployment. They were
+  // the only folders NOT scanned, which is the worst possible omission: a corrupted character here is
+  // the one nobody can fix by editing a file, because the publish run overwrites the wiki page from
+  // this source. Measured the same day: `wiki/What-It-Does.md` carried two destroyed emoji
+  // (`U+FFFD`) and this validator reported ✅ OK, because neither the folder nor the character was
+  // covered.
+  'wiki',
+  'site',
 ];
 const SCAN_ROOT_FILES = ['README.md', 'SETUP.md', 'DEVELOPMENT.md', 'NEXT-AGENT.md', 'USER_GUIDE.md', 'CHANGELOG.md'];
 const SCAN_EXTS = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.json', '.sql', '.md', '.css', '.html', '.ps1', '.py', '.yml', '.yaml', '.prisma']);
@@ -114,6 +123,23 @@ const ALLOWLIST = new Map();
  */
 const ARROW_ARTIFACT = />\u2019|\u2019</;
 
+/**
+ * THIRD SIGNATURE — the REPLACEMENT CHARACTER `U+FFFD`.
+ *
+ * ⚠️ ADDED 2026-11-09, and it is the one signature that needs no heuristics: `U+FFFD` is what a
+ * decoder emits when it KNOWS the bytes were unreadable. Its presence in a source file is never
+ * correct — it is a character the author did not write.
+ *
+ * Measured that day: `wiki/What-It-Does.md` had `> \uFFFD **See it before reading about it:**` — an
+ * emoji destroyed by a round-trip — and this validator reported **✅ OK**, because `U+FFFD` is not in
+ * `MOJIBAKE_CHARS` (it has no lead byte to match). The file is a WIKI SOURCE published to a public
+ * page, so the broken glyph was live.
+ *
+ * `validate-decisions.cjs` already treats `U+FFFD` in a guard-status cell as a hard failure for the
+ * same reason: an unreadable character is indistinguishable from an absent one.
+ */
+const REPLACEMENT_CHAR = /\uFFFD/;
+
 function walk(dir, out) {
   let entries;
   try {
@@ -148,7 +174,8 @@ for (const full of files) {
   const body = fs.readFileSync(full, 'utf8');
   const hasMojibake = MOJIBAKE_CHARS.test(body);
   const hasArrow = ARROW_ARTIFACT.test(body);
-  if (!hasMojibake && !hasArrow) continue;
+  const hasReplacement = REPLACEMENT_CHAR.test(body);
+  if (!hasMojibake && !hasArrow && !hasReplacement) continue;
   const allowReason = ALLOWLIST.get(rel);
   const lines = [];
   const kinds = new Set();
@@ -160,6 +187,10 @@ for (const full of files) {
     if (ARROW_ARTIFACT.test(line)) {
       if (!lines.includes(i + 1)) lines.push(i + 1);
       kinds.add('botched-arrow');
+    }
+    if (REPLACEMENT_CHAR.test(line)) {
+      if (!lines.includes(i + 1)) lines.push(i + 1);
+      kinds.add('replacement-char');
     }
   });
   hits.push({ rel, lines, allowReason, kinds: [...kinds].join('+') });

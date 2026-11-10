@@ -119,6 +119,80 @@ const TXT_CONSUMED = [
 ];
 
 /**
+ * R7 — a HANDOFF must not be sitting in `logs/`.
+ *
+ * Measured 2026-11-09: three complete, shape-valid handoffs dated 2026-11-03 were found in `logs/`,
+ * each carrying the line *"⚠️ Written to `logs/` — `G:` is unmounted."* They had been invisible to
+ * the Librarian for six days. Their QA entries existed (the author wrote them directly) which is
+ * exactly what made the omission invisible: the work looked recorded.
+ *
+ * ⚠️ R1–R4 READ `git ls-files` AND THIS CANNOT. `logs/` is gitignored, so a stray handoff is not
+ * tracked and no `git`-based rule can see it. This rule reads the DISK. That is the whole point:
+ * the folder where the mistake happens is the folder the other rules are blind to.
+ *
+ * ⚠️ WHAT COUNTS AS A HANDOFF — YAML frontmatter carrying `area:` AND `type:` AND `date:`. That is
+ * narrow on purpose: `logs/` may legitimately hold notes and issue drafts, and a guard that fires
+ * on those gets ignored.
+ */
+const HANDOFF_FRONTMATTER = [/^---\r?\n/, /^date:\s*\d{4}-\d{2}-\d{2}\s*$/m, /^area:\s*\S+/m, /^type:\s*\S+/m];
+
+/** Where a handoff belongs, for the error message. The store lives OUTSIDE this repo. */
+const HANDOFF_STORE = 'G:\\My Drive\\Project Management\\Live\\Trading-Command-Suite-Documentation\\handoff';
+
+/** R7 — pure. `entries` is `[{ file, text }]` for files found on disk under logs/. */
+function checkStrayHandoffs(entries) {
+  const errors = [];
+  for (const { file, text } of entries) {
+    // ⚠️ The PATH is part of the rule, so it is enforced HERE rather than left to the caller.
+    // The first version trusted `readLogsOnDisk()` to pass only `logs/` paths; the self-test
+    // immediately caught that a `docs/` path was then reported as a stray handoff.
+    if (!/^logs\//.test(file)) continue;
+    if (!/\.md$/i.test(file)) continue;
+    const head = text.slice(0, 400);
+    if (!HANDOFF_FRONTMATTER.every((re) => re.test(head))) continue;
+    errors.push(
+      `${file}: a HANDOFF is sitting in logs/. \`logs/\` is gitignored, so this file is invisible to ` +
+        'the Librarian and will never reach the QA page, the Capability Map or the Architecture ' +
+        `Framework. Move it to the handoff store (${HANDOFF_STORE}) — the reason it landed here is ` +
+        'almost always that the G: drive was unmounted, which is a reason to write to the repo, not to ' +
+        'a folder nothing reads.',
+    );
+  }
+  return errors;
+}
+
+/**
+ * Everything on disk under `logs/` (recursive), as `{ file, text }`. Untracked by definition — that
+ * is why R7 needs its own reader rather than the `git ls-files` list.
+ */
+function readLogsOnDisk() {
+  const out = [];
+  const root = path.join(ROOT, 'logs');
+  const walk = (dir) => {
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) walk(full);
+      else if (/\.md$/i.test(e.name)) {
+        try {
+          out.push({ file: path.relative(ROOT, full).replace(/\\/g, '/'), text: fs.readFileSync(full, 'utf8') });
+        } catch {
+          // A file that cannot be read cannot be judged; it is reported by readTextFiles for tracked
+          // files, and for an untracked one there is nothing to compare it against. Skipped, not failed.
+        }
+      }
+    }
+  };
+  walk(root);
+  return out;
+}
+
+/**
  * R5/R6 — credentials belong in `.env`, never in tracked source (#1252).
  *
  * Measured 2026-11-07: the dev database password was a literal in **21 tracked files** in a PUBLIC
@@ -375,6 +449,13 @@ function selfTest() {
     ['R6: an UNQUOTED doc comment is not this rule', () => checkCredentials([{ file: 'a.ts', text: '// FINNHUB_API_KEY=your_free_key_here' }]), false],
     ['R6: a comparison is not an assignment', () => checkCredentials([{ file: 'a.ts', text: "if (process.env.X_PASSWORD === 'abc') {}" }]), false],
     ['R6: a placeholder is not a literal', () => checkCredentials([{ file: 'a.ps1', text: '$MT5_PASSWORD = "not-a-password"' }]), false],
+
+    // ── R7 — a handoff sitting in logs/. The failing case is the REAL one found 2026-11-09:
+    //    three complete handoffs, invisible to the Librarian for six days.
+    ['R7: a handoff in logs/ (the real 2026-11-09 defect)', () => checkStrayHandoffs([{ file: 'logs/2026-11-03-1188-x.md', text: '---\r\ndate: 2026-11-03\r\narea: trading\r\ntype: feature\r\n---\r\n\r\n## What Changed\r\n' }]), true],
+    ['R7: an ordinary note in logs/ is not this rule', () => checkStrayHandoffs([{ file: 'logs/notes.md', text: '# scratch\n\nsome thoughts\n' }]), false],
+    ['R7: frontmatter missing `area` is not a handoff', () => checkStrayHandoffs([{ file: 'logs/x.md', text: '---\ndate: 2026-11-03\ntype: feature\n---\n' }]), false],
+    ['R7: the same content OUTSIDE logs/ is not this rule', () => checkStrayHandoffs([{ file: 'docs/2026-11-03-x.md', text: '---\ndate: 2026-11-03\narea: trading\ntype: feature\n---\n' }]), false],
   ];
 
   let bad = 0;
@@ -389,7 +470,7 @@ function selfTest() {
     console.log(`\n  ✗ ${bad} self-test case(s) misbehaved — the rules are not doing what this file claims.`);
     return 1;
   }
-  console.log(`  ✅ self-test: ${cases.length} cases — all four rules were observed to fail on the measured 2026-11-07 files, valid input was observed to pass, and generated/archived files were observed NOT to fire.`);
+  console.log(`  ✅ self-test: ${cases.length} cases — every rule was observed to fail on a REAL file measured in this repo (2026-11-07 layout, 2026-11-07 credentials, 2026-11-09 stray handoff), valid input was observed to pass, and generated/archived files were observed NOT to fire.`);
   return 0;
 }
 
@@ -417,6 +498,7 @@ function main() {
     ...checkScratch(files),
     ...checkTextDumps(files),
     ...checkCredentials(scanned.entries),
+    ...checkStrayHandoffs(readLogsOnDisk()),
   ];
 
   // ⚠️ Unreadable input is its own failure, not a footnote. See readTextFiles().

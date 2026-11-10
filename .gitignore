@@ -5,8 +5,18 @@ dist/
 .DS_Store
 .vscode/
 
-# Backtest data archives (large generated files)
-nest/data/backtest-archive/*.gz
+# Backtest data archives — LOCAL DATA, never repository content (2026-11-09).
+#
+# ⚠️ This rule used to be `nest/data/backtest-archive/*.gz`, which covered the archives but NOT
+# `index.json` — so the generated index stayed TRACKED and churned on every export. And a
+# `data/backtest-archive/` copy at the REPO ROOT was tracked too (10.4 MB, 4 archives, created
+# 2026-07/08) while the service reads `process.cwd() + data/backtest-archive`, i.e. `nest/data/`.
+# The root copy was STRANDED: nothing could read it, and the four archives it held were the only
+# copies of those date ranges. They were moved into `nest/data/backtest-archive/` and indexed, so
+# `GET /api/system/backtest-archive/import/:id` now serves them (verified: 10,000 rows returned).
+#
+# 282.7 MB lives there: a cache plus a generated index, neither of which a clone can use.
+nest/data/
 
 # Logs (generated at runtime)
 nest/logs/

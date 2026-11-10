@@ -24,7 +24,7 @@ audit chain that can answer *"why did it buy that?"* for every order.
 
 | If you want to… | Go to |
 |---|---|
-| **See what it looks like** | [18 screens from the alpha](https://fifecic.github.io/Trading-Command-Suite/showcase/) — captioned, with a glossary |
+| **See what it looks like** | [17 screens from the alpha](https://fifecic.github.io/Trading-Command-Suite/showcase/) — captioned, with a glossary |
 | **Install it** | [Installing and running](Installing) — two tracks, or read [`SETUP.md`](https://github.com/FifeCIC/Trading-Command-Suite/blob/master/SETUP.md) |
 | **Know what it can do** | [What it does](What-It-Does) |
 | **Understand the engine** | [How it works](How-It-Works) — the pipeline from a price to an order |

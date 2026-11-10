@@ -76,6 +76,7 @@ const path = require('node:path');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const INSTRUCTIONS_DIR = path.join(REPO_ROOT, '.github', 'instructions');
+const AGENTS_DIR = path.join(REPO_ROOT, '.github', 'agents');
 const ATTENTION_BOARD = path.join(REPO_ROOT, '.github', 'AGENT-ATTENTION.md');
 const LEGACY_HANDOFF_DIR = path.join(REPO_ROOT, '.github', 'handoffs');
 
@@ -448,6 +449,93 @@ if (fs.existsSync(DOCS_DIR)) {
     );
   }
 }
+
+// ── 10. an AGENT FILE THE CLIENT CANNOT LOAD IS AN AGENT THAT DOES NOT EXIST ──
+//
+// ⚠️ Measured 2026-11-09: `.github/agents/technical-wiki.agent.md` and `website-builder.agent.md`
+// declared `argumentHint:` (camelCase) and neither `tools:` nor `user-invocable:`. They were absent
+// from the agent picker entirely — the client silently ignored them — while the other three in the
+// same folder (`librarian`, `primary`, `trading-watchdog`) appeared normally. So two agents had been
+// unusable for however long, and NOTHING validated this folder: this script only ever read
+// `.github/instructions/`. A file that looks like an agent and is never loaded is the same defect as
+// a rule that never fires — it reads like a capability and provides none.
+//
+// ⚠️ The key names are KEBAB-CASE. VS Code's agent frontmatter is `argument-hint`, not `argumentHint`.
+// A camelCase key is not an error the file parser reports; it is simply not a key it knows, so the
+// field silently means nothing.
+const AGENT_REQUIRED = ['description'];
+const AGENT_KNOWN_KEYS = new Set([
+  'name', 'description', 'tools', 'agents', 'argument-hint', 'user-invocable',
+  'hooks', 'model', 'target', 'disable-model-invocation',
+]);
+const AGENT_CAMEL_TRAPS = {
+  argumentHint: 'argument-hint',
+  userInvocable: 'user-invocable',
+  disableModelInvocation: 'disable-model-invocation',
+};
+
+function checkAgentFiles() {
+  if (!fs.existsSync(AGENTS_DIR)) {
+    warn('agents-dir-missing', '.github/agents does not exist', 'With no agent folder, the picker offers only built-in agents.');
+    return 0;
+  }
+  const files = fs.readdirSync(AGENTS_DIR).filter((f) => f.endsWith('.agent.md'));
+  for (const name of files) {
+    const body = fs.readFileSync(path.join(AGENTS_DIR, name), 'utf8');
+    const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(body);
+    if (!m) {
+      fail(
+        'agent-no-frontmatter',
+        `.github/agents/${name} has no YAML frontmatter`,
+        'An agent without frontmatter is not loadable. It needs at least a `description:`.',
+      );
+      continue;
+    }
+    const keys = [...m[1].matchAll(/^([A-Za-z][\w-]*):/gm)].map((k) => k[1]);
+    for (const k of keys) {
+      if (AGENT_CAMEL_TRAPS[k]) {
+        fail(
+          'agent-camelcase-key',
+          `.github/agents/${name}: \`${k}:\` is not a recognised key — it is \`${AGENT_CAMEL_TRAPS[k]}:\``,
+          `Frontmatter keys here are kebab-case. \`${k}\` is silently ignored, which is how this file went unloadable.`,
+        );
+      } else if (!AGENT_KNOWN_KEYS.has(k)) {
+        warn(
+          'agent-unknown-key',
+          `.github/agents/${name}: \`${k}:\` is not a known agent key`,
+          `Known: ${[...AGENT_KNOWN_KEYS].join(', ')}. An unknown key does nothing — it is not a warning the client shows you.`,
+        );
+      }
+    }
+    for (const req of AGENT_REQUIRED) {
+      if (!keys.includes(req)) {
+        fail(
+          'agent-missing-key',
+          `.github/agents/${name} declares no \`${req}\``,
+          'The client needs it to list the agent at all.',
+        );
+      }
+    }
+    if (!keys.includes('tools')) {
+      warn(
+        'agent-no-tools',
+        `.github/agents/${name} declares no \`tools:\` list`,
+        'Without it the agent runs with whatever the client defaults to, which is not a decision anyone recorded.',
+      );
+    }
+    if (!keys.includes('user-invocable')) {
+      warn(
+        'agent-no-user-invocable',
+        `.github/agents/${name} does not declare \`user-invocable: true\``,
+        'Unless deliberately hidden from the picker, declare it — an agent nobody can select is not an agent.',
+      );
+    }
+  }
+  return files.length;
+}
+
+const agentFileCount = checkAgentFiles();
+notes.push(`scanned ${agentFileCount} agent file(s) in .github/agents`);
 
 // ── report ───────────────────────────────────────────────────────────────────
 

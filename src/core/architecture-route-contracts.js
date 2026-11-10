@@ -448,7 +448,15 @@ export const ROUTE_CONTRACTS = [
           '(it had been discarding every SELL: 80 sell signals, 47 bars scoring at least 10, 0 entries). (2) SERIES: ' +
           '`fullScoreSeries: true` returns every scored bar; the default response is capped to the last `MAX_SCORE_SERIES_ROWS` ' +
           '(2,000), so a bar count read from `scoreSeries` is a floor, not a count. (3) COST: the same arm went 214 s → 7.5 s ' +
-          'because the protocol rarity distribution is read at most once per 60 s; the request and response SHAPE did not change.',
+          'because the protocol rarity distribution is read at most once per 60 s; the request and response SHAPE did not change. ' +
+          'CHANGED (#1187, 2026-11-03): (4) EQUITY MODE — `equityMode` is `\'flat\'` (the DEFAULT) or `\'compound\'`; `flat` sizes every ' +
+          'trade from the starting balance and `compound` from the RUNNING one. The mode is echoed on `execution` with `endingEquity` and ' +
+          '`equityChangePct` in BOTH modes, so a compounded run can never be mistaken for a flat one (`INV-BACKTEST-EQUITY-MODE`). ' +
+          'Measured on forex-session-v1 USDJPY 1h: an IDENTICAL 316 trades / 72% win rate in both modes, with different `netPnl` ' +
+          '(9,728.72 flat vs 16,347.42 compound). (5) A simulation writes NOTHING to the live tables — `opts.simulation` is refused at the ' +
+          'top of `storeSnapshot()`, which is the single write point (`INV-BACKTEST-NO-WRITES`). ⚠️ Honest-partial: removing that write was ' +
+          'PREDICTED to halve a 5m run and does NOT — 5m is 106-112 s either way, because the write is fire-and-forget and was never on the ' +
+          'scoring loop path. The real cost is the per-bar scoring itself (12.4 ms/bar at 5m, 13.8 at 1h), so #1182\'s "5m under 60 s" stays open.',
         status: 'active',
       },
 

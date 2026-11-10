@@ -70,6 +70,20 @@ export const CLOSE_REASONS = {
   SYSTEM_RECONCILED: 'system:reconciled',
   /** Closed through the API/UI by a person. */
   USER_MANUAL: 'user:manual',
+  /**
+   * The BULK "close profitable" (or "close all") sweep by a person — 2026-11-09.
+   *
+   * ⚠️ THIS IS A VALUE OF ITS OWN, NOT `USER_MANUAL`, and the reason is measured. On 2026-11-09
+   * `POST /trading/mt5/close-profitable` closed TEN winners inside 660 ms and every row recorded
+   * `user:manual` — so £91.14 of that day's £141.83 (64%) was indistinguishable in the trade table
+   * from an exit the machine chose. A reader computing a win rate or a per-trade edge then counts a
+   * harvest as a strategy result, and a single click looks like a strategy turning a corner.
+   *
+   * A bulk sweep answers a different question from a per-trade close: it says "bank what is green",
+   * which is a decision about the BOOK, not about the signal that opened the trade. Collapsing the
+   * two made the day unreadable — the same defect shape as `SYSTEM_SESSION_EXIT` above.
+   */
+  USER_CLOSE_PROFITABLE: 'user:close-profitable',
   /** MT5 filled the stop loss. */
   BROKER_SL: 'broker:sl',
   /** MT5 filled the take profit. */

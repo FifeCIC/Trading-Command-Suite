@@ -289,6 +289,48 @@ excuse for a longer row.
 ⚠️ **Not for technical follow-ups with no fork.** Those are GitHub issues. If an agent can settle it
 by measuring, it does not belong in the queue.
 
+## 🤖 The agent picker — what is in it, and why it looks crowded (measured 2026-11-09)
+
+`<no background agents>` is the first thing to check: **an agent in the menu is not an agent running.**
+The picker lists *definitions*; `list_agents` lists *work*.
+
+**25 agent definitions are registered on this machine**, from three sources:
+
+| Source | Count | Where |
+|---|---|---|
+| Installed plugins (awesome-copilot marketplace) | **17** | `~/.vscode/agent-plugins/…/ref_marketplace/plugins/<name>/com.github.copilot/agents/` |
+| This workspace | **5** | `.github/agents/*.agent.md` |
+| User profile | **3** | `~/.copilot/agents/*.agent.md` (`r2b2`, `intranet-auditor`, `copy-from-other`) |
+
+Per plugin: `project-planning` 7 · `ai-team-orchestration` 3 · `database-data-management` 2 ·
+`frontend-web-dev` 2 · `awesome-copilot` 2 · `php-mcp-development` 1.
+
+⚠️ **The same agent is listed TWICE.** Each plugin agent appears under its namespaced id
+(`project-planning:plan`) *and* as `vscode-agent-<sha>` with an identical description. **No file on
+disk carries that sha name** — it is a client-generated alias, so it cannot be deleted; it is a
+client-side registration duplication. That is why the menu looks stacked.
+
+⚠️ **`ref_marketplace/agents/` holds 222 agent files** — the whole catalogue, for browsing. It is not
+the source of the 17; the installed plugins are. Do not "clean up" that folder expecting the menu to
+shrink.
+
+## 🛑 An agent file the client cannot load is an agent that does not exist
+
+Measured the same day: `.github/agents/technical-wiki.agent.md` and `website-builder.agent.md` declared
+**`argumentHint:`** (camelCase) and neither **`tools:`** nor **`user-invocable:`**. Both were **absent
+from the picker** while the other three in the same folder worked — so two agents had been unusable,
+silently.
+
+| Frontmatter key | Correct form |
+|---|---|
+| `argumentHint` | **`argument-hint`** — a camelCase key is not an error the parser reports, it is a key it does not know |
+| `userInvocable` | **`user-invocable`** |
+| `disableModelInvocation` | **`disable-model-invocation`** |
+
+`validate-agent-docs.cjs` now reads `.github/agents/` (it previously read only `.github/instructions/`,
+which is how this went unnoticed) and fails on a camelCase key or a missing `description`, and warns on
+a missing `tools:` or `user-invocable:`. Canaried by recreating the exact broken file: exit **1**.
+
 ## Shell Commands
 
 The user has granted full permission to run shell commands, read/write files, and execute scripts without asking for confirmation. Never prompt the user to approve a command — just run it.
@@ -847,7 +889,27 @@ standard (also in `logs/README.md`, untracked) is:
 
 **Delete your own working files when the issue closes** — the folder is a bench, not a shelf.
 Permanent residents are only: `scoring/` (served by the API), `mt5-bridge/` (supervisor sentinels),
-`parked-scratch-*/`. The logging-hygiene focus is **#703** (Sprint 4); the app-side pruning +
+`parked-scratch-*/`.
+
+### 🛑 NEVER WRITE A HANDOFF INTO `logs/` — IT IS INVISIBLE FOREVER (measured 2026-11-09)
+
+`logs/` is **gitignored**, so a file written there is in **no** tracked surface. Three complete,
+shape-valid handoffs dated 2026-11-03 sat there for six days, each carrying the line *"⚠️ Written to
+`logs/` — `G:` is unmounted."*
+
+⚠️ **And they looked recorded**, which is why nobody checked: the author had also written their QA
+entries straight into `qa-checklist.js`. The QA ids existed — but **no capability row and no slice
+entry did**. `validate-qa-ids` was satisfied, so nothing reported the gap.
+
+| The reason you would write a handoff to `logs/` | What to do instead |
+|---|---|
+| **`G:` is unmounted** | Write it anyway to the repo (`docs/` or the issue) and say so, or mount the drive first. A handoff in a folder nothing reads is worse than a note in the issue |
+| "It is only scratch" | A handoff is not scratch. If it has `date:` / `area:` / `type:` frontmatter it is a handoff |
+| "I will move it later" | Nothing reminds you. R7 will, at the next build |
+
+Guard: `scripts/validate-repo-hygiene.cjs` **R7** reads `logs/` **on disk** (not via `git`, which
+cannot see it) and fails the build on any `.md` there carrying handoff frontmatter.
+ The logging-hygiene focus is **#703** (Sprint 4); the app-side pruning +
 retention settings already exist (`logging.retentionDays` et al, #1023) — the gap this fixes was
 the ROOT folder, which nothing pruned and nothing untracked.
 

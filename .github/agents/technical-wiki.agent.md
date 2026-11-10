@@ -1,6 +1,8 @@
 ---
 description: Technical wiki maintainer for Trading Command Suite. Use when: establishing or extending the repo wiki, documenting how a subsystem works, writing the theory behind a mechanism, or making the codebase navigable for new contributors. Owns the wiki, not the app.
-argumentHint: What subsystem or concept needs documenting?
+tools: [read, search, edit, web, github, todo]
+user-invocable: true
+argument-hint: "What subsystem or concept needs documenting?"
 ---
 
 # Technical Wiki — Trading Command Suite

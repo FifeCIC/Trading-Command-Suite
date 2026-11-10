@@ -8,8 +8,15 @@ describe('Mt5TradingService broker contracts', () => {
     order: { create: jest.fn().mockResolvedValue({}) },
     trade: { findFirst: jest.fn() },
   };
-  const connection = { getUrl: () => 'http://mt5.test', getBrokerIds: () => [2] };
-  let service: Mt5TradingService;
+  const connection = {
+    getUrl: () => 'http://mt5.test',
+    getBrokerIds: () => [2],
+    // `closeProfitable()` / `closeAll()` read the WHOLE BOOK through the connection manager
+    // (#1033), not through fetch. An unstubbed call here is what made the first version of the
+    // sweep test fail with a TypeError instead of an assertion — the test never reached the claim.
+    getAllPositions: jest.fn(async (): Promise<any[]> => []),
+    isBroker: () => true,
+  };  let service: Mt5TradingService;
 
   const response = (body: unknown, ok = true) => ({
     ok,
@@ -115,8 +122,40 @@ describe('Mt5TradingService broker contracts', () => {
     expect(tradeRecorder.close).toHaveBeenCalledWith('trade-42', 2410, 10, 'user:manual', 'Gold Swing 1H');
   });
 
-  it('records the local crypto-route refusal WITH its reason in the order audit (#885)', async () => {
-    // The guard lives before the bridge call — no fetch needed. A route-less crypto symbol must
+  /**
+   * A BULK SWEEP MUST NOT LOOK LIKE A STRATEGY EXIT (2026-11-09).
+   *
+   * Measured: `POST /trading/mt5/close-profitable` closed ten winners inside 660 ms and every row
+   * recorded `user:manual` — so £91.14 of that day's £141.83 (64%) was indistinguishable, in the
+   * trade table, from an exit the machine chose. A reader then computes a win rate over a harvest
+   * and concludes a losing strategy turned a corner.
+   *
+   * ⚠️ Both halves are asserted. Pinning only "the sweep writes its own reason" would pass if
+   * EVERY close stopped writing `user:manual`, which would delete the per-trade distinction — the
+   * case above is what holds that side.
+   */
+  it('a close-profitable SWEEP records its own reason, not user:manual (#2026-11-09)', async () => {
+    // The book comes from the CONNECTION MANAGER (#1033), not from fetch.
+    (connection.getAllPositions as jest.Mock).mockResolvedValueOnce([
+      { ticket: 42, symbol: 'XAUUSD', type: 'buy', volume: 0.1, priceOpen: 2400, priceCurrent: 2410, profit: 10, brokerId: 2 },
+    ]);
+    global.fetch = jest.fn()
+      // bridgeForTicket() → the ticket lives on the primary
+      .mockResolvedValueOnce(response({
+        positions: [{ ticket: 42, symbol: 'XAUUSD', type: 'buy', volume: 0.1, priceOpen: 2400, priceCurrent: 2410, profit: 10 }],
+      }))
+      .mockResolvedValueOnce(response({ success: true, ticket: 42, closePrice: 2410, profit: 10, realized: true })) as any;
+    prisma.trade.findFirst.mockResolvedValue({ id: 'trade-42' });
+    tradeRecorder.close.mockResolvedValue(true);
+
+    await service.closeProfitable();
+
+    expect(tradeRecorder.close).toHaveBeenCalledWith(
+      'trade-42', 2410, 10, 'user:close-profitable', undefined,
+    );
+  });
+
+  it('records the local crypto-route refusal WITH its reason in the order audit (#885)', async () => {    // The guard lives before the bridge call — no fetch needed. A route-less crypto symbol must
     // REFUSE (not crash) and the row must carry the reason.
     global.fetch = jest.fn() as any;
     const result = await service.placeOrder({ symbol: 'BTC', type: 'BUY', volume: 0.1 });

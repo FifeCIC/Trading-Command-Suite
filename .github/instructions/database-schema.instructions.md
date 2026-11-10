@@ -80,6 +80,20 @@ npm --prefix C:\wamp64\www\trading-command-suite\nest exec -- prisma generate
 
 Also add the field to `schema.prisma` **in the same commit**, so the model matches reality.
 
+### Converting a table's ENGINE (MyISAM → InnoDB), #613
+
+```powershell
+node nest/scripts/migrate-innodb.cjs --dry          # list + counts, change nothing
+node nest/scripts/migrate-innodb.cjs --under 1      # convert every table under 1 MB
+node nest/scripts/migrate-innodb.cjs --over 1       # convert every table of 1 MB or more
+```
+
+⚠️ **It always has a `--dry` mode — use it first.** MyISAM is unusable here: it cannot recover from a
+crash and cannot hold a foreign key, which is why `validate-collation-consistency.cjs` fails the build
+on a `CREATE TABLE` that declares no `ENGINE=`. Measured 2026-11-09: **136 of 136 tables are InnoDB**,
+so this is now a one-off historical tool rather than a live need — it is named here so it is findable
+if a future install or a restore reintroduces a MyISAM table.
+
 ### Adding a Prisma-managed table
 
 1. Add the model to `nest/prisma/schema.prisma`.

@@ -24,6 +24,7 @@ import {
   CALIBRATION_SYSTEM,
   CONTRACTS,
   CONTRACT_CARDS,
+  CONTRACT_CARDS_RATIONALE,
   CONTRACT_REGISTER_LAST_UPDATED,
   CURRENT_FLOW_CONTRACTS,
   CURRENT_ROUTE_CONTRACTS,
@@ -1180,6 +1181,20 @@ export default function ArchitectureFrameworkPage() {
             </article>
           </div>
           <CardGrid cards={CONTRACT_CARDS} />
+          {/* ⚠️ PROSE, NOT CARDS (#1253). These three strings used to live inside `CONTRACT_CARDS`,
+              which expects every entry to carry `title` / `summary` / `items`; a bare string there
+              threw `item.items is not iterable` and took the whole app to "App Failed to Load".
+              Kept verbatim here, where a reader still gets the reasoning. */}
+          {CONTRACT_CARDS_RATIONALE.length > 0 && (
+            <div className="architecture-card architecture-card-full">
+              <h3>Why these are settled</h3>
+              <ul>
+                {CONTRACT_CARDS_RATIONALE.map((line) => (
+                  <li key={line.slice(0, 60)}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </SectionBlock>
       )}
 

@@ -325,7 +325,6 @@ entry only — see the two shapes above.
 than silently infer the content.** A Note missing its QA entry is equally incomplete.
 
 ## 🌐 THE PUBLIC SURFACES — the fourth obligation (added 2026-11-01, owner request)
-
 > Owner, 2026-11-01: *"the handoff process needs to have clarity on the github pages, wiki and
 > conversations. The handoffs could be used to ensure they all stay updated or well wired to one
 > another so that information is shared from the one source which is usually the app."*
@@ -362,6 +361,34 @@ say `none`.
 **What triggers an entry:** a changed install step, a changed count, a changed capability, a renamed
 view, a decision that reverses something a public page states, or a disclaimer/risk change. Cosmetic
 page styling does not.
+
+### 🛑 A public page may only state what the repository can PROVE (owner, 2026-11-09)
+
+> *"apply alpha to github pages and wiki … we need to cleanup better as the app's file management has been unprofessional."*
+
+Two claims on the public pages were already wrong, and **no validator read those folders at all**:
+
+| Claim | Was | Truth |
+|---|---|---|
+| Screenshot count | **18** on four pages, `17 captures` on the showcase | **17** — the assets folder holds 18 PNGs, one of which is `logo.png` |
+| Release stage | "alpha", typed by hand on five pages | now **read from `package.json.releaseStage`** and printed in the wiki footer |
+
+```powershell
+node scripts/validate-public-claims.cjs             # C1 count · C2 stage · C3 version
+node scripts/validate-public-claims.cjs --self-test # 12 cases, both directions
+node scripts/validate-public-claims.cjs --report
+```
+
+⚠️ **A page that claims NOTHING passes.** The rule fires on a claim, not on silence — a guard that
+demands prose gets its prose written by whoever wants green.
+
+⚠️ **Do not state the stage by hand anywhere.** `scripts/publish-public-docs.cjs` reads it and
+**refuses to publish** if `releaseStage` is missing: a footer that prints nothing where a stage
+belongs is a published page making no claim at all.
+
+⚠️ **`wiki/` and `site/` ARE now scanned by `validate-text-encoding`** (they were not until
+2026-11-09, and `wiki/What-It-Does.md` was carrying two destroyed emoji in public). A wiki page also
+cannot be fixed in the browser — the next publish overwrites it — so the source is the only place.
 
 ## 📊 DIAGRAMS — REQUIRED WHEN DATA FLOW CHANGES
 
@@ -518,6 +545,24 @@ Added SHA-256 fingerprint tracking to MetaStack ratings so users can detect when
 - **section:** scoring
 - **summary:** MetaStack Fingerprint — SHA-256 hash of component state (protocol, watchlist symbols, broker, thresholds, SL/TP). Detects configuration drift so UI can warn when performance history is stale. Files: stack-performance.service.ts, scoring.controller.ts. Endpoint: GET /api/scoring/metastacks/:id/fingerprint.
 ```
+
+## ⚠️ Release stage — the project is ALPHA, and `1.0.0` is now gated
+
+> **Owner, 2026-11-09:** *"I've decided the project is still in alpha so lets not move onto 1.0.0 just yet."*
+
+`package.json` (both files) declares **`"releaseStage": "alpha"`**. SemVer defines `1.0.0` as
+*"the public API"* and `0.y.z` as *"anything MAY change"* — so while the stage is alpha, `1.0.0` is a
+**claim the project is not making**, not a bigger increment.
+
+| Attempt | Result |
+|---|---|
+| `npm run version:bump -- major` (0.158.0 → 1.0.0) | **exit 2**, refuses, names the stage |
+| `npm run version:bump -- minor` / `patch` | allowed |
+| `releaseStage` **absent** | treated as `alpha` — **fails closed**, never permission |
+
+Crossing 1.0.0 means setting `"releaseStage": "stable"` deliberately, with the owner. A pre-release
+label is a separate question: `1.0.0-beta.1` *is* a legitimate beta (it sorts before `1.0.0`), but it
+still declares the 1.0 API, so it is not available while the stage is alpha either.
 
 ## Project Version — BUMP ONCE PER LOGICAL CHANGE
 

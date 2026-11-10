@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 224,
+  "count": 227,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1006,6 +1006,16 @@
       ]
     },
     {
+      "name": "migrate-innodb.cjs",
+      "where": "nest",
+      "category": "tool",
+      "purpose": "#613 — convert MyISAM tables to InnoDB, one at a time, verifying every step.",
+      "selfTest": false,
+      "reaches": [
+        "docs"
+      ]
+    },
+    {
       "name": "migrate-strategy-keys.cjs",
       "where": "nest",
       "category": "tool",
@@ -1229,7 +1239,9 @@
       "category": "tool",
       "purpose": "a CONTRAST run (docs/GLOSSARY.md).",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "split-seed-packaging.cjs",
@@ -1347,6 +1359,16 @@
       "reaches": [
         "prebuild",
         "npm"
+      ]
+    },
+    {
+      "name": "validate-arch-card-shapes.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a `*_CARDS` export must contain CARD OBJECTS, not prose.",
+      "selfTest": true,
+      "reaches": [
+        "docs"
       ]
     },
     {
@@ -1752,6 +1774,17 @@
       "where": "nest",
       "category": "validator",
       "purpose": "a protocol SEED KEY must be a slug, never a UUID.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-public-claims.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "the public pages must state facts the repository can prove.",
       "selfTest": true,
       "reaches": [
         "prebuild",

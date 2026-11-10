@@ -61,7 +61,7 @@ const REQUIRED_FIELDS = ['WHAT:', 'WHY:', 'REVERSE BY:'];
  *      emoji destroyed to U+FFFD by an encoding round-trip, and the check PASSED it — satisfied
  *      by the prose mention elsewhere in the same row. A row whose status is UNREADABLE was being
  *      reported as marked, which is the exact defect RULE A exists to catch, reached by a second
- *      route. Test: a guard cell with no �, and every row counts exactly one cell-leading mark.
+ *      route. Test: a guard cell with no mark, and every row counts exactly one cell-leading mark.
  *
  * Anchoring to a cell is what distinguishes a DECLARATION from a MENTION. This is a TIGHTENING of
  * the pattern, never a widening of the exemption — an allowlisted guard is worse than none.
