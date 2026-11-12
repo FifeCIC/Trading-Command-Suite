@@ -49,6 +49,12 @@ describe('closeReasonFromComment (#916)', () => {
     // The bulk endpoints (mt5.controller) — a person's instruction through our own API.
     expect(closeReasonFromComment('TCS:close-all')).toBe(CLOSE_REASONS.USER_MANUAL);
     expect(closeReasonFromComment('TCS:close-profitable')).toBe(CLOSE_REASONS.USER_MANUAL);
+    // #1255 — the StopGuardian's money take-profit. Unmapped until 2026-11-12, so during a
+    // re-derivation it fell to the deal-reason enum (3 = expert) and read as `user:manual`: a
+    // BOT's close attributed to a person, on the very reason the guardian had already written
+    // correctly to the trade row. Both halves of one close must agree.
+    expect(closeReasonFromComment('TCS:take-profit')).toBe(CLOSE_REASONS.SYSTEM_TAKE_PROFIT);
+    expect(closeReasonFromComment('TCS:take-profit-amount')).toBe(CLOSE_REASONS.SYSTEM_TAKE_PROFIT);
   });
 
   it('returns null for foreign/empty/unknown comments so the caller falls through to the enum', () => {

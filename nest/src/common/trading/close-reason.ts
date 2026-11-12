@@ -225,6 +225,16 @@ export function closeReasonFromComment(comment: string | null | undefined): Clos
   switch (m[1]) {
     case 'time-stop':
       return CLOSE_REASONS.SYSTEM_TIME_STOP;
+    case 'take-profit':
+      // #1255 (2026-11-12) — the StopGuardian's money take-profit stamps `TCS:take-profit` on the
+      // deal it sends (`stop-guardian.service.ts` → `closePosition(ticket, brokerId, 'take-profit')`),
+      // and this switch did not know the word. It fell through to `null`, then to the deal-reason
+      // enum, and the guardian's close came back as `user:manual` on any path that re-derives the
+      // reason (a repair, or a row whose own reason write did not land). `SYSTEM_TAKE_PROFIT`
+      // already existed and was already written by the guardian itself — only the COMMENT mapping
+      // was missing, so the two halves of one close disagreed.
+    case 'take-profit-amount':
+      return CLOSE_REASONS.SYSTEM_TAKE_PROFIT;
     case 'session-exit':
       // #928 — the exit-side session boundary. Was parsed to null until 2026-10-07, so a
       // session-exit close fell through to the deal-reason enum (3) and landed in

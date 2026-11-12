@@ -19,7 +19,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { SystemLogService } from '../system/log.service';
-import { CLOSE_REASONS } from '../../common/trading/close-reason';
 
 export interface TradeRecord {
   symbol: string;
@@ -142,13 +141,22 @@ export class TradeRecorderService {
     /**
      * WHY it closed — see `common/trading/close-reason.ts`.
      *
-     * Defaults to `user:manual` because the ONLY caller is the API close path
-     * (`Mt5TradingService.closePosition`, reached from the UI and from `closeAll`/`closeProfitable`).
-     * An automatic closer must pass its own value: leaving this to default would label a
-     * system close as a human one, which is the same "attributed to the wrong actor" defect that
-     * `trade.scoringStrategyId` had (#777).
+     * ⚠️ REQUIRED, with no default (#1255, 2026-11-12). It used to default to `user:manual` on the
+     * stated grounds that "the ONLY caller is the API close path". That reasoning was sound but the
+     * default was still a hazard: a default that names a PERSON is the wrong default for a shared
+     * writer, so the next close path to forget a reason would silently blame the operator.
+     *
+     * Measured 2026-11-12 before removing it — `grep -rn 'tradeRecorder\.close(' nest/src` returns
+     * exactly ONE call site (`mt5-trading.service.ts`, which always passes a reason), so requiring
+     * the argument breaks no caller and makes the omission a compile error rather than a wrong
+     * attribution. The nine `user:manual` closes this issue opened with were NOT this default: their
+     * broker deals carry `reason: 0` and an EMPTY comment, i.e. they were closed from the MT5 client
+     * side, and `closeReasonFromDealReason(0)` maps them to `user:manual` by owner direction
+     * (2026-10-07, R46). See #1255.
+     *
+     * REGISTER: docs/SETTLED-DECISIONS.md row 170 · ISSUE: #1255
      */
-    closeReason: string = CLOSE_REASONS.USER_MANUAL,
+    closeReason: string,
     /**
      * The strategy name this close belongs to (#884).
      *

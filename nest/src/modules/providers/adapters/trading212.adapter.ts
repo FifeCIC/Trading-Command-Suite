@@ -69,6 +69,35 @@ export interface T212OrderRequest {
   ticker: string;
   quantity: number;
   side: 'buy' | 'sell';
+  /**
+   * WHICH account the order is sent to.
+   *
+   * ⚠️ Added 2026-11-12 (#1256). The adapter used to be a SINGLE-ACCOUNT object resolved once at
+   * construction from `TRADING212_MODE`, and `POST /orders/sell` accepted an `accountType` that was
+   * destructured and then dropped. So a request to sell ISA holdings went to whichever account the
+   * mode happened to name — the owner's real ISA had no order path at all.
+   *
+   *   'demo' | 'live'  — the trading account the mode names (unchanged behaviour when omitted)
+   *   'isa'            — the Stocks ISA, which is a SEPARATE account with its own credentials
+   *
+   * Omitting it keeps every existing caller behaving exactly as before.
+   */
+  accountType?: 'demo' | 'live' | 'isa';
+}
+
+/**
+ * The credentials + endpoint for ONE Trading212 account.
+ *
+ * ⚠️ `isLive` is what the order guard reads: a live or ISA order moves real money, so it needs
+ * `TRADING212_ALLOW_LIVE_ORDERS=true`. The same precedent as the constructor's `#24` guard, which
+ * already refuses to trade live from a stray key.
+ */
+interface T212ResolvedAccount {
+  key: string;
+  secret: string;
+  baseUrl: string;
+  isLive: boolean;
+  label: string;
 }
 
 export interface T212LimitOrderRequest extends T212OrderRequest {
@@ -160,10 +189,84 @@ export class Trading212Adapter implements IProviderAdapter {
   }
 
   private authHeaders(): Record<string, string> {
-    // Trading212 uses the API key directly as the Authorization header value
-    // (no "Basic", no "Bearer", no secret). The old key:secret Basic auth was
-    // malformed for T212 and would 401 (issue #34).
-    return { Authorization: this.apiKey || '' };
+    return this.authHeadersFor(this.apiKey, this.apiSecret);
+  }
+
+  /**
+   * resolveAccount() — credentials for a NAMED account, or null when that account is not configured.
+   *
+   * ⚠️ `undefined` returns the mode's own account, so every pre-#1256 caller is unchanged. Anything
+   * else is explicit: an unknown target returns null rather than falling back to the mode, because
+   * "sell my ISA holdings" silently executing against the demo account is the defect this closes.
+   */
+  private resolveAccount(target?: T212OrderRequest['accountType']): T212ResolvedAccount | null {
+    if (target === 'isa') {
+      const key = process.env.TRADING212_ISA_API_KEY || '';
+      if (!key) return null;
+      return {
+        key,
+        secret: process.env.TRADING212_ISA_API_SECRET || '',
+        baseUrl: process.env.TRADING212_ISA_BASE_URL || 'https://live.trading212.com/api/v0',
+        isLive: true,
+        label: 'Stocks ISA',
+      };
+    }
+    if (target === 'live') {
+      const key = process.env.TRADING212_LIVE_API_KEY || process.env.TRADING212_API_KEY || '';
+      if (!key) return null;
+      return {
+        key,
+        secret: process.env.TRADING212_LIVE_API_SECRET || process.env.TRADING212_API_SECRET || '',
+        baseUrl: process.env.TRADING212_LIVE_BASE_URL || 'https://live.trading212.com/api/v0',
+        isLive: true,
+        label: 'Invest (live)',
+      };
+    }
+    if (target === 'demo') {
+      const key = process.env.TRADING212_DEMO_API_KEY || process.env.TRADING212_API_KEY || '';
+      if (!key) return null;
+      return {
+        key,
+        secret: process.env.TRADING212_DEMO_API_SECRET || process.env.TRADING212_API_SECRET || '',
+        baseUrl: process.env.TRADING212_DEMO_BASE_URL || 'https://demo.trading212.com/api/v0',
+        isLive: false,
+        label: 'Practice (demo)',
+      };
+    }
+    // Unspecified → the mode's account, exactly as before.
+    if (!this.apiKey) return null;
+    return {
+      key: this.apiKey,
+      secret: this.apiSecret,
+      baseUrl: this.baseUrl,
+      isLive: this.mode === 'live',
+      label: `mode:${this.mode}`,
+    };
+  }
+
+  private authHeadersFor(key: string, secret: string): Record<string, string> {
+    if (!key) return {};
+    // ── 2026-11-12: HTTP BASIC (key:secret) is what Trading212 accepts now ──────────────────────
+    //
+    // ⚠️ THIS COMMENT USED TO SAY THE OPPOSITE — that T212 wanted the key alone and that Basic "was
+    // malformed and would 401 (#34)". That was true when it was written and is FALSE now. Measured
+    // against the live API on 2026-11-12, with all three configured keys (demo, ISA, live):
+    //
+    //     key-only              → HTTP 401
+    //     Basic base64(key:secret) → HTTP 200
+    //
+    // Every key in `nest/.env` works; only the header was wrong. The consequence was not an error
+    // surfaced to a user — `validateConnection()` reads CACHED positions from the database, so the
+    // portfolio screens kept serving stale rows and reported `valid: true` while every outbound call
+    // was being rejected. Plausible output, no error.
+    //
+    // ⚠️ Key-only is still sent when NO secret is configured, so a key-only setup fails exactly as it
+    // did before rather than crashing — but the preference is Basic, because Basic is what works.
+    if (secret) {
+      const token = Buffer.from(`${key}:${secret}`).toString('base64');
+      return { Authorization: `Basic ${token}` };
+    }
+    return { Authorization: key };
   }
 
   /**
@@ -324,6 +427,57 @@ export class Trading212Adapter implements IProviderAdapter {
   // ── Trading212-specific: Portfolio ────────────────────────
 
   /** @deprecated Use getPositions() which returns BrokerPosition[] */
+  /**
+   * getAccountFor() / getPositionsFor() — read ONE named account, not the mode's.
+   *
+   * ⚠️ #1256. The pre-trade gate verified sells against `getPositions()` (the MODE's account). With
+   * `TRADING212_MODE=demo`, a request to sell ISA holdings would have been checked against the demo
+   * book — a different portfolio entirely. Verifying the wrong account is worse than not verifying:
+   * it produces a PASS that means nothing.
+   *
+   * Both return null when the account cannot be read, and the caller MUST treat null as
+   * "cannot judge" and refuse. That is the same rule the #900 risk gate already uses.
+   */
+  async getAccountFor(target: T212OrderRequest['accountType']): Promise<{ total: number; free: number; blocked?: number } | null> {
+    const account = this.resolveAccount(target);
+    if (!account) return null;
+    try {
+      await this.waitForRateLimit('account');
+      const res = await fetch(`${account.baseUrl}/equity/account/cash`, {
+        headers: this.authHeadersFor(account.key, account.secret),
+      });
+      if (!res.ok) {
+        this.logger.warn(`Trading212 account read failed for "${account.label}": HTTP ${res.status}`);
+        return null;
+      }
+      const data = await res.json();
+      return { total: Number(data.total) || 0, free: Number(data.free) || 0, blocked: data.blocked };
+    } catch (err) {
+      this.logger.warn(`Trading212 account read failed for "${account.label}": ${(err as Error).message}`);
+      return null;
+    }
+  }
+
+  async getPositionsFor(target: T212OrderRequest['accountType']): Promise<Trading212Position[] | null> {
+    const account = this.resolveAccount(target);
+    if (!account) return null;
+    try {
+      await this.waitForRateLimit('portfolio');
+      const res = await fetch(`${account.baseUrl}/equity/portfolio`, {
+        headers: this.authHeadersFor(account.key, account.secret),
+      });
+      if (!res.ok) {
+        this.logger.warn(`Trading212 positions read failed for "${account.label}": HTTP ${res.status}`);
+        return null;
+      }
+      const data = await res.json();
+      return Array.isArray(data) ? data : null;
+    } catch (err) {
+      this.logger.warn(`Trading212 positions read failed for "${account.label}": ${(err as Error).message}`);
+      return null;
+    }
+  }
+
   async getRawPositions(): Promise<Trading212Position[]> {
     this.lastPositionSnapshotAuthoritative = false;
     if (!this.hasCredentials) {
@@ -380,24 +534,78 @@ export class Trading212Adapter implements IProviderAdapter {
   // This adapter sends {ticker, quantity} — NO side parameter.
   // DO NOT add "side" to the API payload. DO NOT remove sell capability.
 
+  /**
+   * signedQuantity() — Trading212's market/limit order endpoints take NO `side` field: direction is
+   * the SIGN of `quantity`, with NEGATIVE meaning sell. This is documented by this file's own
+   * `getPositions()`, which reads `Number(p.quantity) < 0 ? 'sell' : 'buy'`.
+   *
+   * ⚠️ #1256 — the order methods below used to send `quantity: params.quantity` with `params.side`
+   * used for LOGGING ONLY. So a sell arrived as a POSITIVE quantity and the broker executed a BUY.
+   * `validatePreTrade()` verified the position existed and that the quantity was available — it
+   * PASSED — and then the request bought MORE of the stock the caller asked to sell. Nothing masked
+   * it: the response was a success.
+   *
+   * Exported so the guard is testable without an HTTP call.
+   *
+   * REGISTER: docs/SETTLED-DECISIONS.md row 170 · ISSUE: #1256
+   */
+  static signedQuantity(side: 'buy' | 'sell', quantity: number): number {
+    const magnitude = Math.abs(quantity);
+    return side === 'sell' ? -magnitude : magnitude;
+  }
+
+  /**
+   * assertOrderAllowed() — refuse a LIVE order unless it is switched on deliberately.
+   *
+   * ⚠️ Same precedent as the constructor's #24 guard ("a live key without an explicit live mode must
+   * NOT trade live"). A code path that suddenly starts moving real money because a key happens to be
+   * configured is exactly the accident this closes. The switch is `TRADING212_ALLOW_LIVE_ORDERS`,
+   * default OFF, so this change cannot place a live order by itself.
+   */
+  private assertOrderAllowed(account: T212ResolvedAccount): T212OrderResult | null {
+    if (!account.isLive) return null;
+    if (String(process.env.TRADING212_ALLOW_LIVE_ORDERS).toLowerCase() === 'true') return null;
+    const error =
+      `Refusing a LIVE order on "${account.label}": real money. Set TRADING212_ALLOW_LIVE_ORDERS=true ` +
+      'and restart the API to enable live order placement.';
+    this.logger.error(error);
+    return { success: false, error, errorCode: 'LIVE_ORDERS_DISABLED' };
+  }
+
   async placeMarketOrder(params: T212OrderRequest): Promise<T212OrderResult> {
-    if (!this.hasCredentials) {
-      return { success: false, error: 'No Trading212 credentials configured' };
+    const account = this.resolveAccount(params.accountType);
+    if (!account) {
+      return {
+        success: false,
+        error: params.accountType
+          ? `No Trading212 credentials configured for account "${params.accountType}".`
+          : 'No Trading212 credentials configured',
+        errorCode: 'NO_ACCOUNT',
+      };
     }
+    const blocked = this.assertOrderAllowed(account);
+    if (blocked) return blocked;
+
+    const quantity = Trading212Adapter.signedQuantity(params.side, params.quantity);
+    if (quantity === 0) {
+      return { success: false, error: 'Refusing a zero-quantity order', errorCode: 'ZERO_QUANTITY' };
+    }
+
     try {
       await this.waitForRateLimit('orders/market');
       const ticker = this.toT212Ticker(params.ticker);
-      const res = await fetch(`${this.baseUrl}/equity/orders/market`, {
+      const res = await fetch(`${account.baseUrl}/equity/orders/market`, {
         method: 'POST',
-        headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker, quantity: params.quantity }),
+        headers: { ...this.authHeadersFor(account.key, account.secret), 'Content-Type': 'application/json' },
+        // ⚠️ SIGNED — see signedQuantity() above. `side` is not a Trading212 field.
+        body: JSON.stringify({ ticker, quantity }),
       });
       const bodyText = await res.text();
       let data: any;
       try { data = JSON.parse(bodyText); } catch { data = bodyText; }
 
       if (!res.ok) {
-        this.logger.error(`T212 placeMarketOrder (${this.mode}) ${params.side} ${params.ticker}: HTTP ${res.status} — ${bodyText.substring(0, 300)}`);
+        this.logger.error(`T212 placeMarketOrder (${account.label}) ${params.side} ${params.ticker}: HTTP ${res.status} — ${bodyText.substring(0, 300)}`);
         return {
           success: false,
           error: typeof data === 'string' ? data : (data?.detail || data?.title || `HTTP ${res.status}`),
@@ -406,36 +614,53 @@ export class Trading212Adapter implements IProviderAdapter {
         };
       }
 
-      this.logger.log(`T212 placeMarketOrder (${this.mode}) ${params.side} ${params.ticker} ×${params.quantity}: ${data?.id || 'filled'}`);
+      this.logger.log(`T212 placeMarketOrder (${account.label}) ${params.side} ${params.ticker} ×${quantity}: ${data?.id || 'filled'}`);
       return {
         success: true,
         orderId: data?.id || data?.orderId,
-        filledQuantity: data?.filledQuantity || params.quantity,
+        // ⚠️ Math.abs — the fill echoes the SIGNED quantity, and a negative number beside "sell"
+        // reads as though the order went the other way.
+        filledQuantity: Math.abs(data?.filledQuantity ?? quantity),
         filledPrice: data?.fillPrice || data?.price,
         status: data?.status || 'filled',
         rawResponse: data,
       };
     } catch (err) {
-      this.logger.error(`T212 placeMarketOrder (${this.mode}) failed: ${(err as Error).message}`);
+      this.logger.error(`T212 placeMarketOrder (${account.label}) failed: ${(err as Error).message}`);
       return { success: false, error: (err as Error).message };
     }
   }
 
   async placeLimitOrder(params: T212LimitOrderRequest): Promise<T212OrderResult> {
-    if (!this.hasCredentials) {
-      return { success: false, error: 'No Trading212 credentials configured' };
+    const account = this.resolveAccount(params.accountType);
+    if (!account) {
+      return {
+        success: false,
+        error: params.accountType
+          ? `No Trading212 credentials configured for account "${params.accountType}".`
+          : 'No Trading212 credentials configured',
+        errorCode: 'NO_ACCOUNT',
+      };
     }
+    const blocked = this.assertOrderAllowed(account);
+    if (blocked) return blocked;
+
+    const quantity = Trading212Adapter.signedQuantity(params.side, Math.round(params.quantity * 100) / 100);
+    if (quantity === 0) {
+      return { success: false, error: 'Refusing a zero-quantity order', errorCode: 'ZERO_QUANTITY' };
+    }
+
     try {
       await this.waitForRateLimit('orders/limit');
       const ticker = this.toT212Ticker(params.ticker);
-      const res = await fetch(`${this.baseUrl}/equity/orders/limit`, {
+      const res = await fetch(`${account.baseUrl}/equity/orders/limit`, {
         method: 'POST',
-        headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker, quantity: Math.round(params.quantity * 100) / 100, limitPrice: params.limitPrice }),
+        headers: { ...this.authHeadersFor(account.key, account.secret), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker, quantity, limitPrice: params.limitPrice }),
       });
       const data = await res.json();
       if (!res.ok) {
-        this.logger.error(`T212 placeLimitOrder (${this.mode}) ${params.side} ${params.ticker}: HTTP ${res.status}`);
+        this.logger.error(`T212 placeLimitOrder (${account.label}) ${params.side} ${params.ticker}: HTTP ${res.status}`);
         return {
           success: false,
           error: data.message || data.code || `HTTP ${res.status}`,
@@ -443,17 +668,17 @@ export class Trading212Adapter implements IProviderAdapter {
           rawResponse: data,
         };
       }
-      this.logger.log(`T212 placeLimitOrder (${this.mode}) ${params.side} ${params.ticker} ×${params.quantity} @${params.limitPrice}: ${data.id || 'placed'}`);
+      this.logger.log(`T212 placeLimitOrder (${account.label}) ${params.side} ${params.ticker} ×${quantity} @${params.limitPrice}: ${data.id || 'placed'}`);
       return {
         success: true,
         orderId: data.id || data.orderId,
-        filledQuantity: data.filledQuantity,
+        filledQuantity: Math.abs(data.filledQuantity ?? quantity),
         filledPrice: data.fillPrice || data.price,
         status: data.status || 'pending',
         rawResponse: data,
       };
     } catch (err) {
-      this.logger.error(`T212 placeLimitOrder (${this.mode}) failed: ${(err as Error).message}`);
+      this.logger.error(`T212 placeLimitOrder (${account.label}) failed: ${(err as Error).message}`);
       return { success: false, error: (err as Error).message };
     }
   }

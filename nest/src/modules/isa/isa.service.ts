@@ -32,17 +32,76 @@ interface IsaWarningRequest {
 const ISA_ALLOWANCE_LIMIT_GBP = 20_000;
 const DEFAULT_BASE_URL = 'https://live.trading212.com/api/v0';
 
+/**
+ * What a fetch ATTEMPT produced. The three outcomes are deliberately distinct because a key that is
+ * PRESENT is not a key that WORKS, and collapsing them let a 401 render as a healthy empty account.
+ *
+ * Measured 2026-11-12: `TRADING212_ISA_API_KEY` was set, Trading212 answered **HTTP 401** on both
+ * `/equity/account/cash` and `/equity/portfolio`, and the dashboard still reported
+ * `status: 'connected'` with every summary field `null` and `positionCount: 0`. Read as a user, that
+ * says "your ISA is connected and holds nothing" — a claim about their money — when the truth was
+ * "we could not ask". Those are different facts and only one of them is evidence.
+ *
+ * ⚠️ Declared as a SINGLE shape with optional fields, NOT a discriminated union on `ok`. This repo
+ * runs `strictNullChecks: false` (nest/tsconfig.json), where `ok: true` / `ok: false` collapse to
+ * `boolean` and `if (outcome.ok)` does NOT narrow — the first two versions of this change failed to
+ * compile for exactly that reason, and a union that cannot be narrowed is worse than a bag of
+ * optionals that can.
+ */
+interface FetchOutcome<T> {
+  ok: boolean;
+  data?: T;
+  reason?: FetchFailureReason;
+  detail?: string;
+}
+
+type FetchFailureReason = 'not_configured' | 'unauthorised' | 'error';
+
+/** The failure (or null) from a fetch outcome — one place that reads the optional fields. */
+function failureOf<T>(outcome: FetchOutcome<T>): { reason: FetchFailureReason; detail: string } | null {
+  if (outcome.ok) return null;
+  return { reason: outcome.reason || 'error', detail: outcome.detail || 'no detail recorded' };
+}
+
 @Injectable()
 export class IsaService {
   private readonly logger = new Logger(IsaService.name);
   private readonly apiKey = process.env.TRADING212_ISA_API_KEY || '';
+  private readonly apiSecret = process.env.TRADING212_ISA_API_SECRET || '';
   private readonly baseUrl = process.env.TRADING212_ISA_BASE_URL || DEFAULT_BASE_URL;
 
+  /**
+   * authHeaders() — HTTP BASIC (key:secret), because that is what Trading212 accepts.
+   *
+   * ⚠️ MEASURED 2026-11-12 against the live API with the configured ISA key:
+   *     key-only                 → HTTP 401
+   *     Basic base64(key:secret) → HTTP 200
+   *
+   * The service sent the key alone, so BOTH fetches were rejected on every call while the dashboard
+   * reported `connected`. A rejected credential is invisible from the outside when the only symptom
+   * is a null field — which is why `status` is now derived from the fetch outcome, not the key.
+   */
+  private authHeaders(): Record<string, string> {
+    if (this.apiSecret) {
+      const token = Buffer.from(`${this.apiKey}:${this.apiSecret}`).toString('base64');
+      return { Authorization: `Basic ${token}` };
+    }
+    return { Authorization: this.apiKey };
+  }
+
   async getDashboard() {
-    const [account, positions] = await Promise.all([
+    const [accountOutcome, positionsOutcome] = await Promise.all([
       this.fetchAccountCash(),
       this.fetchPositions(),
     ]);
+
+    const account = accountOutcome.ok ? (accountOutcome.data ?? null) : null;
+    const positions = positionsOutcome.ok ? (positionsOutcome.data ?? []) : [];
+
+    // ⚠️ The status is derived from the FETCHES, not from whether a key exists. A present key that
+    // T212 rejects is `unauthorised`, not `connected` — see FetchOutcome above.
+    const failure = failureOf(accountOutcome) ?? failureOf(positionsOutcome);
+    const status = this.apiKey && !failure ? 'connected' : (failure ? failure.reason : 'not_configured');
 
     const allowanceUsed = this.readAllowanceUsed();
     const foreignPositions = positions.filter((position) =>
@@ -54,15 +113,21 @@ export class IsaService {
     }, 0);
 
     return {
-      status: this.apiKey ? 'connected' : 'not_configured',
+      status,
       accountType: 'stocks_isa',
       currency: 'GBP',
+      /**
+       * ⚠️ `readable` says whether these numbers came from Trading212. When it is false the summary
+       * fields are null BECAUSE NOTHING WAS READ, and a consumer must render "unavailable", never
+       * "£0" and never "connected".
+       */
+      readable: status === 'connected',
       summary: {
         totalValueGbp: account?.total ?? null,
         cashGbp: account?.free ?? null,
         investedGbp: invested || null,
         resultGbp: account?.result ?? null,
-        positionCount: positions.length,
+        positionCount: status === 'connected' ? positions.length : null,
       },
       allowance: {
         taxYear: this.currentUkTaxYear(),
@@ -82,7 +147,7 @@ export class IsaService {
         bestTimeToTradeToday: '13:00-17:00 GMT',
         rationale: 'London/New York overlap is the baseline high-liquidity window until historical FX pattern analysis is available.',
       },
-      warnings: this.buildDashboardWarnings(allowanceUsed, foreignPositions.length),
+      warnings: this.buildDashboardWarnings(allowanceUsed, foreignPositions.length, failure),
       positions: positions.map((position) => ({
         symbol: this.stripTicker(position.ticker || ''),
         ticker: position.ticker || '',
@@ -124,44 +189,53 @@ export class IsaService {
     };
   }
 
-  private async fetchAccountCash(): Promise<Trading212Cash | null> {
-    if (!this.apiKey) return null;
+  private async fetchAccountCash(): Promise<FetchOutcome<Trading212Cash>> {
+    if (!this.apiKey) return { ok: false, reason: 'not_configured', detail: 'TRADING212_ISA_API_KEY is not set' };
 
     try {
-      const res = await fetch(`${this.baseUrl}/equity/account/cash`, {
-        headers: { Authorization: this.apiKey },
-      });
+      const res = await fetch(`${this.baseUrl}/equity/account/cash`, { headers: this.authHeaders() });
       if (!res.ok) {
-        this.logger.warn(`Trading212 ISA account fetch failed: HTTP ${res.status}`);
-        return null;
+        const detail = `HTTP ${res.status}`;
+        this.logger.warn(`Trading212 ISA account fetch failed: ${detail}`);
+        return { ok: false, reason: this.isAuthFailure(res.status) ? 'unauthorised' : 'error', detail };
       }
-      return await res.json();
+      return { ok: true, data: await res.json() };
     } catch (err) {
-      this.logger.error(`Trading212 ISA account fetch failed: ${(err as Error).message}`);
-      return null;
+      const detail = (err as Error).message;
+      this.logger.error(`Trading212 ISA account fetch failed: ${detail}`);
+      return { ok: false, reason: 'error', detail };
     }
   }
 
-  private async fetchPositions(): Promise<Trading212Position[]> {
-    if (!this.apiKey) return [];
+  private async fetchPositions(): Promise<FetchOutcome<Trading212Position[]>> {
+    if (!this.apiKey) return { ok: false, reason: 'not_configured', detail: 'TRADING212_ISA_API_KEY is not set' };
 
     try {
-      const res = await fetch(`${this.baseUrl}/equity/portfolio`, {
-        headers: { Authorization: this.apiKey },
-      });
+      const res = await fetch(`${this.baseUrl}/equity/portfolio`, { headers: this.authHeaders() });
       if (!res.ok) {
-        this.logger.warn(`Trading212 ISA positions fetch failed: HTTP ${res.status}`);
-        return [];
+        const detail = `HTTP ${res.status}`;
+        this.logger.warn(`Trading212 ISA positions fetch failed: ${detail}`);
+        return { ok: false, reason: this.isAuthFailure(res.status) ? 'unauthorised' : 'error', detail };
       }
       const data = await res.json();
-      return Array.isArray(data) ? data : [];
+      return { ok: true, data: Array.isArray(data) ? data : [] };
     } catch (err) {
-      this.logger.error(`Trading212 ISA positions fetch failed: ${(err as Error).message}`);
-      return [];
+      const detail = (err as Error).message;
+      this.logger.error(`Trading212 ISA positions fetch failed: ${detail}`);
+      return { ok: false, reason: 'error', detail };
     }
   }
 
-  private buildDashboardWarnings(allowanceUsed: number, foreignPositionCount: number) {
+  /** 401/403 mean the credential is wrong or expired — a different fix from a 5xx or a timeout. */
+  private isAuthFailure(status: number): boolean {
+    return status === 401 || status === 403;
+  }
+
+  private buildDashboardWarnings(
+    allowanceUsed: number,
+    foreignPositionCount: number,
+    failure?: { reason: 'not_configured' | 'unauthorised' | 'error'; detail: string } | null,
+  ) {
     const warnings: Array<{ type: string; severity: string; message: string }> = [];
     const remaining = Math.max(ISA_ALLOWANCE_LIMIT_GBP - allowanceUsed, 0);
 
@@ -170,6 +244,23 @@ export class IsaService {
         type: 'isa_connection',
         severity: 'info',
         message: 'Set TRADING212_ISA_API_KEY to enable the Stocks ISA dashboard from real Trading212 data.',
+      });
+    } else if (failure?.reason === 'unauthorised') {
+      // ⚠️ The measured state on 2026-11-12: key present, Trading212 answered 401, and the dashboard
+      // said "connected". The message must name the ACTION (a new key), not the mechanism (a 401).
+      warnings.push({
+        type: 'isa_connection',
+        severity: 'error',
+        message: `The Stocks ISA API key was REJECTED by Trading212 (${failure.detail}). ` +
+          'Holdings and values are unavailable — not empty. Generate a new key in Trading212 and set ' +
+          'TRADING212_ISA_API_KEY, then restart the API (the key is read at import).',
+      });
+    } else if (failure) {
+      warnings.push({
+        type: 'isa_connection',
+        severity: 'error',
+        message: `The Stocks ISA could not be read (${failure.detail}). Holdings and values are ` +
+          'unavailable — not empty.',
       });
     }
 

@@ -39,10 +39,26 @@ describe('TradeRecorderService.close — strategy rides the close (#884)', () =>
 
   it('leaves the strategy column untouched when none is given', async () => {
     const { svc, update } = make();
-    await svc.close('t1', 1.2345, 5.25);
+    await svc.close('t1', 1.2345, 5.25, 'system:take-profit');
     const data = update.mock.calls[0][0].data;
     expect('strategy' in data).toBe(false);
     expect(data.status).toBe('closed');
+  });
+
+  /**
+   * #1255 — the reason is REQUIRED and is never substituted.
+   *
+   * `close()` used to default `closeReason` to `user:manual`. That named a PERSON for any caller
+   * that forgot, which is why a bot's close could read as an operator decision. The default is
+   * gone (omitting it is now a compile error at the one call site), and this pins the other half:
+   * whatever reason the caller supplies is the reason that is written.
+   */
+  it('writes the caller\'s close reason verbatim — it is never defaulted to user:manual (#1255)', async () => {
+    const { svc, update } = make();
+    await svc.close('t1', 1.2345, 5.25, 'system:take-profit', 'DAX Small Target Bot');
+    const data = update.mock.calls[0][0].data;
+    expect(data.closeReason).toBe('system:take-profit');
+    expect(data.closeReason).not.toBe('user:manual');
   });
 
   it('a priced break-even close writes pnl 0 through unchanged', async () => {

@@ -402,30 +402,50 @@ export class Trading212ImportService {
     ticker: string;
     quantity: number;
     side: 'buy' | 'sell';
+    /** #1256 — verify against THE ACCOUNT BEING TRADED, never the mode's. */
+    accountType?: 'demo' | 'live' | 'isa';
   }): Promise<{ passed: boolean; gate: string; error?: string }> {
+    const where = params.accountType ?? this.t212Adapter.mode;
+
     // Gate 1+2: API Health + Account balance (combined — same endpoint, avoid rate limit double-hit)
-    const account = await this.t212Adapter.getAccount();
+    //
+    // ⚠️ #1256 — read the NAMED account when one is given. Before this the gate always read the
+    // mode's account, so with `TRADING212_MODE=demo` a sell of ISA holdings was verified against the
+    // demo book: a different portfolio, producing a PASS that meant nothing.
+    const account = params.accountType
+      ? await this.t212Adapter.getAccountFor(params.accountType)
+      : await this.t212Adapter.getAccount();
     if (!account) {
-      return { passed: false, gate: 'account', error: `Trading212 API (${this.t212Adapter.mode}) is not reachable or returned no account data. Check credentials and connectivity.` };
+      // ⚠️ UNKNOWN IS NOT "NO POSITIONS". An unreadable account must refuse, never fall through.
+      return { passed: false, gate: 'account', error: `Trading212 API (${where}) is not reachable or returned no account data. Check credentials and connectivity.` };
     }
 
     // Gate 3: Position verification (for sells)
     if (params.side === 'sell') {
-      const positions = await this.t212Adapter.getPositions();
-      const ticker = params.ticker.includes('_') ? params.ticker : `${params.ticker.toUpperCase()}_US_EQ`;
-      const pos = positions.find((p) => p.ticker === ticker);
-      if (!pos) {
-        return { passed: false, gate: 'position', error: `No position found for ${params.ticker} in your ${this.t212Adapter.mode} account.` };
+      const raw = params.accountType
+        ? await this.t212Adapter.getPositionsFor(params.accountType)
+        : await this.t212Adapter.getPositions();
+      if (raw == null) {
+        return { passed: false, gate: 'position', error: `Could not read positions for "${where}" — refusing rather than selling blind.` };
       }
-      if (params.quantity > pos.quantity) {
-        return { passed: false, gate: 'quantity', error: `You only have ${pos.quantity} shares of ${params.ticker}. Cannot sell ${params.quantity}.` };
+      const ticker = params.ticker.includes('_') ? params.ticker : `${params.ticker.toUpperCase()}_US_EQ`;
+      // `getPositions()` returns BrokerPosition (`ticker` normalised differently); the raw shape from
+      // `getPositionsFor()` carries T212's own ticker. Compare case-insensitively on both.
+      const pos = (raw as any[]).find((p) => String(p.ticker || '').toUpperCase() === ticker.toUpperCase());
+      if (!pos) {
+        return { passed: false, gate: 'position', error: `No position found for ${params.ticker} in your ${where} account.` };
+      }
+      const held = Math.abs(Number(pos.quantity) || 0);
+      if (params.quantity > held) {
+        return { passed: false, gate: 'quantity', error: `You only have ${held} shares of ${params.ticker}. Cannot sell ${params.quantity}.` };
       }
     }
 
     // Gate 4: Sufficient funds (for buys)
     if (params.side === 'buy') {
       // We don't have price here, but gate 1+2 already passed
-      if (account.marginFree <= 0) {
+      const free = Number((account as any).marginFree ?? (account as any).free ?? 0);
+      if (free <= 0) {
         return { passed: false, gate: 'funds', error: 'No free cash available for this purchase.' };
       }
     }
@@ -440,11 +460,23 @@ export class Trading212ImportService {
     accountType?: 'investment' | 'isa';
     limitPrice?: number;
   }): Promise<T212OrderResult & { preTrade?: { passed: boolean; gate: string; error?: string } }> {
-    // Run pre-trade safety gates
+    // ── #1256 — the controller's `accountType` USED TO BE DROPPED HERE ─────────────────────────
+    //
+    // It was accepted, logged, and never forwarded, so every order went to whichever account
+    // `TRADING212_MODE` named. With `TRADING212_MODE=demo` a request to sell ISA holdings landed on
+    // the demo book. It is now mapped to the adapter's own account target and used for BOTH the
+    // pre-trade verification and the order itself, so the two can never disagree.
+    const accountTarget: 'demo' | 'live' | 'isa' | undefined =
+      params.accountType === 'isa' ? 'isa'
+        : params.accountType === 'investment' ? 'live'
+          : undefined;
+
+    // Run pre-trade safety gates — against THE ACCOUNT BEING TRADED.
     const preTrade = await this.validatePreTrade({
       ticker: params.ticker,
       quantity: params.quantity,
       side: params.side,
+      accountType: accountTarget,
     });
 
     if (!preTrade.passed) {
@@ -452,7 +484,7 @@ export class Trading212ImportService {
       return { success: false, error: preTrade.error, preTrade };
     }
 
-    this.logger.log(`Placing ${this.t212Adapter.mode} ${params.side} order: ${params.ticker} ×${params.quantity}${params.limitPrice ? ` @${params.limitPrice}` : ''}`);
+    this.logger.log(`Placing ${accountTarget ?? this.t212Adapter.mode} ${params.side} order: ${params.ticker} ×${params.quantity}${params.limitPrice ? ` @${params.limitPrice}` : ''}`);
 
     let result: T212OrderResult;
     if (params.limitPrice) {
@@ -460,6 +492,7 @@ export class Trading212ImportService {
         ticker: params.ticker,
         quantity: params.quantity,
         side: params.side,
+        accountType: accountTarget,
         limitPrice: params.limitPrice,
       });
     } else {
@@ -467,6 +500,7 @@ export class Trading212ImportService {
         ticker: params.ticker,
         quantity: params.quantity,
         side: params.side,
+        accountType: accountTarget,
       });
     }
 
