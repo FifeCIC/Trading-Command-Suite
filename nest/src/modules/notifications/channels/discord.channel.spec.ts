@@ -309,6 +309,86 @@ describe('DiscordChannel — public feed policy', () => {
     });
   });
 
+  /**
+   * ⚠️ THE LAYOUT IS THE FEATURE (owner, 2026-11-12): *"The messages sent to Discord for signals,
+   * wins and losses aren't layed out the same… a uniformal approach should be applied and ensure
+   * that both protocol and bot is included."*
+   *
+   * These tests exist because the OLD defect was invisible: two of the three kinds had a different
+   * number of fields, and nothing failed. A published message cannot be un-published, so the shape
+   * has to be pinned by a test rather than by review.
+   *
+   * The builder is private and reached through `as any` on purpose — the thing worth asserting is
+   * the embed a reader sees, not an internal call signature.
+   */
+  describe('the public layout — one shape for signals, wins and losses', () => {
+    const embed = (
+      channel: DiscordChannel,
+      kind: 'signals' | 'wins' | 'losses',
+      m: NotificationMessage,
+    ) => (channel as any).buildFeedEmbed(kind, m) as { title: string; description: string; fields: Array<{ name: string; value: string }> };
+    const names = (e: { fields: Array<{ name: string }> }) => e.fields.map((f) => f.name);
+
+    it('⚠️ ALL THREE kinds carry Protocol and Bot, in the same order', () => {
+      const { channel } = makeChannel();
+      const sig = embed(channel, 'signals', msg({ metadata: { protocolId: 'p1', signalPct: 8 } }));
+      const win = embed(channel, 'wins', msg({ event: 'position-closed', metadata: { pnl: 52 } }));
+      const loss = embed(channel, 'losses', msg({ event: 'position-closed', metadata: { pnl: -20 } }));
+
+      for (const e of [sig, win, loss]) {
+        expect(names(e).slice(0, 2)).toEqual(['Protocol', 'Bot']);
+        expect(names(e)).toHaveLength(3);
+      }
+      // ⚠️ The THIRD label is allowed to differ, and only the third: it names the quantity, and a
+      // signal strength is not a profit. Naming it "Signal" when it holds money would be worse than
+      // an inconsistency. What must never drift is the COUNT, the ORDER, and the two identity fields.
+      expect(names(sig)).toEqual(['Protocol', 'Bot', 'Signal']);
+      expect(names(win)).toEqual(['Protocol', 'Bot', 'Profit']);
+      expect(names(loss)).toEqual(['Protocol', 'Bot', 'Profit']);
+    });
+
+    it('protocol and bot are read from the metadata, name preferred over id', () => {
+      const { channel } = makeChannel();
+      const e = embed(channel, 'wins', msg({
+        event: 'position-closed',
+        metadata: { pnl: 10, protocolId: 'slug-1', protocolName: 'Gold Session', strategyName: 'gold-breakout' },
+      }));
+      expect(e.fields[0].value).toBe('Gold Session');
+      expect(e.fields[1].value).toBe('gold-breakout');
+    });
+
+    it('⚠️ a missing bot is a DASH — never an invented name', () => {
+      const { channel } = makeChannel();
+      const e = embed(channel, 'signals', msg({ metadata: { signalPct: 7 } }));
+      expect(e.fields[1].value).toBe('—');
+      expect(e.fields[0].value).toBe('—');
+    });
+
+    it('the information sits on separate lines, not one joined string', () => {
+      const { channel } = makeChannel();
+      const e = embed(channel, 'signals', msg({ metadata: { protocolId: 'p1', signalPct: 8, opportunityPct: 12 } }));
+      const lines = e.description.split('\n');
+      expect(lines.length).toBeGreaterThanOrEqual(4);
+      expect(lines).toContain('Signal **8%** of capacity');
+      expect(lines).toContain('Opportunity **12%**');
+      expect(e.description).not.toMatch(/ · Protocol/);
+    });
+
+    it('🚀 appears on a $50 win and not on $49.99', () => {
+      const { channel } = makeChannel();
+      const big = embed(channel, 'wins', msg({ event: 'position-closed', metadata: { pnl: 50 } }));
+      const small = embed(channel, 'wins', msg({ event: 'position-closed', metadata: { pnl: 49.99 } }));
+      expect(big.title.startsWith('🚀')).toBe(true);
+      expect(small.title.startsWith('🚀')).toBe(false);
+    });
+
+    it('no rocket on a signal or a loss, whatever the number', () => {
+      const { channel } = makeChannel();
+      expect(embed(channel, 'signals', msg({ metadata: { signalPct: 9 } })).title.startsWith('🚀')).toBe(false);
+      expect(embed(channel, 'losses', msg({ event: 'position-closed', metadata: { pnl: -60 } })).title.startsWith('🚀')).toBe(false);
+    });
+  });
+
   describe('which strategy a signal belongs to', () => {
     it('reads metadata.protocolId', () => {
       const { channel } = makeChannel();

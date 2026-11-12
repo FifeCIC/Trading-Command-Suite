@@ -1205,7 +1205,17 @@ export class StopGuardianService {
       // minimum. Without it a take-profit could only be published as "unknown outcome", which the
       // feed refuses. The value is already in scope here; omitting it would have made the feed
       // silently blind to every stop-guardian close.
-      metadata: { pnl, exitPrice: target, closeReason: 'take-profit' },
+      metadata: {
+        pnl,
+        exitPrice: target,
+        closeReason: 'take-profit',
+        // The published message shows protocol AND bot (owner, 2026-11-12). `strat` is the resolved
+        // trading strategy for this position — the SAME row the guardian used to decide the target,
+        // so these two fields cannot disagree with the decision that closed it.
+        strategyName: strat?.name ?? null,
+        strategyId: strat?.id ?? null,
+        protocolId: strat?.protocolId ?? null,
+      },
     }).catch(() => {});
 
     this.recentMoneyTargetCloses.unshift({

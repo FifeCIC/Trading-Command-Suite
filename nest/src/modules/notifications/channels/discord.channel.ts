@@ -438,24 +438,80 @@ export class DiscordChannel {
     return { title: msg.title, description: msg.body, color, fields, timestamp: new Date().toISOString() };
   }
 
+  /**
+   * buildFeedEmbed() — ONE layout for all three public message kinds.
+   *
+   * Owner, 2026-11-12: *"The messages sent to Discord for signals, wins and losses aren't layed out
+   * the same… a uniformal approach should be applied and ensure that both protocol and bot is
+   * included. Put the information on additional lines too and maybe we could use rocket emoji on a
+   * $50 profit."*
+   *
+   * ⚠️ WHY THIS IS ONE FUNCTION AND NOT THREE BRANCHES. It used to build a SIGNAL embed with NO
+   * fields at all and a closed-trade embed with ONE (`Profit`), so a single feed produced two
+   * different shapes and a reader could not compare a signal against its result. One builder cannot
+   * drift from itself — the kind now changes the WORDS, never the shape.
+   *
+   * Field order is fixed for every kind: **Protocol, Bot**, then the kind's own number. A dash is
+   * printed where a value is genuinely unknown. ⚠️ Never substitute a placeholder NAME for a missing
+   * bot: a fabricated identity in a public feed is worse than an honest dash, and this repo has
+   * already paid for that once (#1018 — attribution must come from a recorded id, not a guess).
+   *
+   * The rocket is deliberately ONE condition (`profit ≥ 50`), not a tier system. It is brightness,
+   * not a claim about performance.
+   */
   private buildFeedEmbed(channel: 'signals' | 'wins' | 'losses', msg: NotificationMessage): Record<string, unknown> {
     const pnl = this.pnlOf(msg);
-    if (channel === 'signals') {
-      return {
-        title: msg.title,
-        description: msg.body,
-        color: 0x22c55e,
-        footer: { text: 'Trading Command Suite - signal' },
-        timestamp: new Date().toISOString(),
-      };
+    const meta = (msg.metadata ?? {}) as Record<string, unknown>;
+    const text = (v: unknown): string | null => {
+      if (v === null || v === undefined) return null;
+      const s = String(v).trim();
+      return s.length > 0 && s !== 'null' && s !== 'undefined' ? s : null;
+    };
+
+    const symbol = text(msg.symbol) ?? text(meta.symbol) ?? '—';
+    const protocol = text(meta.protocolName) ?? text(meta.protocolId) ?? '—';
+    const bot = text(meta.strategyName) ?? text(meta.botName) ?? text(meta.strategyId) ?? '—';
+    const direction = text(meta.direction);
+    const reason = text(meta.closeReason);
+
+    const isSignal = channel === 'signals';
+    const isWin = channel === 'wins';
+    const badge = isSignal ? '📡' : isWin ? '🟢' : '🔴';
+    const kind = isSignal ? 'SIGNAL' : isWin ? 'WIN' : 'LOSS';
+    const rocket = isWin && pnl !== null && pnl >= 50 ? '🚀 ' : '';
+
+    // ── One fact per line, in the same order for every kind ────────────────────────────────────
+    const lines: string[] = [];
+    lines.push(`**${symbol}**${direction ? ` · ${direction}` : ''}${isSignal ? '' : ' · closed'}`);
+    if (isSignal) {
+      const signalPct = text(meta.signalPct);
+      const opportunityPct = text(meta.opportunityPct);
+      lines.push(`Signal **${signalPct ?? '—'}%** of capacity`);
+      lines.push(`Opportunity **${opportunityPct ?? '—'}%**`);
+      lines.push('Suggestion only — no order was placed');
+    } else {
+      lines.push(`Profit **${pnl === null ? '—' : pnl.toFixed(2)}**`);
+      lines.push(reason ? `Closed by **${reason}**` : 'Closed by **unrecorded**');
     }
-    const win = channel === 'wins';
+
+    const fields = [
+      { name: 'Protocol', value: protocol, inline: true },
+      { name: 'Bot', value: bot, inline: true },
+      isSignal
+        ? { name: 'Signal', value: `${text(meta.signalPct) ?? '—'}%`, inline: true }
+        : { name: 'Profit', value: pnl === null ? '—' : pnl.toFixed(2), inline: true },
+    ];
+
     return {
-      title: `${win ? 'WIN' : 'LOSS'} - ${msg.symbol ?? msg.title}`,
-      description: msg.body,
-      color: win ? 0x22c55e : 0xef4444,
-      fields: [{ name: 'Profit', value: pnl === null ? '-' : pnl.toFixed(2), inline: true }],
-      footer: { text: 'Trading Command Suite - closed trade' },
+      title: `${rocket}${badge} ${kind} — ${symbol}`,
+      description: lines.join('\n'),
+      color: isSignal || isWin ? 0x22c55e : 0xef4444,
+      fields,
+      footer: {
+        text: isSignal
+          ? 'Trading Command Suite · signal suggestion'
+          : 'Trading Command Suite · closed trade',
+      },
       timestamp: new Date().toISOString(),
     };
   }
