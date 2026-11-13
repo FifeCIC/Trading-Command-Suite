@@ -655,6 +655,38 @@ if (-not $SkipFrontend) {
 }
 
 Write-Host ""
+# ── BACKUP STALENESS — surface a silent gap at the moment the machine comes back ────────────
+#
+# ⚠️ WHY HERE (2026-11-13). The TCS-DB-Backup task is scheduled daily at 02:00 with
+# StartWhenAvailable = False, so every run that fell while the machine was off was DROPPED.
+# Measured: three archives across four weeks (10-17, 10-31, 11-09). Nothing said so — the task
+# showed Ready and every archive printed DONE.
+#
+# Fixing the trigger needs an elevated Set-ScheduledTask, which this session could not do. This is
+# the no-admin half: the launcher runs exactly when the machine comes back on, so a stale backup
+# becomes VISIBLE at the one moment a catch-up run is possible. It never blocks startup and never
+# starts a backup itself — a 2-minute dump inside the launcher would look like a hang.
+try {
+    $bkRoot = 'G:\My Drive\Project Management\Live\Trading-Command-Suite-Documentation\backups\db'
+    if (Test-Path $bkRoot) {
+        $newest = Get-ChildItem $bkRoot -Filter '*.zip' -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if (-not $newest) {
+            Write-Host '  WARNING: no database backup exists. Run: pwsh -File scripts\backup-db.ps1' -ForegroundColor Yellow
+        } else {
+            $ageH = [math]::Round(((Get-Date) - $newest.LastWriteTime).TotalHours, 1)
+            if ($ageH -gt 36) {
+                Write-Host "  WARNING: newest database backup is $ageH h old ($($newest.Name))." -ForegroundColor Yellow
+                Write-Host '           Run: pwsh -File scripts\backup-db.ps1' -ForegroundColor Yellow
+            } else {
+                Write-Host "  DB backup: $($newest.Name) ($ageH h old)" -ForegroundColor DarkGray
+            }
+        }
+    }
+} catch {
+    # A staleness warning must never be able to fail a launch.
+    Write-Host "  (backup age could not be read: $($_.Exception.Message))" -ForegroundColor DarkGray
+}
 if ($exitOk) { exit 0 }
 Write-Host "  EXIT 1 — startup incomplete:" -ForegroundColor Red
 foreach ($r in $exitReasons) { Write-Host "    $r" -ForegroundColor Red }

@@ -136,14 +136,24 @@ if ($proc.ExitCode -ne 0) {
 }
 
 # Compress with .NET GZipStream (leaveOpen=false on both — dispose closes underlying stream)
-$src = New-Object System.IO.FileStream @("$backupDir\temp.sql", [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
-$dst = New-Object System.IO.FileStream @($dataFile, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
-$gzip = New-Object System.IO.Compression.GZipStream @($dst, [System.IO.Compression.CompressionMode]::Compress, $false)
-$src.CopyTo($gzip)
-$gzip.Close()
-$src.Close()
-$dst.Close()
-Remove-Item "$backupDir\temp.sql"
+#
+# ⚠️ `temp.sql` IS REMOVED IN A `finally`, NOT ON THE LINE AFTER THE COMPRESSION.
+# Measured 2026-11-13: `temp.sql` was deleted only on the success path, so any failure between the
+# dump and the cleanup left a **490 MB** uncompressed dump in the Drive-synced backup folder —
+# found as a stray directory dated 2026-10-17, fifteen days of it syncing to Google Drive on every
+# run that failed. A cleanup that runs only when nothing went wrong is the opposite of a cleanup.
+$src = $null; $dst = $null; $gzip = $null
+try {
+  $src = New-Object System.IO.FileStream @("$backupDir\temp.sql", [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
+  $dst = New-Object System.IO.FileStream @($dataFile, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+  $gzip = New-Object System.IO.Compression.GZipStream @($dst, [System.IO.Compression.CompressionMode]::Compress, $false)
+  $src.CopyTo($gzip)
+} finally {
+  if ($gzip) { $gzip.Dispose() }
+  if ($src) { $src.Dispose() }
+  if ($dst) { $dst.Dispose() }
+  if (Test-Path "$backupDir\temp.sql") { Remove-Item "$backupDir\temp.sql" -Force -ErrorAction SilentlyContinue }
+}
 
 $dataSizeMB = [math]::Round((Get-Item $dataFile).Length / 1MB, 2)
 Write-Host "  Data saved: $dataSizeMB MB gzipped" -ForegroundColor Green
