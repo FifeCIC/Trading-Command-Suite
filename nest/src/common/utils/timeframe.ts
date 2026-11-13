@@ -254,6 +254,74 @@ export function everyCadenceStale(
 }
 
 /**
+ * pickScoringCadence() — WHICH cadence should a protocol actually be scored on, right now?
+ *
+ * ── DECISION (2026-11-13, owner) ──
+ * WHAT:      Score on the FINEST cadence that has fresh data, instead of scoring the protocol's
+ *            base cadence when that base is stale.
+ * WHY:       Owner, 2026-11-13: *"Scoring old data is pointless … That's almost like saying we've
+ *            designed it to score for the sake of it. We're developing an app that should be seeking
+ *            the next best update as the market changes every second of the day."* Measured cost of
+ *            the old behaviour: 108 GER40 snapshots in two hours, EVERY ONE a composite of 89, all
+ *            computed from a base `1m` series frozen 7.6 hours earlier — a constant score feeding six
+ *            `auto` bots whose entry threshold is 10. A frozen bar does not score low; it scores the
+ *            same number forever, which is the "plausible numbers, no error" signature.
+ * INSTEAD OF: Skipping the symbol when its base cadence is stale — measured to remove 11 ALIVE
+ *            instruments (#827: SPY, QQQ, US500, USTEC, XAUUSD, XAGUSD, UK100, GER40, FRA40,
+ *            CHINA50, VIX), because a 1m feed goes quiet outside cash hours. Falling back to a
+ *            coarser cadence keeps the instrument in the ladder on real data; skipping does not.
+ * REVERSE BY: Returning `{ chosen: first, switched: false }` unconditionally — one line, no data
+ *            migration, because nothing is stored differently except the recorded timeframe.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 176
+ * GUARD:     nest/src/common/utils/stale-cadence-fallback.spec.ts
+ *
+ * ⚠️ ORDER IS THE RULE, NOT A TIE-BREAK. The caller passes its cadences FINEST FIRST (the protocol's
+ * base cadence, then 15m, 1h, 1d), and the first non-stale one wins. That is what makes a stale base
+ * degrade by one step rather than jumping to a daily series it never used before.
+ *
+ * ⚠️ EMPTY ARRAY IS `chosen: null, allStale: false` — "I have nothing to judge" is NOT "everything is
+ * dead", matching `everyCadenceStale`'s own contract. A caller must not treat it as a refusal.
+ */
+export interface ScoringCadenceSet {
+  /** Cadence label, e.g. '1m', '15m', '1h', '1d'. */
+  tf: string;
+  /** That cadence's bars, oldest first; only the last element's timestamp is read here. */
+  bars: ReadonlyArray<{ timestamp: unknown }>;
+}
+
+export interface ScoringCadencePick<T extends ScoringCadenceSet> {
+  /** The cadence to score on, or null when there is nothing to judge. */
+  chosen: T | null;
+  /** True when every supplied cadence was stale — nothing fresh exists for this symbol. */
+  allStale: boolean;
+  /** True when `chosen` is a coarser cadence than the first supplied one. */
+  switched: boolean;
+  /** The cadence that was asked for first (the protocol's own base cadence). */
+  requested: string | null;
+}
+
+export function pickScoringCadence<T extends ScoringCadenceSet>(
+  sets: ReadonlyArray<T>,
+  now: number = Date.now(),
+): ScoringCadencePick<T> {
+  // `requested` is the FIRST cadence the caller offered, whether or not it holds bars — that is the
+  // protocol's own base cadence, and "we are not scoring on it" is the fact the caller needs to
+  // report. Deriving it from the filtered list would hide a base cadence that had no data at all.
+  const requested = sets.length > 0 ? sets[0].tf : null;
+  const usable = sets.filter((s) => Array.isArray(s.bars) && s.bars.length > 0);
+  if (usable.length === 0) return { chosen: null, allStale: false, switched: false, requested };
+
+  for (let i = 0; i < usable.length; i += 1) {
+    const set = usable[i];
+    const newest = set.bars[set.bars.length - 1]?.timestamp;
+    if (!isStaleForCadence(newest, set.tf, now)) {
+      return { chosen: set, allStale: false, switched: set.tf !== requested, requested };
+    }
+  }
+  return { chosen: null, allStale: true, switched: false, requested };
+}
+
+/**
  * Tolerance for clock jitter between the bar's source host and this host, before an
  * over-length lead is treated as impossible rather than merely borderline.
  */

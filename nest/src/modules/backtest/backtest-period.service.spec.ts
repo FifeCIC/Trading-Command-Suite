@@ -34,11 +34,14 @@ const settingsStub = (over = {}) => ({
   get: async (key) => ({
     'backtest.periodMinCoveragePct': 90,
     'backtest.periodMaxHoleMinutes': 120,
+    // #1262 — the edge-gap standard. Absent here it would be `NaN`, and `gap > NaN` is always false,
+    // so the gate would silently stop refusing anything.
+    'backtest.periodMaxEdgeGapMinutes': 4320,
     ...over,
   }[key]),
 });
 
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 
 // ── Pure arithmetic: the idempotency claim, testable with no database ────────────────────────
 
@@ -90,6 +93,8 @@ function mockPrisma(opts: {
   symbol: any;
   bars?: Array<{ symbolId: string; timeframe: string; timestamp: Date; provider: string }>;
   runsUsingPeriod?: number;
+  /** A row already using the requested (name, symbolId, timeframe) — set it to exercise #1263. */
+  existingSameName?: any;
 }) {
   const bars = opts.bars ?? [];
   const created: any[] = [];
@@ -114,6 +119,12 @@ function mockPrisma(opts: {
         created.push(row);
         return row;
       }),
+      /**
+       * The uniqueness probe added to `create()` (#1263). `opts.existingSameName` is what the guard
+       * sees: a row means "this name is taken for this symbol+timeframe", `null` means it is free.
+       * Defaulting to null keeps every pre-existing test on the happy path it was written for.
+       */
+      findFirst: jest.fn(async () => opts.existingSameName ?? null),
       findUnique: jest.fn(async () => opts.period),
       update: jest.fn(async ({ data }: any) => {
         updated.push(data);
@@ -139,13 +150,31 @@ function mockPrisma(opts: {
         );
         return rows[0] ?? null;
       }),
-      findMany: jest.fn(async ({ where }: any) => {
-        const seen = new Set<string>();
-        return inSpan(where).filter((b) => {
-          if (seen.has(b.provider)) return false;
-          seen.add(b.provider);
-          return true;
-        });
+      /**
+       * ⚠️ TWO SHAPES, and they must not be collapsed (#1262). `coverage()` reads this table twice:
+       * once for EVERY timestamp (the gap profile needs the order) and once with `distinct: ['provider']`
+       * for the provider list. This mock used to de-duplicate by provider unconditionally, so the
+       * timestamp read returned a single row and every profile looked perfectly covered — which hid
+       * the coverage gate entirely. No existing test supplied bars, so nothing caught it.
+       */
+      findMany: jest.fn(async ({ where, distinct, orderBy }: any) => {
+        const rows = inSpan(where);
+        if (distinct?.includes('provider')) {
+          const seen = new Set<string>();
+          return rows.filter((b) => {
+            if (seen.has(b.provider)) return false;
+            seen.add(b.provider);
+            return true;
+          });
+        }
+        if (orderBy?.timestamp) {
+          return [...rows].sort((a, b) =>
+            orderBy.timestamp === 'asc'
+              ? a.timestamp.getTime() - b.timestamp.getTime()
+              : b.timestamp.getTime() - a.timestamp.getTime(),
+          );
+        }
+        return rows;
       }),
       createMany: jest.fn(async ({ data, skipDuplicates }: any) => {
         let count = 0;
@@ -234,6 +263,83 @@ describe('BacktestPeriodService.create — a window that says why it mattered (#
     await expect(
       svc.create({ name: '   ', symbol: 'GML', timeframe: '5m', from: '2026-03-11', to: '2026-03-13' }),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('refuses a name already used for the same symbol AND timeframe (#1263)', async () => {
+    // The library is looked up by name; 27 rows already share `dev-window-v1` across different
+    // (symbol, timeframe) pairs, which is intended. A second row with the SAME pair is the one a
+    // reader cannot tell apart — same name, same symbol, same timeframe, different dates.
+    const prisma = mockPrisma({
+      period: PERIOD,
+      symbol: SYMBOL,
+      existingSameName: {
+        id: 'existing-1',
+        fromDate: new Date('2026-09-09T00:00:00Z'),
+        toDate: new Date('2026-09-20T00:00:00Z'),
+      },
+    });
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
+
+    await expect(
+      svc.create({
+        name: 'dev-window-v1', symbol: 'GML', timeframe: '5m',
+        from: '2026-03-11T00:00:00Z', to: '2026-03-13T00:00:00Z',
+      }),
+    ).rejects.toThrow(ConflictException);
+
+    // The load-bearing half: it must not have written the row it refused.
+    expect(prisma._created).toHaveLength(0);
+  });
+
+  it('names the existing period, so the caller can act instead of guessing', async () => {
+    const prisma = mockPrisma({
+      period: PERIOD,
+      symbol: SYMBOL,
+      existingSameName: {
+        id: 'existing-1',
+        fromDate: new Date('2026-09-09T00:00:00Z'),
+        toDate: new Date('2026-09-20T00:00:00Z'),
+      },
+    });
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
+
+    await expect(
+      svc.create({
+        name: 'dev-window-v1', symbol: 'GML', timeframe: '5m',
+        from: '2026-03-11T00:00:00Z', to: '2026-03-13T00:00:00Z',
+      }),
+    ).rejects.toThrow(/2026-09-09[\s\S]*2026-09-20[\s\S]*existing-1/);
+  });
+
+  it('probes by the TRIMMED name and the resolved symbol — not the raw input', async () => {
+    // A guard that matched on untrimmed input would let '  dev-window-v1  ' through and create
+    // exactly the duplicate it exists to prevent.
+    const prisma = mockPrisma({ period: PERIOD, symbol: SYMBOL });
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
+
+    await svc.create({
+      name: '  dev-window-v1  ', symbol: 'GML', timeframe: '5m',
+      from: '2026-03-11T00:00:00Z', to: '2026-03-13T00:00:00Z',
+    });
+
+    expect(prisma.backtestPeriod.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { name: 'dev-window-v1', symbolId: 'sym-1', timeframe: '5m' },
+      }),
+    );
+  });
+
+  it('still creates when the name is free — the guard is not a blanket refusal', async () => {
+    const prisma = mockPrisma({ period: PERIOD, symbol: SYMBOL, existingSameName: null });
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
+
+    const out: any = await svc.create({
+      name: 'nvda-2w-2026-11-13', symbol: 'GML', timeframe: '5m',
+      from: '2026-03-11T00:00:00Z', to: '2026-03-13T00:00:00Z',
+    });
+
+    expect(out.name).toBe('nvda-2w-2026-11-13');
+    expect(prisma._created).toHaveLength(1);
   });
 
   it('refuses an inverted window rather than storing a negative span', async () => {
@@ -463,5 +569,107 @@ describe('BacktestPeriodService.remove — a measured window is not a draft (#98
       data: { periodId: null },
     });
     expect(out).toMatchObject({ deleted: true, unlinkedRuns: 4, barsRetained: true });
+  });
+});
+
+// ── The coverage gate (#1262) ────────────────────────────────────────────────────────────────
+
+/**
+ * A period row is an ASSERTION that a window was measured. Measured 2026-11-13, two `dev-window-v1`
+ * rows asserted six weeks ending Oct 20 while their data stopped Oct 13 — and both still reported
+ * `windowSource: period:dev-window-v1`, so a result claimed a window it never covered.
+ *
+ * The gate has to allow the service's documented "define now, capture later" workflow, so the
+ * interesting case is NOT "no bars" — it is "some bars, not enough".
+ */
+describe('BacktestPeriodService.create — the coverage gate (#1262)', () => {
+  const withBars = (bars: any[]) => ({ period: PERIOD, symbol: SYMBOL, bars });
+
+  it('REFUSES a window whose bars do not cover it, and leaves no row behind', async () => {
+    // 5 bars on the first day of a 5-day window: there IS data, so this is not "not yet captured".
+    const prisma = mockPrisma(withBars(
+      barsFor(5).map((b) => ({ ...b, symbolId: 'sym-1', timeframe: '5m', provider: 'test' })),
+    ));
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
+
+    await expect(
+      svc.create({
+        name: 'half a window', symbol: 'GML', timeframe: '5m',
+        from: '2026-03-11T00:00:00Z', to: '2026-03-16T00:00:00Z',
+      }),
+    ).rejects.toThrow(/do not span the requested window[\s\S]*allowPartial/);
+
+    // ⚠️ The load-bearing half: a refused create must not leave the row it refused, or the next
+    // identical call would 409 against a period the caller was told did not exist.
+    expect(prisma.backtestPeriod.delete).toHaveBeenCalledTimes(1);
+  });
+
+  it('ALLOWS a window with no bars at all — defining now and capturing later is the workflow', async () => {
+    const prisma = mockPrisma(withBars([]));
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
+
+    const out: any = await svc.create({
+      name: 'capture me later', symbol: 'GML', timeframe: '5m',
+      from: '2026-03-11T00:00:00Z', to: '2026-03-13T00:00:00Z',
+    });
+
+    expect(out.name).toBe('capture me later');
+    expect(out.barCount).toBe(0);
+    expect(prisma.backtestPeriod.delete).not.toHaveBeenCalled();
+  });
+
+  it('ALLOWS a window the bars fully cover', async () => {
+    // 25 five-minute bars = exactly the 2-hour window.
+    const prisma = mockPrisma(withBars(
+      barsFor(25).map((b) => ({ ...b, symbolId: 'sym-1', timeframe: '5m', provider: 'test' })),
+    ));
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
+
+    const out: any = await svc.create({
+      name: 'tight window', symbol: 'GML', timeframe: '5m',
+      from: '2026-03-11T00:00:00Z', to: '2026-03-11T02:00:00Z',
+    });
+
+    expect(out.barCount).toBe(25);
+    expect(out.coverage.health).toBe('healthy');
+    expect(prisma.backtestPeriod.delete).not.toHaveBeenCalled();
+  });
+
+  it('permits a partial window ONLY when asked, and still reports that it is partial', async () => {
+    const prisma = mockPrisma(withBars(
+      barsFor(5).map((b) => ({ ...b, symbolId: 'sym-1', timeframe: '5m', provider: 'test' })),
+    ));
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
+
+    const out: any = await svc.create({
+      name: 'deliberately partial', symbol: 'GML', timeframe: '5m',
+      from: '2026-03-11T00:00:00Z', to: '2026-03-16T00:00:00Z',
+      allowPartial: true,
+    });
+
+    // Allowed — but the gap travels with the row, so a partial capture cannot look like a full one
+    // just because it was permitted.
+    expect(out.coverage.edgeGapExceeded).toBe(true);
+    expect(out.coverage.endGapMinutes).toBeGreaterThan(4320);
+    expect(prisma.backtestPeriod.delete).not.toHaveBeenCalled();
+  });
+
+  it('uses the SAME rule run() enforces — the verdict is periodHealth, not a second opinion', async () => {
+    // If create() and run() ever disagreed about "covered", a window could be stored and then
+    // refused by the very health check that already exists. Same settings, same verdict.
+    const prisma = mockPrisma(withBars(
+      barsFor(5).map((b) => ({ ...b, symbolId: 'sym-1', timeframe: '5m', provider: 'test' })),
+    ));
+    const svc = new BacktestPeriodService(prisma, mockAdapters({}), settingsStub());
+    const out: any = await svc.create({
+      name: 'p', symbol: 'GML', timeframe: '5m',
+      from: '2026-03-11T00:00:00Z', to: '2026-03-16T00:00:00Z',
+      allowPartial: true,
+    });
+    // ⚠️ The health verdict is HEALTHY here even though the window is 5 days short — because the gap
+    // profile derives `expectedBars` from the bars present. That is precisely why the gate cannot use
+    // it, and why this assertion exists.
+    expect(out.coverage.health).toBe('healthy');
+    expect(out.coverage.edgeGapExceeded).toBe(true);
   });
 });

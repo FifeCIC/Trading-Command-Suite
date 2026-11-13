@@ -1,8 +1,9 @@
 import { useParams, Link } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { createChart } from 'lightweight-charts';
+import { createChart, CandlestickSeries } from 'lightweight-charts';
 import { apiGet } from '../core/api/client';
+import { toChartSeries } from '../core/chart-time';
 import StarToggle from '../components/StarToggle';
 import './symbol-detail.css';
 
@@ -123,8 +124,12 @@ export default function SymbolDetailPage() {
       rightPriceScale: { borderColor: 'rgba(255,255,255,0.08)' },
       timeScale: { borderColor: 'rgba(255,255,255,0.08)', timeVisible: true },
     });
-    const series = chart.addCandlestickSeries({ upColor: '#22c55e', downColor: '#ef4444', borderUpColor: '#22c55e', borderDownColor: '#ef4444', wickUpColor: '#22c55e', wickDownColor: '#ef4444' });
-    series.setData(candles.map((c) => ({ time: c.time || c.timestamp || c.date, open: c.open, high: c.high, low: c.low, close: c.close })));
+    // ⚠️ lightweight-charts v5 REMOVED `chart.addCandlestickSeries()`. This page was calling it, so
+    // the chart threw `addCandlestickSeries is not a function` during the effect and took the whole
+    // Symbol page with it — the same class as #1134 on the Backtest Lab. v5 takes the series TYPE as
+    // an argument instead: `addSeries(SeriesDefinition, options)`.
+    const series = chart.addSeries(CandlestickSeries, { upColor: '#22c55e', downColor: '#ef4444', borderUpColor: '#22c55e', borderDownColor: '#ef4444', wickUpColor: '#22c55e', wickDownColor: '#ef4444' });
+    series.setData(toChartSeries(candles));
     chart.timeScale().fitContent();
     chartInstance.current = chart;
     const h = () => { if (chartRef.current && chartInstance.current) chartInstance.current.applyOptions({ width: chartRef.current.clientWidth }); };

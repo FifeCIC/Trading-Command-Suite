@@ -1,6 +1,6 @@
 {
   "name": "tradingcs",
-  "version": "0.160.0",
+  "version": "0.160.1",
   "releaseStage": "alpha",
   "private": true,
   "license": "AGPL-3.0",
@@ -81,6 +81,7 @@
     "test:notices": "node --test src/core/notices/notices.test.js",
     "test:qa-ids": "node ./scripts/validate-qa-ids.cjs --self-test",
     "test:replay-clock": "node --test src/core/replay-clock.test.js",
+    "test:chart-time": "node --test src/core/chart-time.test.js",
     "test:replay-exit": "node ./scripts/replay-exit-counterfactual.cjs --self-test",
     "test:replay-verdict": "node ./scripts/replay-exit-verdict.cjs --self-test",
     "test:roadmap": "node --test src/core/roadmap/roadmap-core.test.js",
@@ -115,7 +116,8 @@
     "version:check": "node ./scripts/bump-version.cjs --check",
     "report:bot-rules": "node scripts/report-bot-rule-coverage.cjs",
     "db:backup": "pwsh -NoProfile -File scripts/backup-db.ps1",
-    "db:backup:drill": "pwsh -NoProfile -File scripts/restore-drill.ps1"
+    "db:backup:drill": "pwsh -NoProfile -File scripts/restore-drill.ps1",
+    "generate:strategy-seed": "node scripts/generate-strategy-seed.cjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.20",

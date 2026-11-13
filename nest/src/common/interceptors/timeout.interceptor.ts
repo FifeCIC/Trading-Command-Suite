@@ -31,16 +31,50 @@
 
 import {
   Injectable,
+  Logger,
   NestInterceptor,
   ExecutionContext,
   CallHandler,
   GatewayTimeoutException,
 } from '@nestjs/common';
 import { Observable, throwError, TimeoutError } from 'rxjs';
-import { timeout, catchError } from 'rxjs/operators';
+import { timeout, catchError, finalize } from 'rxjs/operators';
 import { LONG_RUNNING_MS } from '../decorators/long-running.decorator';
 
 export const DEFAULT_TIMEOUT_MS = 30_000;
+
+/**
+ * How far into its deadline a request must get before a warning is logged (#1140).
+ *
+ * ── WHY A WARNING EXISTS AT ALL ────────────────────────────────────────────────────────────────
+ * The per-route override fixed `POST /run`, and the SAME defect survived on its siblings: measured
+ * 2026-11-13, `optimize` (a 5×5 grid = 25 full runs), `walk-forward` (optimize twice on 730/365-day
+ * windows) and `coverage` (144 directives × 365 bars) all still carried the 30 s default. A route
+ * that is 20 s of work away from a deadline looks perfectly healthy right up to the 504, and the
+ * 504 carries only `{ seconds: 30 }` — it does not say WHICH route, or how close it was.
+ *
+ * At 80% the request is still running, so the line names the route and the elapsed time while
+ * there is time to act. This is a SYMPTOM guard on purpose: it does not need to know why a route is
+ * slow, so it cannot inherit a wrong theory about the cause.
+ *
+ * ⚠️ The warning is not a pass. A route that warns and then completes still warned, and a route
+ * that warns on EVERY call is undeclared and should get its own `@LongRunning`.
+ */
+export const NEAR_DEADLINE_FRACTION = 0.8;
+
+/** The elapsed time at which a request is considered near its deadline. */
+export function nearDeadlineAtMs(deadlineMs: number): number {
+  return Math.floor(deadlineMs * NEAR_DEADLINE_FRACTION);
+}
+
+/** One line naming what is about to time out. Pure, so it can be asserted without a server. */
+export function nearDeadlineWarning(route: string, elapsedMs: number, deadlineMs: number): string {
+  return (
+    `${route} has run ${elapsedMs}ms of its ${deadlineMs}ms deadline ` +
+    `(${Math.round((elapsedMs / deadlineMs) * 100)}%). If this route is SUPPOSED to take this ` +
+    `long it needs @LongRunning(ms); if not, it is about to be reported as a hang.`
+  );
+}
 
 /** Resolve the deadline for one request. Pure, so it can be asserted without an HTTP stack. */
 export function resolveDeadline(routeOverride: unknown): number {
@@ -57,8 +91,27 @@ export function deadlineFor(context: ExecutionContext): number {
 
 @Injectable()
 export class TimeoutInterceptor implements NestInterceptor {
+  /**
+   * ⚠️ `new Logger(...)` rather than injected, for the same reason `Reflect.getMetadata` is used
+   * directly: `main.ts` builds this interceptor with `new TimeoutInterceptor()` OUTSIDE Nest's DI
+   * container, so an injected dependency would be silently `undefined`.
+   */
+  private readonly logger = new Logger(TimeoutInterceptor.name);
+
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const deadline = deadlineFor(context);
+    const startedAt = Date.now();
+    const route = `${context.getClass()?.name ?? '?'}.${context.getHandler()?.name ?? '?'}`;
+
+    const warnTimer = setTimeout(() => {
+      this.logger.warn(
+        nearDeadlineWarning(route, Date.now() - startedAt, deadline),
+      );
+    }, nearDeadlineAtMs(deadline));
+    // Do not hold the event loop open, and make sure a normal completion cannot leave a warning
+    // queued behind it — a warning fired AFTER the response is worse than none: it accuses a
+    // request that has already succeeded.
+    warnTimer.unref?.();
 
     return next.handle().pipe(
       timeout(deadline),
@@ -70,6 +123,7 @@ export class TimeoutInterceptor implements NestInterceptor {
         }
         return throwError(() => err);
       }),
+      finalize(() => clearTimeout(warnTimer)),
     );
   }
 }

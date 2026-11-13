@@ -21,6 +21,8 @@ import {
   TimeoutInterceptor,
   resolveDeadline,
   DEFAULT_TIMEOUT_MS,
+  nearDeadlineAtMs,
+  nearDeadlineWarning,
 } from './timeout.interceptor';
 import { LONG_RUNNING_MS } from '../decorators/long-running.decorator';
 
@@ -110,5 +112,107 @@ describe('TimeoutInterceptor deadlines (#1139)', () => {
           error: (e) => { expect(e).toBe(boom); expect(e).not.toBeInstanceOf(TimeoutError); done(); },
         });
     });
+  });
+});
+
+/**
+ * ── #1140: the routes that were still on the 30 s default ───────────────────────────────────────
+ *
+ * The per-route override shipped with `POST /run` only. Its SIBLINGS on the same path were never
+ * declared, so the identical 504 was still waiting for them — measured 2026-11-13:
+ *
+ *   optimize       5x5 default grid x `await this.run()`  = 25 full backtests (one run = 298 s)
+ *   walk-forward   calls optimize(), then re-runs train + test on 730/365-day windows  = >2x
+ *   coverage       144 registered directives x 365 days of bars  = ~52,000 evaluations
+ *
+ * These assertions read the deadline through the REAL metadata path (`Reflect`), not through a
+ * local constant, so they fail if a decorator is removed OR if the interceptor stops reading it.
+ */
+describe('Long-running routes are declared, not inherited (#1140)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { BacktestController } = require('../../modules/backtest/backtest.controller');
+
+  const deadlineOf = (method: string): number => {
+    const fn = BacktestController.prototype[method];
+    expect(typeof fn).toBe('function');
+    return resolveDeadline(Reflect.getMetadata(LONG_RUNNING_MS, fn));
+  };
+
+  it.each([
+    ['run', 600_000, 'measured 298 s; 2x headroom'],
+    ['optimize', 1_800_000, 'measured 49.5 s for a 400-run grid (24.8 s for 100)'],
+    ['walkForward', 3_600_000, 'measured 206.4 s for a 15x15 grid on 300/250-day windows'],
+  ])('%s() declares its own deadline (%s)', (method, expected) => {
+    expect(deadlineOf(method as string)).toBe(expected);
+    expect(deadlineOf(method as string)).toBeGreaterThan(DEFAULT_TIMEOUT_MS);
+  });
+
+  // ⚠️ The mirror case, and it is not padding: an over-applied override is indistinguishable from no
+  // timeout. These only READ stored runs, create a record, or bound their own work — decorating them
+  // would blind the hang guard on the routes most likely to be hit in a loop.
+  it.each([
+    ['repeatCheck', 'reads stored runs, does arithmetic on their scoreSeries'],
+    ['compareRuns', 'reads stored runs'],
+    ['createExperiment', 'inserts one row'],
+    ['stopSweep', 'arithmetic over one stored run\'s recorded excursions'],
+    // ⚠️ Measured 2026-11-13: 201 in 1.16 s for 144 directives x 365d. I had decorated this at 900 s
+    // by counting the loop shape, and the measurement proved the count wrong about the cost. This
+    // case exists so the next agent cannot re-add the decorator on the strength of the loop count.
+    ['directiveCoverage', 'measured 1.16 s — it bounds itself with take: days + 30'],
+  ])('%s() correctly keeps the 30 s default (%s)', (method) => {
+    expect(deadlineOf(method as string)).toBe(DEFAULT_TIMEOUT_MS);
+  });
+});
+
+describe('Near-deadline warning (#1140)', () => {
+  it('warns at 80% of the deadline, for both the default and an override', () => {
+    expect(nearDeadlineAtMs(30_000)).toBe(24_000);
+    expect(nearDeadlineAtMs(600_000)).toBe(480_000);
+  });
+
+  it('names the route, the elapsed time and the deadline — a bare 504 names none of them', () => {
+    const msg = nearDeadlineWarning('BacktestController.optimize', 24_000, 30_000);
+    expect(msg).toContain('BacktestController.optimize');
+    expect(msg).toContain('24000ms');
+    expect(msg).toContain('30000ms');
+    expect(msg).toContain('80%');
+    expect(msg).toContain('@LongRunning');
+  });
+
+  it('fires WHILE the request is still running, so there is time to act', async () => {
+    jest.useFakeTimers();
+    const interceptor = new TimeoutInterceptor();
+    const warn = jest.spyOn((interceptor as any).logger, 'warn').mockImplementation(() => {});
+    const never = { handle: () => new (require('rxjs').Observable)(() => () => {}) } as any;
+
+    interceptor.intercept(contextWith(undefined), never);
+    jest.advanceTimersByTime(nearDeadlineAtMs(DEFAULT_TIMEOUT_MS) - 1);
+    expect(warn).not.toHaveBeenCalled();
+
+    jest.advanceTimersByTime(2);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0][0])).toContain('of its 30000ms deadline');
+
+    jest.useRealTimers();
+    warn.mockRestore();
+  });
+
+  it('does NOT warn once the request has completed — accusing a success is worse than silence', async () => {
+    jest.useFakeTimers();
+    const interceptor = new TimeoutInterceptor();
+    const warn = jest.spyOn((interceptor as any).logger, 'warn').mockImplementation(() => {});
+
+    await new Promise<void>((resolve) => {
+      interceptor
+        .intercept(contextWith(undefined), { handle: () => of({ ok: true }) } as any)
+        .subscribe({ next: () => {}, complete: () => resolve() });
+    });
+
+    // Well past the near-deadline point: the timer must have been cleared by finalize.
+    jest.advanceTimersByTime(DEFAULT_TIMEOUT_MS * 2);
+    expect(warn).not.toHaveBeenCalled();
+
+    jest.useRealTimers();
+    warn.mockRestore();
   });
 });

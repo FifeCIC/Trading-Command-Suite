@@ -21,7 +21,7 @@
  * bar, so a chart that drew them alike would be worse than one that drew none.
  */
 import { useEffect, useRef } from 'react';
-import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts';
+import { createChart, CandlestickSeries, LineSeries, createSeriesMarkers } from 'lightweight-charts';
 
 const KIND_STYLE = {
   'regular-bullish': { color: '#22c55e', dashed: false, label: 'Bull', pane: 1, marker: 'belowBar' },
@@ -141,20 +141,25 @@ export default function RsiDivergenceChart({ preview, height = 520 }) {
       ]);
     }
 
-    // ── one marker per confirmed pair, on the RSI pane, carrying the KIND and the strength ──
-    if (drawn.length > 0 && typeof rsiSeries.setMarkers === 'function') {
-      rsiSeries.setMarkers(drawn.map((d) => {
-        const style = KIND_STYLE[d.kind] ?? KIND_STYLE['regular-bullish'];
-        return {
-          time: toSeconds(bars[d.toIndex].time),
-          position: style.marker,
-          color: style.color,
-          shape: style.marker === 'belowBar' ? 'arrowUp' : 'arrowDown',
-          text: `${style.label} ${d.strength}%`,
-          size: 1.4,
-        };
-      }));
-    }
+      // ── one marker per confirmed pair, on the RSI pane, carrying the KIND and the strength ──
+      //
+      // ⚠️ A FOURTH v4 SITE (#1135 listed three). `series.setMarkers()` was removed in v5, and this
+      // guarded it with `typeof … === 'function'`, so it never threw — the divergence markers simply
+      // never appeared. On a chart whose entire purpose is those markers, that reads as "no
+      // divergences found" rather than "the renderer is broken".
+      if (drawn.length > 0) {
+        createSeriesMarkers(rsiSeries, drawn.map((d) => {
+          const style = KIND_STYLE[d.kind] ?? KIND_STYLE['regular-bullish'];
+          return {
+            time: toSeconds(bars[d.toIndex].time),
+            position: style.marker,
+            color: style.color,
+            shape: style.marker === 'belowBar' ? 'arrowUp' : 'arrowDown',
+            text: `${style.label} ${d.strength}%`,
+            size: 1.4,
+          };
+        }));
+      }
 
     chart.timeScale().fitContent();
     chartRef.current = chart;

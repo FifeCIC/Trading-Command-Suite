@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { devTestPeriodName } from './dev-test-window';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
@@ -57,6 +57,15 @@ export interface CreatePeriodInput {
   symbolName?: string;
   /** `stock` | `etf` | `index` | `forex` | `crypto` — defaults to `stock` for a fresh ticker. */
   symbolType?: string;
+  /**
+   * Create the window even though the bars present do not cover it (#1262).
+   *
+   * ⚠️ DEFAULT FALSE, and the default is the point: a period row is an assertion that a window was
+   * measured, so declaring one the data does not fill is the same defect as a fabricated statistic.
+   * Set this only when you are deliberately capturing a window you have measured to be partial and
+   * you want it recorded as such.
+   */
+  allowPartial?: boolean;
 }
 
 export interface ImportBarsResult {
@@ -92,8 +101,7 @@ export interface ImportBarsResult {
 }
 
 export interface PeriodCoverage {
-  periodId: string;
-  name: string;
+  periodId: string;  name: string;
   symbol: string;
   timeframe: string;
   requestedFrom: string;
@@ -114,6 +122,20 @@ export interface PeriodCoverage {
   /** True when `barCount > 0` and the window's own ends are not covered. */
   truncatedStart: boolean;
   truncatedEnd: boolean;
+  /**
+   * How far the first bar starts after `from`, and the last bar stops before `to`, in minutes.
+   * `0` when the window has no bars at all — "not captured" is not "short" (#1262).
+   */
+  startGapMinutes: number;
+  endGapMinutes: number;
+  /**
+   * True when either edge gap exceeds the declared `maxEdgeGapMinutes` (#1262).
+   *
+   * ⚠️ THIS IS THE ONLY FIELD THAT CAN CATCH AN OVER-CLAIMED WINDOW. `health.status` cannot:
+   * the gap profile derives `expectedBars` from the bars PRESENT, so five bars over five days
+   * scores 100% coverage and `healthy`. Measured 2026-11-13 on two stored `dev-window-v1` rows.
+   */
+  edgeGapExceeded: boolean;
   /**
    * The VERDICT (2026-10-29). A bar COUNT cannot say whether a window is measurable — the VIX dev
    * window held 7,662 bars while covering 63.9% of its span with a 111-hour hole in the middle.
@@ -182,6 +204,35 @@ export class BacktestPeriodService {
 
     const { symbol, registered } = await this.resolveSymbol(ticker, input);
 
+    /**
+     * 🛑 A NAME IS NOT AN IDENTIFIER, AND THIS LIBRARY IS LOOKED UP BY NAME (#1263).
+     *
+     * Measured 2026-11-13: 27 rows named `dev-window-v1` — one per (symbol, timeframe), which is
+     * correct and intended — so `name` alone is already ambiguous across the library. It must not
+     * become ambiguous WITHIN a (symbol, timeframe) too, because that is the one combination a
+     * reader cannot tell apart: two rows, same name, same symbol, same timeframe, different dates
+     * or notes, and nothing on the row to say which one a comparison used.
+     *
+     * ⚠️ Not an upsert. This repo's own window note says "DO NOT EDIT THESE DATES IN PLACE — bump the
+     * version, extend the dates, re-seed", because silently moving a frozen window invalidates every
+     * comparison already made against it. An upsert here would do exactly that quietly. So a
+     * collision is REFUSED and the existing id is named, which leaves the caller able to PATCH the
+     * note, or delete and re-create deliberately.
+     */
+    const clash = await this.prisma.backtestPeriod.findFirst({
+      where: { name, symbolId: symbol.id, timeframe },
+      select: { id: true, fromDate: true, toDate: true },
+    });
+    if (clash) {
+      throw new ConflictException(
+        `A period named '${name}' already exists for ${ticker} ${timeframe} ` +
+          `(${clash.fromDate.toISOString().slice(0, 10)} → ${clash.toDate.toISOString().slice(0, 10)}, ` +
+          `id ${clash.id}). Window names must be unique per symbol and timeframe so a stored result ` +
+          `can be traced back to one window. Use a different name, or PATCH /api/backtest/periods/${clash.id} ` +
+          `to change its note.`,
+      );
+    }
+
     const row = await this.prisma.backtestPeriod.create({
       data: {
         name,
@@ -192,6 +243,56 @@ export class BacktestPeriodService {
         toDate: to,
       },
     });
+
+    /**
+     * ── THE COVERAGE GATE (#1262) ────────────────────────────────────────────────────────────────
+     * A period row is an ASSERTION that a window was measured. Measured 2026-11-13: two rows named
+     * `dev-window-v1` existed that the data did not fill — QQQ 5m ended **7.2 days** before the
+     * declared end, NVDA 15m started **5.7 days late** AND ended 7.2 days short. Both still reported
+     * `windowSource: period:dev-window-v1`, so a result claimed a window it never covered.
+     *
+     * ⚠️ THREE STATES, and only one of them is refused:
+     *
+     *   0 bars              → ALLOWED. Defining a window now and capturing it later is this service's
+     *                         documented workflow ("creating a period and filling it are two separate
+     *                         acts"), and `barCount === null` already records "never captured".
+     *   bars but unusable   → REFUSED. There is data, and it does not cover the window. This is the
+     *                         defect: partially-filled data is what makes a claim look founded.
+     *   bars and healthy    → ALLOWED.
+     *
+     * The verdict comes from `coverageOf`, so it is the SAME `periodHealth` rule that `run()` already
+     * enforces as a refusal. A window cannot pass here and then be refused there.
+     */
+    const coverage = await this.coverageOf('(new)', { name, symbolId: symbol.id, timeframe, fromDate: from, toDate: to });
+    /**
+     * ⚠️ THE GATE IS THE EDGE GAPS, **NOT** `health.status` (#1262).
+     *
+     * Using the health verdict here would repeat a documented mistake: `run()` used to refuse an
+     * `unusable` window and had to stop, because the expected-bar calculation assumes a continuous
+     * grid — so every instrument with a closed session read as unusable and the gate would have
+     * refused `dev-window-v1` itself (49-hour weekend hole). That reasoning is recorded at
+     * `backtest.service.ts:1202` and tracked in #1149.
+     *
+     * Edge gaps are session-agnostic: they compare the FIRST and LAST bar to the declared window, and
+     * the canonical rows measure 0.0–0.5 days at the edges while the two defective rows measured
+     * 5.7 and 7.2 days.
+     */
+    const unusable = coverage.barCount > 0 && coverage.edgeGapExceeded;
+    if (unusable && !input.allowPartial) {
+      // Delete first: a refused create must not leave the row it refused, or the next identical call
+      // would 409 against a period the caller was told did not exist.
+      await this.prisma.backtestPeriod.delete({ where: { id: row.id } });
+      throw new BadRequestException(
+        `The bars for ${ticker} ${timeframe} do not span the requested window: ` +
+          `first bar ${coverage.coveredFrom?.slice(0, 10) ?? 'none'} ` +
+          `(${coverage.startGapMinutes} min after ${from.toISOString().slice(0, 10)}), ` +
+          `last bar ${coverage.coveredTo?.slice(0, 10) ?? 'none'} ` +
+          `(${coverage.endGapMinutes} min before ${to.toISOString().slice(0, 10)}). ` +
+          `A period asserts that its window was measured, so it is refused rather than stored. ` +
+          `Import the missing bars, narrow the window to what the data covers, or pass ` +
+          `"allowPartial": true to record it deliberately as a partial window.`,
+      );
+    }
 
     this.logger.log(
       `Period created: '${name}' ${ticker} ${timeframe} ${from.toISOString()} → ${to.toISOString()}` +
@@ -205,7 +306,20 @@ export class BacktestPeriodService {
       // recreate it, because there is no seeder for a ticker a human invented — the same position a
       // watchlist entry or a trade occupies. See the note on `resolveSymbol`.
       symbolRegistered: registered,
-      barCount: await this.countBars(symbol.id, timeframe, from, to),
+      // Reused from the coverage gate rather than counted again — a second count could disagree with
+      // the verdict that was just made on the first, which is the shape this repo keeps finding.
+      barCount: coverage.barCount,
+      // The verdict the gate used, so an allowed `allowPartial` row still SHOWS that it is partial
+      // instead of looking like a full capture.
+      coverage: {
+        health: coverage.health.status,
+        coveragePct: coverage.health.coveragePct,
+        coveredFrom: coverage.coveredFrom,
+        coveredTo: coverage.coveredTo,
+        startGapMinutes: coverage.startGapMinutes,
+        endGapMinutes: coverage.endGapMinutes,
+        edgeGapExceeded: coverage.edgeGapExceeded,
+      },
     };
   }
 
@@ -554,6 +668,22 @@ export class BacktestPeriodService {
   async coverage(periodId: string): Promise<PeriodCoverage> {
     const period = await this.prisma.backtestPeriod.findUnique({ where: { id: periodId } });
     if (!period) throw new NotFoundException(`No backtest period ${periodId}.`);
+    return this.coverageOf(periodId, period);
+  }
+
+  /**
+   * The measurement itself, separated from the lookup so `create()` can ask the SAME question about
+   * a window that has not been stored yet (#1262).
+   *
+   * ⚠️ ONE RULE, TWO CALLERS. The coverage gate on create must not be a second opinion about what
+   * "covered" means — if it were, a window could pass at create and be refused at run by the very
+   * `health.status === 'unusable'` check that already exists. So the arithmetic lives here and both
+   * entry points read it.
+   */
+  private async coverageOf(
+    periodId: string,
+    period: { name: string; symbolId: string; timeframe: string; fromDate: Date; toDate: Date },
+  ): Promise<PeriodCoverage> {
     const symbol = await this.prisma.symbol.findUnique({ where: { id: period.symbolId } });
 
     const where = {
@@ -582,6 +712,21 @@ export class BacktestPeriodService {
       timeframeMinutes(period.timeframe),
     );
 
+    /**
+     * Edge gaps, in minutes. Measured rather than inferred, because "the window started late" and
+     * "the window ended early" are the only two ways a row can assert dates it never measured, and
+     * the internal gap profile is blind to both (#1262).
+     */
+    const standard = await this.periodStandard();
+    const startGapMinutes =
+      barCount > 0 && first
+        ? Math.max(0, (first.timestamp.getTime() - period.fromDate.getTime()) / 60_000)
+        : 0;
+    const endGapMinutes =
+      barCount > 0 && last
+        ? Math.max(0, (period.toDate.getTime() - last.timestamp.getTime()) / 60_000)
+        : 0;
+
     return {
       periodId,
       name: period.name,
@@ -601,13 +746,13 @@ export class BacktestPeriodService {
       // A gap of more than an hour at either end is a real shortfall rather than an alignment
       // artefact — bar timestamps are bucket STARTS, so the first bar can begin slightly after
       // `from` without anything being missing.
-      truncatedStart:
-        barCount > 0 &&
-        (first?.timestamp.getTime() ?? 0) - period.fromDate.getTime() > 3_600_000,
-      truncatedEnd:
-        barCount > 0 &&
-        period.toDate.getTime() - (last?.timestamp.getTime() ?? 0) > 3_600_000,
-      health: periodHealth(profile, await this.periodStandard()),
+      truncatedStart: startGapMinutes * 60_000 > 3_600_000,
+      truncatedEnd: endGapMinutes * 60_000 > 3_600_000,
+      startGapMinutes: Math.round(startGapMinutes),
+      endGapMinutes: Math.round(endGapMinutes),
+      edgeGapExceeded:
+        startGapMinutes > standard.maxEdgeGapMinutes || endGapMinutes > standard.maxEdgeGapMinutes,
+      health: periodHealth(profile, standard),
     };
   }
 
@@ -616,11 +761,23 @@ export class BacktestPeriodService {
    * constant buried in a service. See `backtest.periodMinCoveragePct` / `.periodMaxHoleMinutes`.
    */
   async periodStandard(): Promise<PeriodStandard> {
-    const [minCoveragePct, maxHoleMinutes] = await Promise.all([
+    const [minCoveragePct, maxHoleMinutes, maxEdgeGapMinutes] = await Promise.all([
       this.settings.get<number>('backtest.periodMinCoveragePct'),
       this.settings.get<number>('backtest.periodMaxHoleMinutes'),
+      this.settings.get<number>('backtest.periodMaxEdgeGapMinutes'),
     ]);
-    return { minCoveragePct: Number(minCoveragePct), maxHoleMinutes: Number(maxHoleMinutes) };
+    return {
+      minCoveragePct: Number(minCoveragePct),
+      maxHoleMinutes: Number(maxHoleMinutes),
+      // ⚠️ FAILS CLOSED, NOT OPEN. A missing or malformed setting would make the edge-gap
+      // comparison `gap > NaN`, which is ALWAYS false — the gate would silently stop refusing
+      // anything and still look healthy. That is this repo's most repeated defect, so the fallback
+      // is the declared default rather than whatever `Number(undefined)` produces.
+      maxEdgeGapMinutes:
+        Number.isFinite(Number(maxEdgeGapMinutes)) && Number(maxEdgeGapMinutes) > 0
+          ? Number(maxEdgeGapMinutes)
+          : 4320,
+    };
   }
 
   // ── Update / delete ───────────────────────────────────────────────────────────────────────

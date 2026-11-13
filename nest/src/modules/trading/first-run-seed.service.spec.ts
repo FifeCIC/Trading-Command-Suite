@@ -1,4 +1,7 @@
 import { FirstRunSeedService } from './first-run-seed.service';
+// #1258 — the source fleet, so the #1193 cap tests can compare a seeded flag against the flag it
+// was given rather than against `false`. See the note in "an uncapped level keeps every shipped…".
+import { DEFAULT_TRADING_STRATEGIES } from './strategy-seed-data';
 
 /**
  * first-run-seed.service.spec.ts — the install path must seed ONCE, and never on a live install.
@@ -162,7 +165,20 @@ describe('FirstRunSeedService — seed once, never twice', () => {
 
       await svc.seedIfEmpty();
 
-      expect(seeded(tradingStrategy).some((b) => b.active === false)).toBe(false);
+      /**
+       * ⚠️ COMPARED AGAINST THE SOURCE, NOT AGAINST `false` (#1258, 2026-11-13).
+       *
+       * This asserted `some(b => b.active === false) === false`, which was equivalent to "the cap
+       * changed nothing" only while EVERY shipped bot was active. Once the seed carried the real
+       * fleet, several bots are legitimately INACTIVE in `DEFAULT_TRADING_STRATEGIES` — so the old
+       * form failed while the seeder was behaving perfectly, and the tempting repair would have been
+       * to "fix" the seeder.
+       *
+       * The claim worth testing is the one the cap can break: for an uncapped level, every seeded
+       * `active` flag equals the flag it was given.
+       */
+      const bots = seeded(tradingStrategy);
+      expect(bots.every((b, i) => b.active === DEFAULT_TRADING_STRATEGIES[i].active)).toBe(true);
     });
 
     it('⚠️ FAIL-OPEN: an unreadable level keeps the shipped flags rather than shipping a one-bot install', async () => {
@@ -175,7 +191,41 @@ describe('FirstRunSeedService — seed once, never twice', () => {
 
       await svc.seedIfEmpty();
 
-      expect(seeded(tradingStrategy).some((b) => b.active === false)).toBe(false);
+      // Same comparison as above, and for the same reason: a fail-open level must not CHANGE a flag.
+      const bots = seeded(tradingStrategy);
+      expect(bots.every((b, i) => b.active === DEFAULT_TRADING_STRATEGIES[i].active)).toBe(true);
+    });
+
+    it('a CAPPED level flips only bots the source had ACTIVE — an already-inactive bot is untouched (#1258)', async () => {
+      // ⚠️ THREE properties, because one is not enough to catch a cap that rewrites everything:
+      //   1. inside the limit, every flag is the SOURCE flag (the cap must not touch these);
+      //   2. beyond the limit, an ACTIVE bot is turned OFF (the cap doing its job);
+      //   3. an already-OFF bot stays off (the cap is a no-op, not a rewriter).
+      // ⚠️ Measured 2026-11-13: a mutation that set EVERY seeded bot `active: false` passed all
+      // 9 tests in this file before this version — the two uncapped tests return early and never
+      // reach the cap, and asserting "already-off bots are still off" is satisfied by a cap that
+      // turns everything off. Property 1 is the only one that sees it.
+      const { svc, tradingStrategy, progression } = makeService({
+        protocolCount: 0, botCount: 0, protocolCountAfterSeed: 3,
+      });
+      const LIMIT = 3;
+      progression.activeBotsForFreshInstall = jest.fn(async () => ({ limit: LIMIT, judged: true }));
+
+      await svc.seedIfEmpty();
+
+      const bots = seeded(tradingStrategy);
+      // 1 — inside the limit, nothing changed.
+      for (let i = 0; i < LIMIT; i++) expect(bots[i].active).toBe(DEFAULT_TRADING_STRATEGIES[i].active);
+      // 2 — beyond the limit, a bot the source had ACTIVE is off.
+      const activeBeyond = DEFAULT_TRADING_STRATEGIES
+        .map((s, i) => ({ s, i }))
+        .filter(({ s, i }) => i >= LIMIT && s.active !== false);
+      expect(activeBeyond.length).toBeGreaterThan(0); // the case exists, or this proves nothing
+      for (const { i } of activeBeyond) expect(bots[i].active).toBe(false);
+      // 3 — an already-off bot stays off.
+      for (const { i } of DEFAULT_TRADING_STRATEGIES.map((s, i) => ({ s, i })).filter(({ s }) => s.active === false)) {
+        expect(bots[i].active).toBe(false);
+      }
     });
   });
 });

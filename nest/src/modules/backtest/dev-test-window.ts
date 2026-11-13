@@ -62,6 +62,23 @@ export const DEV_TEST_SYMBOLS = ['XAUUSD', 'XAGUSD', 'VIX', 'SPY', 'US500', 'BTC
  *
  * ⚠️ Do not add a pair here without measuring it first. A period row that over-claims coverage is
  * the same defect as a fabricated statistic: it reports a window that was never measured.
+ *
+ * ── RE-MEASURED 2026-11-13, BECAUSE THREE ROWS EXISTED THAT THIS CONSTANT DID NOT DECLARE ────────
+ * The database held 27 `dev-window-v1` rows against 24 declared pairs. Three had been created
+ * ad-hoc and would have been LOST on any reinstall — the drift `database-seed-discipline` exists to
+ * prevent, and the seeder's `--check` reported it as "unchanged 24" rather than as a problem.
+ *
+ * Each was measured inside the frozen window (2026-09-09 → 2026-10-20), in-window start → end:
+ *
+ *   WTI   `1h`  149 bars, Sep 09 → Oct 20 (0.5 d / 0.2 d edge gaps) — FULL, so DECLARED BELOW.
+ *   QQQ   `5m` 3,786 bars, Sep 09 → **Oct 13** — ends 7.2 d short. NOT declared: it cannot fill
+ *              the window, and declaring it would assert coverage the data does not have.
+ *   NVDA  `15m`  626 bars, **Sep 14** → **Oct 13** — starts 5.7 d late AND ends 7.2 d short. This
+ *              matches the 2026-11-02 measurement recorded above, which is why it was never
+ *              declared. NOT declared; the row that exists is a stray.
+ *
+ * ⇒ The declaration below is the set the data supports. The two stray rows are a KNOWN, MEASURED
+ * over-claim rather than a silent one, and `create()` now refuses to add another (#1263).
  */
 export const DEV_TEST_EXTRA_SYMBOLS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   NVDA: ['1d', '1h'],
@@ -69,6 +86,10 @@ export const DEV_TEST_EXTRA_SYMBOLS: Readonly<Record<string, readonly string[]>>
   // `5m` (7,860) and `15m` (2,554) both END at Oct 14, i.e. eight trading days short, so they are
   // deliberately NOT declared. Tokyo USDJPY Session runs 1h, so the coverage that matters is here.
   USDJPY: ['1h'],
+  // WTI measured 2026-11-13 inside the window: `1h` 149 bars, Sep 09 → Oct 20 with 0.5 d / 0.2 d
+  // edge gaps — the same tolerance the declared rows above are accepted at. `5m`/`15m` were NOT
+  // measured and are therefore NOT declared.
+  WTI: ['1h'],
 });
 
 /** The `backtest_period.name` a seeded row carries, e.g. `dev-window-v1`. */

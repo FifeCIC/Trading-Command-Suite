@@ -2424,6 +2424,21 @@ button.nav-active {
   font-variant-numeric: tabular-nums;
 }
 .dp-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Reset-to-inherited. Only rendered on a row that HAS an override, so its presence is itself the
+   signal that something is stored — the field being non-empty says the same thing twice on purpose. */
+.dp-reset {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg-elev);
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+  cursor: pointer;
+  min-height: 28px;
+}
+.dp-reset:hover:not(:disabled) { color: var(--ink); border-color: var(--accent); }
+.dp-reset:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.dp-reset:disabled { opacity: 0.5; cursor: default; }
 .dp-hint { display: block; font-size: 0.64rem; color: var(--ink-soft); }
 .dp-badge {
   font-size: 0.64rem;

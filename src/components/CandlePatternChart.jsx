@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { createChart, CandlestickSeries } from 'lightweight-charts';
+import { createChart, CandlestickSeries, createSeriesMarkers } from 'lightweight-charts';
 import './candle-pattern-chart.css';
 
 const PATTERN_COLORS = {
@@ -24,6 +24,12 @@ export default function CandlePatternChart({ bars, patterns, onPatternClick, hig
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const candleSeriesRef = useRef(null);
+  /**
+   * ⚠️ v5 markers are an OBJECT owned by a handle, not a series method. Held here because this
+   * chart updates its markers on every pattern change — re-creating the handle each time would
+   * leave the previous one attached to a series that may have been replaced.
+   */
+  const markersRef = useRef(null);
   const markerSeriesRef = useRef(null);
   const [hoveredPattern, setHoveredPattern] = useState(null);
 
@@ -109,12 +115,22 @@ export default function CandlePatternChart({ bars, patterns, onPatternClick, hig
         };
       }).filter(Boolean);
 
-      if (markers.length > 0) {
-        // lightweight-charts v5: setMarkers removed; wrap safely
-        if (typeof candleSeriesRef.current.setMarkers === 'function') {
-          candleSeriesRef.current.setMarkers(markers);
+        if (markers.length > 0) {
+          /**
+           * ⚠️ THE OLD CODE HERE GUARDED AND THEREFORE SILENTLY DID NOTHING (#1135 part 4).
+           *
+           *   if (typeof candleSeriesRef.current.setMarkers === 'function') { …setMarkers(markers); }
+           *
+           * v5 removed `setMarkers`, so the `typeof` was always `'undefined'`, the branch never ran, and
+           * every pattern marker was missing with no error anywhere. A feature that exists, is called,
+           * and cannot be seen is worse than one that throws — it looks like a quiet market.
+           */
+          if (markersRef.current) {
+            markersRef.current.setMarkers(markers);
+          } else {
+            markersRef.current = createSeriesMarkers(candleSeriesRef.current, markers);
+          }
         }
-      }
     }
 
     // Handle marker clicks via chart subscription

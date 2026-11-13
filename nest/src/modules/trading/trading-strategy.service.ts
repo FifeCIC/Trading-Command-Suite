@@ -50,6 +50,7 @@ import { resolveEffectiveRole } from '../../common/utils/signal-direction';
 import { RiskService } from '../risk/risk.service';
 import { buildRiskProfile, applyRiskProfile } from '../risk/risk-profile-rules';
 import { evaluatePerTradeRisk } from '../risk/per-trade-risk';
+import { ScoreOnlyProtocolService } from './score-only-protocols.service';
 import {
   estimatePositionMargin,
   describeMargin,
@@ -268,7 +269,30 @@ export class TradingStrategyService {
   // purpose: every existing positional construction (specs included) keeps working and simply
   // gets the previous primary-only behaviour, which is the documented fallback.
   @Optional() private readonly symbolRouter?: Mt5SymbolRouter,
-  ) {}
+  // #1258 — which protocols are SCORE-ONLY (declared in `scripts/protocol-copies.json`). Optional
+  // so every existing positional construction keeps working; when absent, a fresh instance is built
+  // and its own fail-closed path applies (a missing dependency must not silently permit a
+  // subscription). See `score-only-protocols.service.ts` for why this exists at all.
+  @Optional() private readonly scoreOnlyProtocols?: ScoreOnlyProtocolService,
+  ) {
+    this.scoreOnlyLazy = scoreOnlyProtocols;
+  }
+
+  /**
+   * See the constructor's `scoreOnlyProtocols` note.
+   *
+   * ⚠️ LAZY, not a constructor field. Several specs build the service with
+   * `Object.create(TradingStrategyService.prototype)` (and the positional-arg ones predate this
+   * dependency), so a field initialised in the constructor is `undefined` there and the seed path
+   * threw `Cannot read properties of undefined (reading 'resolve')` — 15 failing tests, all of them
+   * about convergence rather than about this check. A lazy getter keeps the check
+   * ALWAYS-PRESENT (it can never be skipped) while staying constructible without new arguments.
+   */
+  private scoreOnlyLazy?: ScoreOnlyProtocolService;
+  private get scoreOnly(): ScoreOnlyProtocolService {
+    if (!this.scoreOnlyLazy) this.scoreOnlyLazy = new ScoreOnlyProtocolService();
+    return this.scoreOnlyLazy;
+  }
 
   // ── CRUD ──────────────────────────────────────────────
 
@@ -3183,6 +3207,8 @@ export class TradingStrategyService {
     scoringCreated: number;
     /** Bots that existed with NO `strategy_protocol` row and were given one. */
     subscriptionsRepaired: number;
+    /** #1258 — repair SKIPPED because the protocol is score-only, or the manifest could not be read. */
+    subscriptionsSuppressed: number;
     /** Bots whose subscription role was wrong (e.g. a short bot routed as 'long'). */
     rolesCorrected: number;
     /** Which fields moved, per bot — so a re-seed says WHAT it changed, not just how many. */
@@ -3193,7 +3219,7 @@ export class TradingStrategyService {
       return {
         dryRun: !!opts?.dryRun,
         created: 0, updated: 0, unchanged: 0, failed: strategies.length,
-        scoringCreated: 0, subscriptionsRepaired: 0, rolesCorrected: 0, changes: [],
+        scoringCreated: 0, subscriptionsRepaired: 0, subscriptionsSuppressed: 0, rolesCorrected: 0, changes: [],
       };
     }
 
@@ -3201,6 +3227,9 @@ export class TradingStrategyService {
 
     let created = 0, updated = 0, unchanged = 0, failed = 0, scoringCreated = 0;
     let subscriptionsRepaired = 0, rolesCorrected = 0;
+    // #1258 — subscriptions DELIBERATELY not repaired because the protocol is score-only (or the
+    // manifest was unreadable and the check failed closed). Reported, never silent.
+    let subscriptionsSuppressed = 0;
     const changes: Array<{ bot: string; fields: string[] }> = [];
 
     for (const s of strategies) {
@@ -3295,6 +3324,18 @@ export class TradingStrategyService {
         if ((s as any).maxTradeRiskPct !== undefined) {
           desired.maxTradeRiskPct = (s as any).maxTradeRiskPct;
         }
+        // 2026-11-13 (#1258) — the CONVERGENCE half of the three columns nothing wrote. Both paths
+        // must carry them or a re-seed could insert a value and never repair one — the failure the
+        // sim-TSL block above records, measured on 2026-11-03.
+        if ((s as any).cooldownMinutes !== undefined) {
+          desired.cooldownMinutes = (s as any).cooldownMinutes;
+        }
+        if ((s as any).maxPyramidTiers !== undefined) {
+          desired.maxPyramidTiers = (s as any).maxPyramidTiers;
+        }
+        if ((s as any).maxPositions !== undefined) {
+          desired.maxPositions = (s as any).maxPositions;
+        }
         // armed 2026-11-03, record-only — the sim-TSL OBSERVER slot, same optional contract as #995 above.
         //
         // ⚠️ This must be in the CONVERGENCE path as well as the `create` path. Measured
@@ -3369,6 +3410,26 @@ export class TradingStrategyService {
         }
 
         // Queue routing requires a protocol SUBSCRIPTION — see the method header.
+        //
+        // ⚠️ EXCEPT WHEN THE SUBSCRIPTION WAS DELETED ON PURPOSE (#1258, 2026-11-13). A score-only
+        // copy exists to answer a SCORING question, and `scripts/protocol-copies.json` records that
+        // in as many words for `xau-speed-v1-long-copy` — *"its subscriptions were DELETED, so it
+        // cannot queue an order — a scoring question must not spend demo money."* Repairing that
+        // row blindly would hand a deliberately-inert bot an order route, which is a TRADING action
+        // taken by a seeder. The check fails CLOSED: an unreadable manifest suppresses repair.
+        const scoreOnlyCheck = this.scoreOnly.resolve(s.protocolId);
+        if (scoreOnlyCheck.scoreOnly || scoreOnlyCheck.unreadable) {
+          if (!dryRun) {
+            this.logger.warn(
+              `Seed NOT subscribing ${s.name} to ${s.protocolId} — ${scoreOnlyCheck.reason}` +
+                (scoreOnlyCheck.unreadable ? ' (manifest unreadable: failing closed)' : ''),
+            );
+          }
+          subscriptionsSuppressed++;
+          // Skip the rest of the subscription logic for this bot — its PRIMARY leg is deliberately
+          // unrouted, and adding extra legs (below) would defeat the same declaration.
+          continue;
+        }
         const wantRole =
           resolveEffectiveRole(null, (s as any).requireDirection) ??
           (/-short|short-/i.test(s.protocolId) ? 'short' : 'long');
@@ -3472,6 +3533,17 @@ export class TradingStrategyService {
             // disagree about what a bot is called.
             name: normaliseBotName(s.name),
             slug: botSlug(s.name),
+            // ⚠️ #1258 (2026-11-13) — `magic` WAS NEVER WRITTEN HERE, and the docblock on
+            // `SeedTradingStrategy.magic` claimed the opposite: *"SEEDED, not allocated, so a
+            // reinstall restores the SAME number and a position opened long ago still attributes to
+            // the bot that opened it (#1018)."*
+            //
+            // Measured by round-tripping a real bot through the seeder: delete `QQQ Day Bot`
+            // (magic 234161), re-seed, and it came back with `magic: null`. The CONVERGE path writes
+            // magic and the CREATE path did not, so a fresh install gave every bot a null magic —
+            // which is exactly the state #1018 exists to eliminate, because a position opened
+            // before the reinstall can then never be attributed to the bot that opened it.
+            ...(s.magic != null ? { magic: s.magic } : {}),
             symbol: s.symbol,
             protocolId: s.protocolId,
             brokerId: s.brokerId,
@@ -3510,6 +3582,19 @@ export class TradingStrategyService {
             // global ceiling" — a REAL cap, not an absent one.
             ...((s as any).maxTradeRiskPct !== undefined
               ? { maxTradeRiskPct: (s as any).maxTradeRiskPct }
+              : {}),
+            // 2026-11-13 (#1258) — the three columns NOTHING wrote, measured on the live fleet:
+            // `cooldownMinutes` ran at 30 on two bots against a default of 5, and
+            // `maxPyramidTiers` at 2 on one against a default of 1. Both reverted silently on any
+            // reinstall. Same optional contract as every slot above.
+            ...((s as any).cooldownMinutes !== undefined
+              ? { cooldownMinutes: (s as any).cooldownMinutes }
+              : {}),
+            ...((s as any).maxPyramidTiers !== undefined
+              ? { maxPyramidTiers: (s as any).maxPyramidTiers }
+              : {}),
+            ...((s as any).maxPositions !== undefined
+              ? { maxPositions: (s as any).maxPositions }
               : {}),
             // armed 2026-11-03, record-only — the sim-TSL OBSERVER slot, on the same terms as #995 above: present
             // only when the seed declares it. ⚠️ This arms an OBSERVER, not a trailing stop — the
@@ -3594,7 +3679,7 @@ export class TradingStrategyService {
     return {
       dryRun,
       created, updated, unchanged, failed, scoringCreated,
-      subscriptionsRepaired, rolesCorrected, changes,
+      subscriptionsRepaired, subscriptionsSuppressed, rolesCorrected, changes,
     };
   }
 }

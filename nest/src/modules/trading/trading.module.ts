@@ -5,6 +5,7 @@ import { SessionTrackerService } from './session-tracker.service';
 import { SessionTrackerController } from './session-tracker.controller';
 import { MarketContextService } from './market-context.service';
 import { TradingStrategyService } from './trading-strategy.service';
+import { ScoreOnlyProtocolService } from './score-only-protocols.service';
 import { FirstRunSeedService } from './first-run-seed.service';
 import { TradingStrategyController } from './trading-strategy.controller';
 import { BrokerConfigService } from './broker-config.service';
@@ -32,7 +33,7 @@ import { ProgressionModule } from '../progression/progression.module';
 @Module({
   imports: [DirectivesModule, DiversificationModule, RiskModule, NotificationsModule, DatabaseModule, ProvidersModule, AuthModule, forwardRef(() => ScoringModule), ProgressionModule],
   controllers: [Mt5TradingController, SessionTrackerController, TradingStrategyController, TradeHistoryController, BrokerConfigController],
-  providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, BrokerCapabilityService, TradeRecorderService, DuplicateGuardService, StopAdjustmentRecorder, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService, PyramidPolicyService, BotPerformanceService, FirstRunSeedService],
+  providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, BrokerCapabilityService, TradeRecorderService, DuplicateGuardService, StopAdjustmentRecorder, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService, PyramidPolicyService, BotPerformanceService, FirstRunSeedService, ScoreOnlyProtocolService],
   exports: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, BrokerCapabilityService, TradeRecorderService, DuplicateGuardService, StopAdjustmentRecorder, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService, PyramidPolicyService, BotPerformanceService],
 })
 export class TradingModule {}

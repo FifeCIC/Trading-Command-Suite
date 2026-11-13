@@ -121,7 +121,7 @@ export default function DirectiveSettingsPanel({ protocolSlug }) {
     try {
       const res = await apiPatch(
         `/api/scoring/protocols/${encodeURIComponent(protocolSlug)}/directive-config`,
-        { directiveId, config: { maxScore: value === '' ? null : Number(value) } },
+        { directiveId, config: { maxScore: Number(value) } },
       );
       await qc.invalidateQueries({ queryKey: ['directive-config', protocolSlug] });
       if (res?.warning) setNotice({ kind: 'warn', text: res.warning });
@@ -140,6 +140,55 @@ export default function DirectiveSettingsPanel({ protocolSlug }) {
     } finally {
       setSaving(null);
     }
+  };
+
+  /**
+   * reset — remove this protocol's override so the directive falls back to the GLOBAL value.
+   *
+   * ── DECISION (2026-11-13, primary) ──
+   * WHAT:      Blank now means DELETE, and a visible ↺ Inherit control calls the same endpoint.
+   * WHY:      `PATCH {maxScore: null}` genuinely does not clear the stored row (measured 2026-10-27),
+   *           so a blank field had no honest meaning left. `DELETE :slug/directive-config/:directiveId`
+   *           does clear it and had existed and worked the whole time. A parameter whose only exit is
+   *           editing SQL is not a tunable parameter.
+   * INSTEAD OF: The 2026-10-27 behaviour — leave the control out and tell the reader it cannot exist,
+   *           because "there is no delete endpoint". That sentence was false, and it is why nobody
+   *           looked for 17 days.
+   * REVERSE BY: Removing the button and re-blanking the branch; nothing depends on the removal path
+   *           existing, so nothing breaks — but the override becomes unclearable again.
+   * REGISTER:  docs/SETTLED-DECISIONS.md row 175
+   * GUARD:     none in a build gate — `src/components/backtest/` has no spec, so this is proven by
+   *            live-browser measurement only (see #1165)
+   */
+  const reset = async (directiveId) => {
+    setSaving(directiveId);
+    setError(null);
+    setNotice(null);
+    try {
+      await apiDelete(
+        `/api/scoring/protocols/${encodeURIComponent(protocolSlug)}/directive-config/${encodeURIComponent(directiveId)}`,
+      );
+      await qc.invalidateQueries({ queryKey: ['directive-config', protocolSlug] });
+      setNotice({
+        kind: 'ok',
+        text: `Removed the protocol override for ${directiveId} — it now uses the global value on every run and bot using this protocol.`,
+      });
+    } catch (e) {
+      setError({ err: e, directiveId });
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  /** Blank means "inherit" when an override is stored, and "leave alone" when nothing is. */
+  const commit = (d, raw) => {
+    const value = String(raw).trim();
+    if (value === '') {
+      if (d.source === 'override') reset(d.id);
+      return;
+    }
+    if (Number(value) === Number(d.effectiveMaxScore) && d.source === 'override') return;
+    save(d.id, value);
   };
 
   return (
@@ -184,6 +233,7 @@ export default function DirectiveSettingsPanel({ protocolSlug }) {
                 <th scope="col">Effective</th>
                 <th scope="col">Source</th>
                 <th scope="col">This protocol</th>
+                <th scope="col">Reset</th>
               </tr>
             </thead>
             <tbody>
@@ -213,17 +263,9 @@ export default function DirectiveSettingsPanel({ protocolSlug }) {
                         defaultValue={d.source === 'override' ? d.effectiveMaxScore : ''}
                         placeholder={String(d.effectiveMaxScore)}
                         disabled={saving === id}
-                        onKeyDown={(e) => { if (e.key === 'Enter') save(id, e.currentTarget.value); }}
-                        onBlur={(e) => {
-                          const v = e.currentTarget.value;
-                          // ⚠️ BLANK IS NOT "inherit" — there is no endpoint that removes a protocol
-                          // override. Measured 2026-10-27: `PATCH {maxScore: null}` leaves the row in
-                          // place and the config still reports `source: "override"`. So an empty field
-                          // writes nothing rather than pretending to clear something it cannot.
-                          if (v === '') return;
-                          if (Number(v) === Number(d.effectiveMaxScore) && d.source === 'override') return;
-                          save(id, v);
-                        }}
+                        aria-label={`Max score for ${d.name} in this protocol — leave blank to inherit`}
+                        onKeyDown={(e) => { if (e.key === 'Enter') commit(d, e.currentTarget.value); }}
+                        onBlur={(e) => commit(d, e.currentTarget.value)}
                       />
                       <span className="dp-hint">
                         {saving === id
@@ -232,6 +274,21 @@ export default function DirectiveSettingsPanel({ protocolSlug }) {
                             ? 'protocol value'
                             : 'inherited — type to override'}
                       </span>
+                    </td>
+                    <td>
+                      {d.source === 'override' ? (
+                        <button
+                          type="button"
+                          className="dp-reset"
+                          disabled={saving === id}
+                          onClick={() => reset(id)}
+                          title={`Remove this protocol's override for ${d.name} and use the global value`}
+                        >
+                          ↺ Inherit
+                        </button>
+                      ) : (
+                        <span className="dp-hint">—</span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -286,11 +343,12 @@ export default function DirectiveSettingsPanel({ protocolSlug }) {
       </p>
 
       <p className="pb-field-note">
-        ⚠️ <strong>There is no way to remove a protocol override from here.</strong> Measured
-        2026-10-27: <code>{'PATCH {maxScore: null}'}</code> leaves the stored row in place, so clearing
-        the field would be a request the backend silently ignores. To go back to the inherited value,
-        type that value — the score will match, and the row will say <em>protocol</em> rather than
-        <em>inherited</em>. Regression to a clean inherit needs a delete endpoint that does not exist.
+        ⚠️ <strong>A protocol override can be removed.</strong> Clearing the field, or pressing{' '}
+        <strong>↺ Inherit</strong>, deletes the stored override so the directive falls back to the
+        global value — the row then reads <em>inherited</em>. This is the one place the two stores
+        differ: `maxScore` is applied per protocol through `directive-config` (the delete below), while
+        a directive&apos;s own internal numbers are its <code>params</code> on the protocol entry, so
+        they are edited in the section above instead.
       </p>
     </div>
   );

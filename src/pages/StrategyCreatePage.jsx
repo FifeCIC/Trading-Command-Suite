@@ -93,6 +93,10 @@ export default function StrategyCreatePage() {
   // mechanism never acts. Set it and the guardian closes the position when unrealised P&L reaches
   // this amount in the ACCOUNT currency, which is the only way to express "five pounds" exactly.
   const [takeProfitAmount, setTakeProfitAmount] = useState('');
+  // #1257 — the per-bot money-at-risk ceiling, as a PERCENT of equity. EMPTY means "inherit the
+  // global `risk.maxTradeRiskCeilingPct`", which is a REAL cap resolved by the gate — not an absent
+  // one. Declared here because a configurable rule with no surface is a rule nobody can tune.
+  const [maxTradeRiskPct, setMaxTradeRiskPct] = useState('');
   const [hotStockEnabled, setHotStockEnabled] = useState(false);
   const [hotStockAllocation, setHotStockAllocation] = useState('');
   const [hotStockDetectionMode, setHotStockDetectionMode] = useState('');
@@ -379,6 +383,9 @@ export default function StrategyCreatePage() {
       maxPositions: Number(maxPositions),
       maxPyramidTiers: Number(maxPyramidTiers) || 1,
       takeProfitAmount: takeProfitAmount ? Number(takeProfitAmount) : undefined,
+      // #1257 — omitted when empty, so the bot INHERITS the global ceiling. Sending `null` would be
+      // the same value but a different claim; `undefined` is "no opinion", which is what empty means.
+      maxTradeRiskPct: maxTradeRiskPct !== '' ? Number(maxTradeRiskPct) : undefined,
       maxDailyLoss: maxDailyLoss ? Number(maxDailyLoss) : undefined,
       cooldownMinutes: Number(cooldownMinutes),
       // #928 — JSON array, or null when ungated. `parseSessionWindow` on the server reads BOTH the
@@ -690,6 +697,24 @@ export default function StrategyCreatePage() {
                         Optional, in the <strong>account currency</strong>. The position is CLOSED when
                         its live P&amp;L reaches this amount, so it stays the same money at any price
                         level. Empty means the mechanism never acts.
+                      </span>
+                    </label>
+                    <label className="stratcreate-field">
+                      <span>Max risk per trade (% of equity) <BotRuleStatus field="maxTradeRiskPct" byField={botRuleFields} /></span>
+                      <input className="stratcreate-input" type="number" step="0.1" min="0" max="100" placeholder="empty = inherit the global ceiling" value={maxTradeRiskPct} onChange={e => setMaxTradeRiskPct(e.target.value)} />
+                      {/* #1257 — the ONLY per-bot ceiling on what a stop can LOSE. It is not a
+                          sizing target (`sizingRiskPct` is) and it is not the margin caps above:
+                          measured 2026-11-12, XAUUSD 0.01 lot risked 13.9% of a £589 account against
+                          a declared 2% while every margin gate passed, because margin at 1:100 is
+                          trivial next to what a stop can lose. */}
+                      <span className="stratcreate-hint">
+                        Optional, as a <strong>percent of account equity</strong>. The order is REFUSED
+                        if <em>stop distance × volume × contract size</em> would lose more than this.
+                        It applies to every sizing model, including the fixed lot above. Empty inherits
+                        the global ceiling (<code>risk.maxTradeRiskCeilingPct</code>, 20%) — and the
+                        MT5 minimum lot means a 0.01 gold position alone risks about 14% of a small
+                        account, so set a value here only when this bot should be <em>more</em>
+                        cautious than the book.
                       </span>
                     </label>
                   </div>

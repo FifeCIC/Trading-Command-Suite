@@ -340,6 +340,18 @@ export class BacktestController {
     return this.backtestService.getChartData(symbol, timeframe || '1d', from, to, protocolId);
   }
 
+  /**
+   * ⚠️ `@LongRunning` IS NOT OPTIONAL HERE (#1140). This loops `await this.run(...)` once per grid
+   * cell — a 5×5 default grid is **25 full backtests**, and ONE of those measured 298 s on the
+   * frozen development window. On the 30 s default it did not return a partial answer, it returned
+   * 504 with the grid half-computed and nothing stored.
+   *
+   * 30 min covers the default grid on a normal window. A finer grid or a 730-day window will still
+   * exceed it, and the interceptor now WARNS at 80% naming this route rather than dying silently.
+   * The real fix for an unbounded grid is a queued run with a polled status (the follow-up on
+   * #1140), not a bigger number here.
+   */
+  @LongRunning(1_800_000)
   @Post('optimize')
   @ApiOperation({ summary: 'Grid search — optimize SL/TP parameters across a range' })
   async optimize(@Body() body: {
@@ -352,6 +364,14 @@ export class BacktestController {
     return this.backtestService.optimize(body);
   }
 
+  /**
+   * ⚠️ `@LongRunning` required (#1140): this calls `optimize()` — itself a 25-run grid — and then
+   * RE-RUNS the training window with the winning params plus the out-of-sample test window. So it is
+   * more than 2× the work of `optimize`, on the LONGER windows it defaults to (train 730 d, test
+   * 365 d). 60 min is deliberately double `optimize`'s deadline because the work is more than double
+   * and the windows are longer.
+   */
+  @LongRunning(3_600_000)
   @Post('walk-forward')
   @ApiOperation({ summary: 'Walk-forward — optimize on train period, validate on test period' })
   async walkForward(@Body() body: {
@@ -651,8 +671,29 @@ export class BacktestController {
     return replay;
   }
 
-  /** Per-directive coverage: backtest every directive individually */
+  /**
+   * Per-directive coverage: backtest every directive individually.
+   *
+   * 🛑 **NO `@LongRunning`, AND THAT IS A MEASUREMENT — not an oversight (#1140).**
+   * I first decorated this route at 900 s by counting the loop's shape: 144 registered directives
+   * × 365 days of bars "must be minutes". Measured 2026-11-13 instead:
+   *
+   *   POST /api/backtest/coverage { symbol: GER40, days: 365, timeframe: 1d }
+   *   → HTTP 201 in **1.16 s**, 144 directives tested, 236 bars used
+   *
+   * The count was wrong about the cost because the service bounds the work itself:
+   * `take: days + 30` caps the bar load at ~395 rows regardless of timeframe, and each directive
+   * evaluation is cheap. So this route is fast, and a 900 s deadline here would be an over-applied
+   * override — which this repo's own decorator docblock warns "is indistinguishable from no
+   * timeout". Leaving it on the 30 s default keeps the hang guard sharp on a route that the tuning
+   * loop calls repeatedly.
+   *
+   * ⚠️ If this ever DOES take minutes, the interceptor now warns at 80% naming this route. Take
+   * that warning as the instruction to re-measure — do not add the decorator back on the strength
+   * of the loop count.
+   */
   @Post('coverage')
+  @ApiOperation({ summary: 'Run every directive individually against historical data and report per-directive performance' })
   @ApiOperation({ summary: 'Run every directive individually against historical data and report per-directive performance' })
   async directiveCoverage(@Body() body: { symbol: string; days?: number; timeframe?: string }) {
     return this.backtestService.runDirectiveCoverage(body);

@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 228,
+  "count": 229,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -357,6 +357,16 @@
       "selfTest": true,
       "reaches": [
         "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "generate-strategy-seed.cjs",
+      "where": "repo",
+      "category": "generator",
+      "purpose": "read the LIVE bot fleet and emit it as seed data.",
+      "selfTest": true,
+      "reaches": [
         "npm"
       ]
     },

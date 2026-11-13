@@ -14,6 +14,9 @@
  */
 
 import { SessionTag, ALL_HOURS_VALUE } from './session-window';
+// ⚠️ The generated fleet (#1258). Imported as a VALUE — it is spread into the export below. The
+// generated file's import of SeedTradingStrategy is import type, so there is no runtime cycle.
+import { GENERATED_TRADING_STRATEGIES } from './strategy-seed-generated';
 
 export interface SeedTradingStrategy {
   name: string;
@@ -162,6 +165,26 @@ export interface SeedTradingStrategy {
   /** #995 — the observer's decelPct threshold (percent). Absent = the bot keeps its value. */
   exhaustionDecelPct?: number | null;
   /**
+   * Re-entry cooldown per symbol, in MINUTES (2026-11-13).
+   *
+   * ⚠️ WHY IT IS DECLARED HERE. Measured: two bots run at **30** while the column default is **5** —
+   * and neither the create path nor the convergence path wrote this column, so a reinstall silently
+   * reverted both to 5. A per-bot value that only exists in the database is lost, which is the whole
+   * subject of #1258.
+   */
+  cooldownMinutes?: number;
+  /**
+   * Pyramid / scale-in tiers (#344). Column default 1; one bot runs at 2 and would have been
+   * reverted by a reinstall for the same reason as `cooldownMinutes` above.
+   */
+  maxPyramidTiers?: number;
+  /**
+   * Per-bot concurrent position cap. ⚠️ `legacy-only` enforcement (see `bot-rules.ts`) — the live cap
+   * is the BROKER-WIDE `risk.maxOpenPositions`. Seeded so the row is restored faithfully; seeding it
+   * does NOT make it live.
+   */
+  maxPositions?: number;
+  /**
    * Whether the bot starts ENABLED. Absent = true (the historical behaviour).
    *
    * Exists so a deliberately-inactive bot (the `hourly-3dir-v1-long` A/B control) can be
@@ -173,7 +196,13 @@ export interface SeedTradingStrategy {
   style?: string;
 }
 
-export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
+/**
+ * The HAND-AUTHORED fleet — three bots, each carrying a `theory` written from measurements.
+ *
+ * ⚠️ These WIN over the generated entries in the merge below, keyed by name. They are the only
+ * entries with prose, and prose is the one thing a generator cannot produce honestly.
+ */
+const HAND_AUTHORED_TRADING_STRATEGIES: SeedTradingStrategy[] = [
   {
     name: 'Silver Speed Scalp Bot',
     symbol: 'XAGUSD',
@@ -290,4 +319,36 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     // role 'long', and a subscription's own role outranks it, so the short leg below is unaffected.
     legs: [{ protocolId: 'momentum-stock-v1-short', role: 'short' }],
   },
+];
+
+/**
+ * The fleet a FRESH INSTALL gets: every bot, hand-authored entries first.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * WHY A MERGE AND NOT ONE ARRAY (#1258, 2026-11-13)
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ *
+ * Measured that day: this file declared **3** bots while the database held **75** (64 active). A
+ * reinstall, a `db push` accident or a second machine reduced the fleet to three — silently, because
+ * the seed endpoint still reported `unchanged: 3` and nothing compared the two populations.
+ *
+ * `strategy-seed-generated.ts` now carries every bot's numeric treatment, generated from the live
+ * rows by `scripts/generate-strategy-seed.cjs`. This file stays HAND-AUTHORED, because three bots
+ * carry a `theory` written from measurements with comments explaining each choice, and a generator
+ * that rewrote it would destroy that on its next run.
+ *
+ * ⚠️ **HAND-AUTHORED WINS**, keyed by `name`. That is the whole contract: the generated file is a
+ * baseline, and anything with prose or a deliberate hand decision overrides it. A name that appears
+ * in both must therefore describe the SAME bot — `scripts/generate-strategy-seed.cjs` skips the
+ * hand-authored names, so a divergence shows up as a changed generated entry rather than as a
+ * silent override.
+ *
+ * ⚠️ Generation is NOT automatic. Run `node scripts/generate-strategy-seed.cjs` after changing a bot
+ * in the database, or `--check` to see whether the file has drifted.
+ */
+export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
+  ...HAND_AUTHORED_TRADING_STRATEGIES,
+  ...GENERATED_TRADING_STRATEGIES.filter(
+    (g) => !HAND_AUTHORED_TRADING_STRATEGIES.some((h) => h.name === g.name),
+  ),
 ];

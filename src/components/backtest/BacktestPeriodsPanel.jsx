@@ -282,7 +282,7 @@ export default function BacktestPeriodsPanel({ onRunPeriod }) {
                     name="btp-period"
                     checked={p.id === selected}
                     onChange={() => setSelected(p.id)}
-                    aria-label={`Select period ${p.name}`}
+                    aria-label={`Select period ${p.name} for ${p.symbol} ${p.timeframe}`}
                   />
                 </td>
                 <td>

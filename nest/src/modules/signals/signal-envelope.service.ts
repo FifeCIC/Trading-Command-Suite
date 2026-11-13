@@ -24,7 +24,14 @@ import { ManualTradeDefaultsService } from './manual-trade-defaults.service';
 import { ExecutionFeasibilityService, FeasibilityBlocker } from '../trading/execution-feasibility.service';
 import { OutcomeTrackerService } from '../scoring/outcome-tracker.service';
 import { convictionPercent } from './conviction';
-import { selectBaseTimeframe, everyCadenceStale } from '../../common/utils/timeframe';
+import { selectBaseTimeframe, everyCadenceStale, pickScoringCadence } from '../../common/utils/timeframe';
+import { NotificationService } from '../notifications/notifications.service';
+
+/**
+ * How long a symbol may go without a fresh bar before the owner is told (#1264).
+ * Owner: *"warn if an hour passes and there is a lack of data for a symbol"*.
+ */
+const DATA_STARVATION_NOTICE_MS = 60 * 60_000;
 // ⚠️ SINGLE AUTHORITY for signal-class → direction/side. Do NOT reintroduce a prefix test here:
 // `'STRONG_SELL'.startsWith('SELL')` is FALSE, which routed the strongest bearish signal as a
 // LONG/BUY. See the file header in `signal-direction.ts` for the measured evidence.
@@ -353,7 +360,15 @@ export class SignalEnvelopeService {
      * unit tests can construct the service without it; production wiring always provides it.
      */
     private readonly tradeDefaults?: ManualTradeDefaultsService,
+    /**
+     * #1264 — the warning channel. Optional only so the existing unit tests can construct the
+     * service without the notifications graph; production wiring always provides it.
+     */
+    private readonly notifications?: NotificationService,
   ) {}
+
+  /** One data-starvation notice per symbol per hour (#1264). Process-local by design. */
+  private readonly staleNoticeAt = new Map<string, number>();
 
   /**
    * Build a full signal ladder for a set of symbols.
@@ -614,26 +629,56 @@ export class SignalEnvelopeService {
     // picture. A genuinely dead symbol is stale on all of them (HOOD: 1h ended 31 July, `1d` too),
     // so it is still caught.
     //
-    // ⚠️ RESIDUAL, DELIBERATELY NOT FIXED HERE: a symbol that is alive overall but stale on its
-    // BASE cadence (SPY above) still scores from that stale array. That is the last known state and
-    // is defensible while the market is shut, but the honest fix is to SCORE ON THE FRESHEST
-    // AVAILABLE cadence rather than to skip, which would change what every protocol evaluates. That
-    // is a design decision, not a bug fix, so it is called out rather than smuggled in.
+    // ── DECISION (2026-11-13, owner) — THE RESIDUAL ABOVE IS NOW FIXED ──
+    // WHAT:      Score the FINEST cadence that has fresh data (`pickScoringCadence`); the protocol's
+    //            base cadence is a preference, not an override. If nothing is fresh, refuse — and
+    //            refuse loudly when we hold a position.
+    // WHY:       A symbol alive on ANY cadence used to score from its STALE base array, and the
+    //            comment that used to sit here called that "defensible while the market is shut".
+    //            Measured cost: 108 GER40 snapshots in two hours, EVERY ONE a composite of **89**,
+    //            all from a base `1m` series frozen 7.6 hours earlier, feeding six `auto` bots whose
+    //            entry threshold is 10. A frozen bar does not score low; it scores the same number
+    //            forever. Owner, 2026-11-13: *"Scoring old data is pointless … That's almost like
+    //            saying we've designed it to score for the sake of it."*
+    // INSTEAD OF: Skipping the symbol when its base cadence is stale — measured to remove 11 ALIVE
+    //            instruments (#827), because a `1m` feed goes quiet outside cash hours.
+    // REVERSE BY: `pickScoringCadence` returning the first set unconditionally.
+    // REGISTER:  docs/SETTLED-DECISIONS.md row 176
+    // GUARD:     nest/src/common/utils/stale-cadence-fallback.spec.ts
     const cadenceSets: Array<{ tf: string; bars: any[] }> = [
       { tf: baseTimeframe, bars: marketBars },
-      { tf: '1d', bars: dayBars },
-      { tf: '1h', bars: hourBars },
+      // FINEST FIRST is the rule `pickScoringCadence` depends on: a stale base degrades by ONE step
+      // rather than jumping straight to a daily series this protocol never used before.
       { tf: '15m', bars: min15Bars },
-    ].filter((s) => Array.isArray(s.bars) && s.bars.length > 0);
+      { tf: '1h', bars: hourBars },
+      { tf: '1d', bars: dayBars },
+    ];
 
+    // ⚠️ THE REFUSAL STILL USES `everyCadenceStale()`, AND IT MUST KEEP DOING SO.
+    // `prebuild`'s `no-stale-scoring` contract (INV-NO-STALE-SCORING) requires this file to call it —
+    // and it is right to: the refusal is the invariant. `pickScoringCadence` answers the OTHER
+    // question ("which fresh cadence do we use"), so the two are complementary, not duplicates. Both
+    // read the same tolerances from `cadenceStaleMs`, so they cannot disagree about what "stale" means.
     const dead = everyCadenceStale(
       cadenceSets.map((s) => ({ timeframe: s.tf, newest: s.bars[s.bars.length - 1]?.timestamp })),
     );
+    const cadence = pickScoringCadence(cadenceSets);
+    const newestAcrossCadences = cadenceSets
+      .filter((s) => Array.isArray(s.bars) && s.bars.length > 0)
+      .map((s) => new Date(s.bars[s.bars.length - 1].timestamp).getTime())
+      .filter((t) => !Number.isNaN(t));
+    const newestAnyMs = newestAcrossCadences.length > 0 ? Math.max(...newestAcrossCadences) : null;
 
     if (dead) {
+      // Only reached when NOTHING is fresh. Warn once per symbol per hour rather than on every tick —
+      // the owner asked for a warning "if an hour passes and there is a lack of data for a symbol",
+      // and a per-tick warning is a log storm nobody reads.
+      await this.warnIfDataStarved(cleanTicker, newestAnyMs, protocolId);
       const newestOfTf = (tf: string) => {
         const set = cadenceSets.find((s) => s.tf === tf);
-        return set ? new Date(set.bars[set.bars.length - 1].timestamp).toISOString() : 'none';
+        return set && set.bars.length > 0
+          ? new Date(set.bars[set.bars.length - 1].timestamp).toISOString()
+          : 'none';
       };
       this.logger.warn(
         `Skipped scoring ${cleanTicker}: EVERY cadence is stale (${cadenceSets
@@ -650,6 +695,28 @@ export class SignalEnvelopeService {
       return skipped;
     }
 
+    // ⚠️ REASSIGNING `marketBars` / `baseTimeframe` IS THE POINT, not a convenience. Every consumer
+    // below — `scoreWithGating`, `priceAtPredict`, the outcome `timeframe`, and `enrichEnvelope` —
+    // must agree about which series was read, or the score is stamped with a cadence it was not
+    // computed from. A stale base is the ONE case this changes.
+    let scoringBars = marketBars;
+    let scoringTimeframe = baseTimeframe;
+    if (cadence.switched && cadence.chosen) {
+      scoringBars = cadence.chosen.bars as any[];
+      scoringTimeframe = cadence.chosen.tf;
+      this.logger.log(
+        `Scoring ${cleanTicker} on ${scoringTimeframe} instead of its base ${baseTimeframe}: the base ` +
+        `series is stale but ${scoringTimeframe} is current. Fresh data beats the declared cadence ` +
+        `(#1264 — a stale base used to score the same frozen number on every tick).`,
+      );
+    }
+
+    // Warn when a symbol we HOLD has no fresh data at all — the case where a stale reading has a
+    // live consequence. Kept separate from the all-stale branch because this also fires when the base
+    // is stale and only a much coarser series is fresh (position risk is about the symbol, not the
+    // cadence we happened to score).
+    if (cadence.switched) await this.warnIfHeldWithoutFreshData(cleanTicker, newestAnyMs, protocolId);
+
     // Score via ProtocolGatingService
     //
     // ⚠️ `baseTimeframe` is passed THROUGH (2026-09-10). It was computed above
@@ -663,11 +730,11 @@ export class SignalEnvelopeService {
     // already known here — passing it is what stops the false close.
     const gated = await this.protocolGating.scoreWithGating(
       cleanTicker,
-      marketBars,
+      scoringBars,
       protocolId,
       { dayBars, hourBars, min15Bars },
       'group-weighted',
-      baseTimeframe,
+      scoringTimeframe,
       // ⚠️ The LADDER is the only caller that opts in. It must show a current reading for every
       // symbol on every tick, so a neutral tick is persisted as `NO_READING` rather than leaving
       // the previous score as the newest row (which is how a 2-day-old STRONG_BUY stayed ranked
@@ -678,7 +745,7 @@ export class SignalEnvelopeService {
 
     // Feed learning from the canonical live path. The retired rankAll path is
     // not an execution decision source and must not be the sole producer.
-    const priceAtPredict = Number(marketBars[marketBars.length - 1]?.close ?? 0);
+    const priceAtPredict = Number(scoringBars[scoringBars.length - 1]?.close ?? 0);
     if (priceAtPredict > 0) {
       // ⚠️ `predictedAt` IS THE DECISION TIME, NOT THE BAR'S TIMESTAMP (#827).
       //
@@ -707,7 +774,7 @@ export class SignalEnvelopeService {
             // tables must use the same key or they cannot be joined. Do not switch this
             // to the protocol UUID; that was the shape of the original mistake.
             strategyId: protocolId,
-            timeframe: baseTimeframe,
+            timeframe: scoringTimeframe,
             score: item.score,
             signalClass: item.signalClass,
             confidence: item.normalizedScore / 100,
@@ -729,6 +796,98 @@ export class SignalEnvelopeService {
       (envelope.preTradeBlockerCodes ??= []).push(mtf.code);
     }
     return envelope;
+  }
+
+  /**
+   * dataStarvationWarning() — the owner's two warnings, in one place (#1264).
+   *
+   * ── DECISION (2026-11-13, owner) ──
+   * WHAT:      When a symbol cannot be scored on fresh data, SAY SO — and say it louder when we hold
+   *            a position in it.
+   * WHY:       Owner, 2026-11-13: *"we should be refusing to score and maybe warn when a symbol we
+   *            have a position for cannot get fresh data and warn if an hour passes and there is a
+   *            lack of data for a symbol: in the form of a notification."* The failure being guarded
+   *            is silence: a starved symbol simply stops appearing, which reads as "no signal" rather
+   *            than "no data".
+   * INSTEAD OF: Logging on every tick (a storm nobody reads) or doing nothing (the state before).
+   * REVERSE BY: Returning early before the cooldown check.
+   * REGISTER:  docs/SETTLED-DECISIONS.md row 176
+   * GUARD:     none — asserted by live measurement; the cadence rule itself is guarded by
+   *            `common/utils/stale-cadence-fallback.spec.ts`.
+   *
+   * ⚠️ ONE NOTICE PER SYMBOL PER HOUR. The map is process-local on purpose: the alternative is a
+   * settings row for a throttle nobody would ever tune, and a restart re-arming one warning is
+   * harmless. A per-tick notification is the failure this avoids.
+   */
+  private async dataStarvationWarning(
+    ticker: string,
+    newestAnyMs: number | null,
+    held: boolean,
+    protocolId?: string,
+  ): Promise<void> {
+    // `null` means no cadence could be read at all — that is "cannot judge", and it must not be
+    // reported as "starved". The caller's own empty-bars branch already handles it.
+    if (newestAnyMs === null) return;
+    const ageMs = Date.now() - newestAnyMs;
+    const ageHours = ageMs / 3_600_000;
+
+    // A symbol we hold is reported as soon as its data is gone; one we do not hold waits the hour
+    // the owner specified.
+    if (!held && ageMs < DATA_STARVATION_NOTICE_MS) return;
+
+    const last = this.staleNoticeAt.get(ticker) ?? 0;
+    if (Date.now() - last < DATA_STARVATION_NOTICE_MS) return;
+    this.staleNoticeAt.set(ticker, Date.now());
+
+    const newestIso = new Date(newestAnyMs).toISOString();
+    const body = held
+      ? `${ticker} has no fresh bar since ${newestIso} (${ageHours.toFixed(1)}h) and we hold a position in it. It is not being scored: a reading from stale bars would be a plausible number for a moment that has passed.`
+      : `${ticker} has had no fresh bar since ${newestIso} (${ageHours.toFixed(1)}h). It is not being scored until data returns — this is a data gap, not a lack of signal.`;
+
+    this.logger.warn(`Data starvation${held ? ' (POSITION HELD)' : ''}: ${body}`);
+    try {
+      await this.notifications?.send({
+        title: held ? `No market data for held symbol ${ticker}` : `No market data for ${ticker}`,
+        body,
+        symbol: ticker,
+        event: 'provider-degraded',
+        metadata: { newestBar: newestIso, ageHours: Number(ageHours.toFixed(2)), held, protocolId },
+      });
+    } catch (err) {
+      // A failed notification must never take the scoring loop with it — the warn above is the
+      // record, and the notification is the courtesy.
+      this.logger.warn(`Could not send the data-starvation notification for ${ticker}: ${(err as Error).message}`);
+    }
+  }
+
+  /** Does this symbol have an open position? Any failure answers `false` — never block on it. */
+  private async heldByPosition(ticker: string): Promise<boolean> {
+    try {
+      const n = await this.prisma.position.count({ where: { symbol: ticker } });
+      return n > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Held-and-starved: immediate, because a frozen reading has a live consequence. */
+  private async warnIfHeldWithoutFreshData(
+    ticker: string,
+    newestAnyMs: number | null,
+    protocolId?: string,
+  ): Promise<void> {
+    if (!(await this.heldByPosition(ticker))) return;
+    await this.dataStarvationWarning(ticker, newestAnyMs, true, protocolId);
+  }
+
+  /** Nothing fresh anywhere: the owner's "an hour passes with a lack of data" warning. */
+  private async warnIfDataStarved(
+    ticker: string,
+    newestAnyMs: number | null,
+    protocolId?: string,
+  ): Promise<void> {
+    const held = await this.heldByPosition(ticker);
+    await this.dataStarvationWarning(ticker, newestAnyMs, held, protocolId);
   }
 
   /**

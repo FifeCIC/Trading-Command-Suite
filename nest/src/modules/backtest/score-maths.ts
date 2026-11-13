@@ -742,6 +742,16 @@ export type PeriodStatus = 'healthy' | 'degraded' | 'unusable';
 export interface PeriodStandard {
   minCoveragePct: number;
   maxHoleMinutes: number;
+  /**
+   * Longest tolerated gap at either END of a window (#1262).
+   *
+   * ⚠️ SEPARATE FROM `minCoveragePct` BECAUSE COVERAGE CANNOT SEE THIS. `sessionAwareGapProfile`
+   * derives `expectedBars` FROM the bars present, so five bars spread over five days reports
+   * **100% coverage** and `healthy`. Measured 2026-11-13: two stored `dev-window-v1` rows were
+   * days short at the edges and both scored as perfectly covered. Only a comparison of the first
+   * and last bar against the declared window can detect it.
+   */
+  maxEdgeGapMinutes: number;
 }
 
 export interface PeriodHealth {

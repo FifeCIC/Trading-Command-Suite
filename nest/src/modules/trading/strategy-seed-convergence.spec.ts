@@ -406,3 +406,40 @@ describe('seedDefaults — an unavailable database is not a successful seed', ()
     expect(r.updated).toBe(0);
   });
 });
+
+/**
+ * #1258 — `magic` must survive the CREATE path, not only the converge path.
+ *
+ * ⚠️ MEASURED 2026-11-13, by round-tripping a real bot through the seeder: delete `QQQ Day Bot`
+ * (magic 234161), `POST /strategies/seed`, and it came back with **`magic: null`**. The CONVERGE
+ * path writes `magic`; CREATE never did — while `SeedTradingStrategy.magic`'s own docblock claims
+ * the opposite (*"SEEDED, not allocated, so a reinstall restores the SAME number and a position
+ * opened long ago still attributes to the bot that opened it"*). A fresh install therefore produced
+ * a fleet with no attribution at all, which is the exact state #1018 exists to eliminate.
+ */
+describe('seedDefaults — `magic` reaches CREATE, not just convergence (#1258)', () => {
+  it('a NEW bot is created with the seed\'s magic', async () => {
+    const { svc, calls } = harness();
+    await svc.seedDefaults([{ ...SEEDED, magic: 234161 } as any]);
+    expect(calls.create).toHaveLength(1);
+    expect(calls.create[0].data.magic).toBe(234161);
+  });
+
+  it('an entry with NO magic omits the field rather than writing null over an allocated one', async () => {
+    const { svc, calls } = harness();
+    await svc.seedDefaults([{ ...SEEDED } as any]);
+    expect(calls.create).toHaveLength(1);
+    // Omitted, not `null`: `create()` on the API path allocates the next free magic, and a seed
+    // that wrote `null` would overwrite nothing useful while making the column look chosen.
+    expect('magic' in calls.create[0].data).toBe(false);
+  });
+
+  it('a re-seed CONVERGES magic onto a row that lost it — the repair half', async () => {
+    // The measured case: the round-trip restored `QQQ Day Bot` with `magic: null`, and only the
+    // converge path could put it back.
+    const { svc, calls } = harness({ existing: { ...MATCHING_ROW, magic: null } });
+    await svc.seedDefaults([{ ...SEEDED, magic: 234161 } as any]);
+    expect(calls.update).toHaveLength(1);
+    expect(calls.update[0].data.magic).toBe(234161);
+  });
+});

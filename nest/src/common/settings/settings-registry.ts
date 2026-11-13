@@ -127,6 +127,24 @@ export const SETTINGS: SettingDefinition[] = [
     max: 20160,
   },
   {
+    key: 'backtest.periodMaxEdgeGapMinutes',
+    type: 'number',
+    defaultValue: 4320,
+    class: 'runtime',
+    owner: 'backtest',
+    label: 'Period — longest tolerated gap at either END of the window (minutes)',
+    description:
+      'A period row asserts that its window was measured, so a window whose first bar starts long after '
+      + '"from" — or whose last bar stops long before "to" — was never measured across the dates it '
+      + 'claims (#1262). This is measured at the EDGES only, because internal coverage cannot see it: '
+      + 'the gap profile derives its expected bar count FROM the bars present, so five bars over five '
+      + 'days scores 100% coverage. 4320 minutes (3 days) tolerates a weekend plus a public holiday at '
+      + 'either end while refusing a window that is days short of what it claims.',
+    userChangeable: true,
+    min: 0,
+    max: 20160,
+  },
+  {
     key: 'backtest.runMaxGapTradeSharePct',
     type: 'number',
     defaultValue: 10,

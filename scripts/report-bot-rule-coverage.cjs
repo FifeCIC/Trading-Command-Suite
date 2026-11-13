@@ -227,6 +227,31 @@ const IDENTITY_FIELDS = ['baseSize', 'slPct', 'tpPct', 'minComposite', 'maxTrade
     WHERE ts.active = 1 AND NOT EXISTS (SELECT 1 FROM strategy_protocol sp WHERE sp.strategyId = ts.id)`);
   console.log(`  active bots with NO protocol subscription (can never receive a signal): ${num(noSub[0].n)}`);
 
+  // 4 — SEED COVERAGE (#1258). A bot that exists only in the database is lost on any reinstall, and
+  // nothing else reports that: `seedDefaults()` converges what it is given and says nothing about
+  // what it was never given.
+  const seedSrc = fs.readFileSync(
+    path.join(__dirname, '..', 'nest', 'src', 'modules', 'trading', 'strategy-seed-data.ts'), 'utf8');
+  const genPath = path.join(__dirname, '..', 'nest', 'src', 'modules', 'trading', 'strategy-seed-generated.ts');
+  const genSrc = fs.existsSync(genPath) ? fs.readFileSync(genPath, 'utf8') : '';
+  const seededNames = new Set(
+    [...(seedSrc + genSrc).matchAll(/^\s+name: '([^']+)'/gm)].map((m) => m[1]),
+  );
+  const inSeed = bots.filter((b) => seededNames.has(b.name));
+  const missing = bots.filter((b) => !seededNames.has(b.name));
+  console.log('\nSEED COVERAGE  (a bot absent from the seed is lost on reinstall — #1258)');
+  console.log(`  active bots in the database : ${bots.length}`);
+  console.log(`  …present in the seed        : ${inSeed.length}`);
+  console.log(`  …seed entries with no bot   : ${seededNames.size - inSeed.length} (created on the next install)`);
+  if (missing.length) {
+    console.log(`  ⚠️ ${missing.length} active bot(s) exist ONLY in the database:`);
+    for (const b of missing.slice(0, 12)) console.log(`      ${b.symbol} ${b.name}`);
+    if (missing.length > 12) console.log(`      … ${missing.length - 12} more`);
+    console.log('  → run: node scripts/generate-strategy-seed.cjs');
+  } else {
+    console.log('  ✅ every active bot is in the seed');
+  }
+
   console.log('');
   await prisma.$disconnect();
 })().catch((e) => {

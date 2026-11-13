@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
-import { createChart, CandlestickSeries } from 'lightweight-charts';
+import { createChart, CandlestickSeries, createSeriesMarkers } from 'lightweight-charts';
 import { apiGet } from '../core/api/client';
+import { toChartSeries, toChartTimes } from '../core/chart-time';
 import { detectPatterns } from '../core/patterns/pattern-detector';
 import './pattern-scanner.css';
 
@@ -34,7 +35,13 @@ export default function PatternScannerPage() {
     staleTime: 60_000,
   });
 
-  const rawCandles = candlesQuery.data?.bars || candlesQuery.data?.candles || [];
+  // Memoised so the three hooks below (detections, chart series, raw times) do not see a new array
+  // identity on every render — otherwise they recompute and the chart effect tears down and rebuilds
+  // the series each time an unrelated state change (filter, expanded card) re-renders the page.
+  const rawCandles = useMemo(
+    () => candlesQuery.data?.bars || candlesQuery.data?.candles || [],
+    [candlesQuery.data],
+  );
   const hasRealData = rawCandles.length > 0;
 
   const detections = useMemo(() => {
@@ -43,12 +50,26 @@ export default function PatternScannerPage() {
   }, [rawCandles, hasRealData]);
 
   // Format candles for lightweight-charts
-  const chartCandles = useMemo(() => {
-    return rawCandles.map((c) => ({
-      time: c.timestamp ? new Date(c.timestamp).toISOString().split('T')[0] : c.time || c.date || '',
-      open: c.open, high: c.high, low: c.low, close: c.close,
-    })).filter((c) => c.time);
-  }, [rawCandles]);
+  //
+  // ⚠️ lightweight-charts requires `time` to be UNIQUE and ASCENDING per series — it ASSERTS
+  // (`data must be asc ordered by time, index=1, time=…, prev time=…`) and the exception takes the
+  // whole page down into the error boundary.
+  //
+  // This used to be `new Date(c.timestamp).toISOString().split('T')[0]` — a DATE STRING — which
+  // collapsed intraday bars onto a single day. Measured 2026-11-13 on the default view (SPY · 1H):
+  // **100 bars → 13 distinct dates**, so 87 bars shared a timestamp and `setData` threw before the
+  // chart ever drew. Even without the throw the chart would have shown 13 daily candles for 100
+  // hourly bars, so intraday resolution was destroyed as well.
+  //
+  // A UTCTimestamp (seconds) is valid for BOTH intraday and daily series, so one code path serves all
+  // six timeframe pills. Duplicates are collapsed defensively because the assert is fatal, and the
+  // sort is explicit rather than trusted from the provider.
+  const chartCandles = useMemo(() => toChartSeries(rawCandles), [rawCandles]);
+
+  // ⚠️ `detections[].index` indexes `rawCandles`, but the chart consumes the DEDUPED series above,
+  // so the two can differ in length. Markers resolve their time through this parallel array rather
+  // than through `candles[d.index]`, which would silently point at the wrong bar.
+  const rawTimes = useMemo(() => toChartTimes(rawCandles), [rawCandles]);
 
   const filtered = filterType === 'all' ? detections : detections.filter((d) => d.type === filterType);
 
@@ -99,7 +120,7 @@ export default function PatternScannerPage() {
       {/* Candlestick chart */}
       {chartCandles.length > 0 && (
         <section className="ps-section">
-          <PsChart candles={chartCandles} detections={detections} />
+          <PsChart candles={chartCandles} rawTimes={rawTimes} detections={detections} />
         </section>
       )}
 
@@ -186,7 +207,7 @@ export default function PatternScannerPage() {
 
 // ── Chart Component ──────────────────────────────────────
 
-function PsChart({ candles, detections }) {
+function PsChart({ candles, rawTimes, detections }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
 
@@ -221,15 +242,22 @@ function PsChart({ candles, detections }) {
     // Add pattern markers with enhanced visibility
     if (detections?.length > 0) {
       const markers = detections.map((d) => ({
-        time: candles[d.index]?.time,
+        // Resolve through `rawTimes` (parallel to the RAW bars, which is what `d.index` indexes)
+        // rather than `candles[d.index]`, which is the deduped series and may be shorter.
+        time: rawTimes?.[d.index],
         position: d.type === 'bullish' ? 'belowBar' : 'aboveBar',
         color: d.type === 'bullish' ? '#22c55e' : d.type === 'bearish' ? '#ef4444' : '#f59e0b',
         shape: d.type === 'bullish' ? 'arrowUp' : d.type === 'bearish' ? 'arrowDown' : 'circle',
         text: d.pattern,
         size: 3,
-      })).filter((m) => m.time);
+      })).filter((m) => m.time).sort((a, b) => a.time - b.time);
 
-      cs.setMarkers(markers);
+      // ⚠️ v5 REMOVED `series.setMarkers()` — markers are now an OBJECT owned by a handle.
+      // This call threw `cs.setMarkers is not a function` whenever detections existed, so the chart
+      // never appeared on any scan with a pattern in it. `createSeriesMarkers` returns the handle;
+      // the chart is rebuilt from scratch in this effect and removed by its cleanup, so the handle
+      // does not need to outlive it.
+      createSeriesMarkers(cs, markers);
     }
 
     chart.timeScale().fitContent();
@@ -261,7 +289,7 @@ function PsChart({ candles, detections }) {
       chart.remove();
       chartRef.current = null;
     };
-  }, [candles, detections]);
+  }, [candles, rawTimes, detections]);
 
   return <div ref={containerRef} className="ps-chart-container" />;
 }
