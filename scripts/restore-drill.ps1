@@ -72,7 +72,17 @@ New-Item -ItemType Directory -Force -Path $work | Out-Null
 try {
   # ── 1. Extract ────────────────────────────────────────────────
   Write-Host "Extracting..." -ForegroundColor Cyan
-  Expand-Archive -Path $Archive -DestinationPath $work -Force
+  try {
+    Expand-Archive -Path $Archive -DestinationPath $work -Force -ErrorAction Stop
+  } catch {
+    # ⚠️ NAMED, not raw. A truncated or corrupt archive throws a .NET OperationStopped that names
+    # `WindowsBase.dll` and tells a reader nothing about the backup. Canaried 2026-11-13 by
+    # truncating a real archive to 5% — the drill exited 1 (correct) with an unreadable message.
+    Write-Host "✖ THE ARCHIVE CANNOT BE OPENED — it is truncated or corrupt." -ForegroundColor Red
+    Write-Host "  $($_.Exception.Message)" -ForegroundColor DarkGray
+    Write-Host "  Nothing after this point can be trusted; a backup that will not open is not a backup." -ForegroundColor Red
+    exit 1
+  }
   $schemaFile = Join-Path $work 'schema.sql'
   $dataFile = Get-ChildItem $work -Filter 'data-*.sql.gz' | Select-Object -First 1
   if (-not (Test-Path $schemaFile)) { Write-Error "archive has no schema.sql"; exit 1 }
@@ -155,16 +165,20 @@ try {
   # ⚠️ THE COMPARISON TARGET IS THE ARCHIVE'S OWN CLAIM, not the live database. Live moves on:
   # the first run of this drill reported `symbol — live 262, restored 263` because a symbol had been
   # created after the backup was taken. That is drift, not loss, and a drill that calls drift a
-  # failure gets muted. `counts-<stamp>.json` is written beside the archive by `backup-db.ps1` and
-  # records what the dump held at the moment it was taken.
-  $stamp = [System.IO.Path]::GetFileNameWithoutExtension((Split-Path $Archive -Leaf)) -replace '-compact$|-full$', ''
-  $countsFile = Join-Path $BACKUP_ROOT "counts-$stamp.json"
+  # failure gets muted. `counts-<archive-name>.json` is written beside the archive by
+  # `backup-db.ps1` and records what the dump held at the moment it was taken.
+  #
+  # ⚠️ The name keeps `-compact`/`-full`. Stripping it here did not match the file the backup wrote,
+  # and the drill silently fell back to its weaker check — a lookup that misses must be LOUD
+  # (it is, below), but the right fix is to look for the file the writer actually produces.
+  $archiveBase = [System.IO.Path]::GetFileNameWithoutExtension($Archive)
+  $countsFile = Join-Path $BACKUP_ROOT "counts-$archiveBase.json"
   $claimed = $null
   if (Test-Path $countsFile) {
     $claimed = (Get-Content $countsFile -Raw | ConvertFrom-Json).tables
     Write-Host "  comparing against the archive's own claim: $(Split-Path $countsFile -Leaf)" -ForegroundColor DarkGray
   } else {
-    Write-Host "  ⚠️ no counts-$stamp.json beside this archive — falling back to a non-empty check" -ForegroundColor Yellow
+    Write-Host "  ⚠️ no counts-$archiveBase.json beside this archive — falling back to the weaker non-empty check" -ForegroundColor Yellow
   }
 
   foreach ($t in $CONFIG_TABLES) {

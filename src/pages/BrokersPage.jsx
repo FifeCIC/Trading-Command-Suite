@@ -30,7 +30,7 @@
  *   failed read  → "could not load", explicitly NOT "no accounts"
  *   empty list   → "no accounts", which is information
  */
-import { useMemo } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -95,37 +95,38 @@ export default function BrokersPage() {
     return BROKER_CATALOGUE.map((entry) => ({ entry, live: live.get(entry.id) ?? null }));
   }, [statusQuery.data]);
 
+  const tradeableCount = useMemo(
+    () => BROKER_CATALOGUE.filter((b) => b.tcsSupport === TCS_SUPPORT.TRADING).length,
+    [],
+  );
+
   const accounts = useMemo(() => {
     const rows = accountsQuery.data?.accounts;
     return Array.isArray(rows) ? rows : [];
   }, [accountsQuery.data]);
 
   /**
-   * Group by BROKER — the `server` the account reports (e.g. `PepperstoneUK-Demo`).
+   * Which directory row holds which accounts.
    *
-   * ⚠️ MEASURED 2026-11-06 AND IT CHANGED THE DESIGN: grouping by `brokerId` (the BRIDGE) produced a
-   * heading reading "ICMarketsSC-Demo · MetaQuotes-Demo · PepperstoneUK-Demo" — three DIFFERENT brokers
-   * in one group, because a bridge can hold accounts on several brokers. The bridge is the connection
-   * (shown per row and summarised per bridge above the table); the broker is the venue. Naming a group
-   * after a bridge would have told the reader nothing true about their money.
-   *
-   * `Map` keeps first-seen order so the page does not reshuffle between refreshes.
+   * ⚠️ EVERY account currently comes from `GET /api/providers/mt5/accounts`, so all of them belong
+   * to the `mt5` row. This is stated as an explicit map rather than "attach accounts to whichever
+   * row looks like a broker": when a second broker gains an account endpoint (Capital.com, T212),
+   * it MUST be added here deliberately. Guessing the owner would silently put one broker's money
+   * under another broker's row — the exact class of error this page exists to prevent.
    */
-  const byBroker = useMemo(() => {
-    const groups = new Map();
-    for (const a of accounts) {
-      const key = a.server || 'unknown server';
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(a);
-    }
-    return [...groups.entries()].map(([server, rows]) => ({
-      server,
-      accounts: rows,
-      bridges: [...new Set(rows.map((r) => r.brokerId))],
-      connected: rows.filter((r) => r.connected).length,
-      live: rows.some((r) => r.isLive),
-    }));
-  }, [accounts]);
+  const accountsByDirectoryId = useMemo(() => ({ mt5: accounts }), [accounts]);
+
+  // Expanded row ids. A Set, because the reader may have several open at once and the order they
+  // opened them in is not information.
+  const [expanded, setExpanded] = useState(() => new Set());
+
+  const toggleRow = (id) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   /**
    * Per-BRIDGE symbol coverage. This is the only figure that is per bridge rather than per broker,
@@ -172,23 +173,38 @@ export default function BrokersPage() {
       </header>
 
       {/* ── BROKER DIRECTORY ─────────────────────────────────────────────────────────────
-          The list of venues, for a reader deciding where to open an account — not the list of
-          accounts held. Kept above the accounts so the page answers "who could I use?" before
-          "what have I got?".
-          ⚠️ Live status is joined, never hardcoded. A broker with no adapter row reads
-          "not wired into TCS", which is true and is the normal case for most of this table. */}
+          ONE table, ONE presentation. Every venue is a row and expanding a row is the ONLY way
+          detail appears: fees, API depth, warnings, and the accounts held on that venue.
+
+          ⚠️ WHY ACCORDIONS (owner instruction, 2026-11-13): this page used to show a directory
+          table and then a separate stack of per-broker account sections further down. Two
+          presentations of the same subject, and the second one was unreachable — a reader who
+          sorted a column or filtered had no reason to scroll past the table. The detail now lives
+          inside the row it belongs to, so it cannot be missed and there is nothing below the fold.
+
+          ⚠️ The toggle is a real <button> with aria-expanded/aria-controls — Tab reaches it,
+          Enter/Space operates it, and the state is announced. A clickable <tr> would need the same
+          three attributes and still would not be focusable. */}
       <section className={styles.broker} aria-label="Broker directory">
         <div className={styles.brokerHead}>
           <h2 className={styles.brokerName}>Broker directory</h2>
           <span className={styles.brokerId}>
-            {directory.length} venues · {BROKER_CATALOGUE.filter((b) => b.tcsSupport === TCS_SUPPORT.TRADING).length} tradeable in TCS
+            {directory.length} venues · {tradeableCount} tradeable in TCS
           </span>
+          <span className={styles.brokerId}>expand a row for accounts, fees and API</span>
           {statusQuery.isError && (
             <span className={`${styles.chip} ${styles.chipBad}`} title="GET /api/brokers/status failed">
               live status unavailable
             </span>
           )}
-          {statusQuery.isLoading && <span className={`${styles.chip} ${styles.chipNeutral}`}>loading status…</span>}
+          {accountsQuery.isError && (
+            // Surface the failure in the HEADER, not only inside the panel — otherwise a reader
+            // who never expands MT5 sees a page that looks complete. Measured cause of this note:
+            // the old page's error state was only reachable by scrolling.
+            <span className={`${styles.chip} ${styles.chipBad}`} title="GET /api/providers/mt5/accounts failed">
+              accounts unavailable
+            </span>
+          )}
         </div>
 
         <div className={styles.tableWrap}>
@@ -197,222 +213,272 @@ export default function BrokersPage() {
               <tr>
                 <th scope="col">Broker</th>
                 <th scope="col">Regions</th>
-                <th scope="col">Fees</th>
-                <th scope="col">Trades</th>
-                <th scope="col">API</th>
+                <th scope="col">Accounts</th>
                 <th scope="col">TCS support</th>
                 <th scope="col">Live status</th>
               </tr>
             </thead>
             <tbody>
-              {directory.map(({ entry, live }) => (
-                <tr key={entry.id}>
-                  <td>
-                    <strong>{entry.name}</strong>
-                    {entry.note && <span className={styles.featureNote}>{entry.note}</span>}
-                  </td>
-                  <td>
-                    {entry.regions.map((r) => (
-                      <span key={r} className={`${styles.chip} ${styles.chipNeutral}`}>
-                        {REGION_LABEL[r] ?? r}
-                      </span>
-                    ))}
-                  </td>
-                  <td className={styles.report}>
-                    {entry.feesVerified ? (
-                      entry.feeModel
-                    ) : (
-                      <>
-                        {entry.feeModel}
-                        <span className={styles.featureNote}>check the broker — rate not verified</span>
-                      </>
-                    )}
-                  </td>
-                  <td className={styles.report}>{entry.tradingTypes.join(', ')}</td>
-                  <td className={styles.report}>
-                    {entry.api}
-                    {entry.apiNote && <span className={styles.featureNote}>{entry.apiNote}</span>}
-                  </td>
-                  <td>
-                    <span
-                      className={`${styles.chip} ${
-                        entry.tcsSupport === TCS_SUPPORT.TRADING
-                          ? styles.chipOk
-                          : entry.tcsSupport === TCS_SUPPORT.PORTFOLIO
-                            ? styles.chipNeutral
-                            : styles.chipWarn
-                      }`}
-                    >
-                      {TCS_SUPPORT_LABEL[entry.tcsSupport] ?? entry.tcsSupport}
-                    </span>
-                  </td>
-                  <td className={styles.report}>
-                    {statusQuery.isError ? (
-                      // Three states kept apart: a FAILED READ is not "not connected".
-                      <span className={styles.muted}>unknown — status read failed</span>
-                    ) : !live ? (
-                      <span className={styles.muted}>not wired into TCS</span>
-                    ) : (
-                      <>
-                        <span className={`${styles.chip} ${live.connection?.status === 'healthy' ? styles.chipOk : styles.chipNeutral}`}>
-                          {live.connection?.observed ? live.connection.status : 'unobserved'}
-                        </span>
-                        {live.runtime?.canPlaceOrder === true && (
-                          // ⚠️ CAPABILITY IS NOT PERMISSION. The adapter defining `placeOrder` says
-                          // the METHOD exists; `tradingEnabled` in broker_config says whether TCS will
-                          // use it. Measured on the real page 2026-11-13: Trading 212 rendered
-                          // "can place orders" directly beside its own note "order placement is gated
-                          // off in TCS" — a contradiction the reader would have to resolve by trusting
-                          // one half of the same cell. Both facts are shown, named separately.
-                          <span
-                            className={`${styles.chip} ${
-                              live.runtime?.mockSuspect
-                                ? styles.chipWarn
-                                : live.tradingEnabled === true
-                                  ? styles.chipOk
-                                  : styles.chipWarn
-                            }`}
-                          >
-                            {live.runtime?.mockSuspect
-                              ? 'orders = stub'
-                              : live.tradingEnabled === true
-                                ? 'can place orders'
-                                : 'orders gated off'}
+              {directory.map(({ entry, live }) => {
+                const held = accountsByDirectoryId[entry.id] ?? [];
+                const open = expanded.has(entry.id);
+                const panelId = `broker-panel-${entry.id}`;
+                return (
+                  <Fragment key={entry.id}>
+                    <tr>
+                      <th scope="row">
+                        <button
+                          type="button"
+                          className={styles.rowToggle}
+                          aria-expanded={open}
+                          aria-controls={panelId}
+                          onClick={() => toggleRow(entry.id)}
+                        >
+                          <span className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`} aria-hidden="true">
+                            ▸
                           </span>
+                          <span className={styles.toggleName}>{entry.name}</span>
+                        </button>
+                      </th>
+                      <td>
+                        {entry.regions.map((r) => (
+                          <span key={r} className={`${styles.chip} ${styles.chipNeutral}`}>
+                            {REGION_LABEL[r] ?? r}
+                          </span>
+                        ))}
+                      </td>
+                      <td>
+                        {accountsQuery.isError ? (
+                          <span className={styles.muted}>unknown</span>
+                        ) : accountsQuery.isLoading ? (
+                          <span className={styles.muted}>…</span>
+                        ) : held.length > 0 ? (
+                          <span className={styles.chip}>
+                            {held.length} account{held.length === 1 ? '' : 's'}
+                          </span>
+                        ) : (
+                          <span className={styles.muted}>—</span>
                         )}
-                        {live.runtime?.canModifyStop === true && (
-                          <span className={`${styles.chip} ${styles.chipNeutral}`}>can move stops</span>
+                      </td>
+                      <td>
+                        <span
+                          className={`${styles.chip} ${
+                            entry.tcsSupport === TCS_SUPPORT.TRADING
+                              ? styles.chipOk
+                              : entry.tcsSupport === TCS_SUPPORT.PORTFOLIO
+                                ? styles.chipNeutral
+                                : styles.chipWarn
+                          }`}
+                        >
+                          {TCS_SUPPORT_LABEL[entry.tcsSupport] ?? entry.tcsSupport}
+                        </span>
+                      </td>
+                      <td>
+                        {statusQuery.isError ? (
+                          // Three states kept apart: a FAILED READ is not "not connected".
+                          <span className={styles.muted}>unknown — read failed</span>
+                        ) : statusQuery.isLoading ? (
+                          <span className={styles.muted}>…</span>
+                        ) : !live ? (
+                          <span className={styles.muted}>not wired into TCS</span>
+                        ) : (
+                          <>
+                            <span
+                              className={`${styles.chip} ${
+                                live.connection?.status === 'healthy' ? styles.chipOk : styles.chipNeutral
+                              }`}
+                            >
+                              {live.connection?.observed ? live.connection.status : 'unobserved'}
+                            </span>
+                            {live.runtime?.canPlaceOrder === true && (
+                              // ⚠️ CAPABILITY IS NOT PERMISSION. The adapter defining `placeOrder`
+                              // says the METHOD exists; `tradingEnabled` says whether TCS will use
+                              // it. Measured 2026-11-13: Trading 212 rendered "can place orders"
+                              // beside its own note "order placement is gated off in TCS".
+                              <span
+                                className={`${styles.chip} ${
+                                  live.runtime?.mockSuspect
+                                    ? styles.chipWarn
+                                    : live.tradingEnabled === true
+                                      ? styles.chipOk
+                                      : styles.chipWarn
+                                }`}
+                              >
+                                {live.runtime?.mockSuspect
+                                  ? 'orders = stub'
+                                  : live.tradingEnabled === true
+                                    ? 'can place orders'
+                                    : 'orders gated off'}
+                              </span>
+                            )}
+                            {live.runtime?.canModifyStop === true && (
+                              <span className={`${styles.chip} ${styles.chipNeutral}`}>can move stops</span>
+                            )}
+                            {live.runtime?.canPlaceOrder !== true && (
+                              // Registered but unable to trade (e.g. Binance: quotes only). Named so
+                              // the cell does not read as "we don't know" when the answer is "read-only".
+                              <span className={`${styles.chip} ${styles.chipNeutral}`}>read-only</span>
+                            )}
+                          </>
                         )}
-                        {live.runtime?.canPlaceOrder !== true && (
-                          // Registered but unable to trade (e.g. Binance: quotes only). Named so the
-                          // cell does not read as "we don't know" when the answer is "read-only".
-                          <span className={`${styles.chip} ${styles.chipNeutral}`}>read-only</span>
-                        )}
-                      </>
+                      </td>
+                    </tr>
+
+                    {open && (
+                      <tr className={styles.panelRow}>
+                        <td colSpan={5} id={panelId}>
+                          <dl className={styles.panelGrid}>
+                            <dt className={styles.panelTerm}>Fees</dt>
+                            <dd className={styles.panelDef}>
+                              {entry.feeModel}
+                              {!entry.feesVerified && (
+                                <span className={styles.panelNote}>
+                                  check the broker — rate not verified here
+                                </span>
+                              )}
+                            </dd>
+                            <dt className={styles.panelTerm}>Trades</dt>
+                            <dd className={styles.panelDef}>{entry.tradingTypes.join(', ')}</dd>
+                            <dt className={styles.panelTerm}>API</dt>
+                            <dd className={styles.panelDef}>
+                              {entry.api}
+                              {entry.apiNote && <span className={styles.panelNote}>{entry.apiNote}</span>}
+                            </dd>
+                            {entry.note && (
+                              <>
+                                <dt className={styles.panelTerm}>Note</dt>
+                                <dd className={styles.panelDef}>{entry.note}</dd>
+                              </>
+                            )}
+                            {entry.website && (
+                              <>
+                                <dt className={styles.panelTerm}>Website</dt>
+                                <dd className={styles.panelDef}>
+                                  <a href={entry.affiliateUrl || entry.website} target="_blank" rel="noreferrer noopener">
+                                    {entry.website.replace(/^https?:\/\//, '')}
+                                  </a>
+                                </dd>
+                              </>
+                            )}
+                          </dl>
+
+                          {live?.warnings?.length > 0 && (
+                            <ul className={styles.warnList}>
+                              {live.warnings.map((w) => (
+                                <li key={w}>{w}</li>
+                              ))}
+                            </ul>
+                          )}
+
+                          {held.length > 0 && (
+                            <>
+                              <h3 className={styles.panelSubHead}>
+                                {held.length} account{held.length === 1 ? '' : 's'} · {totals.connected} connected
+                                {' · '}balance {totals.balance.toFixed(2)} · equity {totals.equity.toFixed(2)}
+                              </h3>
+                              <p className={styles.panelNote}>
+                                Balances are read from the broker, not calculated here. Refreshes every{' '}
+                                {REFRESH_MS / 1000}s.
+                              </p>
+
+                              {bridgeCoverage.length > 0 && (
+                                <div className={styles.bridgeRow}>
+                                  {bridgeCoverage.map((b) => (
+                                    <Fragment key={b.brokerId}>
+                                      <span className={styles.bridgeName}>Bridge {b.brokerId}</span>
+                                      <span className={styles.chip} title="Symbols this bridge reports the broker offers">
+                                        {b.offered?.toLocaleString() ?? '—'} offered
+                                      </span>
+                                      <span className={styles.chip} title="Of those, symbols this app has onboarded">
+                                        {b.onboarded?.toLocaleString() ?? '—'} onboarded
+                                      </span>
+                                      <span
+                                        className={`${styles.chip} ${b.state === 'ok' ? styles.chipOk : styles.chipWarn}`}
+                                        title={b.reason || 'Last symbol sync result'}
+                                      >
+                                        symbols {b.state || 'unknown'}
+                                      </span>
+                                      <span className={styles.muted}>last sync {fmtWhen(b.lastSuccessAt)}</span>
+                                    </Fragment>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* ONE accounts table with the broker venue as a COLUMN, rather than one
+                                  table per venue. Same columns for every account, so the reader compares
+                                  like with like instead of re-learning a layout per heading. */}
+                              <table className="brk-table">
+                                <thead>
+                                  <tr>
+                                    <th scope="col">Venue</th>
+                                    <th scope="col">Account</th>
+                                    <th scope="col">Bridge</th>
+                                    <th scope="col">Type</th>
+                                    <th scope="col">Connection</th>
+                                    <th scope="col">Role</th>
+                                    <th scope="col" className="num">Balance</th>
+                                    <th scope="col" className="num">Equity</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {held.map((a) => (
+                                    // ⚠️ The key includes the bridge: the same LOGIN can be configured
+                                    // on more than one bridge (measured 2026-11-06: login 10011309743
+                                    // exists on brokers 2 and 3), so `a.login` alone is not unique.
+                                    <tr key={`${a.brokerId}-${a.number}-${a.login}`}>
+                                      <td>{a.server ?? '—'}</td>
+                                      <td>
+                                        <strong>{a.login || '—'}</strong>
+                                        <span className={styles.accountNo}>#{a.number}</span>
+                                      </td>
+                                      <td>{a.brokerId ?? '—'}</td>
+                                      <td>
+                                        <span className={`${styles.chip} ${a.isLive ? styles.chipLive : styles.chipDemo}`}>
+                                          {a.isLive ? 'LIVE' : 'demo'}
+                                        </span>
+                                      </td>
+                                      <td>
+                                        <span className={a.connected ? styles.dotOn : styles.dotOff} aria-hidden="true" />
+                                        {a.connected ? 'connected' : 'not connected'}
+                                      </td>
+                                      <td>{a.active ? <strong>active</strong> : <span className={styles.muted}>standby</span>}</td>
+                                      <td className="num">
+                                        {typeof a.balance === 'number' ? a.balance.toFixed(2) : <span className={styles.muted}>—</span>}
+                                      </td>
+                                      <td className="num">
+                                        {typeof a.equity === 'number' ? a.equity.toFixed(2) : <span className={styles.muted}>—</span>}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </>
+                          )}
+
+                          {entry.id === 'mt5' && accountsQuery.isError && (
+                            <EmptyState
+                              icon="⚠️"
+                              title="Unable to load broker accounts"
+                              description="The request to GET /api/providers/mt5/accounts failed. This is a failed read, NOT an empty account list — no broker has been disconnected by this. Check the API and the MT5 bridges are running."
+                            />
+                          )}
+                          {entry.id === 'mt5' && !accountsQuery.isError && !accountsQuery.isLoading && held.length === 0 && (
+                            <EmptyState
+                              icon="🏛"
+                              title="No broker accounts reported"
+                              description="The broker bridges answered with no accounts. Add an account to a bridge's configuration and it will appear here."
+                            />
+                          )}
+                        </td>
+                      </tr>
                     )}
-                  </td>
-                </tr>
-              ))}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </section>
-
-      {accountsQuery.isError && (
-        <EmptyState
-          icon="⚠️"
-          title="Unable to load broker accounts"
-          description="The request to GET /api/providers/mt5/accounts failed. This is a failed read, NOT an empty account list — no broker has been disconnected by this. Check the API and the MT5 bridges are running."
-        />
-      )}
-
-      {!accountsQuery.isError && accounts.length === 0 && (
-        <EmptyState
-          icon="🏛"
-          title="No broker accounts reported"
-          description="The broker bridges answered with no accounts. Add an account to a bridge's configuration and it will appear here."
-        />
-      )}
-
-      {!accountsQuery.isError && accounts.length > 0 && (
-        <>
-          <div className={styles.summaryBar}>
-            <span className={styles.summaryItem}>
-              <strong>{accounts.length}</strong> accounts
-            </span>
-            <span className={styles.summaryItem}>
-              <strong>{totals.connected}</strong> connected
-            </span>
-            <span className={styles.summaryItem}>
-              Balance <strong>{totals.balance.toFixed(2)}</strong>
-            </span>
-            <span className={styles.summaryItem}>
-              Equity <strong>{totals.equity.toFixed(2)}</strong>
-            </span>
-            <span className={styles.summaryNote}>
-              read from the broker · refreshes every {REFRESH_MS / 1000}s
-            </span>
-          </div>
-
-          {/* Per-bridge connections. The bridge is what holds a symbol catalogue, so its coverage
-              lives here rather than on a broker heading — one bridge can serve several brokers. */}
-          {bridgeCoverage.map((b) => (
-            <div key={b.brokerId} className={styles.bridgeRow}>
-              <span className={styles.bridgeName}>Bridge {b.brokerId}</span>
-              <span className={styles.chip} title="Symbols this bridge reports the broker offers">
-                {b.offered?.toLocaleString() ?? '—'} offered
-              </span>
-              <span className={styles.chip} title="Of those, symbols this app has onboarded">
-                {b.onboarded?.toLocaleString() ?? '—'} onboarded
-              </span>
-              <span
-                className={`${styles.chip} ${b.state === 'ok' ? styles.chipOk : styles.chipWarn}`}
-                title={b.reason || 'Last symbol sync result'}
-              >
-                symbols {b.state || 'unknown'}
-              </span>
-              <span className={styles.muted}>last sync {fmtWhen(b.lastSuccessAt)}</span>
-            </div>
-          ))}
-
-          {byBroker.map((broker) => (
-            <section key={broker.server} className={styles.broker} aria-label={`Broker ${broker.server}`}>
-              <div className={styles.brokerHead}>
-                <h2 className={styles.brokerName}>{broker.server}</h2>
-                <span className={styles.brokerId}>
-                  {broker.accounts.length} account{broker.accounts.length === 1 ? '' : 's'} · bridge
-                  {broker.bridges.length === 1 ? ` ${broker.bridges[0]}` : `s ${broker.bridges.join(', ')}`}
-                </span>
-                <span className={`${styles.chip} ${broker.connected > 0 ? styles.chipOk : styles.chipNeutral}`}>
-                  {broker.connected} connected
-                </span>
-                {broker.live && <span className={`${styles.chip} ${styles.chipLive}`}>LIVE</span>}
-              </div>
-
-              <table className="brk-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Account</th>
-                    <th scope="col">Bridge</th>
-                    <th scope="col">Type</th>
-                    <th scope="col">Connection</th>
-                    <th scope="col">Role</th>
-                    <th scope="col" className="num">Balance</th>
-                    <th scope="col" className="num">Equity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {broker.accounts.map((a) => (
-                    // ⚠️ The key includes the bridge: the same LOGIN can be configured on more than
-                    // one bridge (measured 2026-11-06: login 10011309743 exists on brokers 2 and 3),
-                    // so `a.login` alone is not unique and React would warn about duplicate keys.
-                    <tr key={`${a.brokerId}-${a.number}-${a.login}`}>
-                      <td><strong>{a.login || '—'}</strong><span className={styles.accountNo}>#{a.number}</span></td>
-                      <td>{a.brokerId ?? '—'}</td>
-                      <td>
-                        <span className={`${styles.chip} ${a.isLive ? styles.chipLive : styles.chipDemo}`}>
-                          {a.isLive ? 'LIVE' : 'demo'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={a.connected ? styles.dotOn : styles.dotOff} aria-hidden="true" />
-                        {a.connected ? 'connected' : 'not connected'}
-                      </td>
-                      <td>{a.active ? <strong>active</strong> : <span className={styles.muted}>standby</span>}</td>
-                      <td className="num">
-                        {typeof a.balance === 'number' ? a.balance.toFixed(2) : <span className={styles.muted}>—</span>}
-                      </td>
-                      <td className="num">
-                        {typeof a.equity === 'number' ? a.equity.toFixed(2) : <span className={styles.muted}>—</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          ))}
-        </>
-      )}
     </div>
   );
 }
