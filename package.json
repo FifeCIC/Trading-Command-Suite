@@ -1,15 +1,21 @@
 {
   "name": "tradingcs",
-  "version": "0.159.0",
+  "version": "0.160.0",
   "releaseStage": "alpha",
   "private": true,
   "license": "AGPL-3.0",
   "author": "Ryan Bayne (https://ryanbayne.uk)",
   "contributors": [
-    { "name": "FifeCIC", "url": "https://fifecic.scot" }
+    {
+      "name": "FifeCIC",
+      "url": "https://fifecic.scot"
+    }
   ],
   "homepage": "https://fifecic.github.io/Trading-Command-Suite/",
-  "repository": { "type": "git", "url": "https://github.com/FifeCIC/Trading-Command-Suite.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FifeCIC/Trading-Command-Suite.git"
+  },
   "type": "module",
   "//overrides": "Security pins for TRANSITIVE packages, 2026-11-03. mermaid pulls dompurify; the advisory is a SAFE_FOR_TEMPLATES bypass fixed in 3.4.17. ⚠️ An override, not `npm audit fix`: that rewrote the whole lockfile (46 package versions here, 126 in nest/, incl. rolldown and jest 30.4->30.5) which is an unreviewed dependency upgrade, not a security patch. Remove an entry once the parent requires the patched version itself.",
   "overrides": {
@@ -106,7 +112,8 @@
     "validate:selftest-harness": "node ./scripts/validate-selftest-harness.cjs",
     "validate:theories": "node ./scripts/validate-theories.cjs",
     "version:bump": "node ./scripts/bump-version.cjs",
-    "version:check": "node ./scripts/bump-version.cjs --check"
+    "version:check": "node ./scripts/bump-version.cjs --check",
+    "report:bot-rules": "node scripts/report-bot-rule-coverage.cjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.20",

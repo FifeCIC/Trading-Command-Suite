@@ -282,7 +282,14 @@ describe('SignalActionsService.placeManualTrade — rejection contract', () => {
 
       // Fails if the call is dropped again (the #945 defect): the gate must see the REAL order
       // (0.1 from the defaults fixture, BTC from the signal), not a placeholder.
-      expect((service as any).strategyService.assessGlobalRiskLimits).toHaveBeenCalledWith(0.1, 'BTC');
+      //
+      // #1257 — the third argument carries the STOP DISTANCE. A manual trade has no bot row, so
+      // the stop is supplied explicitly; omitting it makes the per-trade ceiling unmeasurable and
+      // the gate refuses. Asserted as an object containing `slPct` rather than an exact literal so
+      // adding another risk input does not fail this wiring canary for the wrong reason.
+      expect((service as any).strategyService.assessGlobalRiskLimits).toHaveBeenCalledWith(
+        0.1, 'BTC', expect.objectContaining({ slPct: expect.any(Number) }),
+      );
       expect(placeOrder).toHaveBeenCalledTimes(1); // a passing gate must not impede trading
     });
 

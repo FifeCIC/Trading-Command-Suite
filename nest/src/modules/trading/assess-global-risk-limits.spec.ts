@@ -2,6 +2,21 @@ import { TradingStrategyService } from './trading-strategy.service';
 import { RiskService } from '../risk/risk.service';
 
 /**
+ * #1257 — the per-trade money-at-risk input, shared by every fixture in this file.
+ *
+ * A deliberately tight stop (0.1% of price) so the per-trade ceiling never MASKS the cap each test
+ * is actually about: at 0.001–0.1 lot the money at risk is pennies against a ~1,000–1,400 equity
+ * account, far under the 2% cap these fixtures declare.
+ *
+ * ⚠️ It is supplied EXPLICITLY at every call, never omitted. Omitting it makes the gate refuse —
+ * a cap that cannot read its input must not pass — which would turn the "should block" tests green
+ * for the wrong reason and the "should allow" tests into mysteries. Module scope because this file
+ * has TWO independent `describe` blocks with their own fixtures, and a block-scoped constant made
+ * the second one throw `PER_TRADE is not defined`.
+ */
+const PER_TRADE = { slPct: 0.1 } as const;
+
+/**
  * assessGlobalRiskLimits() — the gates that stand between a signal and a real order.
  *
  * ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -52,7 +67,7 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
    * edit rather than eight.
    */
   const SYMBOL = 'XAUUSD';
-  const assess = (svc: any) => svc.assessGlobalRiskLimits(SIZE, SYMBOL);
+  const assess = (svc: any) => svc.assessGlobalRiskLimits(SIZE, SYMBOL, PER_TRADE);
 
   /**
    * The account fields the gates require.
@@ -105,6 +120,12 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
           // mirror the registry — see the note above).
           'risk.maxPortfolioRisk': 0.15,
           'risk.requireBrokerStopLoss': true,
+          // #1257 (2026-11-12) — the PER-TRADE money-at-risk ceiling. A FRACTION here, exactly as
+          // the registry stores it; the gate converts to a percent. Leaving it out is not a harmless
+          // staleness: the cap resolves to 0, 0 refuses EVERYTHING, and 15 of these tests fail with
+          // `allowed: true` expected — the mirror-image of the #865 trap where a missing cap made a
+          // gate stop blocking. Either way a fixture that mirrors the registry is load-bearing.
+          'risk.maxTradeRiskCeilingPct': 2,
         } as Record<string, unknown>)[key],
       ),
     } as any;
@@ -329,7 +350,7 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
     };
     const svc = build(mt5);
 
-    const result = await svc.assessGlobalRiskLimits(0.1, 'UK100');
+    const result = await svc.assessGlobalRiskLimits(0.1, 'UK100', PER_TRADE);
 
     // 0.1 × 10 × 10227.4 = 10,227 notional, assumed GBP, ÷ 100 = £102.27 on £1,000 → 10.2%.
     // Under the 25% cap, so it is admitted — which is the point of the change.
@@ -366,8 +387,8 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
     };
     const svc = build(mt5);
 
-    const gold = await svc.assessGlobalRiskLimits(0.001, 'XAUUSD');
-    const yen = await svc.assessGlobalRiskLimits(0.001, 'NZDJPY');
+    const gold = await svc.assessGlobalRiskLimits(0.001, 'XAUUSD', PER_TRADE);
+    const yen = await svc.assessGlobalRiskLimits(0.001, 'NZDJPY', PER_TRADE);
 
     // Both permitted. The old expression refused BOTH — at ~86%, for the same stated reason,
     // with the same number, which is precisely what made the defect hard to see.
@@ -389,7 +410,7 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
     };
     const svc = build(mt5);
 
-    const result = await svc.assessGlobalRiskLimits(1, 'XAUUSD');
+    const result = await svc.assessGlobalRiskLimits(1, 'XAUUSD', PER_TRADE);
 
     expect(result.allowed).toBe(false);
     expect(result.reason).toContain('exceeds max per symbol');
@@ -428,7 +449,7 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
     const svc = build(mt5);
 
     // The order alone is ~4% — it would pass measured on its own. The SYMBOL total (~26%) refuses it.
-    const blocked = await svc.assessGlobalRiskLimits(0.02, 'XAUUSD');
+    const blocked = await svc.assessGlobalRiskLimits(0.02, 'XAUUSD', PER_TRADE);
     expect(blocked.allowed).toBe(false);
     expect(blocked.reason).toContain('max per symbol');
     // And the reason exposes the existing term, so the refusal is explicable from the record.
@@ -441,7 +462,7 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
       getAccount: jest.fn().mockResolvedValue(acct({ equity: 1000, balance: 1000, margin: 100 })),
     };
     const clean = build(emptyMt5);
-    const allowed = await clean.assessGlobalRiskLimits(0.02, 'XAUUSD');
+    const allowed = await clean.assessGlobalRiskLimits(0.02, 'XAUUSD', PER_TRADE);
     expect(allowed.allowed).toBe(true);
   });
 
@@ -629,6 +650,10 @@ describe('assessGlobalRiskLimits — the #900 cap judges the ROUTED account (202
         'risk.maxDrawdown': 0.25,
         'risk.maxPortfolioRisk': 0.15,
         'risk.requireBrokerStopLoss': true,
+        // #1257 — this SECOND fixture needed it too. Two independent settings stubs in one file is
+        // exactly how a new cap gets wired into one describe block and not the other; the failure
+        // here was `allowed: false` on every test, because a cap that resolves to 0 refuses all.
+        'risk.maxTradeRiskCeilingPct': 2,
       } as Record<string, unknown>)[key]),
     } as any;
 
@@ -658,7 +683,7 @@ describe('assessGlobalRiskLimits — the #900 cap judges the ROUTED account (202
     };
     const svc = build(mt5, { resolveForOrder: () => ({ brokerId: 3, mt5: true, explicit: true, url: 'http://localhost:5001', brokerSymbol: 'GER40' }) });
 
-    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL);
+    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL, PER_TRADE);
 
     expect(result.allowed).toBe(true);
     expect(mt5.getAccountBook).toHaveBeenCalledWith(3);
@@ -674,7 +699,7 @@ describe('assessGlobalRiskLimits — the #900 cap judges the ROUTED account (202
     // brokerId 0 / mt5:false is the crypto route shape (#914) — not a bridge, so no book to read.
     const svc = build(mt5, { resolveForOrder: () => ({ brokerId: 0, mt5: false, explicit: true, url: null, brokerSymbol: 'BTC' }) });
 
-    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL);
+    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL, PER_TRADE);
 
     expect(result.allowed).toBe(false);
     expect(result.reason).toContain('Portfolio at risk');
@@ -689,7 +714,7 @@ describe('assessGlobalRiskLimits — the #900 cap judges the ROUTED account (202
     };
     const svc = build(mt5, { resolveForOrder: () => ({ brokerId: 3, mt5: true, explicit: true, url: 'http://localhost:5001', brokerSymbol: 'GER40' }) });
 
-    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL);
+    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL, PER_TRADE);
 
     expect(result.allowed).toBe(false);
     expect(result.reason).toContain('account 3');
@@ -706,7 +731,7 @@ describe('assessGlobalRiskLimits — the #900 cap judges the ROUTED account (202
     };
     const svc = build(mt5, { resolveForOrder: () => ({ brokerId: 3, mt5: true, explicit: true, url: 'http://localhost:5001', brokerSymbol: 'GER40' }) });
 
-    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL);
+    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL, PER_TRADE);
 
     expect(result.allowed).toBe(false);
     expect(result.reason).toContain('no usable equity');
@@ -720,10 +745,89 @@ describe('assessGlobalRiskLimits — the #900 cap judges the ROUTED account (202
     };
     const svc = build(mt5);   // no router, exactly as the 15 pre-existing tests build it
 
-    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL);
+    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL, PER_TRADE);
 
     expect(result.allowed).toBe(false);
     expect(result.reason).toContain('Portfolio at risk');
     expect(mt5.getAccountBook).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * #1257 — the per-trade MONEY-AT-RISK ceiling, exercised through the REAL gate in BOTH directions.
+ *
+ * The defect this closes: `risk.maxPerTradeRisk` was declared, configurable, and read only by the
+ * position-size CALCULATOR. No order ever met it. Measured live 2026-11-12, XAUUSD 0.01 lot risked
+ * £78 (13.3% of a £589.16 account) against a 2% ceiling; NZDJPY 0.1 lot risked £37 (6.3%). Both
+ * passed every gate that existed, because `maxPortfolioRisk` and `maxPerSymbol` measure MARGIN, and
+ * at 1:100 the margin on those orders was trivial next to what their stops could lose.
+ *
+ * The fixture prices gold at 4,346.06 with contractSize 100 and a USD→GBP rate near 0.747, so one
+ * lot is ~£324,573 of notional and 0.1% of price is a 4.35 stop distance.
+ */
+describe('assessGlobalRiskLimits — the per-trade money-at-risk ceiling (#1257)', () => {
+  const SYMBOL = 'XAUUSD';
+
+  const settings = {
+    get: jest.fn(async (key: string) => ({
+      'risk.maxPositionSize': 10,
+      'risk.maxOpenPositions': 20,
+      'risk.maxDailyLoss': 100,
+      'risk.maxPerSymbol': 0.95,      // loose on purpose — this test is about the OTHER cap
+      'risk.maxDrawdown': 0.25,
+      'risk.maxPortfolioRisk': 0.95,  // loose on purpose
+      'risk.requireBrokerStopLoss': true,
+      'risk.maxTradeRiskCeilingPct': 2,  // #1257 — PERCENT of equity
+    } as Record<string, unknown>)[key]),
+  } as any;
+
+  function build() {
+    const mt5: Record<string, any> = {
+      getPositions: jest.fn().mockResolvedValue([]),
+      getAllPositions: jest.fn().mockResolvedValue([]),
+      getPrimaryPositions: jest.fn().mockResolvedValue([]),
+      getAccount: jest.fn().mockResolvedValue({ equity: 1000, balance: 1000, leverage: 100, currency: 'GBP' }),
+      getSymbolInfo: jest.fn().mockResolvedValue({ name: SYMBOL, digits: 2, contractSize: 100, volumeMin: 0.01, volumeMax: 100 }),
+      getQuote: jest.fn(async (s: string) => {
+        const fx: Record<string, number> = { GBPUSD: 1.33838, GBPJPY: 209.768 };
+        if (s === SYMBOL) return { bid: 4346, ask: 4346.5, last: 4346.06 };
+        const last = fx[s];
+        return last != null ? { bid: last, ask: last, last } : null;
+      }),
+    };
+    const prisma = { trade: { findMany: jest.fn().mockResolvedValue([]) } } as any;
+    const notificationService = { notifyDrawdown: jest.fn().mockResolvedValue(undefined) } as any;
+    const svc = new TradingStrategyService(
+      prisma, mt5 as any, {} as any, new RiskService(), notificationService, {} as any,
+      settings, undefined, undefined, undefined, undefined,
+    );
+    return { svc, mt5 };
+  }
+
+  it('REFUSES a 0.1-lot gold order whose stop risks ~13% of equity', async () => {
+    const { svc } = build();
+    // 0.1 lot × 100 contract × 4.346 stop distance × 0.747 rate = £324.6 of risk on £1,000 = 32%.
+    const result = await svc.assessGlobalRiskLimits(0.1, SYMBOL, { slPct: 0.1 });
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('per-trade cap');
+    expect(result.reason).toContain('risk.maxTradeRiskCeilingPct');
+  });
+
+  it('ALLOWS the same order at a size inside the cap — the cap is a limit, not a ban', async () => {
+    const { svc } = build();
+    // 2% of 1,000 = £20. At £3,246 of risk per lot, 0.005 lot risks ~£16.
+    const result = await svc.assessGlobalRiskLimits(0.005, SYMBOL, { slPct: 0.1 });
+    expect(result.allowed).toBe(true);
+  });
+
+  it('REFUSES rather than passes when the stop distance cannot be resolved at all', async () => {
+    const { svc } = build();
+    // No perTrade argument and no bot row -> no stop distance. A cap that cannot read its input
+    // must never pass; this is the failure mode that made the old setting decorative.
+    const result = await svc.assessGlobalRiskLimits(0.001, SYMBOL);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/Cannot measure the money at risk/);
+  });
+});
+
+

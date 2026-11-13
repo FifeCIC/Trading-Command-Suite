@@ -28,7 +28,7 @@ describe('Trading212Adapter — order DIRECTION (#1256)', () => {
   beforeEach(() => {
     // Credentials must exist for the order path to run at all.
     process.env.TRADING212_DEMO_API_KEY = 'k3y';
-    process.env.TRADING212_DEMO_API_SECRET = 's3cr3t';
+    process.env.TRADING212_DEMO_API_SECRET = '<test-secret>';
     process.env.TRADING212_DEMO_BASE_URL = 'https://demo.trading212.com/api/v0';
   });
 
@@ -108,8 +108,8 @@ describe('Trading212Adapter — live orders are off unless switched on (#1256)',
   const savedEnv = { ...process.env };
 
   beforeEach(() => {
-    process.env.TRADING212_ISA_API_KEY = 'isa-key';
-    process.env.TRADING212_ISA_API_SECRET = 'isa-secret';
+    process.env.TRADING212_ISA_API_KEY = '<test-isa-key>';
+    process.env.TRADING212_ISA_API_SECRET = '<test-isa-secret>';
     process.env.TRADING212_ISA_BASE_URL = 'https://live.trading212.com/api/v0';
   });
 
@@ -135,7 +135,7 @@ describe('Trading212Adapter — live orders are off unless switched on (#1256)',
   // Direction check: a DEMO order is not blocked by this switch, or the rail would be unusable.
   it('does NOT block a demo order', async () => {
     delete process.env.TRADING212_ALLOW_LIVE_ORDERS;
-    process.env.TRADING212_DEMO_API_KEY = 'demo-key';
+    process.env.TRADING212_DEMO_API_KEY = '<test-demo-key>';
     process.env.TRADING212_DEMO_BASE_URL = 'https://demo.trading212.com/api/v0';
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true, status: 200, text: async () => '{"id":1}', json: async () => ({ id: 1 }),

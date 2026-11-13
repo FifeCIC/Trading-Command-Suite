@@ -82,7 +82,28 @@ $credArgs = @("-u", $DB_USER, "-p$DB_PASS", "-h", $DB_HOST, "-P", $DB_PORT)
 # ── Schema dump (always) ──────────────────────────────────────
 Write-Host "Dumping schema..." -ForegroundColor Cyan
 $schemaFile = Join-Path $backupDir "schema.sql"
-& $mysqldump @credArgs --no-data --no-tablespaces --routines --triggers --events $DB_NAME 2>&1 | Out-File $schemaFile -Encoding UTF8
+# ⚠️ STDOUT ONLY — `Start-Process -RedirectStandardOutput`, NOT `2>&1 | Out-File`.
+#
+# MEASURED 2026-11-13, and it is the reason no backup could ever be restored: this line used to be
+#   & $mysqldump @credArgs ... 2>&1 | Out-File $schemaFile
+# and `2>&1` folds mysqldump's STDERR into the file. mysqldump always writes this to stderr:
+#
+#   mysqldump: [Warning] Using a password on the command line interface can be insecure.
+#
+# …so line 1 of every `schema.sql` was that warning, MySQL rejected it, and the restore aborted
+# before a single table was created. The data file was unaffected (it already redirected stdout
+# only), which is why the archive still looked complete — 134 tables dumped, 127 MB written, `DONE`
+# printed. Nothing noticed because nothing had ever restored a backup: the same
+# "plausible output, no error" shape as every other defect this repo has paid for.
+$schemaProc = Start-Process -FilePath $mysqldump `
+  -ArgumentList (@("-u", $DB_USER, "-p$DB_PASS", "-h", $DB_HOST, "-P", $DB_PORT,
+                   "--no-data", "--no-tablespaces", "--routines", "--triggers", "--events", $DB_NAME)) `
+  -NoNewWindow -PassThru -Wait -RedirectStandardOutput $schemaFile
+if ($schemaProc.ExitCode -ne 0) {
+  Write-Error "schema dump FAILED (exit $($schemaProc.ExitCode))"
+  Remove-Item -Recurse -Force $backupDir -ErrorAction SilentlyContinue
+  exit 1
+}
 Write-Host "  Schema saved: $schemaFile" -ForegroundColor Green
 
 # ── Data dump (compressed with .NET GZipStream) ───────────────
@@ -137,6 +158,108 @@ Remove-Item -Recurse -Force $backupDir
 
 $sizeMB = [math]::Round((Get-Item $archive).Length / 1MB, 2)
 Write-Host "Backup complete: $archive ($sizeMB MB)" -ForegroundColor Green
+
+# ─── VERIFY — a backup nobody opened is a file, not a backup ─────────────────────────────────
+#
+# ⚠️ WHY THIS EXISTS (2026-11-13). Measured before it was written: the archive set held THREE
+# backups spread over four weeks — 10-17, 10-31, 11-09 — against a DAILY schedule, and the last
+# scheduled run reported `LastResult=0x800710E0`. Every one of those archives reported `DONE` when
+# it was created, and nothing had ever opened one. That is the defect this repo keeps re-finding:
+# **plausible output, no error** — the script prints success whether or not the zip is readable.
+#
+# This check is deliberately CHEAP and runs on EVERY backup:
+#   1. the zip opens and holds exactly the two expected entries;
+#   2. the DATA stream decompresses to a plausible size (a truncated gzip throws here);
+#   3. `schema.sql` carries the same number of CREATE TABLE statements as the live database.
+#
+# It CANNOT prove the dump restores. That is what `-RestoreDrill` is for, and it is a separate,
+# heavier run — because a check that makes the nightly job slow is a check somebody disables.
+$verifyErrors = @()
+try {
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  $zip = [System.IO.Compression.ZipFile]::OpenRead($archive)
+  try {
+    $names = $zip.Entries | ForEach-Object { $_.Name }
+    foreach ($expected in @('schema.sql', (Split-Path $dataFile -Leaf))) {
+      if ($names -notcontains $expected) { $verifyErrors += "archive is missing $expected" }
+    }
+    $dataEntry = $zip.Entries | Where-Object { $_.Name -eq (Split-Path $dataFile -Leaf) }
+    if ($dataEntry) {
+      # Re-read the whole gzip stream. A truncated or corrupt member THROWS here rather than
+      # returning a short read, which is exactly the difference between "verified" and "looks fine".
+      $stream = $dataEntry.Open()
+      try {
+        $gz = New-Object System.IO.Compression.GZipStream @($stream, [System.IO.Compression.CompressionMode]::Decompress)
+        $buffer = New-Object byte[] 1048576
+        $total = 0
+        while (($n = $gz.Read($buffer, 0, $buffer.Length)) -gt 0) { $total += $n }
+        $gz.Dispose()
+        $uncompressedMB = [math]::Round($total / 1MB, 1)
+        if ($total -lt 1MB) { $verifyErrors += "decompressed data is only $uncompressedMB MB — the dump is effectively empty" }
+        Write-Host "  Verified: data decompresses to $uncompressedMB MB" -ForegroundColor DarkGray
+      } finally { $stream.Dispose() }
+    }
+    $schemaEntry = $zip.Entries | Where-Object { $_.Name -eq 'schema.sql' }
+    if ($schemaEntry) {
+      $reader = New-Object System.IO.StreamReader @($schemaEntry.Open())
+      try { $schemaText = $reader.ReadToEnd() } finally { $reader.Dispose() }
+      $created = ([regex]::Matches($schemaText, 'CREATE TABLE')).Count
+      # ⚠️ THE HEADER CHECK — the guard for the defect above, and it is the one that would have
+      # caught it on the very first run. A valid mysqldump begins with `-- MySQL dump`; anything
+      # else in line 1 means something that is not SQL reached the file (a warning, a stack trace,
+      # a BOM). Reported as its own failure because it makes EVERY later check meaningless.
+      $firstLine = ($schemaText -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -First 1)
+      if ($firstLine -notmatch '^--') {
+        $verifyErrors += "schema.sql does not start with a SQL comment — line 1 is '$($firstLine.Substring(0, [Math]::Min(90, $firstLine.Length)))'. Something that is not SQL got into the dump."
+      }
+      $liveCount = (& $mysql @credArgs -N -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$DB_NAME' AND TABLE_TYPE='BASE TABLE';" 2>&1 |
+        Where-Object { $_ -and $_ -notmatch 'Warning' } | Select-Object -First 1).Trim()
+      # ⚠️ Compared as a BAND, not equality: `--routines --triggers` can add statements and a
+      # table added between the two reads moves the number. A backup with FEWER tables than the
+      # database is the failure that matters, and it is reported by name.
+      if ([int]$created -lt [int]$liveCount) {
+        $verifyErrors += "schema.sql has $created CREATE TABLE statement(s) but the database has $liveCount tables — the dump is INCOMPLETE"
+      }
+      Write-Host "  Verified: schema carries $created CREATE TABLE / $liveCount live table(s)" -ForegroundColor DarkGray
+    }
+  } finally { $zip.Dispose() }
+} catch {
+  $verifyErrors += "archive could not be read: $($_.Exception.Message)"
+}
+
+if ($verifyErrors.Count -gt 0) {
+  foreach ($e in $verifyErrors) { Write-Host "  ✖ VERIFY FAILED: $e" -ForegroundColor Red }
+  # ⚠️ The bad archive is REMOVED, not left in place. A corrupt zip that stays in the folder is
+  # counted by retention as a backup and will eventually be the only one left.
+  Remove-Item $archive -Force -ErrorAction SilentlyContinue
+  Write-Host "  Archive removed — a file that cannot be read is not a backup." -ForegroundColor Red
+  exit 1
+}
+
+# ─── ROW COUNTS — the CLAIM that `restore-drill.ps1` tests the restore against ───────────────
+#
+# ⚠️ WHY A SIDECAR AND NOT A COMPARISON AGAINST LIVE. The drill first compared the restored row
+# counts to the LIVE database and reported `symbol — live 262, restored 263`. Both numbers were
+# right: a symbol had been deleted AFTER the backup was taken. That check measures "has anything
+# changed since", which is not the question — a backup is a snapshot and is SUPPOSED to differ.
+#
+# So each archive now records what it holds, at the moment it is written. The drill compares the
+# restore against THAT. The manifest is the claim; the restore is the evidence.
+$CONFIG_TABLES = @(
+  'trading_strategy', 'strategy_protocol', 'scoring_strategy', 'protocol',
+  'protocol_directive_entry', 'protocol_directive_group', 'directive',
+  'symbol', 'symbol_route', 'watchlist', 'watchlist_item', 'appsetting', 'global_setting',
+  'broker_config', 'broker_symbol'
+)
+$counts = [ordered]@{ archive = (Split-Path $archive -Leaf); takenAt = $timestamp; mode = $mode; tables = [ordered]@{} }
+foreach ($t in $CONFIG_TABLES) {
+  $n = (& $mysql @credArgs -N -e "SELECT COUNT(*) FROM ``$DB_NAME``.``$t``;" 2>&1 |
+    Where-Object { $_ -notmatch 'Warning' -and $_ } | Select-Object -First 1)
+  if ($n) { $counts.tables[$t] = [int]$n.Trim() }
+}
+$countsFile = Join-Path $BACKUP_ROOT "counts-$timestamp-$mode.json"
+($counts | ConvertTo-Json -Depth 4) | Out-File $countsFile -Encoding UTF8
+Write-Host "  Counts recorded: $countsFile ($($counts.tables.Count) config tables)" -ForegroundColor DarkGray
 
 # ── Retention ─────────────────────────────────────────────────
 # Separate compact and full backups

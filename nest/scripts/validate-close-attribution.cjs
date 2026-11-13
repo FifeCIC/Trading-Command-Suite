@@ -70,6 +70,14 @@ const ALLOWLIST = [
       'literal in a declaration from code. Added 2026-10-06 when a measurement note in the ' +
       'maxHoldHours caveat tripped the build.',
   },
+  {
+    file: 'modules/notifications/channels/discord.channel.ts',
+    why: 'NOTIFIER, not a writer — it renders a close LABEL from the reason vocabulary ' +
+      '(`CLOSE_REASON_LABELS[closeReason]`) into a Discord embed. It has no prisma call and cannot ' +
+      'close or update a trade. Added 2026-11-12 when #1255 added the `user:close-profitable` ' +
+      'vocabulary entry and this file began mentioning the field. ⚠️ If it ever starts closing a ' +
+      'trade, delete this entry rather than widening it.',
+  },
 ];
 
 function walk(dir, out = []) {

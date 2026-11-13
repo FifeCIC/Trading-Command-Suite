@@ -8,6 +8,7 @@ import { TradingStrategyService } from './trading-strategy.service';
 import { FirstRunSeedService } from './first-run-seed.service';
 import { TradingStrategyController } from './trading-strategy.controller';
 import { BrokerConfigService } from './broker-config.service';
+import { BrokerCapabilityService } from './broker-capability.service';
 import { BrokerConfigController } from './broker-config.controller';
 import { TradeRecorderService } from './trade-recorder.service';
 import { DuplicateGuardService } from './duplicate-guard.service';
@@ -31,7 +32,7 @@ import { ProgressionModule } from '../progression/progression.module';
 @Module({
   imports: [DirectivesModule, DiversificationModule, RiskModule, NotificationsModule, DatabaseModule, ProvidersModule, AuthModule, forwardRef(() => ScoringModule), ProgressionModule],
   controllers: [Mt5TradingController, SessionTrackerController, TradingStrategyController, TradeHistoryController, BrokerConfigController],
-  providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopAdjustmentRecorder, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService, PyramidPolicyService, BotPerformanceService, FirstRunSeedService],
-  exports: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopAdjustmentRecorder, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService, PyramidPolicyService, BotPerformanceService],
+  providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, BrokerCapabilityService, TradeRecorderService, DuplicateGuardService, StopAdjustmentRecorder, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService, PyramidPolicyService, BotPerformanceService, FirstRunSeedService],
+  exports: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, BrokerCapabilityService, TradeRecorderService, DuplicateGuardService, StopAdjustmentRecorder, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService, PyramidPolicyService, BotPerformanceService],
 })
 export class TradingModule {}

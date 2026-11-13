@@ -70,6 +70,11 @@ export interface StrategyTreatment {
   tpPct: number | null;
   /** Fixed-money take-profit. Part of the identity: it is the exit (#1224). */
   takeProfitAmount: number | null;
+  /**
+   * #1257 — the per-trade money-at-risk ceiling, as a percent of equity. Part of the identity: it
+   * is the limit that decides whether an idea is tradeable at its configured size.
+   */
+  maxTradeRiskPct: number | null;
   /** How the size is computed, and the risk it commits. Part of the identity (#1224). */
   sizingModel: string | null;
   sizingRiskPct: number | null;
@@ -219,6 +224,8 @@ interface BotRow {
    * typo reads `undefined` at compile time rather than silently comparing nothing.
    */
   takeProfitAmount?: number | null;
+  /** #1257 — per-trade money-at-risk ceiling, % of equity. Part of the identity. */
+  maxTradeRiskPct?: number | null;
   sizingModel?: string | null;
   sizingRiskPct?: number | null;
   allocationAmount?: number | null;
@@ -620,6 +627,13 @@ export function buildTreatment(bot: any): StrategyTreatment {
     slPct: bot.slPct,
     tpPct: bot.tpPct,
     takeProfitAmount: bot.takeProfitAmount ?? null,
+    // #1257 (2026-11-12) — the per-trade money-at-risk ceiling IS part of the identity: two bots
+    // that differ in how much they will lose on one idea are different strategies, and hashing them
+    // the same would make the derivation report them as duplicates of each other. Same reasoning as
+    // `takeProfitAmount` above (v2, #1224), which is exactly the field whose omission made two exit
+    // policies share one identity.
+    maxTradeRiskPct: bot.maxTradeRiskPct ?? null,
+    // REGISTER: docs/SETTLED-DECISIONS.md row 171 · ISSUE: #1257
     sizingModel: bot.sizingModel ?? null,
     sizingRiskPct: bot.sizingRiskPct ?? null,
     allocationAmount: bot.allocationAmount ?? null,
@@ -718,6 +732,10 @@ export function canonicaliseTreatment(t: StrategyTreatment): Record<string, stri
     sizingRiskPct: num(t.sizingRiskPct),
     slPct: num(t.slPct),
     takeProfitAmount: num(t.takeProfitAmount),
+    // #1257 — classified EXPLICITLY, not left to fall through to "unkeyed". The guard that fails the
+    // build on an unclassified column is the reason this line had to be written the moment the
+    // column existed, and that is the guard behaving exactly as intended.
+    maxTradeRiskPct: num(t.maxTradeRiskPct),
     timeframe: String(t.timeframe),
     tpPct: num(t.tpPct),
     useRaritySizing: String(Boolean(t.useRaritySizing)),

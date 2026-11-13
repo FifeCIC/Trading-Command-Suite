@@ -1742,6 +1742,21 @@ model TradingStrategy {
   // sized model with no riskPct REFUSES visibly (TCS-TRADE-023) — there is deliberately no
   // default, because a guessed risk fraction would trade a fiction.
   sizingRiskPct Float?
+  // ── MONEY-AT-RISK CEILING (#1257, 2026-11-12) ─────────────────────────────────────────────
+  // The most this bot may LOSE on one position, as a PERCENT of account equity (2 = 2%).
+  // Not a sizing target — a ceiling. It applies to EVERY sizing model, including `fixedLot`,
+  // which is the case that exposed the gap: XAUUSD 0.01 lot risked £78 (13.3% of a £589 account)
+  // against a declared 2% cap that nothing on the order path read.
+  //
+  // ⚠️ NOT the same field as `sizingRiskPct` above, and the difference is the whole point:
+  //   sizingRiskPct = what a SIZED model aims AT (an input to the maths; ignored by fixedLot).
+  //   maxTradeRiskPct = what NO order may exceed (a gate; read for every bot, every model).
+  // One is an aim, the other is a limit. A bot can have a 2% target and a 5% ceiling.
+  //
+  // NULL = use the global `risk.maxPerTradeRisk` setting (declared, never silently absent), so an
+  // existing bot inherits a real cap without a migration. Owner direction 2026-11-12: the value
+  // must be CONFIGURABLE per bot — "that is what makes it possible to create different strategies".
+  maxTradeRiskPct Float?
   useRaritySizing Boolean @default(true)
   maxSize       Float?
   maxPositions  Int      @default(1)

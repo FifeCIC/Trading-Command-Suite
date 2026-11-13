@@ -1317,6 +1317,7 @@ CREATE TABLE `trading_strategy` (
     `baseSize` DOUBLE NULL DEFAULT 0.01,
     `sizingModel` VARCHAR(20) NULL,
     `sizingRiskPct` DOUBLE NULL,
+    `maxTradeRiskPct` DOUBLE NULL,
     `useRaritySizing` BOOLEAN NOT NULL DEFAULT true,
     `maxSize` DOUBLE NULL,
     `maxPositions` INTEGER NOT NULL DEFAULT 1,

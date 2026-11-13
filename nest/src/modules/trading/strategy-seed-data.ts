@@ -37,6 +37,15 @@ export interface SeedTradingStrategy {
   tpPct: number;
   minComposite: number;
   /**
+   * #1257 — the per-trade money-at-risk ceiling, as a PERCENT of account equity (2 = 2%).
+   *
+   * ⚠️ OPTIONAL, and absent means "inherit the global `risk.maxTradeRiskCeilingPct`" — the same
+   * contract as `allocationAmount` below. A seeder that stamped a number here would overwrite an
+   * operator's per-bot choice on every run, which is the failure mode `allocationAmount` exists to
+   * avoid. Declare it only where a bot is deliberately MORE cautious than the book.
+   */
+  maxTradeRiskPct?: number | null;
+  /**
    * SIM-TSL OBSERVER (#936 / armed 2026-11-03, record-only, armed 2026-11-03).
    *
    * ⚠️ This ARMS AN OBSERVER, NOT A TRAILING STOP. `observeSimulatedTsl()` records the moment a

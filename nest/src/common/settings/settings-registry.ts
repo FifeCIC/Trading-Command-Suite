@@ -427,6 +427,41 @@ export const SETTINGS: SettingDefinition[] = [
     max: 1.0,
   },
   {
+    // ── PER-TRADE MONEY-AT-RISK CEILING (#1257, 2026-11-12) ──────────────────────────────────
+    //
+    // The rule the owner asked for: a ceiling that a bot can OVERRIDE, so two strategies can differ
+    // in how much they will lose on one idea — *"maxPerTradeRisk has to be configurable — that is
+    // what makes it possible to create different strategies."*
+    //
+    // ⚠️ WHY A NEW KEY AND NOT `risk.maxPerTradeRisk`. That setting already exists as a SIZING
+    // TARGET: `RiskService.calculatePositionSize()` multiplies equity by it to decide how big an
+    // order SHOULD be. This is the opposite job — it refuses an order that is already too big. If
+    // one number served both, raising the ceiling would also multiply every manual risk-based size
+    // by the same factor; that is two meanings in one field, which is the defect this repo has paid
+    // for repeatedly (see `maxDrawdown` fraction-vs-percent in risk.controller.ts).
+    //
+    // ⚠️ THE DEFAULT IS 20, NOT 2, AND THAT IS MEASURED. The MT5 volume FLOOR is 0.01 lots, so the
+    // smallest gold position that CAN be opened on account 2 risks £78 on a £589.16 equity = 13.3%.
+    // A 2% ceiling would refuse every gold order forever, however correct the signal — the exact
+    // shape that produced 601 refusals in one day at `maxPortfolioRisk` 15% (recorded in
+    // risk-profile-rules.ts). 20% admits every configuration that exists today and still refuses an
+    // order that is 10x oversized, which is the job. **Tighten it per bot, not globally**, when a
+    // strategy should be more cautious than the book.
+    key: 'risk.maxTradeRiskCeilingPct',
+    type: 'number',
+    defaultValue: 20,
+    class: 'runtime',
+    owner: 'trading',
+    label: 'Max risk per trade (% of equity)',
+    description:
+      'Ceiling on the money at risk on ONE position — entry-to-stop distance × volume × contract ' +
+      'size, in the account currency — as a PERCENT of account equity (20 = 20%). A bot whose ' +
+      '`maxTradeRiskPct` is set uses its own value instead. Refuses the order before it is sent.',
+    userChangeable: true,
+    min: 0.1,
+    max: 100,
+  },
+  {
     // ⚠️ Added 2026-09-19 (#900). The owner's rule, verbatim: "if … the distant broker stop loss
     // is missing … then it doesn't trade." docs/trading-bot-model.md §6b requires a broker-side
     // protective stop on EVERY position so an app failure never leaves one unprotected — that

@@ -9,11 +9,21 @@
  * Data (real only — no fixtures; the app is single-instance against live bridges):
  *   GET /api/providers/mt5/accounts        — one row per account per bridge, with balance/equity
  *   GET /api/broker-symbols/summary        — per-broker symbol coverage and last sync
+ *   GET /api/brokers/status                — live capability + connection state, per adapter id
  *
- * ⚠️ NO BROKER NAMES ARE HARDCODED. `broker_config` has no list endpoint, so the broker's NAME is
- * derived from the `server` its accounts report (e.g. `PepperstoneUK-Demo`). That is data the
- * external system gave us, and it survives a new account on a broker nobody has configured yet —
- * which a constant map would not (`.github/instructions/external-systems-are-data.instructions.md`).
+ * ── TWO KINDS OF BROKER NAME, AND ONLY ONE OF THEM IS DATA ────────────────────
+ * ⚠️ `src/data/broker-catalogue.js` DOES hardcode broker names, regions, fee models and support
+ * levels. That is correct and is not a breach of the rule below: those are REFERENCE FACTS about
+ * venues a reader might sign up to, identical for every user of the app, and there is no external
+ * system to ask. They are a directory, not a configuration.
+ *
+ * ⚠️ NO ACCOUNT-HOLDING BROKER NAME IS HARDCODED. `broker_config` has no list endpoint, so the
+ * broker's NAME for the accounts section is derived from the `server` its accounts report (e.g.
+ * `PepperstoneUK-Demo`). That is data the external system gave us, and it survives a new account
+ * on a broker nobody has configured yet — which a constant map would not
+ * (`.github/instructions/external-systems-are-data.instructions.md`).
+ * The directory joins to live state by adapter id and NEVER invents a status for a venue TCS has
+ * not wired: "not wired into TCS" is rendered, not guessed.
  *
  * ⚠️ THREE STATES, KEPT APART (the repo's most repeated defect is collapsing them):
  *   loading      → LoadingSkeleton
@@ -26,6 +36,13 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import PageInfoPopover from '../components/PageInfoPopover';
+import {
+  BROKER_CATALOGUE,
+  BROKER_CATALOGUE_BY_ID,
+  REGION_LABEL,
+  TCS_SUPPORT,
+  TCS_SUPPORT_LABEL,
+} from '../data/broker-catalogue';
 import styles from './accounts.module.css';
 
 const REFRESH_MS = 30_000;
@@ -56,6 +73,27 @@ export default function BrokersPage() {
     queryFn: () => apiGet('/api/broker-symbols/summary').catch(() => null),
     refetchInterval: 120_000,
   });
+
+  /**
+   * Live broker capability + connection state, for the directory below.
+   *
+   * ⚠️ NOT `.catch(() => null)`. The directory must be able to say "live status could not be
+   * loaded" — collapsing a failed read into an empty object would render every broker as
+   * "not connected in TCS", which is the repo's most repeated defect: a failed query and a
+   * real absence must never look the same.
+   */
+  const statusQuery = useQuery({
+    queryKey: ['brokers-status'],
+    queryFn: () => apiGet('/api/brokers/status'),
+    refetchInterval: REFRESH_MS * 2,
+    retry: 1,
+  });
+
+  /** catalogue (static reference) ⟕ live status, joined on adapter id. */
+  const directory = useMemo(() => {
+    const live = new Map((statusQuery.data?.brokers ?? []).map((b) => [b.id, b]));
+    return BROKER_CATALOGUE.map((entry) => ({ entry, live: live.get(entry.id) ?? null }));
+  }, [statusQuery.data]);
 
   const accounts = useMemo(() => {
     const rows = accountsQuery.data?.accounts;
@@ -121,12 +159,144 @@ export default function BrokersPage() {
             bridge, so the bridge number is shown per account and summarised above the table.
             Balances are read from the broker, not calculated here.
             <br /><br />
+            The <strong>Broker Directory</strong> above lists venues this app does not hold an
+            account on yet, with what each one charges and how far TCS supports it. Regions were
+            checked against each broker&apos;s own UK site; a fee shown as &quot;check the
+            broker&quot; means the rate was not verified and is deliberately not guessed at.
+            <br /><br />
             Looking for what a broker can TRADE (symbol coverage and classes)? That is the
             <strong> Broker Catalogue</strong> in the Status area. Registration details for each
             vendor, including MT5, are on <strong>Vendors</strong>.
           </PageInfoPopover>
         </h1>
       </header>
+
+      {/* ── BROKER DIRECTORY ─────────────────────────────────────────────────────────────
+          The list of venues, for a reader deciding where to open an account — not the list of
+          accounts held. Kept above the accounts so the page answers "who could I use?" before
+          "what have I got?".
+          ⚠️ Live status is joined, never hardcoded. A broker with no adapter row reads
+          "not wired into TCS", which is true and is the normal case for most of this table. */}
+      <section className={styles.broker} aria-label="Broker directory">
+        <div className={styles.brokerHead}>
+          <h2 className={styles.brokerName}>Broker directory</h2>
+          <span className={styles.brokerId}>
+            {directory.length} venues · {BROKER_CATALOGUE.filter((b) => b.tcsSupport === TCS_SUPPORT.TRADING).length} tradeable in TCS
+          </span>
+          {statusQuery.isError && (
+            <span className={`${styles.chip} ${styles.chipBad}`} title="GET /api/brokers/status failed">
+              live status unavailable
+            </span>
+          )}
+          {statusQuery.isLoading && <span className={`${styles.chip} ${styles.chipNeutral}`}>loading status…</span>}
+        </div>
+
+        <div className={styles.tableWrap}>
+          <table className="brk-table">
+            <thead>
+              <tr>
+                <th scope="col">Broker</th>
+                <th scope="col">Regions</th>
+                <th scope="col">Fees</th>
+                <th scope="col">Trades</th>
+                <th scope="col">API</th>
+                <th scope="col">TCS support</th>
+                <th scope="col">Live status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {directory.map(({ entry, live }) => (
+                <tr key={entry.id}>
+                  <td>
+                    <strong>{entry.name}</strong>
+                    {entry.note && <span className={styles.featureNote}>{entry.note}</span>}
+                  </td>
+                  <td>
+                    {entry.regions.map((r) => (
+                      <span key={r} className={`${styles.chip} ${styles.chipNeutral}`}>
+                        {REGION_LABEL[r] ?? r}
+                      </span>
+                    ))}
+                  </td>
+                  <td className={styles.report}>
+                    {entry.feesVerified ? (
+                      entry.feeModel
+                    ) : (
+                      <>
+                        {entry.feeModel}
+                        <span className={styles.featureNote}>check the broker — rate not verified</span>
+                      </>
+                    )}
+                  </td>
+                  <td className={styles.report}>{entry.tradingTypes.join(', ')}</td>
+                  <td className={styles.report}>
+                    {entry.api}
+                    {entry.apiNote && <span className={styles.featureNote}>{entry.apiNote}</span>}
+                  </td>
+                  <td>
+                    <span
+                      className={`${styles.chip} ${
+                        entry.tcsSupport === TCS_SUPPORT.TRADING
+                          ? styles.chipOk
+                          : entry.tcsSupport === TCS_SUPPORT.PORTFOLIO
+                            ? styles.chipNeutral
+                            : styles.chipWarn
+                      }`}
+                    >
+                      {TCS_SUPPORT_LABEL[entry.tcsSupport] ?? entry.tcsSupport}
+                    </span>
+                  </td>
+                  <td className={styles.report}>
+                    {statusQuery.isError ? (
+                      // Three states kept apart: a FAILED READ is not "not connected".
+                      <span className={styles.muted}>unknown — status read failed</span>
+                    ) : !live ? (
+                      <span className={styles.muted}>not wired into TCS</span>
+                    ) : (
+                      <>
+                        <span className={`${styles.chip} ${live.connection?.status === 'healthy' ? styles.chipOk : styles.chipNeutral}`}>
+                          {live.connection?.observed ? live.connection.status : 'unobserved'}
+                        </span>
+                        {live.runtime?.canPlaceOrder === true && (
+                          // ⚠️ CAPABILITY IS NOT PERMISSION. The adapter defining `placeOrder` says
+                          // the METHOD exists; `tradingEnabled` in broker_config says whether TCS will
+                          // use it. Measured on the real page 2026-11-13: Trading 212 rendered
+                          // "can place orders" directly beside its own note "order placement is gated
+                          // off in TCS" — a contradiction the reader would have to resolve by trusting
+                          // one half of the same cell. Both facts are shown, named separately.
+                          <span
+                            className={`${styles.chip} ${
+                              live.runtime?.mockSuspect
+                                ? styles.chipWarn
+                                : live.tradingEnabled === true
+                                  ? styles.chipOk
+                                  : styles.chipWarn
+                            }`}
+                          >
+                            {live.runtime?.mockSuspect
+                              ? 'orders = stub'
+                              : live.tradingEnabled === true
+                                ? 'can place orders'
+                                : 'orders gated off'}
+                          </span>
+                        )}
+                        {live.runtime?.canModifyStop === true && (
+                          <span className={`${styles.chip} ${styles.chipNeutral}`}>can move stops</span>
+                        )}
+                        {live.runtime?.canPlaceOrder !== true && (
+                          // Registered but unable to trade (e.g. Binance: quotes only). Named so the
+                          // cell does not read as "we don't know" when the answer is "read-only".
+                          <span className={`${styles.chip} ${styles.chipNeutral}`}>read-only</span>
+                        )}
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {accountsQuery.isError && (
         <EmptyState

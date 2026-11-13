@@ -799,7 +799,12 @@ export class AutomationLoopService implements OnModuleInit {
     // Position building, the other guards aggregate account risk.
     // ⚠️ `symbol` is passed because the per-symbol cap needs the instrument's contract size and
     // price — without them gold and a yen cross are priced identically (#865).
-    const accountRisk = await this.strategyService.assessGlobalRiskLimits(baseSize, symbol);
+    const accountRisk = await this.strategyService.assessGlobalRiskLimits(baseSize, symbol, {
+      // #1257 — the bot's own money-at-risk ceiling and its `slPct` stop distance, read from the
+      // one row that owns both.
+      strategyId,
+      slPct,
+    });
     if (!accountRisk.allowed) {
       this.auditLog.logBlocked(this.state.tickCount, strategyId, symbol, accountRisk.reason);
       decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason: accountRisk.reason, compositePct, signal: side });
@@ -2758,7 +2763,13 @@ export class AutomationLoopService implements OnModuleInit {
       return { confirmed: false, message: `Broker ${action.brokerId || 'mt5'} does not support orders` };
     }
 
-    const accountRisk = await this.strategyService.assessGlobalRiskLimits(action.quantity, action.symbol);
+    const accountRisk = await this.strategyService.assessGlobalRiskLimits(action.quantity, action.symbol, {
+      // #1257 — a semi-auto confirmation is still THIS bot's order, so its ceiling applies.
+      // `action.slPct` is optional on the pending action; when it is absent the gate falls back to
+      // the bot's configured `slPct` via `strategyId`, and refuses if neither resolves.
+      strategyId: action.strategyId,
+      slPct: action.slPct,
+    });
     if (!accountRisk.allowed) {
       return { confirmed: false, message: `Action blocked: ${accountRisk.reason}` };
     }

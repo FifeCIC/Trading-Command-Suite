@@ -288,6 +288,31 @@ export const BOT_RULES: BotRule[] = [
     summary: 'Per-bot realised-loss stop for the trading day.',
     caveat: '⚠️ Legacy path only. The live stop is the GLOBAL `risk.maxDailyLoss` setting.' },
 
+  // #1257 (2026-11-12) — THE MONEY-AT-RISK CEILING, and the first per-bot risk cap that is LIVE.
+  { field: 'maxTradeRiskPct', label: 'Max risk per trade (% of equity)', stage: 'risk', enforcement: 'live',
+    enforcedBy: 'nest/src/modules/trading/trading-strategy.service.ts',
+    summary:
+      'Refuses any order whose money at risk — stop distance × volume × contract size, converted to ' +
+      'the ACCOUNT currency — exceeds this PERCENT of account equity. Applies to every sizing model, ' +
+      'including fixedLot. NULL inherits the global `risk.maxTradeRiskCeilingPct` (already a PERCENT).',
+    caveat:
+      '⚠️ WHY IT EXISTS. `risk.maxPerTradeRisk` was declared and configurable but read by exactly one ' +
+      'thing: the position-size CALCULATOR (`RiskService.calculatePositionSize`), a preview. No order ' +
+      'ever met it. Measured live 2026-11-12: XAUUSD 0.01 lot risked £78 (13.3% of a £589.16 ' +
+      'account) and NZDJPY 0.1 lot £37 (6.3%) — both passed every gate, because `maxPortfolioRisk` ' +
+      'and `maxPerSymbol` are measured as MARGIN, and at 1:100 margin is trivial next to what a stop ' +
+      'can lose. ' +
+      '⚠️ NOT `sizingRiskPct`. That is what a sized model aims AT (an input, ignored by fixedLot); ' +
+      'this is what NO order may exceed (a gate, read for every bot). A bot may aim at 2% and cap at 5%. ' +
+      '⚠️ The stop distance used is `slPct` of the REFERENCE price at dispatch — the same price the ' +
+      'order is built from, so the cap and the stop it will actually carry cannot drift apart. ' +
+      '⚠️ The GLOBAL default is `risk.maxTradeRiskCeilingPct` = 20%, not 2%, and that is measured: ' +
+      'the MT5 volume floor is 0.01 lots, so the smallest possible gold position on the £589 account ' +
+      'risks 13.3% — a 2% ceiling would refuse every gold order forever. Tighten it PER BOT where a ' +
+      'strategy should be more cautious than the book. ' +
+      '⚠️ Cap 0/NaN REFUSES everything; it never reads as "no limit". ' +
+      'REGISTER: docs/SETTLED-DECISIONS.md row 171 · ISSUE: #1257' },
+
   { field: 'allocationAmount', label: 'Capital allocation', stage: 'risk', enforcement: 'display-only',
     enforcedBy: 'nest/src/modules/trading/bot-performance.service.ts',
     summary:
@@ -460,3 +485,4 @@ export function ruleEnforcementCounts() {
     return acc;
   }, {});
 }
+

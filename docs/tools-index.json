@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 227,
+  "count": 228,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1152,6 +1152,16 @@
       "where": "repo",
       "category": "tool",
       "purpose": "STEP 3d (#1024's untested question).",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "report-bot-rule-coverage.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "\"is THIS bot actually configured, or is it just wearing the",
       "selfTest": true,
       "reaches": [
         "npm"

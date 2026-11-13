@@ -49,6 +49,7 @@ import { BOT_RULES, NON_BEHAVIOURAL_COLUMNS } from './bot-rules';
 import { resolveEffectiveRole } from '../../common/utils/signal-direction';
 import { RiskService } from '../risk/risk.service';
 import { buildRiskProfile, applyRiskProfile } from '../risk/risk-profile-rules';
+import { evaluatePerTradeRisk } from '../risk/per-trade-risk';
 import {
   estimatePositionMargin,
   describeMargin,
@@ -192,6 +193,14 @@ export interface StrategySummary {
   /** #344 pyramid averaging — moved here from ScoringStrategy (2026-08-27). */
   maxPyramidTiers?: number;
   /**
+   * #1257 — the per-trade money-at-risk ceiling, as a PERCENT of account equity.
+   *
+   * `null` means "inherit `risk.maxTradeRiskCeilingPct`" — a REAL cap resolved by the gate, not an
+   * absent one. Carried on the summary so the strategies list can show which bots have chosen a
+   * stricter limit than the book: a configurable rule with no surface is a rule nobody can tune.
+   */
+  maxTradeRiskPct?: number | null;
+  /**
    * THE MARKET SCOPE of this strategy — the watchlist(s) its protocol is bound to.
    *
    * WHY THIS EXISTS: the owner defines a strategy as protocol + market + bot treatment, and the
@@ -218,6 +227,22 @@ export interface StrategySummary {
   /** Days since first trade (or 1 if only one day of trades). */
   daysActive: number | null;
 }
+
+export interface PerTradeRiskRequest {
+  /** The bot. The gate reads its `slPct` (stop distance) and `maxTradeRiskPct` (the ceiling). */
+  strategyId?: string | null;
+  /** Stop distance as a PERCENT of price (1.5 = 1.5%). Overrides the bot's own `slPct`. */
+  slPct?: number | null;
+  /** Absolute entry→stop price distance. Wins over `slPct`. */
+  stopDistance?: number | null;
+}
+
+/**
+ * bot-rules.ts declares `maxTradeRiskPct` as enforced by THIS file; the validator checks that the
+ * file references the field name, so the string must appear somewhere load-bearing. It does — in
+ * `perTradeCapPct()` below — and this comment is not that. Kept next to the type so a reader
+ * looking for the rule's home lands here rather than searching.
+ */
 
 @Injectable()
 export class TradingStrategyService {
@@ -503,6 +528,12 @@ export class TradingStrategyService {
         // reason: a field the engine reads off this summary is invisible if the summary drops it.
         exitBeforeUtc: (s as any).exitBeforeUtc ?? null,
         maxPyramidTiers: (s as any).maxPyramidTiers ?? 1,
+        // #1257 — the per-trade money-at-risk ceiling, in PERCENT of equity. ⚠️ `null` is a REAL
+        // STATE, not a missing value: it means "inherit `risk.maxTradeRiskCeilingPct`", and the gate
+        // resolves it either way. Carried on this summary because the mapper is a hand-written field
+        // list — a column not named here vanishes from the strategies list, which is how `magic` was
+        // lost (#1018). A configurable rule with no surface is a rule nobody can tune.
+        maxTradeRiskPct: (s as any).maxTradeRiskPct ?? null,
         // #1189 — THE NARRATIVE FLAGS. ⚠️ This mapper is a HAND-WRITTEN FIELD LIST, so a column not
         // named here silently vanishes from the strategies list — that is exactly how `magic` was
         // lost (#1018). `theory` itself is deliberately NOT carried: the list is a table, prose does
@@ -742,6 +773,17 @@ export class TradingStrategyService {
      * currency. Absent/NULL = the mechanism never acts, which is every bot that does not opt in.
      */
     takeProfitAmount?: number | null;
+    /**
+     * #1257 (2026-11-12) — the per-trade MONEY-AT-RISK ceiling, as a PERCENT of account equity
+     * (2 = "risk at most 2% of equity on any one position"). Absent/NULL = inherit the global
+     * `risk.maxPerTradeRisk` setting, so a bot that does not opt in still gets a real cap.
+     *
+     * ⚠️ THE REASON THIS IS A COLUMN AND NOT A CONSTANT (owner direction, 2026-11-12): two
+     * strategies may legitimately differ in how much they will lose on one idea, and that
+     * difference IS the strategy. A hardcoded number would make every bot the same bot.
+     * ⚠️ NOT `sizingRiskPct` — that is what a sized model aims AT; this is what NO order may exceed.
+     */
+    maxTradeRiskPct?: number | null;
     duplicatedFromId?: string | null;
     /**
      * #1018 — the bot's MT5 magic. Supplied by the DUPLICATE path (which must not inherit the
@@ -845,6 +887,9 @@ export class TradingStrategyService {
         // Money take-profit (2026-11-06). Written straight through: NULL (absent) means the
         // mechanism never acts, so an old client that does not send it changes nothing.
         takeProfitAmount: data.takeProfitAmount ?? undefined,
+        // #1257 — the per-trade money-at-risk ceiling. NULL means "inherit risk.maxPerTradeRisk",
+        // which is a REAL cap, not an absent one; the gate resolves it either way.
+        maxTradeRiskPct: data.maxTradeRiskPct ?? undefined,
         duplicatedFromId: data.duplicatedFromId ?? null,
         // #1018 — EVERY bot gets a magic, including one created through the API. An explicit value
         // is honoured (the duplicate path needs a DIFFERENT one from its source); otherwise the
@@ -2058,7 +2103,10 @@ export class TradingStrategyService {
     const tpPct = (strategy.tpPct ?? 1.0) / 100;
 
     // ── Pre-Flight Safety Gates (Issue #28) ──────────────
-    const safetyCheck = await this.assessGlobalRiskLimits(size, strategy.symbol);
+    // #1257 — `strategyId` lets the gate read this bot's own `maxTradeRiskPct` ceiling and its
+    // `slPct` stop distance. Passing the id rather than a number is deliberate: the gate resolves
+    // both from the SAME row, so the cap and the stop cannot be read from different bots.
+    const safetyCheck = await this.assessGlobalRiskLimits(size, strategy.symbol, { strategyId: strategy.id });
     if (!safetyCheck.allowed) {
       return { executed: false, reason: safetyCheck.reason };
     }
@@ -2166,16 +2214,111 @@ export class TradingStrategyService {
   }
 
   /**
+   * evaluatePerTradeCeiling() — resolve the cap and the stop distance, then evaluate the money at
+   * risk. The ONE place a per-trade ceiling is decided (#1257).
+   *
+   * Cap precedence:
+   *   1. `trading_strategy.maxTradeRiskPct` — the bot's own, in PERCENT. THE CONFIGURABLE KNOB, and
+   *      the reason this is a rule rather than a constant: two strategies may differ in how much
+   *      they are willing to lose per idea, and that difference is the strategy.
+   *   2. `risk.maxTradeRiskCeilingPct` — the global ceiling, already in PERCENT.
+   *
+   * ⚠️ NOT `risk.maxPerTradeRisk`, and the distinction is load-bearing. That setting is a SIZING
+   * TARGET: `calculatePositionSize()` multiplies equity by it to decide how big an order should be,
+   * so raising it makes manual risk-based sizing ten times larger. A CEILING has the opposite job —
+   * it refuses orders that are already too big. One number cannot be both without one meaning
+   * corrupting the other, which is why they are two settings with two units spelled out in their
+   * names (`...Pct` = percent, the older one = fraction).
+   *
+   * Stop-distance precedence: explicit `stopDistance` → explicit `slPct` → the bot's `slPct`.
+   * When none resolves, the evaluation refuses: an unmeasurable risk is not a satisfied cap.
+   *
+   * ⚠️ A bot row is read only when a `strategyId` is supplied — the manual signal path has no bot,
+   * and it passes `slPct` explicitly. Reading a bot the caller did not name would apply one bot's
+   * ceiling to another bot's order, which is the wrong-actor defect this repo keeps re-finding.
+   */
+  private async evaluatePerTradeCeiling(input: {
+    symbol: string;
+    size: number;
+    price: number;
+    contractSize: number;
+    conversionRate: number;
+    equity: number;
+    perTrade?: PerTradeRiskRequest;
+  }): Promise<ReturnType<typeof evaluatePerTradeRisk>> {
+    const { perTrade } = input;
+    let botSlPct: number | null = null;
+    let botCapPct: number | null = null;
+    let botLabel = '';
+
+    if (perTrade?.strategyId) {
+      try {
+        const bot = await this.prisma.tradingStrategy.findUnique({
+          where: { id: perTrade.strategyId },
+          // `maxTradeRiskPct` is the rule declared in bot-rules.ts (stage 'risk', live).
+          select: { name: true, slPct: true, maxTradeRiskPct: true },
+        });
+        if (bot) {
+          botLabel = bot.name;
+          botSlPct = typeof bot.slPct === 'number' ? bot.slPct : null;
+          botCapPct = typeof (bot as any).maxTradeRiskPct === 'number' ? (bot as any).maxTradeRiskPct : null;
+        }
+      } catch (err: any) {
+        // An unreadable bot must not silently fall back to the global cap — say so in the reason.
+        this.logger.warn(
+          `Per-trade cap: could not read bot ${perTrade.strategyId} (${err?.message ?? err}) — ` +
+            'using risk.maxPerTradeRisk and the caller-supplied stop distance.',
+        );
+      }
+    }
+
+    const capPct =
+      botCapPct ??
+      (Number(await this.settings.get<number>('risk.maxTradeRiskCeilingPct')) || 0);
+    const capSource = botCapPct != null
+      ? `bot "${botLabel || perTrade?.strategyId}" maxTradeRiskPct`
+      : 'risk.maxTradeRiskCeilingPct';
+
+    const explicitSlPct = typeof perTrade?.slPct === 'number' ? perTrade.slPct : null;
+    const slPct = explicitSlPct ?? botSlPct;
+    const stopDistance =
+      typeof perTrade?.stopDistance === 'number' && perTrade.stopDistance > 0
+        ? perTrade.stopDistance
+        : slPct != null && input.price > 0
+          ? (input.price * slPct) / 100
+          : 0;
+
+    return evaluatePerTradeRisk({
+      stopDistance,
+      volume: input.size,
+      contractSize: input.contractSize,
+      conversionRate: input.conversionRate,
+      equity: input.equity,
+      capPct,
+      capSource,
+    });
+  }
+
+  /**
    * Pre-flight safety gates before any MT5 order.
    * Checks settings-driven risk limits + RiskService portfolio gates.
    *
    * ⚠️ `symbol` is REQUIRED as of 2026-09-18 (#865). The per-symbol allocation cap cannot be
    * evaluated without knowing which instrument is being priced — the old signature took only a
    * size, which is how `size × 100_000` came to be applied to gold and to a yen cross alike.
+   *
+   * ⚠️ `perTrade` is the MONEY-AT-RISK input (#1257, 2026-11-12). Without it the per-trade cap
+   * cannot be measured, and the gate REFUSES with a named reason — a cap that cannot read its input
+   * must never pass. Every caller supplies it; `validate-manual-trade-gate.cjs` fails the build if a
+   * `.placeOrder()` path omits it, so "the caller forgot" is a build error rather than a silent
+   * widening of the risk envelope. Supply `strategyId` (preferred — the gate reads the bot's own
+   * `slPct` AND `maxTradeRiskPct`), or an explicit `slPct`/`stopDistance` for a manual trade with
+   * no bot row.
    */
   async assessGlobalRiskLimits(
     size: number,
     symbol: string,
+    perTrade?: PerTradeRiskRequest,
   ): Promise<{ allowed: boolean; reason: string }> {
     // ── 1. MT5_MAX_POSITION_SIZE ──
     const maxPosSize = await this.settings.get<number>('risk.maxPositionSize');
@@ -2379,6 +2522,11 @@ export class TradingStrategyService {
         //
         // An error we do not understand is a cap we cannot evaluate, so it refuses and says so.
         let marginEstimate: ReturnType<typeof estimatePositionMargin>;
+        // #1257 — the money-at-risk verdict, computed with the per-symbol inputs above and JUDGED
+        // after every other cap has had its say (see the note at the assignment).
+        let tradeRisk: ReturnType<TradingStrategyService['evaluatePerTradeCeiling']> extends Promise<infer R>
+          ? R
+          : never;
         // #899 — capital already committed to THIS symbol (sum of open positions). Filled inside
         // the inner try below; the gate compares existing + new against maxPerSymbol so three bots
         // on one symbol cannot each pass a 25% cap and total 60%.
@@ -2440,6 +2588,34 @@ export class TradingStrategyService {
             // can only be too strict — never too loose. It stops being used the moment MT5 reports
             // the real value.
             assumeAccountCurrencyWhenUnknown: true,
+          });
+
+          // ── MONEY-AT-RISK CEILING (#1257, 2026-11-12) ───────────────────────────────────
+          //
+          // The cap `risk.maxPerTradeRisk` has always declared, finally asked of a real order.
+          // It lives here because this is where the gate already holds the three inputs the
+          // arithmetic needs — the FRESH quote (price), the broker's contract size, and the
+          // profit→account conversion rate the margin estimator just resolved. Re-deriving any of
+          // them elsewhere would create a second answer to the same question.
+          //
+          // ⚠️ The stop distance is `slPct` of the SAME reference price the order is built from, so
+          // the money the cap measures and the stop the broker will hold cannot drift apart.
+          // ⚠️ `marginEstimate.conversionRate` is only meaningful when `source === 'computed'`; the
+          // refusal for `unavailable` runs immediately below, so this block may trust it.
+          //
+          // ⚠️ COMPUTED HERE, JUDGED LAST. The refusal is deferred to the end of the gate so this
+          // cap does not steal the FIRST refusal from the per-symbol and portfolio-at-risk caps —
+          // those messages are quoted in alerts and in issue evidence, and silently changing which
+          // cap answers first would make every past measurement look like it was about a different
+          // limit. Same inputs, same place in the pipeline; only the speaking order is preserved.
+          tradeRisk = await this.evaluatePerTradeCeiling({
+            symbol,
+            size,
+            price: symbolQuote?.last ?? 0,
+            contractSize: symbolInfo?.contractSize ?? 0,
+            conversionRate: marginEstimate.source === 'computed' ? marginEstimate.conversionRate : 0,
+            equity: portfolioValue,
+            perTrade,
           });
 
           // ── #899: existing exposure on this symbol ──────────────────────────────────────
@@ -2590,6 +2766,22 @@ export class TradingStrategyService {
               `Measured as the loss if every broker stop filled (#900)` +
               (bookScope.brokerId != null ? `, on account ${bookScope.brokerId} (the account this order routes to).` : '.'),
           };
+        }
+
+        // ── #1257 — THE MONEY-AT-RISK CEILING, last word ──────────────────────────────────
+        //
+        // Deliberately AFTER the caps above, for two reasons:
+        //   1. It preserves which cap speaks first, so every alert, decision row and issue quote
+        //      from before this change still means what it said.
+        //   2. The caps above measure MARGIN and COUNT; this one measures what a stop can LOSE.
+        //      They are different questions and this one is the stricter of the two in practice —
+        //      at 1:100, margin on a 0.01-lot gold order is £29 while its stop risks £78.
+        //
+        // ⚠️ Judged even when nothing above refused: that is the whole point. Every gate before
+        // this one passed the two live positions that motivated it.
+        if (tradeRisk && !tradeRisk.allowed) {
+          this.logger.warn(`Per-trade risk cap refused ${symbol} ${size} lot: ${tradeRisk.reason}`);
+          return { allowed: false, reason: tradeRisk.reason };
         }
       }
     } catch (err: any) {
@@ -2961,6 +3153,14 @@ export class TradingStrategyService {
     exhaustionObserveEnabled?: boolean;
     /** #995 — observer decelPct threshold (percent). Absent = no opinion. */
     exhaustionDecelPct?: number | null;
+    /**
+     * #1257 — the per-trade money-at-risk ceiling, as a PERCENT of equity. Absent = no opinion,
+     * which leaves whatever the operator set (or NULL, meaning "inherit the global"). Declared
+     * means converge — the same contract as `allocationAmount`, and for the same reason: a seeder
+     * that stamps a number over an operator's per-bot choice is a seeder that silently undoes
+     * tuning.
+     */
+    maxTradeRiskPct?: number | null;
   }>, opts?: {
     /**
      * Report drift but write NOTHING (#833 acceptance criterion 3).
@@ -3086,6 +3286,14 @@ export class TradingStrategyService {
         }
         if ((s as any).exhaustionDecelPct !== undefined) {
           desired.exhaustionDecelPct = (s as any).exhaustionDecelPct;
+        }
+        // #1257 — the per-trade risk ceiling. Same optional contract as the two slots above:
+        // absent means "no opinion", declared means "converge". Present in BOTH this path and the
+        // `create` block, or a re-seed could insert a value and never repair one.
+        //
+        // REGISTER: docs/SETTLED-DECISIONS.md row 172
+        if ((s as any).maxTradeRiskPct !== undefined) {
+          desired.maxTradeRiskPct = (s as any).maxTradeRiskPct;
         }
         // armed 2026-11-03, record-only — the sim-TSL OBSERVER slot, same optional contract as #995 above.
         //
@@ -3296,6 +3504,12 @@ export class TradingStrategyService {
               : {}),
             ...((s as any).exhaustionDecelPct !== undefined
               ? { exhaustionDecelPct: (s as any).exhaustionDecelPct }
+              : {}),
+            // #1257 — the per-trade risk ceiling, on the same terms: present only when the seed
+            // declares it. Absent leaves the column NULL, which the gate reads as "inherit the
+            // global ceiling" — a REAL cap, not an absent one.
+            ...((s as any).maxTradeRiskPct !== undefined
+              ? { maxTradeRiskPct: (s as any).maxTradeRiskPct }
               : {}),
             // armed 2026-11-03, record-only — the sim-TSL OBSERVER slot, on the same terms as #995 above: present
             // only when the seed declares it. ⚠️ This arms an OBSERVER, not a trailing stop — the

@@ -111,14 +111,14 @@ describe('IsaService — connected means READ, not merely configured (2026-11-12
    */
   it('sends HTTP BASIC with key:secret, not the bare key', async () => {
     process.env.TRADING212_ISA_API_KEY = 'k3y';
-    process.env.TRADING212_ISA_API_SECRET = 's3cr3t';
+    process.env.TRADING212_ISA_API_SECRET = '<test-secret>';
     const fetchMock = jest.fn()
       .mockResolvedValue(okResp({ total: 1, free: 0, invested: 1, result: 0 })) as any;
     global.fetch = fetchMock;
 
     await new IsaService().getDashboard();
 
-    const expected = `Basic ${Buffer.from('k3y:s3cr3t').toString('base64')}`;
+    const expected = `Basic ${Buffer.from('k3y:<test-secret>').toString('base64')}`;
     for (const call of fetchMock.mock.calls) {
       expect(call[1].headers.Authorization).toBe(expected);
     }

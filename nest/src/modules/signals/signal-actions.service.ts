@@ -288,7 +288,14 @@ export class SignalActionsService {
     // did not exist on this path. It does now. A refusal must NOT depend on the alert write (the
     // feasibility refusal above set that precedent): a failing alerts table produces the coded
     // refusal, never a 500.
-    const riskGate = await this.strategyService.assessGlobalRiskLimits(quantity, ticker);
+    const riskGate = await this.strategyService.assessGlobalRiskLimits(quantity, ticker, {
+      // #1257 — a manual trade has no bot row, so the stop distance is supplied explicitly. The
+      // unit is a PERCENT of price (the same `slPct` that builds the stop below); the gate resolves
+      // the price and the profit→account rate itself, from the same quote the order is priced on.
+      // Without this argument the per-trade cap could not be measured and the gate would refuse —
+      // which is correct: a risk limit nobody can evaluate is not a satisfied one.
+      slPct,
+    });
     if (!riskGate.allowed) {
       try {
         await this.alerts.addAlert(
