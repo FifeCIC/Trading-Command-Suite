@@ -2031,9 +2031,13 @@ export default function BacktestPage({ subject: fixedSubject }) {
             stops and costs.
             <br />
             <br />
-            <strong>Score detail</strong> (protocol runs only) re-scores the same window bar by bar
-            and explains the numbers. It is a diagnostic — nothing about it is stored, so it is not a
-            measurement to compare.
+            <strong>Score detail</strong> shows the per-bar score series <em>this run stored</em>,
+            behind the figures above. It is part of this run&rsquo;s own result, not a comparison.
+            <br />
+            <br />
+            ⚠️ It does <strong>not</strong> re-score anything. A bar-by-bar re-score of the same
+            window is a separate replay diagnostic, and it is not wired up yet — so it is not
+            described here as if it were.
           </PageInfoPopover>
         </h1>
       </header>

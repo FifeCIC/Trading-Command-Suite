@@ -22,6 +22,7 @@ import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 import { computeSizing } from '../trading/position-sizing';
 import { BacktestPeriodService } from './backtest-period.service';
 import { applyExecutionCosts } from './execution-costs';
+import { tradeBasis } from './trade-basis';
 import { computeEquityPath, type EquityPoint, type EquitySummary } from './equity-drawdown';
 import { describeRunDifferences, type RunDifferenceSet } from './run-differences';
 import { breakEvenFromOutcomes, medianBracket } from './break-even';
@@ -704,7 +705,7 @@ export function describeCostDivergence(runs: CostFacts[]): string | null {
     `${r.costs.positionModel}/${r.costs.accountSize}/${r.costs.riskPct}`))];
 
   const parts: string[] = [];
-  if (false) {
+  if (costs.length > 1) {
     parts.push(
       'the runs used DIFFERENT execution costs (spread/slippage/commission: ' +
       `${runs.map((r) => `${labelled(r)} ${r.costs.spread}/${r.costs.slippage}/${r.costs.commission}`).join(' vs ')})`,
@@ -2084,30 +2085,20 @@ export class BacktestService {
      * equity, so no single account denominator is exact — the declared account is the only one that
      * does not move, and it is the figure the caller supplied.
      */
-    const avgTradePnlPctOfAccount =
-      accountSize > 0 ? (totalPnl / (accountSize * (trades.length || 1))) * 100 : 0;
-
-    /**
-     * ── SIGNALS vs TRADES: asserted at WRITE time, not just derived (#1135 part 2) ────────────────
-     * The only path that turns an entry signal into NO trade is the affordability refusal, so the
-     * difference between the two populations must equal the refusal count. Equality is therefore
-     * EXPECTED and is not evidence of the old conflation — but a mismatch means a second separator
-     * was introduced without being counted, and the two numbers a reader compares have silently
-     * stopped describing the same thing.
-     *
-     * ⚠️ A warning rather than a throw: a mismatch makes the REPORT wrong, not the measurement, and
-     * discarding a completed run's results would be worse than recording them with the disagreement
-     * stated. The published `signalsWithoutTrade` field carries the number either way.
-     */
-    const signalsWithoutTrade = entrySignals.length - trades.length;
-    if (signalsWithoutTrade !== sizingRefusals.length) {
-      this.logger.warn(
-        `[backtest] population mismatch ${symbol} ${timeframe}: ${entrySignals.length} signals − ` +
-          `${trades.length} trades = ${signalsWithoutTrade}, but ${sizingRefusals.length} sizing ` +
-          `refusal(s) were recorded. Something else is now separating signals from trades without ` +
-          `being counted (#1135).`,
-      );
+    const basis = tradeBasis({
+      totalPnl,
+      accountSize,
+      tradeCount: trades.length,
+      signalCount: entrySignals.length,
+      sizingRefusalCount: sizingRefusals.length,
+    });
+    const { avgTradePnlPctOfAccount, signalsWithoutTrade } = basis;
+    if (basis.populationMismatch) {
+      this.logger.warn(`[backtest] population mismatch ${symbol} ${timeframe}: ${basis.populationMismatch}`);
     }
+    // ── SIGNALS vs TRADES (#1135 part 2) ──────────────────────────────────────────────────────────
+    // The reconciliation and its warning now live in `tradeBasis()` (./trade-basis.ts) so they can be
+    // tested without a database. `signalsWithoutTrade` is destructured above and published either way.
     const grossPnlTotal = trades.reduce((s, t) => s + t.pnl + (t.commission ?? 0), 0);
     const totalCommissionPaid = trades.reduce((s, t) => s + (t.commission ?? 0), 0);
     const tradePnls = trades.map(t => t.pnl);
@@ -2297,23 +2288,25 @@ export class BacktestService {
           tradesRefusedUnaffordable: sizingRefusals.length,
           ...(sizingRefusals.length ? { firstSizingRefusals: sizingRefusals.slice(0, 5) } : {}),
           /**
-         * ⚠️ THIS NAME SAYS "Pct" AND THE VALUE IS A FRACTION (#1135).
-         *
-         * Measured 2026-11-13 on a live USDJPY run: `avgNotionalPct: 0.994` against a mean committed
-         * notional of **$9,940 on a $10,000 account**. 9,940 / 10,000 = 0.994, so `0.994` means
-         * **99.4%**, not 0.994%. The unit is pinned by `affordable-size.spec.ts`, which asserts
-         * `notionalPct: 1` when the notional EQUALS the equity.
-         *
-         * ⚠️ And it sits directly beside `avgTradePnl`, which IS a percent (0.3104 = 0.31%). Two
-         * fields, both reading like percentages, different units — multiplying them naively is
-         * wrong by 100×. That adjacency is the whole reason #1135 was hard to read.
-         *
-         * The relation is `avgTradePnlPctOfAccount ≈ avgTradePnl × avgNotionalPct` (no /100).
-         * Verified: 0.3104 × 0.994 = 0.3085 against a measured `avgTradePnlPctOfAccount` of 0.3079.
-         * Do not change this value in place — it is stored on historical runs; a rename is tracked
-         * separately so the unit can be stated without moving the number.
-         */
-        avgNotionalPct: (() => {
+          * ⚠️ THE NAME NOW CARRIES THE UNIT, because it is a FRACTION and it sits beside fields that
+          * really are percentages (#1265, renamed from `avgNotionalPct` 2026-11-13).
+          *
+          * Measured 2026-11-13 on a live USDJPY run: `0.994` against a mean committed notional of
+          * **$9,940 on a $10,000 account**. 9,940 / 10,000 = 0.994, so `0.994` means **99.4%**, not
+          * 0.994%. The unit is pinned by `affordable-size.spec.ts`, which asserts `notionalPct: 1`
+          * when the notional EQUALS the equity.
+          *
+          * ⚠️ It sits directly beside `avgTradePnl`, which IS a percent (0.3104 = 0.31%). Multiplying
+          * the two naively is wrong by 100× — that adjacency is the whole reason #1135 was hard to
+          * read, and why the name had to change rather than be documented.
+          *
+          * The relation is `avgTradePnlPctOfAccount ≈ avgTradePnl × avgNotionalFractionOfAccount`
+          * (no /100). Verified: 0.3104 × 0.994 = 0.3085 against a measured 0.3079.
+          *
+          * ⚠️ The VALUE did not move in this rename — it is the fraction it always was, and historical
+          * runs' 0.994 still means 0.994.
+          */
+        avgNotionalFractionOfAccount: (() => {
             const pcts = trades.map((t) => t.notionalPct).filter((v): v is number => typeof v === 'number');
             return pcts.length ? Number((pcts.reduce((a, b) => a + b, 0) / pcts.length).toFixed(3)) : null;
           })(),

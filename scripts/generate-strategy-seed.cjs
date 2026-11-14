@@ -15,7 +15,7 @@
  * WHAT IT WRITES, AND WHY IT IS A SEPARATE FILE
  * ─────────────────────────────────────────────────────────────────────────────────────────────
  *
- * `nest/src/modules/trading/strategy-seed-generated.ts` — every bot's NUMERIC TREATMENT, generated
+ * `nest/src/modules/trading/strategy-seed-generated.local.ts` — every bot's NUMERIC TREATMENT, generated
  * from the rows. `strategy-seed-data.ts` then composes: its hand-written entries WIN over the
  * generated ones, keyed by `name`, because those carry `theory` prose a generator cannot invent.
  *
@@ -50,7 +50,14 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const OUT = path.join(ROOT, 'nest', 'src', 'modules', 'trading', 'strategy-seed-generated.ts');
+// ── DECISION (2026-11-13, owner) — write to a GITIGNORED local path, never the tracked one ──
+// WHAT:      The generator writes strategy-seed-generated.local.ts; the repo tracks nothing.
+// WHY:       The repository is PUBLIC and the fleet's numbers ARE the strategies. 24e70aeb published
+//            72 of them. Owner: *"avoid giving away all strategies."*
+// INSTEAD OF: strategy-seed-generated.ts (tracked).
+// REVERSE BY: Pointing this back at the tracked name — but do not, without making the repo private.
+// REGISTER:  docs/SETTLED-DECISIONS.md row 177
+const OUT = path.join(ROOT, 'nest', 'src', 'modules', 'trading', 'strategy-seed-generated.local.ts');
 const HAND_AUTHORED = path.join(ROOT, 'nest', 'src', 'modules', 'trading', 'strategy-seed-data.ts');
 
 function loadEnv() {
@@ -166,7 +173,9 @@ function buildEntries(rows, subsByBot, skipNames) {
 function render(entries) {
   const lines = [];
   lines.push(`/**`);
-  lines.push(` * strategy-seed-generated.ts — ⚠️ GENERATED FILE, DO NOT EDIT BY HAND.`);
+  lines.push(` * strategy-seed-generated.local.ts — ⚠️ GENERATED FILE, DO NOT EDIT BY HAND.`);
+  lines.push(` * ⚠️ GITIGNORED ON PURPOSE: the numbers in this file ARE the strategies, and the`);
+  lines.push(` * repository is public — so it is generated locally and never committed (#1258, register 177).`);
   lines.push(` *`);
   lines.push(` * Every bot in the live fleet, emitted from \`trading_strategy\` + \`strategy_protocol\` by`);
   lines.push(` * \`scripts/generate-strategy-seed.cjs\` on ${new Date().toISOString().slice(0, 10)}.`);

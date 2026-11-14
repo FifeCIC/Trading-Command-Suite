@@ -12,52 +12,59 @@
   "files": [
     {
       "path": "src/data/qa-checklist.js",
-      "lines": 8331,
+      "lines": 8694,
       "verdict": "data",
       "commentRatio": 0.03,
       "maxFunctionLines": 0
     },
     {
       "path": "nest/src/modules/backtest/backtest.service.ts",
-      "lines": 4787,
+      "lines": 4869,
       "verdict": "critical",
-      "commentRatio": 0.403,
-      "maxFunctionLines": 1229
+      "commentRatio": 0.411,
+      "maxFunctionLines": 1310
     },
     {
       "path": "src/pages/BacktestPage.jsx",
-      "lines": 3870,
+      "lines": 3874,
       "verdict": "large-but-structured",
       "commentRatio": 0.259,
       "maxFunctionLines": 16
     },
     {
-      "path": "nest/src/modules/automation/automation-loop.service.ts",
-      "lines": 3406,
+      "path": "nest/src/modules/trading/trading-strategy.service.ts",
+      "lines": 3716,
       "verdict": "critical",
-      "commentRatio": 0.373,
+      "commentRatio": 0.356,
+      "maxFunctionLines": 218
+    },
+    {
+      "path": "nest/src/modules/automation/automation-loop.service.ts",
+      "lines": 3421,
+      "verdict": "critical",
+      "commentRatio": 0.374,
       "maxFunctionLines": 430
     },
     {
-      "path": "nest/src/modules/trading/trading-strategy.service.ts",
-      "lines": 3406,
-      "verdict": "critical",
-      "commentRatio": 0.339,
-      "maxFunctionLines": 215
-    },
-    {
       "path": "src/core/architecture-route-contracts.js",
-      "lines": 2812,
+      "lines": 2885,
       "verdict": "data",
-      "commentRatio": 0.019,
+      "commentRatio": 0.02,
       "maxFunctionLines": 0
     },
     {
       "path": "nest/src/modules/automation/stop-guardian.service.ts",
-      "lines": 2453,
+      "lines": 2463,
       "verdict": "high",
-      "commentRatio": 0.509,
+      "commentRatio": 0.508,
       "maxFunctionLines": 484
+    },
+    {
+      "path": "nest/src/modules/signals/signal-envelope.service.ts",
+      "lines": 2390,
+      "verdict": "high",
+      "commentRatio": 0.35,
+      "maxFunctionLines": 233
     },
     {
       "path": "nest/src/modules/scoring/protocol-gating.service.ts",
@@ -67,11 +74,11 @@
       "maxFunctionLines": 65
     },
     {
-      "path": "nest/src/modules/signals/signal-envelope.service.ts",
-      "lines": 2231,
-      "verdict": "high",
-      "commentRatio": 0.342,
-      "maxFunctionLines": 181
+      "path": "src/pages/architecture-framework.data.js",
+      "lines": 2117,
+      "verdict": "data",
+      "commentRatio": 0.058,
+      "maxFunctionLines": 0
     },
     {
       "path": "src/pages/DiagramsPage.jsx",
@@ -79,13 +86,6 @@
       "verdict": "high",
       "commentRatio": 0.024,
       "maxFunctionLines": 204
-    },
-    {
-      "path": "src/pages/architecture-framework.data.js",
-      "lines": 2056,
-      "verdict": "data",
-      "commentRatio": 0.049,
-      "maxFunctionLines": 0
     },
     {
       "path": "src/pages/ViewStrategyPage.jsx",
@@ -109,6 +109,13 @@
       "maxFunctionLines": 1381
     },
     {
+      "path": "nest/src/modules/trading/trade-history.controller.ts",
+      "lines": 1542,
+      "verdict": "warn",
+      "commentRatio": 0.274,
+      "maxFunctionLines": 413
+    },
+    {
       "path": "nest/src/modules/providers/adapters/mt5.adapter.ts",
       "lines": 1536,
       "verdict": "warn",
@@ -117,17 +124,10 @@
     },
     {
       "path": "src/pages/ArchitectureFrameworkPage.jsx",
-      "lines": 1513,
+      "lines": 1528,
       "verdict": "warn",
       "commentRatio": 0.008,
-      "maxFunctionLines": 1267
-    },
-    {
-      "path": "nest/src/modules/trading/trade-history.controller.ts",
-      "lines": 1512,
-      "verdict": "warn",
-      "commentRatio": 0.269,
-      "maxFunctionLines": 413
+      "maxFunctionLines": 1281
     },
     {
       "path": "nest/src/modules/providers/position-sync.service.ts",
@@ -135,6 +135,13 @@
       "verdict": "ok",
       "commentRatio": 0.459,
       "maxFunctionLines": 51
+    },
+    {
+      "path": "nest/src/common/settings/settings-registry.ts",
+      "lines": 1384,
+      "verdict": "ok",
+      "commentRatio": 0.32,
+      "maxFunctionLines": 50
     },
     {
       "path": "nest/src/modules/symbols/symbols.service.ts",
@@ -149,13 +156,6 @@
       "verdict": "ok",
       "commentRatio": 0.148,
       "maxFunctionLines": 13
-    },
-    {
-      "path": "nest/src/common/settings/settings-registry.ts",
-      "lines": 1298,
-      "verdict": "ok",
-      "commentRatio": 0.312,
-      "maxFunctionLines": 50
     },
     {
       "path": "src/pages/AbStrategiesPage.jsx",
@@ -173,9 +173,9 @@
     },
     {
       "path": "src/App.jsx",
-      "lines": 1265,
+      "lines": 1267,
       "verdict": "ok",
-      "commentRatio": 0.172,
+      "commentRatio": 0.171,
       "maxFunctionLines": 135
     },
     {
@@ -193,6 +193,13 @@
       "maxFunctionLines": 17
     },
     {
+      "path": "nest/src/modules/trading/strategy-seed-generated.ts",
+      "lines": 1231,
+      "verdict": "ok",
+      "commentRatio": 0.023,
+      "maxFunctionLines": 0
+    },
+    {
       "path": "src/components/ScreenOptions.jsx",
       "lines": 1227,
       "verdict": "ok",
@@ -208,9 +215,9 @@
     },
     {
       "path": "nest/src/modules/backtest/score-maths.ts",
-      "lines": 1210,
+      "lines": 1220,
       "verdict": "ok",
-      "commentRatio": 0.336,
+      "commentRatio": 0.341,
       "maxFunctionLines": 92
     },
     {
@@ -228,18 +235,18 @@
       "maxFunctionLines": 118
     },
     {
+      "path": "nest/src/modules/trading/mt5-trading.service.ts",
+      "lines": 1117,
+      "verdict": "ok",
+      "commentRatio": 0.385,
+      "maxFunctionLines": 23
+    },
+    {
       "path": "nest/src/modules/scoring/protocols.controller.ts",
       "lines": 1112,
       "verdict": "ok",
       "commentRatio": 0.192,
       "maxFunctionLines": 97
-    },
-    {
-      "path": "nest/src/modules/trading/mt5-trading.service.ts",
-      "lines": 1100,
-      "verdict": "ok",
-      "commentRatio": 0.378,
-      "maxFunctionLines": 23
     },
     {
       "path": "nest/src/modules/directives/directives.service.ts",
@@ -277,6 +284,13 @@
       "maxFunctionLines": 397
     },
     {
+      "path": "src/data/known-features.js",
+      "lines": 1028,
+      "verdict": "ok",
+      "commentRatio": 0.348,
+      "maxFunctionLines": 0
+    },
+    {
       "path": "src/components/widgets/dashboard-widgets.jsx",
       "lines": 990,
       "verdict": "ok",
@@ -284,18 +298,18 @@
       "maxFunctionLines": 85
     },
     {
-      "path": "src/data/known-features.js",
-      "lines": 988,
-      "verdict": "ok",
-      "commentRatio": 0.345,
-      "maxFunctionLines": 0
-    },
-    {
       "path": "src/core/notices/registry.js",
       "lines": 952,
       "verdict": "ok",
       "commentRatio": 0.186,
       "maxFunctionLines": 6
+    },
+    {
+      "path": "nest/src/modules/backtest/backtest-period.service.ts",
+      "lines": 926,
+      "verdict": "ok",
+      "commentRatio": 0.36,
+      "maxFunctionLines": 207
     },
     {
       "path": "src/pages/T212PortfolioPage.jsx",
@@ -312,11 +326,25 @@
       "maxFunctionLines": 77
     },
     {
+      "path": "nest/src/modules/backtest/backtest.controller.ts",
+      "lines": 919,
+      "verdict": "ok",
+      "commentRatio": 0.307,
+      "maxFunctionLines": 95
+    },
+    {
       "path": "nest/src/modules/automation/automation.controller.ts",
       "lines": 914,
       "verdict": "ok",
       "commentRatio": 0.232,
       "maxFunctionLines": 132
+    },
+    {
+      "path": "src/core/architecture-reference.js",
+      "lines": 913,
+      "verdict": "data",
+      "commentRatio": 0.155,
+      "maxFunctionLines": 0
     },
     {
       "path": "nest/src/modules/market-data/bar-refresh.service.ts",
@@ -333,11 +361,11 @@
       "maxFunctionLines": 221
     },
     {
-      "path": "src/core/architecture-reference.js",
-      "lines": 885,
-      "verdict": "data",
-      "commentRatio": 0.154,
-      "maxFunctionLines": 0
+      "path": "nest/src/modules/providers/adapters/trading212.adapter.ts",
+      "lines": 882,
+      "verdict": "ok",
+      "commentRatio": 0.182,
+      "maxFunctionLines": 58
     },
     {
       "path": "nest/src/modules/scoring/score-history.service.ts",
@@ -345,13 +373,6 @@
       "verdict": "ok",
       "commentRatio": 0.308,
       "maxFunctionLines": 49
-    },
-    {
-      "path": "nest/src/modules/backtest/backtest.controller.ts",
-      "lines": 878,
-      "verdict": "ok",
-      "commentRatio": 0.275,
-      "maxFunctionLines": 95
     },
     {
       "path": "nest/src/modules/research/research-import.service.ts",
@@ -375,6 +396,20 @@
       "maxFunctionLines": 78
     },
     {
+      "path": "src/pages/StrategyCreatePage.jsx",
+      "lines": 844,
+      "verdict": "ok",
+      "commentRatio": 0.193,
+      "maxFunctionLines": 793
+    },
+    {
+      "path": "nest/src/modules/trading/assess-global-risk-limits.spec.ts",
+      "lines": 834,
+      "verdict": "data",
+      "commentRatio": 0.438,
+      "maxFunctionLines": 100
+    },
+    {
       "path": "nest/src/modules/providers/mt5.controller.ts",
       "lines": 830,
       "verdict": "ok",
@@ -387,13 +422,6 @@
       "verdict": "ok",
       "commentRatio": 0.218,
       "maxFunctionLines": 300
-    },
-    {
-      "path": "src/pages/StrategyCreatePage.jsx",
-      "lines": 819,
-      "verdict": "ok",
-      "commentRatio": 0.193,
-      "maxFunctionLines": 768
     },
     {
       "path": "nest/src/modules/automation/ab-test.service.ts",
@@ -431,17 +459,10 @@
       "maxFunctionLines": 725
     },
     {
-      "path": "nest/src/modules/backtest/backtest-period.service.ts",
-      "lines": 769,
-      "verdict": "ok",
-      "commentRatio": 0.311,
-      "maxFunctionLines": 207
-    },
-    {
       "path": "nest/src/modules/scoring/strategy-derivation.service.ts",
-      "lines": 757,
+      "lines": 775,
       "verdict": "ok",
-      "commentRatio": 0.414,
+      "commentRatio": 0.423,
       "maxFunctionLines": 170
     },
     {
@@ -450,6 +471,13 @@
       "verdict": "ok",
       "commentRatio": 0.278,
       "maxFunctionLines": 337
+    },
+    {
+      "path": "src/pages/TradeJournalPage.jsx",
+      "lines": 749,
+      "verdict": "ok",
+      "commentRatio": 0.144,
+      "maxFunctionLines": 531
     },
     {
       "path": "nest/src/modules/trading/bot-performance.service.spec.ts",
@@ -501,13 +529,6 @@
       "maxFunctionLines": 651
     },
     {
-      "path": "nest/src/modules/trading/assess-global-risk-limits.spec.ts",
-      "lines": 730,
-      "verdict": "data",
-      "commentRatio": 0.445,
-      "maxFunctionLines": 94
-    },
-    {
       "path": "src/components/WidgetBoard.jsx",
       "lines": 712,
       "verdict": "ok",
@@ -522,6 +543,13 @@
       "maxFunctionLines": 0
     },
     {
+      "path": "src/components/backtest/DirectiveSettingsPanel.jsx",
+      "lines": 691,
+      "verdict": "ok",
+      "commentRatio": 0.191,
+      "maxFunctionLines": 27
+    },
+    {
       "path": "nest/src/modules/scoring/exit-consensus.service.ts",
       "lines": 688,
       "verdict": "ok",
@@ -534,6 +562,13 @@
       "verdict": "ok",
       "commentRatio": 0.07,
       "maxFunctionLines": 3
+    },
+    {
+      "path": "nest/src/modules/backtest/backtest-period.service.spec.ts",
+      "lines": 676,
+      "verdict": "data",
+      "commentRatio": 0.181,
+      "maxFunctionLines": 8
     },
     {
       "path": "src/pages/EarningsCalendarPage.jsx",
@@ -564,13 +599,6 @@
       "maxFunctionLines": 195
     },
     {
-      "path": "nest/src/modules/providers/adapters/trading212.adapter.ts",
-      "lines": 657,
-      "verdict": "ok",
-      "commentRatio": 0.118,
-      "maxFunctionLines": 44
-    },
-    {
       "path": "nest/src/modules/system/log.service.ts",
       "lines": 655,
       "verdict": "ok",
@@ -585,18 +613,18 @@
       "maxFunctionLines": 0
     },
     {
-      "path": "src/components/backtest/DirectiveSettingsPanel.jsx",
-      "lines": 633,
-      "verdict": "ok",
-      "commentRatio": 0.184,
-      "maxFunctionLines": 27
-    },
-    {
       "path": "nest/src/modules/directives/directive-fixtures.ts",
       "lines": 628,
       "verdict": "ok",
       "commentRatio": 0.264,
       "maxFunctionLines": 392
+    },
+    {
+      "path": "nest/src/modules/portfolio/trading212-import.service.ts",
+      "lines": 618,
+      "verdict": "ok",
+      "commentRatio": 0.135,
+      "maxFunctionLines": 17
     },
     {
       "path": "nest/src/modules/providers/mt5/mt5-connection-manager.service.ts",
@@ -613,13 +641,6 @@
       "maxFunctionLines": 553
     },
     {
-      "path": "src/pages/TradeJournalPage.jsx",
-      "lines": 601,
-      "verdict": "ok",
-      "commentRatio": 0.178,
-      "maxFunctionLines": 383
-    },
-    {
       "path": "nest/src/modules/trading/session-window.ts",
       "lines": 596,
       "verdict": "ok",
@@ -634,11 +655,11 @@
       "maxFunctionLines": 89
     },
     {
-      "path": "nest/src/modules/portfolio/trading212-import.service.ts",
-      "lines": 584,
+      "path": "src/core/nav-tree.js",
+      "lines": 580,
       "verdict": "ok",
-      "commentRatio": 0.116,
-      "maxFunctionLines": 17
+      "commentRatio": 0.618,
+      "maxFunctionLines": 8
     },
     {
       "path": "nest/src/modules/news/news-import.service.ts",
@@ -646,6 +667,20 @@
       "verdict": "ok",
       "commentRatio": 0.25,
       "maxFunctionLines": 113
+    },
+    {
+      "path": "nest/src/modules/risk/risk.controller.ts",
+      "lines": 577,
+      "verdict": "ok",
+      "commentRatio": 0.278,
+      "maxFunctionLines": 57
+    },
+    {
+      "path": "src/pages/CapabilityMapPage.jsx",
+      "lines": 571,
+      "verdict": "ok",
+      "commentRatio": 0.083,
+      "maxFunctionLines": 281
     },
     {
       "path": "src/pages/MetaStackCockpitPage.jsx",
@@ -711,32 +746,11 @@
       "maxFunctionLines": 488
     },
     {
-      "path": "src/pages/CapabilityMapPage.jsx",
-      "lines": 555,
-      "verdict": "ok",
-      "commentRatio": 0.085,
-      "maxFunctionLines": 281
-    },
-    {
-      "path": "nest/src/modules/risk/risk.controller.ts",
-      "lines": 555,
-      "verdict": "ok",
-      "commentRatio": 0.273,
-      "maxFunctionLines": 57
-    },
-    {
       "path": "nest/src/modules/system/system-health.service.ts",
       "lines": 553,
       "verdict": "ok",
       "commentRatio": 0.092,
       "maxFunctionLines": 51
-    },
-    {
-      "path": "src/core/nav-tree.js",
-      "lines": 551,
-      "verdict": "ok",
-      "commentRatio": 0.602,
-      "maxFunctionLines": 8
     },
     {
       "path": "src/pages/ScreenerPage.jsx",
@@ -772,6 +786,13 @@
       "verdict": "ok",
       "commentRatio": 0.366,
       "maxFunctionLines": 57
+    },
+    {
+      "path": "nest/src/modules/notifications/channels/discord.channel.ts",
+      "lines": 538,
+      "verdict": "ok",
+      "commentRatio": 0.369,
+      "maxFunctionLines": 56
     },
     {
       "path": "src/pages/UiReviewPage.jsx",
@@ -823,6 +844,13 @@
       "maxFunctionLines": 481
     },
     {
+      "path": "nest/src/common/utils/timeframe.ts",
+      "lines": 518,
+      "verdict": "ok",
+      "commentRatio": 0.697,
+      "maxFunctionLines": 47
+    },
+    {
       "path": "src/pages/SignalsOverviewPage.jsx",
       "lines": 516,
       "verdict": "ok",
@@ -837,6 +865,13 @@
       "maxFunctionLines": 20
     },
     {
+      "path": "nest/src/modules/signals/signal-actions.service.ts",
+      "lines": 506,
+      "verdict": "ok",
+      "commentRatio": 0.324,
+      "maxFunctionLines": 255
+    },
+    {
       "path": "src/pages/AppearanceDataDisplayPage.jsx",
       "lines": 505,
       "verdict": "ok",
@@ -849,13 +884,6 @@
       "verdict": "ok",
       "commentRatio": 0.098,
       "maxFunctionLines": 428
-    },
-    {
-      "path": "nest/src/modules/signals/signal-actions.service.ts",
-      "lines": 499,
-      "verdict": "ok",
-      "commentRatio": 0.318,
-      "maxFunctionLines": 248
     },
     {
       "path": "src/pages/StrategyComparisonPage.jsx",
@@ -879,6 +907,13 @@
       "maxFunctionLines": 0
     },
     {
+      "path": "nest/src/modules/trading/bot-rules.ts",
+      "lines": 489,
+      "verdict": "ok",
+      "commentRatio": 0.324,
+      "maxFunctionLines": 6
+    },
+    {
       "path": "nest/src/modules/providers/adapter-factory.ts",
       "lines": 487,
       "verdict": "ok",
@@ -891,6 +926,13 @@
       "verdict": "ok",
       "commentRatio": 0.559,
       "maxFunctionLines": 0
+    },
+    {
+      "path": "src/pages/BrokersPage.jsx",
+      "lines": 485,
+      "verdict": "ok",
+      "commentRatio": 0.159,
+      "maxFunctionLines": 10
     },
     {
       "path": "src/pages/AutomationSettingsPage.jsx",
@@ -907,13 +949,6 @@
       "maxFunctionLines": 173
     },
     {
-      "path": "nest/src/modules/notifications/channels/discord.channel.ts",
-      "lines": 482,
-      "verdict": "ok",
-      "commentRatio": 0.362,
-      "maxFunctionLines": 31
-    },
-    {
       "path": "src/components/backtest/TradeTable.jsx",
       "lines": 478,
       "verdict": "ok",
@@ -926,13 +961,6 @@
       "verdict": "ok",
       "commentRatio": 0.161,
       "maxFunctionLines": 255
-    },
-    {
-      "path": "nest/src/modules/backtest/backtest-period.service.spec.ts",
-      "lines": 468,
-      "verdict": "data",
-      "commentRatio": 0.162,
-      "maxFunctionLines": 7
     },
     {
       "path": "nest/src/modules/scoring/micro-trend-detector.service.ts",
@@ -961,13 +989,6 @@
       "verdict": "ok",
       "commentRatio": 0.147,
       "maxFunctionLines": 5
-    },
-    {
-      "path": "nest/src/modules/trading/bot-rules.ts",
-      "lines": 463,
-      "verdict": "ok",
-      "commentRatio": 0.339,
-      "maxFunctionLines": 6
     },
     {
       "path": "nest/src/modules/diversification/global-diversification.service.ts",
@@ -1012,18 +1033,18 @@
       "maxFunctionLines": 59
     },
     {
-      "path": "nest/src/common/utils/timeframe.ts",
-      "lines": 450,
+      "path": "src/pages/SymbolDetailPage.jsx",
+      "lines": 451,
       "verdict": "ok",
-      "commentRatio": 0.712,
-      "maxFunctionLines": 47
+      "commentRatio": 0.06,
+      "maxFunctionLines": 441
     },
     {
-      "path": "src/pages/SymbolDetailPage.jsx",
+      "path": "nest/src/modules/trading/strategy-seed-convergence.spec.ts",
       "lines": 446,
-      "verdict": "ok",
-      "commentRatio": 0.051,
-      "maxFunctionLines": 437
+      "verdict": "data",
+      "commentRatio": 0.228,
+      "maxFunctionLines": 4
     },
     {
       "path": "src/core/strategy-diagram.js",
@@ -1159,6 +1180,13 @@
       "maxFunctionLines": 403
     },
     {
+      "path": "src/components/backtest/ProtocolScoreDetail.jsx",
+      "lines": 421,
+      "verdict": "ok",
+      "commentRatio": 0.123,
+      "maxFunctionLines": 27
+    },
+    {
       "path": "src/pages/ThemeLabSections.jsx",
       "lines": 421,
       "verdict": "ok",
@@ -1194,6 +1222,13 @@
       "maxFunctionLines": 12
     },
     {
+      "path": "nest/src/modules/notifications/channels/discord.channel.spec.ts",
+      "lines": 410,
+      "verdict": "data",
+      "commentRatio": 0.143,
+      "maxFunctionLines": 9
+    },
+    {
       "path": "src/pages/MonitoringPage.jsx",
       "lines": 409,
       "verdict": "ok",
@@ -1208,11 +1243,11 @@
       "maxFunctionLines": 58
     },
     {
-      "path": "nest/src/modules/trading/strategy-seed-convergence.spec.ts",
-      "lines": 409,
-      "verdict": "data",
-      "commentRatio": 0.21,
-      "maxFunctionLines": 4
+      "path": "src/core/hidden-views.js",
+      "lines": 407,
+      "verdict": "ok",
+      "commentRatio": 0.636,
+      "maxFunctionLines": 39
     },
     {
       "path": "nest/src/modules/indicators/indicators.service.ts",
@@ -1241,13 +1276,6 @@
       "verdict": "ok",
       "commentRatio": 0.515,
       "maxFunctionLines": 73
-    },
-    {
-      "path": "src/components/backtest/ProtocolScoreDetail.jsx",
-      "lines": 399,
-      "verdict": "ok",
-      "commentRatio": 0.073,
-      "maxFunctionLines": 27
     },
     {
       "path": "src/pages/SymbolFocusPage.jsx",
@@ -1362,13 +1390,6 @@
       "maxFunctionLines": 31
     },
     {
-      "path": "src/core/hidden-views.js",
-      "lines": 379,
-      "verdict": "ok",
-      "commentRatio": 0.636,
-      "maxFunctionLines": 39
-    },
-    {
       "path": "src/pages/CalculatorsPage.jsx",
       "lines": 379,
       "verdict": "ok",
@@ -1474,6 +1495,13 @@
       "maxFunctionLines": 300
     },
     {
+      "path": "nest/src/modules/trading/strategy-seed-data.ts",
+      "lines": 355,
+      "verdict": "ok",
+      "commentRatio": 0.643,
+      "maxFunctionLines": 0
+    },
+    {
       "path": "nest/src/modules/trading/execution-feasibility.service.spec.ts",
       "lines": 354,
       "verdict": "data",
@@ -1530,6 +1558,13 @@
       "maxFunctionLines": 230
     },
     {
+      "path": "nest/src/modules/risk/risk-profile-rules.ts",
+      "lines": 350,
+      "verdict": "ok",
+      "commentRatio": 0.466,
+      "maxFunctionLines": 10
+    },
+    {
       "path": "nest/src/modules/strategies/strategies.controller.ts",
       "lines": 350,
       "verdict": "ok",
@@ -1579,6 +1614,13 @@
       "maxFunctionLines": 30
     },
     {
+      "path": "nest/src/modules/isa/isa.service.ts",
+      "lines": 339,
+      "verdict": "ok",
+      "commentRatio": 0.127,
+      "maxFunctionLines": 73
+    },
+    {
       "path": "src/components/DetachableWidget.jsx",
       "lines": 338,
       "verdict": "ok",
@@ -1600,6 +1642,13 @@
       "maxFunctionLines": 150
     },
     {
+      "path": "nest/src/modules/trading/broker-capability.service.ts",
+      "lines": 334,
+      "verdict": "ok",
+      "commentRatio": 0.308,
+      "maxFunctionLines": 90
+    },
+    {
       "path": "src/components/ScoringThresholds.jsx",
       "lines": 333,
       "verdict": "ok",
@@ -1619,6 +1668,13 @@
       "verdict": "ok",
       "commentRatio": 0.003,
       "maxFunctionLines": 293
+    },
+    {
+      "path": "nest/src/modules/signals/signal-envelope-stale-symbol.spec.ts",
+      "lines": 333,
+      "verdict": "data",
+      "commentRatio": 0.192,
+      "maxFunctionLines": 318
     },
     {
       "path": "nest/src/modules/automation/experiment-review.service.ts",
@@ -1654,13 +1710,6 @@
       "verdict": "ok",
       "commentRatio": 0.185,
       "maxFunctionLines": 61
-    },
-    {
-      "path": "nest/src/modules/notifications/channels/discord.channel.spec.ts",
-      "lines": 330,
-      "verdict": "data",
-      "commentRatio": 0.127,
-      "maxFunctionLines": 9
     },
     {
       "path": "nest/src/modules/providers/mt5/mt5-session-recovery.service.ts",
@@ -1740,11 +1789,32 @@
       "maxFunctionLines": 1
     },
     {
+      "path": "src/pages/PatternScannerPage.jsx",
+      "lines": 315,
+      "verdict": "ok",
+      "commentRatio": 0.121,
+      "maxFunctionLines": 194
+    },
+    {
       "path": "nest/src/modules/backtest/directive-preview.service.ts",
       "lines": 314,
       "verdict": "ok",
       "commentRatio": 0.31,
       "maxFunctionLines": 21
+    },
+    {
+      "path": "nest/src/modules/trading/mt5-trading.service.spec.ts",
+      "lines": 313,
+      "verdict": "data",
+      "commentRatio": 0.228,
+      "maxFunctionLines": 5
+    },
+    {
+      "path": "nest/src/modules/signals/signal-actions.service.spec.ts",
+      "lines": 312,
+      "verdict": "data",
+      "commentRatio": 0.187,
+      "maxFunctionLines": 54
     },
     {
       "path": "src/components/ProtocolCarousel.jsx",
@@ -1824,11 +1894,11 @@
       "maxFunctionLines": 19
     },
     {
-      "path": "nest/src/modules/signals/signal-actions.service.spec.ts",
+      "path": "nest/src/modules/trading/broker-capability.spec.ts",
       "lines": 305,
       "verdict": "data",
-      "commentRatio": 0.173,
-      "maxFunctionLines": 54
+      "commentRatio": 0.057,
+      "maxFunctionLines": 13
     },
     {
       "path": "nest/src/modules/scoring/risk-gating-engine.service.ts",
@@ -1908,6 +1978,13 @@
       "maxFunctionLines": 95
     },
     {
+      "path": "src/core/experience-levels.js",
+      "lines": 289,
+      "verdict": "ok",
+      "commentRatio": 0.489,
+      "maxFunctionLines": 3
+    },
+    {
       "path": "nest/src/modules/directives/parameters.ts",
       "lines": 289,
       "verdict": "ok",
@@ -1936,11 +2013,11 @@
       "maxFunctionLines": 14
     },
     {
-      "path": "src/pages/PatternScannerPage.jsx",
+      "path": "src/core/hidden-views.test.js",
       "lines": 287,
-      "verdict": "ok",
-      "commentRatio": 0.028,
-      "maxFunctionLines": 174
+      "verdict": "data",
+      "commentRatio": 0.175,
+      "maxFunctionLines": 9
     },
     {
       "path": "src/core/signal-utils.js",
@@ -1971,18 +2048,11 @@
       "maxFunctionLines": 82
     },
     {
-      "path": "nest/src/modules/risk/risk-profile-rules.ts",
-      "lines": 286,
-      "verdict": "ok",
-      "commentRatio": 0.429,
-      "maxFunctionLines": 10
-    },
-    {
-      "path": "nest/src/modules/trading/strategy-seed-data.ts",
+      "path": "nest/src/common/trading/close-reason.ts",
       "lines": 285,
       "verdict": "ok",
-      "commentRatio": 0.594,
-      "maxFunctionLines": 0
+      "commentRatio": 0.74,
+      "maxFunctionLines": 33
     },
     {
       "path": "nest/src/modules/alerts/alerts.service.ts",
@@ -2025,6 +2095,13 @@
       "verdict": "ok",
       "commentRatio": 0.188,
       "maxFunctionLines": 237
+    },
+    {
+      "path": "nest/src/modules/trading/exit-quality.spec.ts",
+      "lines": 280,
+      "verdict": "data",
+      "commentRatio": 0.179,
+      "maxFunctionLines": 1
     },
     {
       "path": "nest/src/modules/trading/market-context.service.ts",
@@ -2102,13 +2179,6 @@
       "verdict": "ok",
       "commentRatio": 0.305,
       "maxFunctionLines": 4
-    },
-    {
-      "path": "nest/src/modules/trading/mt5-trading.service.spec.ts",
-      "lines": 274,
-      "verdict": "data",
-      "commentRatio": 0.195,
-      "maxFunctionLines": 5
     },
     {
       "path": "nest/src/modules/trading/session-window.spec.ts",
@@ -2209,25 +2279,11 @@
       "maxFunctionLines": 1
     },
     {
-      "path": "nest/src/common/trading/close-reason.ts",
-      "lines": 261,
-      "verdict": "ok",
-      "commentRatio": 0.731,
-      "maxFunctionLines": 26
-    },
-    {
       "path": "nest/src/modules/trading/weekend-defense.service.ts",
       "lines": 261,
       "verdict": "ok",
       "commentRatio": 0.268,
       "maxFunctionLines": 131
-    },
-    {
-      "path": "src/core/hidden-views.test.js",
-      "lines": 260,
-      "verdict": "data",
-      "commentRatio": 0.15,
-      "maxFunctionLines": 9
     },
     {
       "path": "src/pages/ExitSignalsPage.jsx",
@@ -2279,11 +2335,11 @@
       "maxFunctionLines": 17
     },
     {
-      "path": "src/core/experience-levels.js",
-      "lines": 256,
+      "path": "src/data/broker-catalogue.js",
+      "lines": 255,
       "verdict": "ok",
-      "commentRatio": 0.422,
-      "maxFunctionLines": 3
+      "commentRatio": 0.181,
+      "maxFunctionLines": 0
     },
     {
       "path": "src/pages/ImportJobsPage.jsx",
@@ -2298,6 +2354,13 @@
       "verdict": "ok",
       "commentRatio": 0.132,
       "maxFunctionLines": 95
+    },
+    {
+      "path": "nest/src/modules/trading/exit-quality.ts",
+      "lines": 255,
+      "verdict": "ok",
+      "commentRatio": 0.227,
+      "maxFunctionLines": 50
     },
     {
       "path": "nest/src/modules/portfolio/exit-signal.service.ts",
@@ -2335,25 +2398,11 @@
       "maxFunctionLines": 36
     },
     {
-      "path": "src/pages/BrokersPage.jsx",
-      "lines": 249,
-      "verdict": "ok",
-      "commentRatio": 0.19,
-      "maxFunctionLines": 204
-    },
-    {
       "path": "nest/src/modules/automation/automation-loop.persist-decisions.spec.ts",
       "lines": 248,
       "verdict": "data",
       "commentRatio": 0.221,
       "maxFunctionLines": 18
-    },
-    {
-      "path": "nest/src/modules/isa/isa.service.ts",
-      "lines": 248,
-      "verdict": "ok",
-      "commentRatio": 0,
-      "maxFunctionLines": 59
     },
     {
       "path": "nest/src/modules/trading/position-sizing.ts",
@@ -2489,6 +2538,20 @@
       "maxFunctionLines": 29
     },
     {
+      "path": "nest/src/modules/risk/risk-profile-rules.spec.ts",
+      "lines": 235,
+      "verdict": "data",
+      "commentRatio": 0.294,
+      "maxFunctionLines": 11
+    },
+    {
+      "path": "nest/src/modules/trading/trade-recorder.service.ts",
+      "lines": 235,
+      "verdict": "ok",
+      "commentRatio": 0.364,
+      "maxFunctionLines": 50
+    },
+    {
       "path": "src/pages/CurrentStrategyPage.jsx",
       "lines": 234,
       "verdict": "ok",
@@ -2522,6 +2585,13 @@
       "verdict": "ok",
       "commentRatio": 0.058,
       "maxFunctionLines": 32
+    },
+    {
+      "path": "nest/src/modules/trading/first-run-seed.service.spec.ts",
+      "lines": 232,
+      "verdict": "data",
+      "commentRatio": 0.272,
+      "maxFunctionLines": 17
     },
     {
       "path": "nest/src/modules/directives/market-status-timeframe.spec.ts",
@@ -2571,13 +2641,6 @@
       "verdict": "ok",
       "commentRatio": 0.843,
       "maxFunctionLines": 5
-    },
-    {
-      "path": "nest/src/modules/trading/trade-recorder.service.ts",
-      "lines": 227,
-      "verdict": "ok",
-      "commentRatio": 0.335,
-      "maxFunctionLines": 50
     },
     {
       "path": "src/components/backtest/BacktestSettingsInventory.jsx",
@@ -2650,6 +2713,13 @@
       "maxFunctionLines": 12
     },
     {
+      "path": "nest/src/common/interceptors/timeout.interceptor.spec.ts",
+      "lines": 219,
+      "verdict": "data",
+      "commentRatio": 0.223,
+      "maxFunctionLines": 10
+    },
+    {
       "path": "nest/src/modules/directives/implementations/news-catalyst.directive.ts",
       "lines": 219,
       "verdict": "ok",
@@ -2713,6 +2783,13 @@
       "maxFunctionLines": 7
     },
     {
+      "path": "src/core/support/report-buffers.js",
+      "lines": 216,
+      "verdict": "ok",
+      "commentRatio": 0.365,
+      "maxFunctionLines": 74
+    },
+    {
       "path": "src/pages/AnalyseSymbolPage.jsx",
       "lines": 216,
       "verdict": "ok",
@@ -2769,11 +2846,25 @@
       "maxFunctionLines": 54
     },
     {
+      "path": "src/core/support/report-build.js",
+      "lines": 212,
+      "verdict": "ok",
+      "commentRatio": 0.299,
+      "maxFunctionLines": 19
+    },
+    {
       "path": "nest/src/modules/strategies/strategy-prerequisites.ts",
       "lines": 212,
       "verdict": "ok",
       "commentRatio": 0.045,
       "maxFunctionLines": 48
+    },
+    {
+      "path": "src/components/backtest/RsiDivergenceChart.jsx",
+      "lines": 211,
+      "verdict": "ok",
+      "commentRatio": 0.237,
+      "maxFunctionLines": 5
     },
     {
       "path": "src/pages/VolatilityAnalysisPage.jsx",
@@ -2837,13 +2928,6 @@
       "verdict": "ok",
       "commentRatio": 0.162,
       "maxFunctionLines": 152
-    },
-    {
-      "path": "src/components/backtest/RsiDivergenceChart.jsx",
-      "lines": 206,
-      "verdict": "ok",
-      "commentRatio": 0.216,
-      "maxFunctionLines": 5
     },
     {
       "path": "nest/src/common/trading/quote-freshness.ts",
@@ -2972,13 +3056,6 @@
       "maxFunctionLines": 109
     },
     {
-      "path": "nest/src/modules/signals/signal-envelope-stale-symbol.spec.ts",
-      "lines": 201,
-      "verdict": "data",
-      "commentRatio": 0.257,
-      "maxFunctionLines": 186
-    },
-    {
       "path": "nest/src/modules/directives/implementations/market-memory-zones.directive.ts",
       "lines": 200,
       "verdict": "ok",
@@ -3063,13 +3140,6 @@
       "maxFunctionLines": 20
     },
     {
-      "path": "nest/src/modules/trading/exit-quality.ts",
-      "lines": 195,
-      "verdict": "ok",
-      "commentRatio": 0.207,
-      "maxFunctionLines": 47
-    },
-    {
       "path": "src/core/patterns/pattern-detector.js",
       "lines": 194,
       "verdict": "ok",
@@ -3089,6 +3159,13 @@
       "verdict": "ok",
       "commentRatio": 0.144,
       "maxFunctionLines": 59
+    },
+    {
+      "path": "src/components/CandlePatternChart.jsx",
+      "lines": 193,
+      "verdict": "ok",
+      "commentRatio": 0.121,
+      "maxFunctionLines": 7
     },
     {
       "path": "nest/src/common/utils/signal-direction.spec.ts",
@@ -3294,6 +3371,13 @@
       "maxFunctionLines": 18
     },
     {
+      "path": "nest/src/modules/providers/adapters/trading212-order-direction.spec.ts",
+      "lines": 185,
+      "verdict": "data",
+      "commentRatio": 0.191,
+      "maxFunctionLines": 6
+    },
+    {
       "path": "nest/src/modules/providers/provider-degradation.service.ts",
       "lines": 185,
       "verdict": "ok",
@@ -3336,13 +3420,6 @@
       "maxFunctionLines": 8
     },
     {
-      "path": "nest/src/modules/risk/risk-profile-rules.spec.ts",
-      "lines": 183,
-      "verdict": "data",
-      "commentRatio": 0.309,
-      "maxFunctionLines": 11
-    },
-    {
       "path": "src/theme/semantic-contrast.test.js",
       "lines": 182,
       "verdict": "data",
@@ -3383,13 +3460,6 @@
       "verdict": "ok",
       "commentRatio": 0.19,
       "maxFunctionLines": 29
-    },
-    {
-      "path": "nest/src/modules/trading/first-run-seed.service.spec.ts",
-      "lines": 182,
-      "verdict": "data",
-      "commentRatio": 0.187,
-      "maxFunctionLines": 17
     },
     {
       "path": "nest/src/modules/trading/stop-guardian.service.ts",
@@ -3481,13 +3551,6 @@
       "verdict": "ok",
       "commentRatio": 0.21,
       "maxFunctionLines": 78
-    },
-    {
-      "path": "src/components/CandlePatternChart.jsx",
-      "lines": 177,
-      "verdict": "ok",
-      "commentRatio": 0.051,
-      "maxFunctionLines": 7
     },
     {
       "path": "src/data/design-observations.js",
@@ -3684,6 +3747,13 @@
       "verdict": "ok",
       "commentRatio": 0.179,
       "maxFunctionLines": 63
+    },
+    {
+      "path": "nest/src/modules/risk/per-trade-risk.ts",
+      "lines": 168,
+      "verdict": "ok",
+      "commentRatio": 0.481,
+      "maxFunctionLines": 49
     },
     {
       "path": "nest/src/modules/trading/trading-strategy.activation-gate.spec.ts",
@@ -3924,13 +3994,6 @@
       "maxFunctionLines": 0
     },
     {
-      "path": "nest/src/modules/trading/exit-quality.spec.ts",
-      "lines": 159,
-      "verdict": "data",
-      "commentRatio": 0.143,
-      "maxFunctionLines": 1
-    },
-    {
       "path": "nest/src/modules/trading/position-sizing.spec.ts",
       "lines": 159,
       "verdict": "data",
@@ -4076,6 +4139,13 @@
       "verdict": "ok",
       "commentRatio": 0.255,
       "maxFunctionLines": 49
+    },
+    {
+      "path": "nest/src/modules/backtest/cost-divergence.spec.ts",
+      "lines": 154,
+      "verdict": "data",
+      "commentRatio": 0.294,
+      "maxFunctionLines": 0
     },
     {
       "path": "nest/src/modules/directives/implementations/ma-crossover.directive.ts",
@@ -4379,6 +4449,13 @@
       "maxFunctionLines": 127
     },
     {
+      "path": "nest/src/modules/directives/implementations/cad-usd-oil-correlation.directive.ts",
+      "lines": 146,
+      "verdict": "ok",
+      "commentRatio": 0.45,
+      "maxFunctionLines": 67
+    },
+    {
       "path": "nest/src/modules/directives/implementations/market-regime.directive.ts",
       "lines": 146,
       "verdict": "ok",
@@ -4391,6 +4468,13 @@
       "verdict": "ok",
       "commentRatio": 0.417,
       "maxFunctionLines": 48
+    },
+    {
+      "path": "nest/src/modules/trading/score-only-protocols.service.ts",
+      "lines": 146,
+      "verdict": "ok",
+      "commentRatio": 0.449,
+      "maxFunctionLines": 26
     },
     {
       "path": "src/pages/AppearancePatternsPage.jsx",
@@ -4477,6 +4561,13 @@
       "maxFunctionLines": 106
     },
     {
+      "path": "nest/src/modules/isa/isa.service.fetch-outcome.spec.ts",
+      "lines": 142,
+      "verdict": "data",
+      "commentRatio": 0.29,
+      "maxFunctionLines": 5
+    },
+    {
       "path": "nest/src/modules/trading/bot-summary-mapping.spec.ts",
       "lines": 142,
       "verdict": "data",
@@ -4544,6 +4635,13 @@
       "lines": 140,
       "verdict": "ok",
       "commentRatio": 0.211,
+      "maxFunctionLines": 34
+    },
+    {
+      "path": "src/components/SupportReportPanel.jsx",
+      "lines": 139,
+      "verdict": "ok",
+      "commentRatio": 0.148,
       "maxFunctionLines": 34
     },
     {
@@ -4643,13 +4741,6 @@
       "verdict": "data",
       "commentRatio": 0.165,
       "maxFunctionLines": 4
-    },
-    {
-      "path": "nest/src/modules/directives/implementations/cad-usd-oil-correlation.directive.ts",
-      "lines": 135,
-      "verdict": "ok",
-      "commentRatio": 0.398,
-      "maxFunctionLines": 67
     },
     {
       "path": "src/core/replay-clock.js",
@@ -4783,6 +4874,13 @@
       "verdict": "ok",
       "commentRatio": 0.119,
       "maxFunctionLines": 97
+    },
+    {
+      "path": "nest/src/common/interceptors/timeout.interceptor.ts",
+      "lines": 130,
+      "verdict": "ok",
+      "commentRatio": 0.5,
+      "maxFunctionLines": 28
     },
     {
       "path": "nest/src/modules/directives/implementations/earnings-momentum.directive.ts",
@@ -5324,13 +5422,6 @@
       "maxFunctionLines": 58
     },
     {
-      "path": "nest/src/common/interceptors/timeout.interceptor.spec.ts",
-      "lines": 115,
-      "verdict": "data",
-      "commentRatio": 0.214,
-      "maxFunctionLines": 10
-    },
-    {
       "path": "nest/src/modules/backtest/backtest.controller.spec.ts",
       "lines": 115,
       "verdict": "data",
@@ -5520,6 +5611,13 @@
       "maxFunctionLines": 0
     },
     {
+      "path": "nest/src/modules/risk/per-trade-risk.spec.ts",
+      "lines": 111,
+      "verdict": "data",
+      "commentRatio": 0.11,
+      "maxFunctionLines": 0
+    },
+    {
       "path": "nest/src/modules/signals/signal-envelope-bot-verdict.spec.ts",
       "lines": 111,
       "verdict": "data",
@@ -5532,6 +5630,13 @@
       "verdict": "data",
       "commentRatio": 0.433,
       "maxFunctionLines": 3
+    },
+    {
+      "path": "nest/src/modules/backtest/trade-basis.spec.ts",
+      "lines": 110,
+      "verdict": "data",
+      "commentRatio": 0.286,
+      "maxFunctionLines": 0
     },
     {
       "path": "src/core/performance-change.js",
@@ -5567,6 +5672,13 @@
       "verdict": "data",
       "commentRatio": 0.577,
       "maxFunctionLines": 0
+    },
+    {
+      "path": "nest/src/modules/trading/exit-quality-bars.ts",
+      "lines": 109,
+      "verdict": "ok",
+      "commentRatio": 0.374,
+      "maxFunctionLines": 43
     },
     {
       "path": "src/core/hooks/useSymbolEnvelope.js",
@@ -5779,6 +5891,13 @@
       "maxFunctionLines": 10
     },
     {
+      "path": "nest/src/common/utils/stale-cadence-fallback.spec.ts",
+      "lines": 103,
+      "verdict": "data",
+      "commentRatio": 0.224,
+      "maxFunctionLines": 2
+    },
+    {
       "path": "nest/src/modules/scoring/exit-consensus.controller.ts",
       "lines": 103,
       "verdict": "ok",
@@ -5877,6 +5996,13 @@
       "maxFunctionLines": 50
     },
     {
+      "path": "nest/src/modules/backtest/dev-test-window.ts",
+      "lines": 97,
+      "verdict": "ok",
+      "commentRatio": 0.857,
+      "maxFunctionLines": 0
+    },
+    {
       "path": "src/components/StarToggle.jsx",
       "lines": 96,
       "verdict": "ok",
@@ -5916,6 +6042,13 @@
       "lines": 96,
       "verdict": "ok",
       "commentRatio": 0.495,
+      "maxFunctionLines": 0
+    },
+    {
+      "path": "src/core/chart-time.test.js",
+      "lines": 95,
+      "verdict": "data",
+      "commentRatio": 0.157,
       "maxFunctionLines": 0
     },
     {
@@ -6143,6 +6276,13 @@
       "maxFunctionLines": 9
     },
     {
+      "path": "src/core/support/report-build.test.js",
+      "lines": 86,
+      "verdict": "data",
+      "commentRatio": 0.23,
+      "maxFunctionLines": 0
+    },
+    {
       "path": "nest/src/modules/directives/implementations/volume-confirmation.directive.spec.ts",
       "lines": 86,
       "verdict": "data",
@@ -6241,6 +6381,13 @@
       "maxFunctionLines": 0
     },
     {
+      "path": "src/main.jsx",
+      "lines": 83,
+      "verdict": "ok",
+      "commentRatio": 0.553,
+      "maxFunctionLines": 0
+    },
+    {
       "path": "nest/src/modules/automation/automation-loop-queue-freshness.spec.ts",
       "lines": 83,
       "verdict": "data",
@@ -6274,6 +6421,13 @@
       "verdict": "ok",
       "commentRatio": 0.132,
       "maxFunctionLines": 67
+    },
+    {
+      "path": "nest/src/modules/trading/score-only-protocols.service.spec.ts",
+      "lines": 83,
+      "verdict": "data",
+      "commentRatio": 0.378,
+      "maxFunctionLines": 0
     },
     {
       "path": "src/components/backtest/charts/BacktestChartPane.jsx",
@@ -6416,13 +6570,6 @@
       "maxFunctionLines": 2
     },
     {
-      "path": "src/main.jsx",
-      "lines": 77,
-      "verdict": "ok",
-      "commentRatio": 0.549,
-      "maxFunctionLines": 0
-    },
-    {
       "path": "src/utils/exportCsv.js",
       "lines": 77,
       "verdict": "ok",
@@ -6442,6 +6589,13 @@
       "verdict": "ok",
       "commentRatio": 0.077,
       "maxFunctionLines": 3
+    },
+    {
+      "path": "nest/src/modules/backtest/trade-basis.ts",
+      "lines": 77,
+      "verdict": "ok",
+      "commentRatio": 0.638,
+      "maxFunctionLines": 19
     },
     {
       "path": "nest/src/modules/notifications/notifications.controller.ts",
@@ -6472,6 +6626,13 @@
       "maxFunctionLines": 57
     },
     {
+      "path": "src/core/chart-time.js",
+      "lines": 76,
+      "verdict": "ok",
+      "commentRatio": 0.653,
+      "maxFunctionLines": 16
+    },
+    {
       "path": "src/core/decision-score.js",
       "lines": 76,
       "verdict": "ok",
@@ -6484,20 +6645,6 @@
       "verdict": "ok",
       "commentRatio": 0.778,
       "maxFunctionLines": 25
-    },
-    {
-      "path": "nest/src/common/interceptors/timeout.interceptor.ts",
-      "lines": 76,
-      "verdict": "ok",
-      "commentRatio": 0.464,
-      "maxFunctionLines": 15
-    },
-    {
-      "path": "nest/src/modules/backtest/dev-test-window.ts",
-      "lines": 76,
-      "verdict": "ok",
-      "commentRatio": 0.829,
-      "maxFunctionLines": 0
     },
     {
       "path": "nest/src/modules/backtest/fixed-units.spec.ts",
@@ -6654,6 +6801,13 @@
       "maxFunctionLines": 0
     },
     {
+      "path": "nest/src/modules/trading/trade-recorder.service.spec.ts",
+      "lines": 72,
+      "verdict": "data",
+      "commentRatio": 0.303,
+      "maxFunctionLines": 7
+    },
+    {
       "path": "nest/src/modules/webhooks/webhooks.controller.ts",
       "lines": 72,
       "verdict": "ok",
@@ -6680,6 +6834,13 @@
       "verdict": "ok",
       "commentRatio": 0.033,
       "maxFunctionLines": 25
+    },
+    {
+      "path": "nest/src/common/trading/close-reason.spec.ts",
+      "lines": 71,
+      "verdict": "data",
+      "commentRatio": 0.302,
+      "maxFunctionLines": 0
     },
     {
       "path": "src/components/ThemePacksChooser.jsx",
@@ -6834,13 +6995,6 @@
       "verdict": "ok",
       "commentRatio": 0.383,
       "maxFunctionLines": 37
-    },
-    {
-      "path": "nest/src/common/trading/close-reason.spec.ts",
-      "lines": 65,
-      "verdict": "data",
-      "commentRatio": 0.263,
-      "maxFunctionLines": 0
     },
     {
       "path": "nest/src/modules/directives/implementations/vwap.directive.ts",
@@ -7116,11 +7270,11 @@
       "maxFunctionLines": 7
     },
     {
-      "path": "nest/src/modules/trading/trade-recorder.service.spec.ts",
+      "path": "nest/src/modules/trading/exit-quality-bars.spec.ts",
       "lines": 56,
       "verdict": "data",
-      "commentRatio": 0.235,
-      "maxFunctionLines": 7
+      "commentRatio": 0.271,
+      "maxFunctionLines": 0
     },
     {
       "path": "src/components/Breadcrumbs.jsx",
@@ -7501,6 +7655,13 @@
       "maxFunctionLines": 4
     },
     {
+      "path": "nest/src/modules/trading/broker-config.controller.ts",
+      "lines": 45,
+      "verdict": "ok",
+      "commentRatio": 0.375,
+      "maxFunctionLines": 5
+    },
+    {
       "path": "src/components/LastUpdated.jsx",
       "lines": 44,
       "verdict": "ok",
@@ -7669,6 +7830,13 @@
       "maxFunctionLines": 0
     },
     {
+      "path": "nest/src/modules/trading/trading.module.ts",
+      "lines": 40,
+      "verdict": "ok",
+      "commentRatio": 0,
+      "maxFunctionLines": 0
+    },
+    {
       "path": "nest/src/common/trading/peak-equity.spec.ts",
       "lines": 38,
       "verdict": "data",
@@ -7691,13 +7859,6 @@
     },
     {
       "path": "nest/src/modules/symbols/dto/create-symbol.dto.ts",
-      "lines": 38,
-      "verdict": "ok",
-      "commentRatio": 0,
-      "maxFunctionLines": 0
-    },
-    {
-      "path": "nest/src/modules/trading/trading.module.ts",
       "lines": 38,
       "verdict": "ok",
       "commentRatio": 0,
@@ -7907,6 +8068,13 @@
       "maxFunctionLines": 21
     },
     {
+      "path": "nest/src/modules/signals/signals.module.ts",
+      "lines": 30,
+      "verdict": "ok",
+      "commentRatio": 0.179,
+      "maxFunctionLines": 0
+    },
+    {
       "path": "src/components/ToggleSwitch.jsx",
       "lines": 29,
       "verdict": "ok",
@@ -8075,13 +8243,6 @@
       "maxFunctionLines": 3
     },
     {
-      "path": "nest/src/modules/trading/broker-config.controller.ts",
-      "lines": 27,
-      "verdict": "ok",
-      "commentRatio": 0.261,
-      "maxFunctionLines": 5
-    },
-    {
       "path": "nest/src/modules/trading/session-tracker.controller.ts",
       "lines": 27,
       "verdict": "ok",
@@ -8128,13 +8289,6 @@
       "lines": 26,
       "verdict": "ok",
       "commentRatio": 0.542,
-      "maxFunctionLines": 0
-    },
-    {
-      "path": "nest/src/modules/signals/signals.module.ts",
-      "lines": 26,
-      "verdict": "ok",
-      "commentRatio": 0.083,
       "maxFunctionLines": 0
     },
     {

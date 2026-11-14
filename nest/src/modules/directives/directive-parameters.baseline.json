@@ -1753,5 +1753,32 @@
     "long-gap-series": "36b174eb15b122a4",
     "long-range-tightening": "2d4fc1aa4999d33d",
     "long-ceiling-zone": "b376bfc96d043534"
+  },
+  "ema-structure": {
+    "decline-bounce": "75e2382e7abfaecf",
+    "mild-decline": "bf17321fe067dd56",
+    "uptrend": "7c5f8352466a1239",
+    "downtrend": "c1a6836370e044a0",
+    "choppy": "3b1242b9ebc15908",
+    "reversal-hammer": "b3652a06a2a9d081",
+    "mean-reverting": "3bf2ed54a349bffb",
+    "noisy-uptrend": "eba4229f95d742c6",
+    "noisy-downtrend": "e372629d5fe20f31",
+    "noisy-range": "9df862a357d607fe",
+    "volume-climax": "f9843975a9e71770",
+    "volume-drought": "29b79877b6e8791f",
+    "range-compression": "947ea2f33c30f7d0",
+    "doji-bar": "0684c3d0da963e06",
+    "engulfing-bar": "82a6cecaaf861add",
+    "harami-bar": "2aa59ec730decea9",
+    "three-soldiers": "8381cf63b2930892",
+    "gap-up-bar": "52ce0f46a3c01637",
+    "long-wick": "973d9efe5af03269",
+    "volatility-burst": "4f14687cb7d1df01",
+    "long-rally-pullback": "db1dbc6ee1431ccf",
+    "long-crash-and-base": "8bfb1fbc22189980",
+    "long-gap-series": "5b386b638021bf38",
+    "long-range-tightening": "ac54b1447a99513b",
+    "long-ceiling-zone": "c25297109d4bfe2d"
   }
 }

@@ -26,6 +26,20 @@ import '../../pages/backtest-lab.css';
  * guarded by `validate-single-scoring-path.cjs`) — this is not a second scoring path.
  */
 
+// ── PLANNED IN #1135 ──
+// MISSING:    NOTHING RENDERS THIS COMPONENT. The per-bar drill-down therefore does not exist in the
+//             UI at all — not "it is refused on a big window", which is how #1135 originally read it.
+// TODAY:      `BacktestPage` lazy-loads five other backtest components (EquityCurveChart,
+//             BacktestSettingsInventory, ProtocolDirectiveSettings, DirectiveSettingsPanel,
+//             RunComparisonPanels.ScoreTable) and this is not one of them. Measured 2026-11-13 by
+//             recursive search over src/: the only non-comment occurrence of the name is the export
+//             below. Two durable docs claimed otherwise and were corrected the same day
+//             (architecture-reference.js, architecture-framework.data.js).
+// WHEN BUILT: mount it on /lab/backtest-strategies (or delete it and keep `ScoreTable` as the per-bar
+//             surface). THEN add a `lastNBars` bound to the replay, because multi-protocol windows
+//             still hit the budget — measured 2026-11-13: 2 protocols refused at 574 of 698 bars,
+//             while 1 protocol completes the whole window in 9.73 s.
+
 /** Bars the replay engine needs before it will score a single window. Sent as `windowSize`. */
 const WINDOW_SIZE = 30;
 
@@ -100,6 +114,18 @@ export default function ProtocolScoreDetail({
   const [resultKey, setResultKey] = useState('');
 
   const key = `${protocolId}|${periodId || `${symbol}|${timeframe}`}`;
+
+  // ⚠️ `periodId` IS REQUIRED, and the guard lives here rather than in `run()` so the button is
+  // disabled and the reason is on screen before a click.
+  //
+  // The previous fallback sent `{ symbol, timeframe, protocolIds, windowSize }` with NEITHER `from`
+  // nor `to`, which `replay.service.ts:408` refuses with *"Replay needs either a periodId, or symbol
+  // + timeframe + from + to"* — so that branch could only ever produce a 400. It went unnoticed
+  // because this component is not mounted anywhere yet (#1135). This component never receives dates,
+  // only a stored period's id, so the period is the only way in.
+  const unavailable = blockedReason || (!periodId
+    ? 'Select a stored period to replay — score detail re-scores that period\'s bars and needs its dates.'
+    : null);
 
   const replayMutation = useMutation({
     mutationFn: (config) => apiPost('/api/replay/run', config),
@@ -182,12 +208,8 @@ export default function ProtocolScoreDetail({
   };
 
   const run = () => {
-    if (blockedReason) return;
-    replayMutation.mutate(
-      periodId
-        ? { periodId, protocolIds: [protocolId], windowSize: WINDOW_SIZE }
-        : { symbol, timeframe, protocolIds: [protocolId], windowSize: WINDOW_SIZE },
-    );
+    if (unavailable) return;
+    replayMutation.mutate({ periodId, protocolIds: [protocolId], windowSize: WINDOW_SIZE });
   };
 
   return (
@@ -221,13 +243,13 @@ export default function ProtocolScoreDetail({
           type="button"
           className="ff-btn"
           onClick={run}
-          disabled={Boolean(blockedReason) || replayMutation.isPending || !protocolId}
+          disabled={Boolean(unavailable) || replayMutation.isPending || !protocolId}
         >
           {replayMutation.isPending ? `Scoring… ${elapsed}s` : 'Score this window'}
         </button>
       </div>
 
-      {blockedReason && <p className="pb-none">{blockedReason}</p>}
+      {unavailable && <p className="pb-none">{unavailable}</p>}
 
       {replayMutation.isError && (
         <NoticeBlock notice={noticeFromError(replayMutation.error)} compact />

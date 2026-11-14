@@ -19,6 +19,8 @@ describe('SignalEnvelopeService — stale symbols are not scored (#827)', () => 
   let scoreWithGating: jest.Mock;
   let barsByTf: Record<string, any[]>;
   let warns: string[];
+  let prismaStub: any;
+  let notifications: { send: jest.Mock };
 
   const barsAt = (iso: string) => [{ timestamp: iso, open: 1, high: 1, low: 1, close: 1, volume: 1 }];
 
@@ -48,6 +50,10 @@ describe('SignalEnvelopeService — stale symbols are not scored (#827)', () => 
     }));
 
     const prisma: any = { symbol: { findFirst: jest.fn(async () => ({ id: 'sym-1', ticker: 'TEST' })) } };
+    // #1264 — no position unless a test says so; `position.count` is how "do we hold this?" is asked.
+    prisma.position = { count: jest.fn(async () => 0) };
+    prismaStub = prisma;
+    notifications = { send: jest.fn(async () => undefined) };
     // ⚠️ `recommendedTimeframe: '1m'` is DELIBERATE, not incidental: `selectBaseTimeframe` resolves
     // it to the base cadence the guard checks, and the four cadences the guard inspects are then
     // exactly 1m/1d/1h/15m — the four this spec controls. With '5m' the base cadence would be one
@@ -71,9 +77,13 @@ describe('SignalEnvelopeService — stale symbols are not scored (#827)', () => 
     };
     const stub = {} as any;
 
+    // ⚠️ SIX stubs, not five. The constructor now ends `…outcomeTracker, tradeDefaults?, notifications?`
+    // — positional construction means an omitted `tradeDefaults` silently hands the notification stub
+    // to the WRONG parameter, and the symptom is "no notification was sent" rather than a type error.
     service = new SignalEnvelopeService(
       prisma, { scoreWithGating } as any, protocolDb, marketData,
-      stub, stub, stub, stub, stub, { recordOutcomes: jest.fn(async () => 0) } as any,
+      stub, stub, stub, stub, stub, { recordOutcomes: jest.fn(async () => 0) } as any, stub,
+      notifications as any,
     );
     jest.spyOn((service as any).logger, 'warn').mockImplementation((m: any) => { warns.push(String(m)); });
     jest.spyOn((service as any).logger, 'log').mockImplementation(() => undefined);
@@ -152,6 +162,128 @@ describe('SignalEnvelopeService — stale symbols are not scored (#827)', () => 
     it('still scores a healthy symbol normally', async () => {
       await service.buildEnvelope('SPY', 'test-v1');
       expect(scoreWithGating).toHaveBeenCalled();
+    });
+  });
+
+  describe('#1264 — a stale BASE cadence scores on the freshest cadence that has data', () => {
+    // The GER40 measurement, 2026-11-13T20:09Z. The old behaviour scored the 1m series — frozen for
+    // 7.6 h — and produced the SAME composite (89) on all 108 snapshots in two hours, against an
+    // entry threshold of 10 on six `auto` bots.
+    const GER40 = { '1m': at(7.6), '15m': at(7.8), '1h': at(8.3), '1d': at(23.3) };
+
+    it('scores GER40 on 1h, not on its frozen 1m base', async () => {
+      barsByTf = {
+        '1m': barsAt(GER40['1m']),
+        '15m': barsAt(GER40['15m']),
+        '1h': barsAt(GER40['1h']),
+        '1d': barsAt(GER40['1d']),
+      };
+
+      await service.buildEnvelope('GER40', 'test-v1');
+
+      expect(scoreWithGating).toHaveBeenCalledTimes(1);
+      const args = scoreWithGating.mock.calls[0];
+      // arg[1] = the bars to score, arg[5] = the cadence label. BOTH must be the 1h series: a score
+      // computed from 1h bars but stamped `1m` is the same lie in a different place.
+      expect(args[1][0].timestamp).toBe(GER40['1h']);
+      expect(args[5]).toBe('1h');
+    });
+
+    it('says so in the log rather than switching silently', async () => {
+      barsByTf = {
+        '1m': barsAt(GER40['1m']),
+        '15m': barsAt(GER40['15m']),
+        '1h': barsAt(GER40['1h']),
+        '1d': barsAt(GER40['1d']),
+      };
+      const logs: string[] = [];
+      jest.spyOn((service as any).logger, 'log').mockImplementation((m: any) => { logs.push(String(m)); });
+
+      await service.buildEnvelope('GER40', 'test-v1');
+
+      expect(logs.some((l) => l.includes('instead of its base'))).toBe(true);
+    });
+
+    it('leaves a healthy symbol alone — no switch, base cadence used', async () => {
+      await service.buildEnvelope('SPY', 'test-v1');
+
+      const args = scoreWithGating.mock.calls[0];
+      expect(args[5]).toBe('1m');
+      expect(args[1][0].timestamp).toBe(barsByTf['1m'][0].timestamp);
+    });
+
+    it('warns IMMEDIATELY when we hold a position in a symbol scoring off a stale base', async () => {
+      prismaStub.position.count.mockResolvedValue(1);
+      barsByTf = {
+        '1m': barsAt(GER40['1m']),
+        '15m': barsAt(GER40['15m']),
+        '1h': barsAt(GER40['1h']),
+        '1d': barsAt(GER40['1d']),
+      };
+
+      await service.buildEnvelope('GER40', 'test-v1');
+
+      expect(notifications.send).toHaveBeenCalledTimes(1);
+      const msg = notifications.send.mock.calls[0][0];
+      expect(msg.symbol).toBe('GER40');
+      expect(msg.event).toBe('provider-degraded');
+      expect(msg.title).toContain('held symbol');
+      expect(msg.metadata.held).toBe(true);
+    });
+
+    it('does NOT warn for a stale base we hold nothing in', async () => {
+      await service.buildEnvelope('GER40', 'test-v1');
+      expect(notifications.send).not.toHaveBeenCalled();
+    });
+
+    it('warns about a starved symbol nobody holds, once everything is stale', async () => {
+      barsByTf = {
+        '1m': barsAt('2026-07-31T21:00:00.000Z'),
+        '1d': barsAt('2026-07-21T21:00:00.000Z'),
+        '1h': barsAt('2026-07-31T21:00:00.000Z'),
+        '15m': barsAt('2026-07-31T21:00:00.000Z'),
+      };
+
+      await service.buildEnvelope('HOOD', 'test-v1');
+
+      expect(notifications.send).toHaveBeenCalledTimes(1);
+      expect(notifications.send.mock.calls[0][0].title).toBe('No market data for HOOD');
+    });
+
+    it('sends ONE notice per symbol per hour, not one per tick', async () => {
+      barsByTf = {
+        'm1': [],
+        '1m': barsAt('2026-07-31T21:00:00.000Z'),
+        '1d': barsAt('2026-07-21T21:00:00.000Z'),
+        '1h': barsAt('2026-07-31T21:00:00.000Z'),
+        '15m': barsAt('2026-07-31T21:00:00.000Z'),
+      };
+
+      await service.buildEnvelope('HOOD', 'test-v1');
+      await service.buildEnvelope('HOOD', 'test-v1');
+      await service.buildEnvelope('HOOD', 'test-v1');
+
+      expect(notifications.send).toHaveBeenCalledTimes(1);
+
+      // …and the hour passing re-arms it, so a lasting gap is not reported once and forgotten.
+      jest.setSystemTime(new Date(NOW + 61 * 60_000));
+      await service.buildEnvelope('HOOD', 'test-v1');
+      expect(notifications.send).toHaveBeenCalledTimes(2);
+    });
+
+    it('a notification failure never takes the scoring loop with it', async () => {
+      notifications.send.mockRejectedValue(new Error('smtp is down'));
+      prismaStub.position.count.mockResolvedValue(1);
+      barsByTf = {
+        '1m': barsAt(at(7.6)),
+        '15m': barsAt(at(7.8)),
+        '1h': barsAt(at(8.3)),
+        '1d': barsAt(at(23.3)),
+      };
+
+      await expect(service.buildEnvelope('GER40', 'test-v1')).resolves.toBeDefined();
+      expect(scoreWithGating).toHaveBeenCalled();
+      expect(warns.some((w) => w.includes('Could not send the data-starvation notification'))).toBe(true);
     });
   });
 

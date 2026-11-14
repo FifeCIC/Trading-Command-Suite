@@ -33,17 +33,17 @@ it is expensive to review and risky to change.
 
 | File | Lines | Comments | Longest fn | Fns over 60 |
 |---|---|---|---|---|
-| `nest/src/modules/backtest/backtest.service.ts` | 4,787 | 40.3% | 1229 | 5 |
-| `nest/src/modules/automation/automation-loop.service.ts` | 3,406 | 37.3% | 430 | 4 |
-| `nest/src/modules/trading/trading-strategy.service.ts` | 3,406 | 33.9% | 215 | 6 |
+| `nest/src/modules/backtest/backtest.service.ts` | 4,869 | 41.1% | 1310 | 5 |
+| `nest/src/modules/trading/trading-strategy.service.ts` | 3,716 | 35.6% | 218 | 7 |
+| `nest/src/modules/automation/automation-loop.service.ts` | 3,421 | 37.4% | 430 | 4 |
 
 ### `high`
 
 | File | Lines | Comments | Longest fn | Fns over 60 |
 |---|---|---|---|---|
-| `nest/src/modules/automation/stop-guardian.service.ts` | 2,453 | 50.9% | 484 | 2 |
+| `nest/src/modules/automation/stop-guardian.service.ts` | 2,463 | 50.8% | 484 | 2 |
+| `nest/src/modules/signals/signal-envelope.service.ts` | 2,390 | 35.0% | 233 | 3 |
 | `nest/src/modules/scoring/protocol-gating.service.ts` | 2,290 | 49.2% | 65 | 1 |
-| `nest/src/modules/signals/signal-envelope.service.ts` | 2,231 | 34.2% | 181 | 3 |
 | `src/pages/DiagramsPage.jsx` | 2,097 | 2.4% | 204 | 1 |
 
 ### `warn`
@@ -53,15 +53,15 @@ it is expensive to review and risky to change.
 | `src/pages/ViewStrategyPage.jsx` | 1,788 | 20.0% | 807 | 1 |
 | `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts` | 1,770 | 26.2% | 87 | 3 |
 | `src/pages/MetaStackExplorerPage.jsx` | 1,695 | 15.0% | 1381 | 1 |
+| `nest/src/modules/trading/trade-history.controller.ts` | 1,542 | 27.4% | 413 | 4 |
 | `nest/src/modules/providers/adapters/mt5.adapter.ts` | 1,536 | 32.4% | 195 | 1 |
-| `src/pages/ArchitectureFrameworkPage.jsx` | 1,513 | 0.8% | 1267 | 1 |
-| `nest/src/modules/trading/trade-history.controller.ts` | 1,512 | 26.9% | 413 | 4 |
+| `src/pages/ArchitectureFrameworkPage.jsx` | 1,528 | 0.8% | 1281 | 1 |
 
 ### `large-but-structured`
 
 | File | Lines | Comments | Longest fn | Fns over 60 |
 |---|---|---|---|---|
-| `src/pages/BacktestPage.jsx` | 3,870 | 25.9% | 16 | 0 |
+| `src/pages/BacktestPage.jsx` | 3,874 | 25.9% | 16 | 0 |
 
 
 ## Unreferenced modules (6)
@@ -76,6 +76,23 @@ line as a QUESTION — delete / wire up / keep and explain — never as a delete
 - `src/hooks/useSpeedTradingKeys.js`
 - `src/pages/AdvancedResearchPage.jsx`
 - `src/pages/directives-manager.seed.js`
+
+## Named only in commentary (6)
+
+⚠️ **Discussed somewhere, named by no code.** These are NOT in the list above, because a name-reference
+scan sees them mentioned — usually by the very documentation that makes them look intentional. That is
+how a 420-line component stayed invisible for weeks: `ProtocolScoreDetail.jsx` was described as the live
+per-bar drill-down in three documents while nothing imported it.
+
+A prose mention, in a comment **or a string**, is not a reference. Same QUESTION per file — delete /
+wire up / keep and explain. Owner: #1228.
+
+- `nest/src/modules/scoring/rarity.service.ts`
+- `src/components/DetachableWidget.jsx`
+- `src/components/SeesScoringPanel.jsx`
+- `src/components/backtest/ProtocolScoreDetail.jsx`
+- `src/core/phase-gates.js`
+- `src/pages/SymbolFocusPage.jsx`
 
 ## How to act on this
 

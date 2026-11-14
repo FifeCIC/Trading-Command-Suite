@@ -1004,4 +1004,24 @@ export const KNOWN_FEATURES = {
     'Protocol focus rank': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
     'Contrast runs (backtest comparison)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
     'Trade-exit decision-moment observation': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'partial' },
+  // ── batch #54 (2026-11-13) — 21 handoffs (2026-11-08 → 2026-11-13): 15 full, 6 Notes (QA only).
+  //    Note: 15 full handoffs declare only 12 UNIQUE capability names, and 11 are NEW rows here
+  //    `Repository layout gate` that #1252 owns, #1259 re-declares #1260's broker status (and is the
+  //    later record: uiSurfaces 0 → 1), and #1263 re-declares #1262's period library. Recorded once
+  //    each, in the FINAL shape. The twelfth, `Repository layout gate`, was already recorded by batch
+  //    #52, so #1252 and #1254 add no row. Theme: unread configuration became enforced rules — a password, a
+  //    risk ceiling, a seed, a backup and a backtest window that were declared and read by nothing.
+  //    uiSurfaces: 0 is a FINDING, not a blank (7 of these 12).
+    'Architecture card-shape guard': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Public-surface claim gate': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Agent-definition gate': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Broker capability & connection status': { dataPersistence: 'none', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Per-trade money-at-risk ceiling': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Backtest result interpretation (stated units)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Remove a protocol\'s directive override (return to global)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Bot rule coverage report': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Seed fidelity — the fleet survives a reinstall': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Backtest period library (named, reusable windows)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Database backup with restore proof': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Fresh-cadence scoring with starved-data warnings': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
 };

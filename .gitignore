@@ -139,3 +139,8 @@ temp-*
 
 # Session output saved as .txt. Real data files are named in .github/instructions/repository-layout.
 nest/*.txt
+
+# The bot fleet's numbers ARE the strategies. The repository is PUBLIC, so the generated
+# fleet is built locally and never committed (#1258, register row 177).
+nest/src/modules/trading/strategy-seed-generated.ts
+nest/src/modules/trading/strategy-seed-generated.local.ts

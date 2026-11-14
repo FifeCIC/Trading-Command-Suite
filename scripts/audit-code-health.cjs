@@ -291,6 +291,123 @@ function unreferenced(files, texts) {
   return out;
 }
 
+/**
+ * Reduce a file to the text that could actually REFER to a module.
+ *
+ * Removes comments, and removes string bodies that are prose — but KEEPS any string that looks like a
+ * module specifier, so `import('./widgets/builtin-widgets')` and a registry path still count.
+ *
+ * ⚠️ Why the string rule is needed at all (measured 2026-11-13). `architecture-reference.js` and
+ * `architecture-framework.data.js` hold their prose INSIDE string literals, so a component described
+ * there is "named in code" by a naive test. Stripping every string would swing the other way and
+ * report every `lazy(() => import('../x'))` as an orphan — a false positive that would get the whole
+ * check allowlisted. The discriminator: a module specifier has **no spaces** and contains `/` or `.`;
+ * a sentence has spaces.
+ *
+ * Where this is unsure it keeps the text, which can only make the scan MISS a case, never invent one.
+ */
+function stripComments(text) {
+  const noComments = text
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  return noComments.replace(/(['"`])((?:\\.|(?!\1)[^\\])*)\1/g, (match, quote, body) => {
+    const looksLikeAModulePath = /^[.\w@/-]+$/.test(body) && /[/.]/.test(body);
+    return looksLikeAModulePath ? match : `${quote}${quote}`;
+  });
+}
+
+/**
+ * Files that are named elsewhere, but ONLY inside commentary — the state that hid a 420-line
+ * component for weeks (#1228, measured 2026-11-13).
+ *
+ * WHY THIS STATE EXISTS. `unreferenced()` counts NAME OCCURRENCES in the whole file text. A component
+ * that the architecture docs describe, and that nothing imports, therefore scores as *referenced*:
+ *
+ *   src/components/backtest/ProtocolScoreDetail.jsx  (420 lines) — named in architecture-reference.js,
+ *   view-meta.js, view-routes.jsx and the QA checklist. IMPORTED BY NOTHING. `BacktestPage` renders
+ *   `RunComparisonPanels.ScoreTable` instead.
+ *
+ * The docs made the orphan look intentional, and the report stayed quiet. This distinguishes
+ * "referenced" from "discussed". It is ADDITIVE: `unreferenced()` is unchanged, so no existing
+ * finding moves, and the docblock's promise — a QUESTION per file, never a delete list — still holds.
+ */
+function namedOnlyInCommentary(files, texts) {
+  const all = [...texts.values()].join('\n') + scriptsText();
+  const code = [...texts.values()].map(stripComments).join('\n') + stripComments(scriptsText());
+  const count = (needle, hay) => hay.split(needle).length - 1;
+  const out = [];
+
+  for (const f of files) {
+    if (SKIP_FILE.test(f.rel)) continue;
+    // A declaration file is not a capability on its own — it describes its own .ts sibling.
+    if (/\.d\.ts$/.test(f.rel)) continue;
+    if (REACHED_OTHERWISE.has(f.rel)) continue;
+
+    const own = texts.get(f.rel) ?? '';
+    const ownCode = stripComments(own);
+
+    // ⚠️ THE SAME TWO KEYS AS `unreferenced()` — the filename AND each exported symbol. Counting only
+    // the filename falsely reported `rarity.service.ts`, which is reached through `RarityService` and
+    // never through its filename. A second state that is less precise than the first would over-report,
+    // get allowlisted, and cover nothing.
+    const keys = [path.basename(f.rel, path.extname(f.rel)), ...exportedNames(own)];
+
+    let named = false;
+    let namedInCode = false;
+    for (const key of keys) {
+      // ⚠️ LENGTH GUARD, raised from `unreferenced()`'s 4 to 8. This state compares against PROSE, and
+      // a short common name matches English: `used`, `data`, `index` appear in comments thousands of
+      // times across the corpus, which reported a genuinely-imported module as commentary-only. A
+      // distinctive name (16–19 chars here: `ProtocolScoreDetail`, `DetachableWidget`) is what this
+      // scan can actually speak about. Missing a short-named orphan is the acceptable side of the
+      // trade — over-reporting is what gets a check allowlisted.
+      if (key.length < 8) continue;
+      if (count(key, all) > count(key, own)) named = true;
+      if (count(key, code) > count(key, ownCode)) namedInCode = true;
+    }
+
+    // Already reported as fully unreferenced — that is the stronger finding, so do not duplicate it.
+    if (named && !namedInCode) out.push(f.rel);
+  }
+  return out;
+}
+
+/**
+ * Text of `scripts/` and the repo-root config files — the corpus a module can be referenced FROM
+ * without being part of the size report.
+ *
+ * ⚠️ Without this, `src/core/architecture-reference.js` and `src/core/phase-gates.js` read as orphans
+ * because the only things that import them are validators under `scripts/`. A scan whose reachability
+ * corpus is narrower than its reporting set invents findings, and an invented finding is the fastest
+ * way to lose a reader's trust in the whole report.
+ */
+let SCRIPTS_TEXT = null;
+function scriptsText() {
+  if (SCRIPTS_TEXT !== null) return SCRIPTS_TEXT;
+  const out = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (e.name !== 'node_modules') walk(p);
+      } else if (/\.(cjs|mjs|js)$/.test(e.name)) {
+        // ⚠️ NOT this file. Its own self-test contains the fixture names as string literals, so
+        // including it made every fixture look "named in code" — a query that names the thing it is
+        // looking for finds its own name, and the check then reports nothing.
+        if (p === __filename) continue;
+        out.push(fs.readFileSync(p, 'utf8'));
+      }
+    }
+  };
+  try {
+    walk(path.join(ROOT, 'scripts'));
+  } catch {
+    // No scripts directory: an empty corpus can only make this scan MISS, never invent.
+  }
+  SCRIPTS_TEXT = out.join('\n');
+  return SCRIPTS_TEXT;
+}
+
 function analyseTree(rootDir) {
   const abs = listFiles(rootDir);
   const files = abs.map((a) => {
@@ -299,9 +416,10 @@ function analyseTree(rootDir) {
   });
   const texts = new Map(files.map((f) => [f.path, fs.readFileSync(path.join(ROOT, f.path), 'utf8')]));
   const refs = unreferenced(files.map((f) => ({ rel: f.path })), texts);
+  const commentaryOnly = namedOnlyInCommentary(files.map((f) => ({ rel: f.path })), texts);
   for (const f of files) f.verdict = verdictOf(f);
   files.sort((a, b) => b.lines - a.lines);
-  return { files, unreferenced: refs.sort() };
+  return { files, unreferenced: refs.sort(), commentaryOnly: commentaryOnly.sort() };
 }
 
 // ── reporting ───────────────────────────────────────────────────────────────────────────────────
@@ -349,6 +467,15 @@ function report(state) {
 
   console.log(`\n  ⚠️ NAME-REFERENCE SCAN, not a module graph: ${n(state.unreferenced.length)} file(s) are named nowhere else.`);
   for (const p of state.unreferenced) console.log(`     ${p}`);
+  if (state.commentaryOnly.length > 0) {
+    console.log(
+      `\n  ⚠️ NAMED ONLY IN COMMENTARY: ${n(state.commentaryOnly.length)} file(s) are discussed somewhere ` +
+        'but named by no code.\n' +
+        '     A mention in a doc comment is not a reference — that is how a 420-line component stayed\n' +
+        '     invisible for weeks (#1228). Same QUESTION per file: delete / wire up / keep+explain.',
+    );
+    for (const p of state.commentaryOnly) console.log(`     ${p}`);
+  }
   console.log('');
   return f;
 }
@@ -418,6 +545,18 @@ registry string that does not contain its filename reads as unreferenced here an
 line as a QUESTION — delete / wire up / keep and explain — never as a delete list. Owner: #1228.
 
 ${state.unreferenced.map((p) => `- \`${p}\``).join('\n') || '_None._'}
+
+## Named only in commentary (${n(state.commentaryOnly.length)})
+
+⚠️ **Discussed somewhere, named by no code.** These are NOT in the list above, because a name-reference
+scan sees them mentioned — usually by the very documentation that makes them look intentional. That is
+how a 420-line component stayed invisible for weeks: \`ProtocolScoreDetail.jsx\` was described as the live
+per-bar drill-down in three documents while nothing imported it.
+
+A prose mention, in a comment **or a string**, is not a reference. Same QUESTION per file — delete /
+wire up / keep and explain. Owner: #1228.
+
+${state.commentaryOnly.map((p) => `- \`${p}\``).join('\n') || '_None._'}
 
 ## How to act on this
 
@@ -682,6 +821,81 @@ function selfTest() {
       refs.join(','),
     );
 
+    // 8b — NAMED ONLY IN COMMENTARY: the state that hid a 420-line component (#1228).
+    //      The names are deliberately LONG: this state ignores keys under 8 characters, because a short
+    //      common name matches English prose (see the guard's comment). Fixture names must be
+    //      distinctive or the case would test the length guard instead of the behaviour.
+    mk('discussedComponent.ts', 'export const discussedComponentThing = 1;');
+    mk(
+      'docsProse.ts',
+      [
+        '/**',
+        ' * The per-bar drill-down lives in discussedComponent — it calls the replay endpoint.',
+        ' */',
+        'export const unrelated = 1;',
+      ].join('\n'),
+    );
+    // And a genuine STRING reference must NOT be reported: a dynamic import keeps its module name.
+    mk('dynamicallyLoadedComponent.ts', 'export const dynamicallyLoadedThing = 1;');
+    mk('componentLoader.ts', "export const load = () => import('./dynamicallyLoadedComponent');");
+    // And a mention inside a PROSE STRING must be reported too. This is the case that actually hid
+    // `ProtocolScoreDetail`: `architecture-reference.js` and `architecture-framework.data.js` store
+    // their descriptions INSIDE string literals, so a naive "is the name present in code?" test calls
+    // the orphan referenced. Without this fixture the string/prose discrimination is untested — proved
+    // by canary: forcing `looksLikeAModulePath` to `true` left every other case passing.
+    mk('stringMentionedComponent.ts', 'export const stringMentionedThing = 1;');
+    mk(
+      'proseStrings.ts',
+      "export const note = 'the per-bar drill-down lives in stringMentionedComponent and calls replay';",
+    );
+    // And a real static import must NOT be reported.
+    mk('referencedComponent.ts', 'export const referencedComponentThing = 1;');
+    mk('componentConsumer.ts', "import { referencedComponentThing } from './referencedComponent';\nexport const use = referencedComponentThing;");
+    const names2 = [...names, 'discussedComponent.ts', 'docsProse.ts', 'dynamicallyLoadedComponent.ts', 'componentLoader.ts', 'stringMentionedComponent.ts', 'proseStrings.ts', 'referencedComponent.ts', 'componentConsumer.ts'];
+    const texts2 = new Map(names2.map((f) => [f, fs.readFileSync(path.join(dir, f), 'utf8')]));
+    const asFiles = names2.map((rel) => ({ rel }));
+    const commentary = namedOnlyInCommentary(asFiles, texts2);
+    check1(
+      'a file named ONLY in a comment IS reported as commentary-only',
+      commentary.includes('discussedComponent.ts'),
+      commentary.join(','),
+    );
+    check1(
+      'a file named ONLY inside a PROSE STRING is reported as commentary-only',
+      commentary.includes('stringMentionedComponent.ts'),
+      commentary.join(','),
+    );
+    check1(
+      'the old scan does NOT already report it — proving the new state adds a finding',
+      !unreferenced(asFiles, texts2).includes('discussedComponent.ts'),
+      'unreferenced() already caught it, so 8b proves nothing',
+    );
+    check1(
+      'a module named in a STRING (dynamic import) is NOT commentary-only',
+      !commentary.includes('dynamicallyLoadedComponent.ts'),
+      commentary.join(','),
+    );
+    check1(
+      'a file named in real code is not commentary-only',
+      !commentary.includes('referencedComponent.ts'),
+      commentary.join(','),
+    );
+
+    // 8c — THE LENGTH GUARD, isolated. A SHORT name that appears only in prose must NOT be reported:
+    // `/^[.\w@/-]+$/`-style prose matching makes short common words appear everywhere, which is how a
+    // genuinely-imported module was once reported. Without this case the guard is a decoration —
+    // canary-proved: lowering the threshold from 8 to 4 leaves every other case passing.
+    mk('maxi.ts', 'export const maxiThing = 1;');
+    mk('proseAboutMaxi.ts', '// the maxi module is discussed here and nowhere else\nexport const n = 1;');
+    const names3 = ['maxi.ts', 'proseAboutMaxi.ts'];
+    const texts3 = new Map(names3.map((f) => [f, fs.readFileSync(path.join(dir, f), 'utf8')]));
+    const commentary3 = namedOnlyInCommentary(names3.map((rel) => ({ rel })), texts3);
+    check1(
+      'a SHORT name mentioned only in prose is NOT reported (the length guard holds)',
+      !commentary3.includes('maxi.ts'),
+      commentary3.join(','),
+    );
+
     // 9 — the ratchet accepts ordinary growth but rejects a band change.
     check1('growing within a band is not a regression', ORDER[bandOf(1600)] === ORDER[bandOf(1900)]);
     check1('crossing a threshold IS a regression', ORDER[bandOf(1999)] < ORDER[bandOf(2000)]);
@@ -695,7 +909,7 @@ function selfTest() {
     console.error(`\n[code-health] ✖ SELF-TEST FAILED — ${failed.length} of ${cases.length}`);
     process.exit(1);
   }
-  console.log(`\n[code-health] ✅ self-test: ${cases.length} cases — thresholds, the both-conditions exemption, span measurement, reachability both directions, and the ratchet all observed to behave.`);
+  console.log(`\n[code-health] ✅ self-test: ${cases.length} cases — thresholds, the both-conditions exemption, span measurement, reachability both directions, commentary-only in both directions, and the ratchet all observed to behave.`);
 }
 
 // ── main ──────────────────────────────────────────────────────────────────────────────────────

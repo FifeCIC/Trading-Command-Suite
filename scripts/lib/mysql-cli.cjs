@@ -104,7 +104,14 @@ function query(sql, conn) {
         'an empty result and an unreachable database must never look the same.)',
     );
   }
-  const args = ['-h', conn.host, '-P', conn.port, '-u', conn.user, '--batch', '--raw', conn.database, '-e', sql];
+  // ⚠️ `--default-character-set=utf8mb4` IS NOT COSMETIC. Without it the client negotiates the server
+  // default (often cp850 on Windows) and every non-ASCII character comes back as `?` — measured
+  // 2026-11-13 while verifying a seeded capability row: `Seed fidelity — the fleet survives a
+  // reinstall` read back as `Seed fidelity ? the fleet survives a reinstall`, which looks exactly like
+  // a charset corruption in the DATABASE. It was a display artifact; the stored bytes were correct
+  // (`HEX(SUBSTRING(name,14,1))` = `E28094`). A verification tool that reports `?` where the row holds
+  // an em dash invites a "the DB mangled our text" diagnosis that costs a whole investigation.
+  const args = ['-h', conn.host, '-P', conn.port, '-u', conn.user, '--default-character-set=utf8mb4', '--batch', '--raw', conn.database, '-e', sql];
   return execFileSync(client, args, {
     env: { ...process.env, MYSQL_PWD: conn.password },
     encoding: 'utf8',

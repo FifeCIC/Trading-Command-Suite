@@ -177,6 +177,34 @@ export const ROUTE_CONTRACTS = [
         status: 'active',
       },
   
+      /* — batch #54 — new/changed endpoints (2026-11-08 to 2026-11-13, 21 handoffs) — */
+      {
+        route: 'GET /api/brokers/status',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BrokerConfigController / BrokerCapabilityService',
+        contract:
+          'NEW (#1260). The joined broker view — what a broker can actually DO, and whether it is up — so the Accounts page does not client-side-join two independently-cached endpoints. Each row carries `role` (`broker` | `data-provider`), persisted intent (`tradingEnabled`, styles, assets), DECLARED capabilities, `runtime` (`canReadPositions`, `canPlaceOrder`, `canModifyStop`, `canClosePosition`, `mockSuspect`, `probeError`), `connection` (`observed`, `status`, `reason`), and `warnings[]`. Every capability is derived from the ADAPTER OBJECT (`typeof adapter.placeOrder === \'function\'`), never from a table of strings, and `provenTradeable` excludes self-declared stubs — measured: 3 of 4 brokers proven, because IBKR `placeOrder` returns `success: true` with no execution. ⚠️ A `runtime.*` value of `null` means CANNOT JUDGE, never `false`. ⚠️ `canModifyStop` describes the adapter only: nothing calls `adapter.modifyPosition` anywhere, so on every non-MT5 broker there is no stop-management caller at all (#1260). `@Get(\'status\')` is declared BEFORE `@Get(\':id\')` or Nest matches the literal segment as an id.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/backtest/periods',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestPeriodService.create()',
+        contract:
+          'CHANGED (#1263, #1262). (1) UNIQUE: a duplicate `(name, symbolId, timeframe)` is REFUSED with 409 naming the existing id and its dates. `dev-window-v1` held 27 rows against the 24 the canonical constant declared, and `seed:dev-window:check` reported "unchanged 24" as though all was well. (2) COVERAGE GATE: `create()` now refuses a period whose bars do not span its declared window, measured as an EDGE gap against the declared setting `backtest.periodMaxEdgeGapMinutes` (4320). `allowPartial: true` keeps the row and returns `edgeGapExceeded: true`. ⚠️ The gate CANNOT use internal coverage: `sessionAwareGapProfile` derives `expectedBars` FROM the bars present, so five bars over five days reports `coveragePct: 100` and `healthy` — internal coverage structurally cannot see an over-claim. Edge gaps are session-agnostic, which is why they are the only usable signal (canonical rows measure 0.0-0.5 days; the two defective ones measured 5.7 and 7.2).',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/backtest/periods/:id/coverage',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'BacktestController / BacktestPeriodService.coverageOf()',
+        contract:
+          'CHANGED (#1262). ONE measurement, two callers: `coverageOf()` was extracted from `coverage()` so the GET and the `create()` gate cannot disagree. Adds `startGapMinutes`, `endGapMinutes` and `edgeGapExceeded` beside the existing present-rows/span/provider figures. ⚠️ `truncatedStart` / `truncatedEnd` are NOT replaced: those answer "is an edge exactly covered", this answers "is it covered within the declared tolerance". Both are reported; only `edgeGapExceeded` gates.',
+        status: 'active',
+      },
       /* — batch #51 — new/changed endpoints (2026-11-07, 5 handoffs) — */
       {
         route: 'GET /api/trading/exit-quality',
@@ -571,7 +599,7 @@ export const ROUTE_CONTRACTS = [
         method: 'POST',
         permission: 'Authenticated operator access',
         owner: 'BacktestController / BacktestService',
-        contract: 'CHANGED (#1142 measured OPEN). The `if (positionSize < 1) positionSize = 1` floor is gone: `applyAffordability()` caps units at `accountSize x maxLeverage` (default 1, unleveraged), REFUSES a trade whose one unit costs more than the account and counts it, and every trade records `notional` / `notionalPct`. Stats gain `notionalCap`, `maxLeverage`, `tradesRefusedUnaffordable`, `avgNotionalPct` and `firstSizingRefusals`. A stored run had reported +$138,058.50 on a $10,000 account; stored runs keep their numbers, new runs are physical.',
+        contract: 'CHANGED (#1142 measured OPEN). The `if (positionSize < 1) positionSize = 1` floor is gone: `applyAffordability()` caps units at `accountSize x maxLeverage` (default 1, unleveraged), REFUSES a trade whose one unit costs more than the account and counts it, and every trade records `notional` / `notionalPct`. Stats gain `notionalCap`, `maxLeverage`, `tradesRefusedUnaffordable`, `avgNotionalFractionOfAccount` and `firstSizingRefusals`. A stored run had reported +$138,058.50 on a $10,000 account; stored runs keep their numbers, new runs are physical.',
         status: 'active',
       },
       /* — batch #43 — new/changed endpoints (2026-10-30 to 2026-10-31, 4 handoffs) — */

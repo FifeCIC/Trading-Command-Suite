@@ -14,9 +14,41 @@
  */
 
 import { SessionTag, ALL_HOURS_VALUE } from './session-window';
-// ⚠️ The generated fleet (#1258). Imported as a VALUE — it is spread into the export below. The
-// generated file's import of SeedTradingStrategy is import type, so there is no runtime cycle.
-import { GENERATED_TRADING_STRATEGIES } from './strategy-seed-generated';
+
+/**
+ * ── DECISION (2026-11-13, owner) — THE FLEET IS NOT PUBLIC ──
+ * WHAT:      The generated fleet is loaded from a LOCAL, GITIGNORED file (`strategy-seed-generated.
+ *            local.ts`) and never committed. The repository ships only `HAND_AUTHORED_TRADING_
+ *            STRATEGIES`.
+ * WHY:       Owner, 2026-11-13: *"Our installation data needs to be strong but not all of my protocols
+ *            and all of my bots: avoid giving away all strategies."* The repo is PUBLIC — verified
+ *            `"visibility":"PUBLIC"` — and commit `24e70aeb` published **72 bot definitions** with every
+ *            size, threshold, stop and session window in them. That was my landing for #1258, which
+ *            generated the seed "*so a reinstall restores all 75 bots*" without asking whether a public
+ *            repository was the right place for it. It is not: a bot's numbers ARE the strategy.
+ * INSTEAD OF: Committing `strategy-seed-generated.ts` (what `24e70aeb` did).
+ * REVERSE BY: Re-committing the generated file and restoring a static import — nothing else in the
+ *            merge changes.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 177
+ * GUARD:     `scripts/generate-strategy-seed.cjs --check` refuses to write into the tracked path, and
+ *            `scripts/validate-repo-hygiene.cjs` fails if a populated generated seed is tracked.
+ *
+ * ⚠️ THE LOCAL FILE IS OPTIONAL AND ITS ABSENCE IS NOT AN ERROR. A fresh clone has no fleet — that is
+ * the intended state. `require` (not a static import) is what makes the file optional; a static import
+ * of a non-existent module would fail to compile, which would force the file back into the repo.
+ */
+function loadLocalFleet(): SeedTradingStrategy[] {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const mod = require('./strategy-seed-generated.local');
+    const list = mod?.GENERATED_TRADING_STRATEGIES;
+    return Array.isArray(list) ? (list as SeedTradingStrategy[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+const GENERATED_TRADING_STRATEGIES: SeedTradingStrategy[] = loadLocalFleet();
 
 export interface SeedTradingStrategy {
   name: string;
