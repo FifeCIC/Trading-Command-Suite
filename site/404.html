@@ -11,20 +11,21 @@
 -->
 <base href="/Trading-Command-Suite/">
 <title>Page not found — Trading Command Suite</title>
+<meta name="theme-color" content="#000000">
 <meta name="robots" content="noindex">
 <!--
   Served by GitHub Pages for any path that does not exist. GitHub's default 404 is unbranded, which
   makes a broken link look like a broken project — the one moment a visitor is most likely to leave.
 -->
 <style>
+  /* ⚠️ DARK ALWAYS, matching site/index.html and site/showcase/ (owner report 2026-11-15).
+     This page used to follow the OPERATING SYSTEM's preference, so a visitor on a light desktop
+     got a light 404 from a dark site — the same identity break the owner reported on the showcase.
+     The site commits to one palette: no prefers-color-scheme branch here, deliberately. */
   :root {
-    color-scheme: light dark;
-    --bg: #fbfbfc; --ink: #16181d; --ink-soft: #4b515c; --link: #12509c;
-    --risk-bg: #fff3f2; --risk-border: #c0362c; --risk-ink: #7d1f18;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #0f1216; --ink: #e9ecf1; --ink-soft: #a9b2bf; --link: #8fc0ff;
-            --risk-bg: #2a1413; --risk-border: #ff6b5e; --risk-ink: #ffd9d5; }
+    color-scheme: dark;
+    --bg: #000000; --ink: #e5e7eb; --ink-soft: #a1a9b5; --link: #2dd4bf;
+    --risk-bg: #1c0f0e; --risk-border: #ff6b5e; --risk-ink: #ffd9d5;
   }
   * { box-sizing: border-box; }
   body { margin: 0; padding: 2rem 1.25rem 4rem; max-width: 42rem;

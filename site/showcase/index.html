@@ -6,7 +6,7 @@
 <title>Trading Command Suite — early alpha screenshots</title>
 <link rel="canonical" href="https://fifecic.github.io/Trading-Command-Suite/showcase/">
 <link rel="icon" href="assets/logo.png" type="image/png">
-<meta name="theme-color" content="#0f1216" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#000000">
 <meta property="og:site_name" content="Trading Command Suite">
 <meta property="og:title" content="Trading Command Suite — 17 screens from the alpha">
 <meta property="og:description" content="What a purpose-built trading analysis platform actually looks like: scoring ladders, protocol registries, risk controls and a decision trail. Not financial advice.">
@@ -51,17 +51,22 @@
 -->
 
 <style>
-  /* Palette taken from the product's own light theme (website/light-theme-reference.md) so the
-     brochure matches the app rather than inventing a second identity. */
+  /* ⚠️ Palette is the DARK set, identical to site/index.html. Owner report 2026-11-15:
+     *"The github website begings with a dark theme which I like but then moving onto other pages
+     its a light theme."* This file used the product's LIGHT theme deliberately, which made the site
+     change identity at a link click. One site, one palette — change it here and in index.html
+     together, or the pages drift apart again. */
   :root {
-    --bg: #f4f7fb;
-    --ink: #0f172a;
-    --ink-soft: #334155;
-    --panel: #ffffff;
-    --line: #d9e2ec;
-    --accent: #0b7d7e;          /* darkened from the app's #0ea5a6 to clear 4.5:1 on white */
-    --accent-soft: #0ea5a6;
-    --shadow-card: 0 10px 24px rgba(15, 23, 42, 0.08);
+    color-scheme: dark;
+    --bg: #000000;
+    --panel: #0a0d11;
+    --panel-2: #11161c;
+    --ink: #e5e7eb;
+    --ink-soft: #a1a9b5;
+    --line: #242b34;
+    --accent: #14b8b9;          /* the app's accent, already boosted for AA body text on black */
+    --accent-soft: #2dd4bf;
+    --shadow-card: 0 10px 24px rgba(0, 0, 0, 0.55);
     --font-body: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     --radius: 14px;
   }
@@ -93,11 +98,11 @@
 
   .banner {
     display: flex; gap: 12px; align-items: flex-start;
-    background: rgba(245, 158, 11, 0.08);
-    border: 1px solid rgba(245, 158, 11, 0.35);
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.45);
     border-left-width: 6px;
     border-radius: 10px; padding: 14px 16px; margin: 22px 0 0;
-    color: #7c2d12;
+    color: #ffd8a6;
   }
   .banner strong { display: block; }
   .banner p { margin: 2px 0 0; font-size: 0.95rem; }
@@ -105,13 +110,13 @@
   nav.cta-row { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0 8px; }
   .cta {
     display: inline-block; padding: 11px 18px; border-radius: 999px;
-    background: var(--accent); color: #fff; text-decoration: none;
+    background: var(--accent); color: #04252a; text-decoration: none;
     font-weight: 600; font-size: 0.95rem; border: 1px solid var(--accent);
     min-height: 44px;
   }
-  .cta:hover { background: #096a6b; }
-  .cta.secondary { background: transparent; color: var(--accent); }
-  .cta.secondary:hover { background: rgba(14, 165, 166, 0.1); }
+  .cta:hover { background: var(--accent-soft); }
+  .cta.secondary { background: transparent; color: var(--ink); border-color: var(--line); }
+  .cta.secondary:hover { background: rgba(20, 184, 185, 0.14); }
 
   section.card {
     background: var(--panel); border: 1px solid var(--line);
@@ -125,8 +130,8 @@
   dl.terms dd { margin: 2px 0 0; color: var(--ink-soft); }
   .note { font-size: 0.94rem; color: var(--ink-soft); }
   .note.mistake {
-    background: rgba(59, 130, 246, 0.07);
-    border: 1px solid rgba(59, 130, 246, 0.25);
+    background: rgba(59, 130, 246, 0.14);
+    border: 1px solid rgba(59, 130, 246, 0.4);
     border-radius: 10px; padding: 12px 14px; margin-top: 16px;
   }
 
@@ -135,7 +140,7 @@
   figure { margin: 0; }
   figure img {
     width: 100%; height: auto; display: block;
-    border: 1px solid var(--line); border-radius: 10px; background: #fff;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2);
   }
   figcaption { margin-top: 8px; font-size: 0.9rem; color: var(--ink-soft); }
   figcaption b { color: var(--ink); }
