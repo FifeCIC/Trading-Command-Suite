@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **571** backend source files (specs excluded). Two access paths, because one
+Scanned **575** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**571** source files · **3227** declarations · **392** ratio sites · **1714** nodes · **179** unreferenced
+**575** source files · **3236** declarations · **394** ratio sites · **1720** nodes · **180** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -1048,6 +1048,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/signals/signal-envelope.service.ts:677 newestOfTf`
 - `nest/src/modules/signals/signal-queue.service.ts:264 getQueue`
 - `nest/src/modules/strategies/strategies.service.ts:56 calculateScore`
+- `nest/src/modules/supporter/supporter.service.ts:131 unavailable`
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:166 note`
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:179 runSource`
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:283 observedOnly`
