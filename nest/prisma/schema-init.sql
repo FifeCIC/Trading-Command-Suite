@@ -10,12 +10,12 @@
 -- directly shippable: `@default(now())` emits `DEFAULT CURRENT_TIMESTAMP(3)`, which MySQL evaluates
 -- in the SESSION timezone (SYSTEM = local). This app stores UTC, so a fresh install would write
 -- timestamps in the future with no error — the #844 fault. The generator applies that correction
--- (116 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
+-- (117 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
 --
 -- ⚠️ The prebuild gate caught this, and it is worth recording: validate-local-time-sources.cjs failed
 -- the build on the FIRST generated version and named every offending column.
 --
--- SCALE: 122 CREATE TABLE statements.
+-- SCALE: 123 CREATE TABLE statements.
 --
 -- WHAT IT DOES NOT COVER, and both are intentional:
 --   1. The 13 raw-managed tables (4 with checked-in DDL in prisma/raw-managed/, 9 created by
@@ -2367,6 +2367,20 @@ CREATE TABLE `strategy_track_record` (
 
     INDEX `strategy_track_record_strategyId_observedAt_idx`(`strategyId`, `observedAt`),
     INDEX `strategy_track_record_status_idx`(`status`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `supporter_interaction` (
+    `id` VARCHAR(36) NOT NULL,
+    `kind` VARCHAR(40) NOT NULL,
+    `context` VARCHAR(160) NULL,
+    `shownAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    `response` VARCHAR(20) NULL,
+    `respondedAt` DATETIME(3) NULL,
+
+    INDEX `supporter_interaction_kind_shownAt_idx`(`kind`, `shownAt`),
+    INDEX `supporter_interaction_shownAt_idx`(`shownAt`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

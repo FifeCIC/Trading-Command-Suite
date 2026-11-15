@@ -97,6 +97,137 @@ function HealthChecksSection() {
   );
 }
 
+/**
+ * SupporterSection — the off switch for the in-app support prompt (#1147).
+ *
+ * WHY THIS EXISTS AT ALL: `#1147` §2.2 — *"a prompt the user cannot turn off is a hassle"*. The
+ * prompt offers "Don't ask again" itself, but a user who chose "Not now" months ago needs a place
+ * to change their mind. Both switches live here because they are the same decision.
+ *
+ * ⚠️ The current verdict is rendered from `/api/supporter/status`'s own `detail` sentence. It is
+ * NOT recomputed here: two implementations of "how often may we ask" would drift, and the user
+ * would be told a cadence the server is not applying.
+ */
+function SupporterSection() {
+  const qc = useQueryClient();
+  const { data: status } = useQuery({
+    queryKey: ['supporter-status', 'general'],
+    queryFn: () => apiGet('/api/supporter/status?kind=general'),
+    retry: false,
+    staleTime: 30_000,
+  });
+  const { data: registry } = useQuery({
+    queryKey: ['settings-registry'],
+    queryFn: () => apiGet('/api/system/settings/registry'),
+    retry: false,
+    staleTime: 30_000,
+  });
+
+  const read = (key) => (registry?.settings || []).find((s) => s.key === key);
+
+  const save = async (key, value) => {
+    await apiPut(`/api/system/settings/registry/${key}`, { value });
+    await qc.invalidateQueries({ queryKey: ['settings-registry'] });
+    await qc.invalidateQueries({ queryKey: ['supporter-status', 'general'] });
+  };
+
+  const enabled = read('supporter.enabled');
+  const cadence = read('supporter.cadenceDays');
+  const snooze = read('supporter.snoozedUntil');
+  const donate = read('supporter.donate.url');
+  const snoozedUntil = typeof snooze?.value === 'string' ? snooze.value : '';
+  const snoozeActive = snoozedUntil && new Date(snoozedUntil).getTime() > Date.now();
+
+  return (
+    <SettingsSection
+      id="supporter"
+      title="💚 Supporter Programme"
+      desc="The app asks, roughly once a quarter, whether you would like to support it. It is free and complete either way — nothing is withheld, and both answers here are respected immediately."
+    >
+      {!registry && (
+        <p className="settings-footnote">
+          The settings registry could not be read, so these controls are not shown. Nothing has
+          changed — an unreadable value is never rendered as if it were a default.
+        </p>
+      )}
+
+      {enabled && (
+        <SettingRow
+          label="Support prompts"
+          hint="Off stops every in-app support prompt. Nothing else in the app changes."
+        >
+          <div className="inline-actions">
+            <button
+              type="button"
+              className={enabled.value === true ? 'cta' : ''}
+              onClick={() => save('supporter.enabled', !(enabled.value === true))}
+            >
+              {enabled.value === true ? 'On' : 'Off'}
+            </button>
+          </div>
+        </SettingRow>
+      )}
+
+      {cadence && (
+        <SettingRow
+          label="Minimum days between prompts"
+          hint="Also how long a new installation is in use before the first ask."
+        >
+          <input
+            type="number"
+            min="7"
+            max="3650"
+            step="1"
+            className="settings-input settings-input-sm"
+            value={typeof cadence.value === 'number' ? cadence.value : 90}
+            onChange={(e) => {
+              const next = parseInt(e.target.value, 10);
+              if (Number.isFinite(next) && next >= 7 && next <= 3650) save('supporter.cadenceDays', next);
+            }}
+          />
+        </SettingRow>
+      )}
+
+      <SettingRow
+        label="Snoozed until"
+        hint={
+          snoozeActive
+            ? 'Set by "Not now" on the prompt. Clearing it makes the prompt eligible again.'
+            : 'Not snoozed.'
+        }
+      >
+        <div className="inline-actions">
+          <code>{snoozedUntil || '—'}</code>
+          {snoozedUntil && (
+            <button type="button" onClick={() => save('supporter.snoozedUntil', '')}>
+              Clear
+            </button>
+          )}
+        </div>
+      </SettingRow>
+
+      {donate && (
+        <SettingRow
+          label="Donate destination"
+          hint="Where the prompt's button sends you. One primary destination on purpose — a menu is not an ask."
+        >
+          <code>
+            <a href={typeof donate.value === 'string' ? donate.value : '#'} target="_blank" rel="noopener noreferrer">
+              {typeof donate.value === 'string' && donate.value ? donate.value : '(not set)'}
+            </a>
+          </code>
+        </SettingRow>
+      )}
+
+      {status?.detail && (
+        <p className="settings-footnote">
+          <strong>Current decision:</strong> {status.detail}
+        </p>
+      )}
+    </SettingsSection>
+  );
+}
+
 export default function SettingsPage() {
   // Deep-link support: `?section=<id>` scrolls the named section into view, so a link from
   // anywhere in the app lands the user ON the control rather than at the top of the page.
@@ -149,6 +280,8 @@ export default function SettingsPage() {
       </SettingsSection>
 
       <HealthChecksSection />
+
+      <SupporterSection />
 
       <SettingsSection
         id="moved"

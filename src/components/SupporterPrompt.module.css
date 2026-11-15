@@ -1,0 +1,144 @@
+/*
+ * SupporterPrompt.module.css — the support ask (#1147).
+ *
+ * ⚠️ A CSS MODULE, not a global stylesheet: `.prompt` as a global class would collide with the 110
+ * duplicate selectors measured in this repo (ui-standards → Rule B). Scoped by file hash, so it
+ * cannot paint another surface.
+ *
+ * All colours come from tokens — `validate-css-literals.cjs` runs in prebuild.
+ * The enter animation is neutralised by the global `prefers-reduced-motion` block in index.css.
+ */
+
+.prompt {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 400;
+  width: min(380px, calc(100vw - 32px));
+  padding: 16px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+  color: var(--ink);
+  animation: supporter-in 250ms ease-out;
+}
+
+@keyframes supporter-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.close:hover {
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.title {
+  margin: 0 24px 6px 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.body {
+  margin: 0 0 12px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px;
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cta:hover {
+  filter: brightness(1.08);
+}
+
+.links {
+  margin: 12px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.76rem;
+}
+
+.links a {
+  color: var(--ink-soft);
+  text-decoration: underline;
+}
+
+.links a:hover {
+  color: var(--accent);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.quiet {
+  min-height: 44px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.quiet:hover {
+  color: var(--ink);
+  border-color: var(--color-border);
+}
+
+.footnote {
+  margin: 10px 0 0;
+  font-size: 0.68rem;
+  color: var(--color-muted);
+}
+
+@media (max-width: 600px) {
+  .prompt {
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    width: auto;
+  }
+}

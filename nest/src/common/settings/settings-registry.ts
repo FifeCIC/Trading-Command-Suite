@@ -864,6 +864,71 @@ export const SETTINGS: SettingDefinition[] = [
     min: 0,
     max: 100000,
   },
+  // ── Supporter Programme (#1147 §2.2) ──────────────────────
+  // The in-app support prompts. Named by the owner on 2026-11-15 — "Supporter Programme",
+  // namespace `supporter` (SETTLED-DECISIONS row 182). That namespace was chosen by measurement:
+  // `supporter` and `steward` appear in ZERO files, while `CSS` already appears 225 times across
+  // 100 files and `sustain` already means trend persistence in the strategy library.
+  //
+  // ⚠️ WHY THESE ARE SETTINGS AND NOT CONSTANTS: the owner's constraint is *"wouldn't want to
+  // hassle users"*, and a prompt the user cannot turn off is a hassle. `enabled` is the off switch
+  // the prompt itself offers, so it must be a stored, readable value rather than a build flag.
+  {
+    key: 'supporter.enabled',
+    type: 'boolean',
+    defaultValue: true,
+    class: 'runtime',
+    owner: 'supporter',
+    label: 'Supporter Programme prompts',
+    description:
+      'OFF stops every in-app support prompt. The prompt offers this switch itself ("No thanks, ' +
+      'don\'t ask again"), because a prompt that cannot be turned off is the hassle this system ' +
+      'exists to avoid. Nothing in the app is behind it — support is voluntary.',
+    userChangeable: true,
+  },
+  {
+    key: 'supporter.cadenceDays',
+    type: 'number',
+    defaultValue: 90,
+    class: 'runtime',
+    owner: 'supporter',
+    label: 'Minimum days between support prompts',
+    description:
+      'How long after a prompt the next one may appear — and also how long a NEW installation ' +
+      'must be in use before the first ask. 90 days is the owner\'s stated cadence (2026-11-14: ' +
+      '"once every three month in general"). ⚠️ Raising this is the safe direction; lowering it ' +
+      'below 30 starts overriding the user\'s own snooze.',
+    userChangeable: true,
+    min: 7,
+    max: 3650,
+  },
+  {
+    key: 'supporter.snoozedUntil',
+    type: 'string',
+    defaultValue: '',
+    class: 'runtime',
+    owner: 'supporter',
+    label: 'Snoozed until (ISO date)',
+    description:
+      'Set when the user answers "Not now". Empty means not snoozed. An unparseable value is ' +
+      'reported by the resolver as `invalid` rather than treated as "not snoozed" — a corrupt ' +
+      'snooze must not become an immediate re-ask.',
+    userChangeable: true,
+  },
+  {
+    key: 'supporter.donate.url',
+    type: 'string',
+    defaultValue: 'https://github.com/sponsors/ryanbayne',
+    class: 'runtime',
+    owner: 'supporter',
+    label: 'Primary donate destination',
+    description:
+      'Where the donate button sends the user. GitHub Sponsors is the single primary on purpose: ' +
+      'four equal buttons is a menu, not an ask (DONATION-LINKS.md §4). A URL is an EXTERNAL ' +
+      'system, so it is data rather than a literal in the component — a different deployment can ' +
+      'point it elsewhere without a rebuild.',
+    userChangeable: true,
+  },
 ];
 
 export const SETTINGS_BY_KEY: ReadonlyMap<string, SettingDefinition> = new Map(

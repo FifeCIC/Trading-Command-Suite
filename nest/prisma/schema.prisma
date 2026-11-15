@@ -3239,3 +3239,30 @@ model StrategyTrackRecord {
   @@map("strategy_track_record")
 }
 
+// ── Supporter Programme (#1147 §2.2) ─────────────────────────────────────────
+// Interaction history for the in-app support prompts. The system was NAMED by the owner on
+// 2026-11-15 — "Supporter Programme", namespace `supporter` (SETTLED-DECISIONS row 182).
+//
+// WHY A TABLE AND NOT A COUNTER IN MEMORY: frequency control has to survive a restart. A count held
+// in a module variable reads as "never shown" after every API boot, so the prompt would re-fire on
+// each restart — the exact opposite of the owner's constraint, *"wouldn't want to hassle users"*.
+
+model SupporterInteraction {
+  id          String    @id @default(uuid()) @db.VarChar(36)
+  /// Which prompt. 'general' is the only kind built; 'milestone' (§2.4) and 'profit' (§2.3) are
+  /// planned. Kept as data so a new kind needs no migration.
+  kind        String    @db.VarChar(40)
+  /// Where the user was — a route path, or a named surface. Null when the caller supplies none.
+  context     String?   @db.VarChar(160)
+  shownAt     DateTime  @default(now()) @db.DateTime(3)
+  /// NULL = shown, not yet answered. Otherwise one of SUPPORTER_RESPONSES.
+  /// ⚠️ NULL is a real state, not "unknown": the prompt WAS shown and the user has not answered,
+  /// which is precisely what the `recently-shown` cooldown is computed from.
+  response    String?   @db.VarChar(20)
+  respondedAt DateTime? @db.DateTime(3)
+
+  @@index([kind, shownAt])
+  @@index([shownAt])
+  @@map("supporter_interaction")
+}
+

@@ -24,6 +24,7 @@ import {
   SystemHealthPage,
 } from './core/direct-pages.jsx';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
+import SupporterPrompt from './components/SupporterPrompt';
 import ScreenOptions from './components/ScreenOptions';
 import PageInfoPopover from './components/PageInfoPopover';
 import { VIEW_EXPLANATIONS } from './core/view-explanations';
@@ -740,6 +741,9 @@ function AppShell({ directContent = null, directArea = null, directView = null }
       )}
 
       <PwaInstallPrompt />
+      {/* #1147 — the support ask. It renders itself only when the API says it may, and it renders
+          NOTHING on an error state: an interruption triggered by an error is a bug, not an offer. */}
+      <SupporterPrompt />
 
       <div className="sci-bg" aria-hidden="true">
         <div className="sci-stars" />

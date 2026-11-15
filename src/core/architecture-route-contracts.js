@@ -329,6 +329,40 @@ export const ROUTE_CONTRACTS = [
           '⚠️ This is a guardrail, not a licence (#809), and it is NOT `experience-levels.js`, which is a chosen display preference.',
         status: 'active',
       },
+      /* — #1147 — the Supporter Programme (named by the owner 2026-11-15) — */
+      {
+        route: 'GET /api/supporter/status',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'SupporterController / SupporterService',
+        contract:
+          'NEW (#1147 §2.2). Whether an in-app support prompt may appear NOW, plus the reasoning. The VERDICT is ' +
+          'computed server-side (`eligible`) rather than shipping raw inputs, so only one definition of the cadence ' +
+          'exists. Returns `{ status, eligible, reason, detail, enabled, cadenceDays, daysActive, lastShownAt, ' +
+          'lastResponse, daysSinceLastShown, snoozedUntil, targets[] }`. `reason` is one of eligible | disabled | ' +
+          'snoozed | too-new | recently-shown | unavailable. ⚠️ EVERY failure path returns `eligible: false` with ' +
+          "`status: 'unavailable'` — an unreadable setting, install age or prompt history must never produce a prompt, " +
+          'because the deleted 2026-09-17 donation panel appeared exactly when the app could not answer. `daysActive` ' +
+          'comes from ProgressionService rather than a second derivation. A new installation is never asked: the first ' +
+          'ask waits for `cadenceDays` of use.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/supporter/interaction',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'SupporterController / SupporterService',
+        contract:
+          'NEW (#1147 §2.2). ONE endpoint for the prompt history, because shown-and-answered are one record. ' +
+          '`{ kind?, context? }` records a SHOWN event (this is what starts the cooldown — without it a user who ' +
+          'ignored the prompt would be asked on every request); `{ kind?, response, context? }` records the answer, ' +
+          'where response is one of dismissed | snoozed | donated | opened | muted. Side effects: `snoozed` sets ' +
+          '`supporter.snoozedUntil` +30 days, `muted` sets `supporter.enabled` false, `donated` sets snoozedUntil to ' +
+          'the cadence, and `dismissed`/`opened` change no frequency. Writes to `supporter_interaction` (a NEW modelled ' +
+          'table). ⚠️ An unknown kind or response is REFUSED with 400 rather than stored: the store decides whether to ' +
+          'ask again, so an unrecognised row would sit there looking like an answer while the user is asked anyway.',
+        status: 'active',
+      },
 
       {
         route: 'GET /api/trading/mt5/account',
