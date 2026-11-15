@@ -1,5 +1,11 @@
 #!/usr/bin/env node
 /**
+ * ── HISTORICAL (kept deliberately, #1277) ───────────────────────────────────────────────────────
+ * This is a POINT-IN-TIME probe, not maintained tooling. It is kept ONLY because tracked code
+ * cites it by name (see `rg -n "<this filename>"`), so deleting it would leave a dangling
+ * reference. It is NOT run by `prebuild`, has no npm script, and its measurement belongs to the
+ * issue it was written for — do not extend it; write a new probe and cite that instead.
+
  * apply-threshold-column-defaults.cjs — align live column defaults with schema.prisma.
  *
  * ⚠️ WHY THIS EXISTS INSTEAD OF `prisma db push`

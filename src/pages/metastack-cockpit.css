@@ -51,7 +51,7 @@
    host composes widgets, and if it needs a preview it will design one against the widget model. Dead
    CSS is not a reserve — it is a thing nobody can tell from an intention.
 
-   ALL 18 WERE UNREFERENCED. Measured by grepping every `src/**/*.jsx` for each selector, not inferred
+   ALL 18 WERE UNREFERENCED. Measured by grepping every .jsx file under src/ for each selector, not inferred
    from git dates. Nothing rendered differently when they were removed — that is what "unreferenced"
    means. `.cockpit-mode-full` is the one similarly-named class that IS used (the pop-out) and it is
    kept, below.
@@ -135,7 +135,7 @@
 }
 
 /* ── Notes block: `.cockpit-notes` was ALSO deleted under #862 — it was missing from the issue's
-   list of 14. Same test, same result: grepping every `src/**/*.jsx` finds no `cockpit-notes`, and
+   list of 14. Same test, same result: grepping every .jsx file under src/ finds no `cockpit-notes`, and
    the sibling page's notes block carries a different prefix (`screencockpit-notes`), so it was not
    a cross-file use. ── */
 

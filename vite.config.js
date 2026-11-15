@@ -36,11 +36,29 @@ const localProxy = {
 
 export default defineConfig(() => {
   return {
-    css: {
-      lightningcss: false,
-    },
+  // ⚠️ NO `css.lightningcss` SETTING HERE, DELIBERATELY (removed 2026-11-15). `css.lightningcss`
+  // controls CSS *transforms* (nesting, custom media) and defaults to `false` — it was never what
+  // minified the bundle. Leaving `lightningcss: false` here read as "lightningcss is off" while
+  // `build.cssMinify: 'lightningcss'` a few lines below turned it ON, which is exactly the sort of
+  // contradiction that sends the next reader looking in the wrong place.
   build: {
-    cssMinify: false, // lightningcss is too strict — disable CSS minification for now
+    // ── DECISION (2026-11-15, primary) ──
+    // WHAT:      CSS minification is ON (`lightningcss`), and this must not be turned off.
+    // WHY:       It was `false` with the comment "lightningcss is too strict — disable CSS
+    //            minification for now". The minifier was not too strict: **20 stylesheets in
+    //            `src/` were genuinely invalid**, and it was the only thing in the build that
+    //            noticed. With it off, a browser silently DROPPED the invalid rules and rendered
+    //            the rest — no error, no console message. Measured 2026-11-15: `.cm-table`,
+    //            `.tp-comparison-table`, `.sig-loop-table`, `.uir-table`, `.rll-table`,
+    //            `.pc-table` and `.tp-config-table` were all still rendered while their rules had
+    //            been deleted by a botched text replacement (commit `ac63fa7f`, 2026-10-15) —
+    //            tables lost `min-width`, `border-collapse`, sticky headers and cell padding.
+    // INSTEAD OF: `cssMinify: false`, which silenced the messenger and shipped the broken CSS.
+    // REVERSE BY: Nothing should. If the build fails here, the CSS is broken — fix the CSS.
+    //             `node scripts/validate-css-parses.cjs` names the file, line and reason.
+    // REGISTER:  docs/SETTLED-DECISIONS.md
+    // GUARD:     scripts/validate-css-parses.cjs (prebuild; two checks, 11-case self-test)
+    cssMinify: 'lightningcss',
   },
   server: {
     proxy: localProxy,

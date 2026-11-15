@@ -51,9 +51,6 @@
 .ps-expand { overflow: hidden; margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--line); }
 .ps-expand-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem; font-size: 0.68rem; color: var(--ink-soft); }
 
-  font-size: 0.82rem;
-}
-
 .ps-type-tabs {
   display: flex;
   gap: 0.3rem;

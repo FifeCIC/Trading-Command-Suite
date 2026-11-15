@@ -319,12 +319,6 @@ Or watch mode:
 npm --prefix nest run test:watch
 ```
 
-### Backend E2E tests
-
-```bash
-npm --prefix nest run test:e2e
-```
-
 ### Frontend build check
 
 ```bash

@@ -1,4 +1,10 @@
 /**
+ * ── HISTORICAL (kept deliberately, #1277) ───────────────────────────────────────────────────────
+ * This is a POINT-IN-TIME probe, not maintained tooling. It is kept ONLY because tracked code
+ * cites it by name (see `rg -n "<this filename>"`), so deleting it would leave a dangling
+ * reference. It is NOT run by `prebuild`, has no npm script, and its measurement belongs to the
+ * issue it was written for — do not extend it; write a new probe and cite that instead.
+
  * Isolate why marketbar rows land in the future (#750 symptom, 2026-09-10).
  *
  * The bridge returns CORRECT UTC timestamps (verified: 18:55:00 while true UTC

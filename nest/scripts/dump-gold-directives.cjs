@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+// ── HISTORICAL (kept deliberately, #1277) ─────────────────────────────────────────────────
+// This is a POINT-IN-TIME probe, not maintained tooling. It is kept ONLY because tracked code
+// cites it by name, so deleting it would leave a dangling reference. It is NOT run by prebuild,
+// has no npm script, and its measurement belongs to the issue it was written for.
+// Do not extend it — write a new probe and cite that instead.
+
 // Dump metadata for the 12 GOLD-protocol directives (issue #637 matrix input).
 const fs = require('fs');
 const path = require('path');

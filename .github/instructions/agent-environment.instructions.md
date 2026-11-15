@@ -99,13 +99,26 @@ will find — `analyse-unreachable-capacity.cjs` was one, and it took three pass
 agent was actively looking for exactly that capability. **Three separate proposals in one session
 were to BUILD something already in this list.**
 
-⚠️ **Measured 2026-10-02: 175 tools, 75 orphans (43%).** The count has NOT moved — because
-`--find`/`--run` make the library **reachable**, not **referenced**. Reachability is the thing that
+⚠️ **Measured 2026-10-02: 175 tools, 75 orphans (43%).** The count has NOT moved — because`--find`/`--run` make the library **reachable**, not **referenced**. Reachability is the thing that
 mattered: an orphan with a working search is usable; the same orphan without one is lost. Do not
 chase a zero orphan count; chase *findability*.
 
+⚠️ **Measured 2026-11-15 (after #1277's triage): 190 tools, 7 orphans.** The 64 that were there were
+triaged — 15 wired to npm scripts, 7 kept with a `HISTORICAL` header because tracked code cites them,
+42 deleted as one-off probes for closed issues. The 7 that remain are orphaned **by design** and each
+says so in its own header. This is what "chase findability" looks like when it is actually done; the
+number is not the target, and it will rise again as new probes are written.
+
 **The rule: `--find` the capability words FIRST. Then read the index. Then build.** A fourth surface
 for something that already exists makes the problem worse, not better.
+
+⚠️ **`--find` takes words that NARROW, not a quoted phrase.** `--find audit signal` works;
+`--find "audit signal"` arrives as one argument and matches nothing. A quoted-phrase result of "no
+hit" is a finding about your quoting, not about the library.
+
+⚠️ **`tools-index --help` used to WRITE.** Any unrecognised flag fell through to the `--write` at the
+end of `main()`, so asking a question silently rewrote two tracked generated files. Fixed 2026-11-15:
+unknown flags exit 2, and `--help`/no-args print usage and write nothing.
 
 ⚠️ **The index is not a build gate for orphans** — 75 of them is a backlog to work through, not a
 build-breaker. `--check` fails only when the generated files are stale. Its success line reports the

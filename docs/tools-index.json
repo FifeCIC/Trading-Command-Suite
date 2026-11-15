@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 232,
+  "count": 191,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -8,7 +8,9 @@
       "category": "analysis",
       "purpose": "WHERE THE PIPELINE ASKS THE DATABASE FOR SOMETHING IT ALREADY HAS.",
       "selfTest": true,
-      "reaches": null
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "analyse-unreachable-capacity.cjs",
@@ -173,20 +175,14 @@
       ]
     },
     {
-      "name": "audit-signal-capacity2.cjs",
-      "where": "nest",
-      "category": "audit",
-      "purpose": "pin the Signal denominator to CONFIG (#781 / owner query).",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
       "name": "audit-strategy-realism.cjs",
       "where": "nest",
       "category": "audit",
       "purpose": "#960 Tier 1, as a GUARD rather than a one-off.",
       "selfTest": true,
-      "reaches": null
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "audit-symbol-protocol-authority.cjs",
@@ -244,25 +240,19 @@
       "category": "check",
       "purpose": "PHASE 0 of #1133: is POST /api/backtest/run deterministic?",
       "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "check-bundle-budget.mjs",
-      "where": "repo",
-      "category": "check",
-      "purpose": "(no header comment)",
-      "selfTest": false,
       "reaches": [
         "npm"
       ]
     },
     {
-      "name": "check-clock-alert.cjs",
-      "where": "nest",
+      "name": "check-bundle-budget.mjs",
+      "where": "repo",
       "category": "check",
-      "purpose": "one-off diagnostic for the MT5 clock-offset alert (#750 family).",
-      "selfTest": false,
-      "reaches": null
+      "purpose": "bundle size is a property, so it needs a guard that can PASS",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "check-prisma-client-fresh.cjs",
@@ -270,7 +260,9 @@
       "category": "check",
       "purpose": "Assert the generated Prisma client matches `prisma/schema.prisma` (#765).",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "check-urls.mjs",
@@ -278,7 +270,9 @@
       "category": "check",
       "purpose": "Broken Link Checker — checks all external URLs in the registry.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "diff-seed-vs-db.cjs",
@@ -314,7 +308,7 @@
       "name": "seed-arch.cjs",
       "where": "nest",
       "category": "database",
-      "purpose": "Quick seed: reads the backup data file and inserts sections/entries into DB.",
+      "purpose": "── HISTORICAL (kept deliberately, #1277) ─────────────────────────────────────────────────",
       "selfTest": false,
       "reaches": null
     },
@@ -416,7 +410,9 @@
       "category": "tool",
       "purpose": "bring scoring_strategy.tradeThreshold onto the live scale.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "apply-protocol-scrub.cjs",
@@ -432,7 +428,7 @@
       "name": "apply-threshold-column-defaults.cjs",
       "where": "nest",
       "category": "tool",
-      "purpose": "align live column defaults with schema.prisma.",
+      "purpose": "── HISTORICAL (kept deliberately, #1277) ───────────────────────────────────────────────────────",
       "selfTest": false,
       "reaches": null
     },
@@ -445,30 +441,6 @@
       "reaches": [
         "docs"
       ]
-    },
-    {
-      "name": "batch-audit-directives.cjs",
-      "where": "repo",
-      "category": "tool",
-      "purpose": "Batch Directive Auditor — applies category, minScore, directionBias.",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "breaker-before-after.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "#846. Did broker 3 stop being skipped after the fix?",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "breaker-post-fix-check.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "#846. Is broker 3 skipped AFTER the fix landed?",
-      "selfTest": false,
-      "reaches": null
     },
     {
       "name": "bump-version.cjs",
@@ -561,14 +533,6 @@
       ]
     },
     {
-      "name": "classify-open-positions.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "are the current positions bot-traded or manual?",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
       "name": "clean-unused-imports.cjs",
       "where": "repo",
       "category": "tool",
@@ -582,15 +546,7 @@
       "name": "cleanup-canonical.cjs",
       "where": "nest",
       "category": "tool",
-      "purpose": "Generalised canonical cleanup: for every protocol, delete score rows whose",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "collapse-alert-backlog.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "one-off reconciliation of historic alert spam (2026-09-23).",
+      "purpose": "── HISTORICAL (kept deliberately, #1277) ─────────────────────────────────────────────────",
       "selfTest": false,
       "reaches": null
     },
@@ -603,22 +559,6 @@
       "reaches": [
         "docs"
       ]
-    },
-    {
-      "name": "confirm-breaker-attribution.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "which broker's errors tripped the shared breaker?",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "dedupe-directives.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "one-off cleanup for issue #641.",
-      "selfTest": false,
-      "reaches": null
     },
     {
       "name": "delete-directive.cjs",
@@ -649,30 +589,6 @@
       "reaches": [
         "npm"
       ]
-    },
-    {
-      "name": "diagnose-collation-failure.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "why did `trading_strategy` and",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "diagnose-unscored-protocols.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "Diagnose why active protocols show no scores on the Protocols Ladder.",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "diagnose-vix-order-failure.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "why was signal 507f7e90 blocked with",
-      "selfTest": false,
-      "reaches": null
     },
     {
       "name": "directive-conformance.cjs",
@@ -709,7 +625,7 @@
       "name": "dump-gold-directives.cjs",
       "where": "nest",
       "category": "tool",
-      "purpose": "Dump metadata for the 12 GOLD-protocol directives (issue #637 matrix input).",
+      "purpose": "── HISTORICAL (kept deliberately, #1277) ─────────────────────────────────────────────────",
       "selfTest": false,
       "reaches": null
     },
@@ -732,22 +648,6 @@
       "reaches": [
         "docs"
       ]
-    },
-    {
-      "name": "fix-collation-fk-pair.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "finish #842 for the two tables an FK pins together.",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "fix-collation-split.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "#842. Normalise the divergent collation to the majority.",
-      "selfTest": false,
-      "reaches": null
     },
     {
       "name": "fix-local-time-defaults.cjs",
@@ -778,14 +678,6 @@
       "reaches": [
         "docs"
       ]
-    },
-    {
-      "name": "fix-seed-directions.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "one-off cleanup (#620): remove directives from",
-      "selfTest": false,
-      "reaches": null
     },
     {
       "name": "gen-directive-capabilities.cjs",
@@ -850,90 +742,10 @@
       ]
     },
     {
-      "name": "inspect-781-symbols.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "what is actually PERSISTED for the #781 symbols?",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "inspect-fk-graph.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "what pins the last two `0900_ai_ci` tables together?",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "inspect-scoring-strategy-thresholds.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "what ARE the 27 rows, before aligning them?",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "inspect-threshold-defaults.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "the LIVE column defaults, vs what schema.prisma claims.",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "inspect-vix-state.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "(no header comment)",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "inspect-vix.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "(no header comment)",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "introspect-columns.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "print the real columns of the tables under test.",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "list-empty-groups.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "List every protocol group whose `directiveIds` array is EMPTY.",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "live-isolation-probe.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "#846. Replay the user's exact scenario against the live API.",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
       "name": "measure-broker-clock-offset.cjs",
       "where": "nest",
       "category": "tool",
-      "purpose": "is the future-lead explained by the TICK-LAG",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "measure-collation-split.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "#842. Which tables disagree, and do real joins FAIL?",
+      "purpose": "── HISTORICAL (kept deliberately, #1277) ───────────────────────────────────────────────────────",
       "selfTest": false,
       "reaches": null
     },
@@ -941,15 +753,7 @@
       "name": "measure-future-lead-bound.cjs",
       "where": "nest",
       "category": "tool",
-      "purpose": "the DECISIVE test for the broker-clock story.",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "measure-future-rows.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "decide whether #844's fix is LIVE or merely DECLARED.",
+      "purpose": "── HISTORICAL (kept deliberately, #1277) ───────────────────────────────────────────────────────",
       "selfTest": false,
       "reaches": null
     },
@@ -969,7 +773,9 @@
       "category": "tool",
       "purpose": "the evidence behind \"which 2-3 strategies ship?\".",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "measure-period-sensitivity.cjs",
@@ -987,7 +793,9 @@
       "category": "tool",
       "purpose": "are the bots using profit-taking or trailing stops?",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "measure-short-legs.cjs",
@@ -995,15 +803,9 @@
       "category": "tool",
       "purpose": "does the SHORT leg of a pair fire at all, on STORED bars?",
       "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "measure-sizing-config.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "is rarity sizing CONFIGURED on and never read?",
-      "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "measure-sr-levels.cjs",
@@ -1036,44 +838,14 @@
       ]
     },
     {
-      "name": "normalise-watchlists.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "#763 — normalise merged watchlist symbol arrays to ONE entry per ticker.",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "pepperstone-decision-log.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "what did the automation loop DECIDE today?",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
       "name": "profit-taking-detail.cjs",
       "where": "nest",
       "category": "tool",
       "purpose": "has trailing ACTUALLY adjusted any stop?",
       "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "protocol-notes-2026-08-20.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "2026-08-20 — Protocol state clarity: disable unconfigured protocols and",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "prototype-scoring-curve.js",
-      "where": "repo",
-      "category": "tool",
-      "purpose": "Prototype: Scoring Curve Formula",
-      "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "prune-orphan-entries.cjs",
@@ -1101,23 +873,9 @@
       "category": "tool",
       "purpose": "rank backtests on metrics that survive a sizing change.",
       "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "reconcile-signal-opportunity.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "prove Signal and Opportunity are not swapped.",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "remove-risk-group-directive.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "Remove `session-open-effect` from RISK-GATE groups in the protocol seed data.",
-      "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "remove-seed-directive.cjs",
@@ -1145,7 +903,9 @@
       "category": "tool",
       "purpose": "snap off-boundary bars onto their cadence, merging duplicates.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "replay-exit-counterfactual.cjs",
@@ -1193,7 +953,9 @@
       "category": "tool",
       "purpose": "\"does a small target get hit BEFORE the stop, often enough?\"",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "report-protocol-pair.cjs",
@@ -1231,7 +993,9 @@
       "category": "tool",
       "purpose": "HOW MUCH does each symbol actually MOVE in a short window?",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "report-symbol-priority-ties.cjs",
@@ -1284,14 +1048,6 @@
       ]
     },
     {
-      "name": "strip-seed-maxscores.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "one-off cleanup for issue #619.",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
       "name": "test-gate-membership-guard.cjs",
       "where": "nest",
       "category": "tool",
@@ -1300,14 +1056,6 @@
       "reaches": [
         "npm"
       ]
-    },
-    {
-      "name": "test-remove-risk-guard.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "Verify that `remove-risk-group-directive.cjs` REFUSES to write invalid syntax.",
-      "selfTest": false,
-      "reaches": null
     },
     {
       "name": "tools-index.cjs",
@@ -1329,14 +1077,6 @@
       "reaches": [
         "npm"
       ]
-    },
-    {
-      "name": "why-no-pepperstone-trades.cjs",
-      "where": "nest",
-      "category": "tool",
-      "purpose": "the user reports no trades on Pepperstone today,",
-      "selfTest": false,
-      "reaches": null
     },
     {
       "name": "why-unregistered.cjs",
@@ -1524,6 +1264,17 @@
       "where": "repo",
       "category": "validator",
       "purpose": "the \"is this colour reachable by a theme?\" gate",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-css-parses.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a stylesheet the minifier cannot parse is styling that never applied",
       "selfTest": true,
       "reaches": [
         "prebuild",
@@ -2066,7 +1817,9 @@
       "category": "validator",
       "purpose": "Referential-integrity guard for symbol refs.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "npm"
+      ]
     },
     {
       "name": "validate-text-encoding.cjs",
@@ -2175,50 +1928,10 @@
       ]
     },
     {
-      "name": "probe-bar-timestamp-path.cjs",
-      "where": "nest",
-      "category": "verification",
-      "purpose": "Decisive test: does the bar-refresh INSERT path shift the timestamp?",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "probe-diagram-truth.cjs",
-      "where": "repo",
-      "category": "verification",
-      "purpose": "TEMPORARY DISCOVERY PROBE (2026-09-21)",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "probe-stale-symbols.cjs",
-      "where": "nest",
-      "category": "verification",
-      "purpose": "diagnostic for #781 (UK100 4-month-old feed, VIX 0 bars).",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
       "name": "probe-timezone-roundtrip.cjs",
       "where": "nest",
       "category": "verification",
-      "purpose": "Isolate why marketbar rows land in the future (#750 symptom, 2026-09-10).",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "verify-breaker-isolation-live.cjs",
-      "where": "nest",
-      "category": "verification",
-      "purpose": "#846. Does the RUNNING system now isolate brokers?",
-      "selfTest": false,
-      "reaches": null
-    },
-    {
-      "name": "verify-config-override.cjs",
-      "where": "nest",
-      "category": "verification",
-      "purpose": "one-off check that a protocol directive maxScore",
+      "purpose": "── HISTORICAL (kept deliberately, #1277) ───────────────────────────────────────────────────────",
       "selfTest": false,
       "reaches": null
     },
@@ -2241,14 +1954,6 @@
       "reaches": [
         "docs"
       ]
-    },
-    {
-      "name": "verify-t212-holdings.cjs",
-      "where": "nest",
-      "category": "verification",
-      "purpose": "are the 21 non-MT5 position rows really portfolio HOLDS?",
-      "selfTest": false,
-      "reaches": null
     },
     {
       "name": "verify-view-meta-routes.cjs",

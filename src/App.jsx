@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { analytics, trackAppView } from './analytics';
@@ -84,6 +84,34 @@ const BASE_NAV_TREE = NAV_TREE;
  * `VIEW_COMPONENTS` is not an option for these.
  */
 const INLINE_VIEWS = ['demos', 'use-cases', 'analytics', 'about'];
+
+/**
+ * PageRouteLoading — the Suspense fallback for a lazily-loaded page (#1280).
+ *
+ * Every entry in `VIEW_COMPONENTS` is a `React.lazy`, so a route change mounts this for the duration
+ * of one chunk fetch. Deliberately inline-styled and tiny: it must not depend on any page's
+ * stylesheet, because at this moment that stylesheet has not been fetched either — a class-based
+ * fallback here could render unstyled, which is the exact defect `validate-css-imports.cjs` exists
+ * to catch.
+ *
+ * `role="status"` + `aria-live="polite"` so a screen reader announces the wait instead of appearing
+ * to do nothing (`accessibility-policy.instructions.md`).
+ */
+function PageRouteLoading() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        padding: '2.5rem 1.5rem',
+        color: 'var(--ink-soft)',
+        fontSize: '0.9rem',
+      }}
+    >
+      Loading…
+    </div>
+  );
+}
 
 // Redirect the legacy /scoringStrategies/ area (renamed to /scoring/ 2026-08-19).
 function ScoringStrategiesRedirect() {
@@ -560,9 +588,21 @@ function AppShell({ directContent = null, directArea = null, directView = null }
     // by the route table rather than by this branch. Nothing here references a specific page.
     if (directContent) return directContent;
 
-    // ── Component map lookup (handles ~90 simple views) ──
+    // ── Component map lookup (handles ~150 simple views) ──
+    // ⚠️ EVERY entry in VIEW_COMPONENTS is a `React.lazy` (2026-11-15, #1280), so the chunk for this
+    // page is fetched on first visit rather than at app start. Before that change all 153 page modules
+    // were eagerly imported here, which put the whole app in the entry chunk — 4.65 MB, and 354 KB
+    // from the PWA precache cap that FAILS the build when exceeded (`check-bundle-budget.mjs` C1).
+    // The Suspense boundary is required, not decorative: without it React throws on the first lazy
+    // render. The fallback is deliberately plain — it is visible for one chunk load on a cold cache.
     const Component = VIEW_COMPONENTS[secondaryView];
-    if (Component) return <Component />;
+    if (Component) {
+      return (
+        <Suspense fallback={<PageRouteLoading />}>
+          <Component />
+        </Suspense>
+      );
+    }
 
     // ── Plugin tab skeletons ──
     if (PLUGIN_TAB_SKELETONS[secondaryView]) {

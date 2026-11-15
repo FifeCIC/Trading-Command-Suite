@@ -472,8 +472,15 @@ function selfTest() {
       const r = resolveTool([{ name: 'a.cjs' }], 'nope');
       return !!r.error && r.error.includes('--find');
     }],
-    ['classifies validators', () => categoryOf('validate-thing.cjs') === 'validator'],
-    ['classifies audits', () => categoryOf('audit-thing.cjs') === 'audit'],
+    // ⚠️ THE FLAG GUARD (#1277, measured 2026-11-15). Before this, ANY unknown flag fell through to
+    // the `--write` at the end of main(), so `--help` (and every typo) silently rewrote two tracked
+    // generated files. Both directions are asserted: a typo must be refused, a real flag must not.
+    ['refuses an unknown flag', () => unknownFlags(['--chek']).length === 1],
+    ['refuses an unknown flag even beside a valid one', () => unknownFlags(['--check', '--orphan']).join() === '--orphan'],
+    ['accepts every documented flag', () => unknownFlags(KNOWN_FLAGS).length === 0],
+    ['accepts no flags at all (prints usage, never writes)', () => unknownFlags([]).length === 0],
+    ['ignores positionals, so --find/--run arguments are not mistaken for flags', () => unknownFlags(['--find', 'passage', 'signal']).length === 0],
+    ['classifies validators', () => categoryOf('validate-thing.cjs') === 'validator'],    ['classifies audits', () => categoryOf('audit-thing.cjs') === 'audit'],
     ['classifies analysis', () => categoryOf('analyse-unreachable-capacity.cjs') === 'analysis'],
     ['classifies generators', () => categoryOf('generate-free-map.cjs') === 'generator'],  // fixture name; the file need not exist
     ['falls back to tool', () => categoryOf('commit-only.cjs') === 'tool'],
@@ -529,8 +536,56 @@ function selfTest() {
   process.exit(runCases(cases) ? 1 : 0);
 }
 
+/** Every flag this tool accepts. `--help` and no-args both print usage; neither writes. */
+const KNOWN_FLAGS = ['--write', '--check', '--self-test', '--orphans', '--find', '--run', '--help'];
+
+/**
+ * unknownFlags(argv) — flags this tool does not understand. PURE, so it can be canaried.
+ *
+ * ⚠️ Extracted because the guard it feeds is the one that stops `--help` (and any typo) falling
+ * through to `--write`. Measured 2026-11-15 (#1277): `--help` printed "wrote docs/TOOLS-INDEX.md +
+ * …" and mutated two tracked generated files while the reader was asking a question.
+ */
+function unknownFlags(argv) {
+  return argv.filter((a) => a.startsWith('--') && !KNOWN_FLAGS.includes(a));
+}
+
 function main() {
   const argv = process.argv.slice(2);
+
+  // ⚠️ NO FLAG FALLS THROUGH TO `--write` (added 2026-11-15, #1277).
+  //
+  // Measured: `node scripts/tools-index.cjs --help` printed "wrote docs/TOOLS-INDEX.md + …" — it
+  // WRITES. Any unrecognised flag reached the write at the bottom of this function, so a reader
+  // asking a QUESTION silently mutated two tracked, generated files. `--help` was the common case;
+  // a typo (`--orphan`, `--chek`) would do the same thing on a path nobody would look at.
+  //
+  // The rule the repo already applies everywhere else: a check that cannot read its input must
+  // ERROR, never pass. This is the same shape — an argument this tool does not understand must
+  // report that, not do the most destructive thing it can.
+  const unknown = unknownFlags(argv);
+  if (unknown.length) {
+    console.error(`\n  ✖ unknown option(s): ${unknown.join(' ')}`);
+    console.error(`    known: ${KNOWN_FLAGS.join(' ')}`);
+    console.error('    run with --help for what each does\n');
+    process.exit(2);
+  }
+
+  if (argv.includes('--help') || argv.length === 0) {
+    console.log(`
+  tools-index.cjs — the index of every tool in scripts/ and nest/scripts/
+
+    --write      regenerate docs/TOOLS-INDEX.md + docs/tools-index.json
+    --check      exit 1 if those generated files are stale (runs in prebuild)
+    --orphans    list only the tools named nowhere  (a finding, not a blank)
+    --find <kw>  search NAME and PURPOSE; several words NARROW: --find audit signal
+    --run <name> run one, printing which file it resolved to
+    --self-test  prove the classifier, the matcher and the dispatcher can fail
+    --help       this text
+`);
+    return;
+  }
+
   if (argv.includes('--self-test')) return selfTest();
 
   const tools = scan();

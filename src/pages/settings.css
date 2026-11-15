@@ -99,7 +99,7 @@
   margin-top: 0.5rem;
   border: 1px solid var(--line);
   border-radius: 6px;
-}ng; colour only reinforces it. */
+}
 .threshold-ok { color: var(--accent); font-weight: 600; }
 .threshold-bad { color: var(--danger); font-weight: 700; }
 .threshold-unknown { color: var(--ink-soft); font-style: italic; }

@@ -2,16 +2,26 @@
  * View Routes — Single source of truth mapping view IDs to page components.
  *
  * When adding a new page:
- * 1. Import the component below
+ * 1. Add a LAZY import below — `const Foo = lazy(() => import('../pages/Foo.jsx'));`
  * 2. Add an entry to VIEW_COMPONENTS
  * 3. Add the view to src/core/nav-tree.js
+ *
+ * ⚠️ EVERY page import here must be `lazy` (#1280, 2026-11-15). It used to be a plain `import`, and
+ * because App.jsx renders `VIEW_COMPONENTS[view]`, that put **all 153 page modules into the entry
+ * chunk** — 4.65 MB, within 354 KB of the PWA precache cap that FAILS the build when exceeded. Lazy
+ * imports cut the entry chunk to 0.68 MB. App.jsx supplies the required `<Suspense>` boundary, so a
+ * plain `import` here is still *correct* at runtime — it just puts the page on the critical path for
+ * every user, which is the thing this file exists to avoid. `check-bundle-budget.mjs` (C2 ratchet)
+ * will fail the build when the entry chunk grows.
  *
  * Complex inline views (demos, analytics, about, etc.) are handled
  * directly in App.jsx renderMainContent() — they don't belong here.
  *
  * @generated — extracted from App.jsx renderMainContent()
- * @updated 2026-07-03
+ * @updated 2026-11-15 — lazy imports (#1280)
  */
+
+import { lazy } from 'react';
 
 // ── Trading ──
 // TradingStrategiesPage was RETIRED 2026-09-23 (owner, option A). Its table + sticky sidebar layout
@@ -20,229 +30,229 @@
 //   'strategies'          -> an ORPHAN id with no nav entry and no view-meta key; nothing routed to
 //                            it, so it was only discoverable by deleting the import and watching
 //                            what broke. Both mappings are removed rather than left dangling.
-import StrategyComparisonPage from '../pages/StrategyComparisonPage.jsx';
-import StrategyMonitorPage from '../pages/StrategyMonitorPage.jsx';
+const StrategyComparisonPage = lazy(() => import('../pages/StrategyComparisonPage.jsx'));
+const StrategyMonitorPage = lazy(() => import('../pages/StrategyMonitorPage.jsx'));
 // The canonical bot index (#504 consolidation, 2026-07-29). It was built and then referenced by
 // nothing - no route, no nav entry, no view-meta entry - so a finished registry was invisible.
 // Surfaced 2026-09-18, then renamed to `trading-bots` (docs/trading-bot-model.md §5).
-import StrategiesListPage from '../pages/StrategiesListPage.jsx';
-import StrategyCreatePage from '../pages/StrategyCreatePage.jsx';
+const StrategiesListPage = lazy(() => import('../pages/StrategiesListPage.jsx'));
+const StrategyCreatePage = lazy(() => import('../pages/StrategyCreatePage.jsx'));
 // #864 — the per-bot truth view. Reached at /trading/strategy/:strategyId, NOT from the sidebar:
 // it is a detail page for one bot, so it has no nav entry (the same shape as /trading/symbol/:ticker).
-import ViewStrategyPage from '../pages/ViewStrategyPage.jsx';
+const ViewStrategyPage = lazy(() => import('../pages/ViewStrategyPage.jsx'));
 // #876 — STRATEGIES, derived from unique (protocol x treatment) combinations. Different from
 // `Trading Bots` above, which lists `trading_strategy` ROWS.
-import DerivedStrategiesPage from '../pages/DerivedStrategiesPage.jsx';
-import AbStrategiesPage from '../pages/AbStrategiesPage.jsx';
-import TradeJournalPage from '../pages/TradeJournalPage.jsx';
-import TradingPlansPage from '../pages/TradingPlansPage.jsx';
-import CalculatorsPage from '../pages/CalculatorsPage.jsx';
-import OrderTestingPage from '../pages/OrderTestingPage.jsx';
-import PortfolioPage from '../pages/PortfolioPage.jsx';
-import PortfolioEventsPage from '../pages/PortfolioEventsPage.jsx';
-import TradeHistoryPage from '../pages/TradeHistoryPage.jsx';
-import PositionsMonitorPage from '../pages/PositionsMonitorPage.jsx';
-import StrategyLibraryPage from '../pages/StrategyLibraryPage.jsx';
+const DerivedStrategiesPage = lazy(() => import('../pages/DerivedStrategiesPage.jsx'));
+const AbStrategiesPage = lazy(() => import('../pages/AbStrategiesPage.jsx'));
+const TradeJournalPage = lazy(() => import('../pages/TradeJournalPage.jsx'));
+const TradingPlansPage = lazy(() => import('../pages/TradingPlansPage.jsx'));
+const CalculatorsPage = lazy(() => import('../pages/CalculatorsPage.jsx'));
+const OrderTestingPage = lazy(() => import('../pages/OrderTestingPage.jsx'));
+const PortfolioPage = lazy(() => import('../pages/PortfolioPage.jsx'));
+const PortfolioEventsPage = lazy(() => import('../pages/PortfolioEventsPage.jsx'));
+const TradeHistoryPage = lazy(() => import('../pages/TradeHistoryPage.jsx'));
+const PositionsMonitorPage = lazy(() => import('../pages/PositionsMonitorPage.jsx'));
+const StrategyLibraryPage = lazy(() => import('../pages/StrategyLibraryPage.jsx'));
 
 // ── Scoring ──
-import DirectivesManagerPage from '../pages/DirectivesManagerPage.jsx';
-import DirectiveViewerPage from '../pages/DirectiveViewerPage.jsx';
-import DirectiveImpactAuditPage from '../pages/DirectiveImpactAuditPage.jsx';
-import LadderPage from '../pages/LadderPage.jsx';
-import AbLadderPage from '../pages/AbLadderPage.jsx';
-import SeesArenaPage from '../pages/SeesArenaPage.jsx';
-import ExitSignalsPage from '../pages/ExitSignalsPage.jsx';
+const DirectivesManagerPage = lazy(() => import('../pages/DirectivesManagerPage.jsx'));
+const DirectiveViewerPage = lazy(() => import('../pages/DirectiveViewerPage.jsx'));
+const DirectiveImpactAuditPage = lazy(() => import('../pages/DirectiveImpactAuditPage.jsx'));
+const LadderPage = lazy(() => import('../pages/LadderPage.jsx'));
+const AbLadderPage = lazy(() => import('../pages/AbLadderPage.jsx'));
+const SeesArenaPage = lazy(() => import('../pages/SeesArenaPage.jsx'));
+const ExitSignalsPage = lazy(() => import('../pages/ExitSignalsPage.jsx'));
 // #988 — the guardian's own history, read from `stop_adjustment` + `sim_tsl_event`.
-import StopGuardianStatsPage from '../pages/StopGuardianStatsPage.jsx';
-import ScoringActivityLogsPage from '../pages/ScoringActivityLogsPage.jsx';
-import SignalsOverviewPage from '../pages/SignalsOverviewPage.jsx';
-import ProtocolsPage from '../pages/ProtocolsPage.jsx';
-import ProtocolTrailPage from '../pages/ProtocolTrailPage.jsx';
-import SinglesMonitorPage from '../pages/SinglesMonitorPage.jsx';
-import ProtocolsLadderPage from '../pages/ProtocolsLadderPage.jsx';
-import SymbolsLadderPage from '../pages/SymbolsLadderPage.jsx';
+const StopGuardianStatsPage = lazy(() => import('../pages/StopGuardianStatsPage.jsx'));
+const ScoringActivityLogsPage = lazy(() => import('../pages/ScoringActivityLogsPage.jsx'));
+const SignalsOverviewPage = lazy(() => import('../pages/SignalsOverviewPage.jsx'));
+const ProtocolsPage = lazy(() => import('../pages/ProtocolsPage.jsx'));
+const ProtocolTrailPage = lazy(() => import('../pages/ProtocolTrailPage.jsx'));
+const SinglesMonitorPage = lazy(() => import('../pages/SinglesMonitorPage.jsx'));
+const ProtocolsLadderPage = lazy(() => import('../pages/ProtocolsLadderPage.jsx'));
+const SymbolsLadderPage = lazy(() => import('../pages/SymbolsLadderPage.jsx'));
 // ⚠️ `ThemePage` import REMOVED 2026-10-13 with the page itself (owner request) — it was the Theme
 // Packs gallery, whose pack chooser now lives in the Appearance area. Leaving the import would have
 // broken the build the moment the file was deleted, which is the correct order: route, then file.
-import AppearanceAreaPage from '../pages/AppearanceAreaPage.jsx';
+const AppearanceAreaPage = lazy(() => import('../pages/AppearanceAreaPage.jsx'));
 // ⚠️ THESE TWO IMPORTS WERE MISSING ON FIRST ATTEMPT (2026-10-13) and the BUILD PASSED WITHOUT THEM.
 // The route map below referenced `AppearanceMotionPage` / `AppearanceFormsPage` while nothing imported
 // them, so the map held two undefined identifiers. Vite does not fail on that — it is a runtime
 // ReferenceError, and the whole app rendered "App Failed to Load" with the name of the missing
 // identifier as the only clue. The lesson is not "be careful": it is that **a green build does not
 // prove a view works**, and this page pair was only caught by opening the route in the browser.
-import AppearanceMotionPage from '../pages/AppearanceMotionPage.jsx';
+const AppearanceMotionPage = lazy(() => import('../pages/AppearanceMotionPage.jsx'));
 // Element groups — the sections of the retired Theme Lab, split by what a reader is deciding.
 // They all render ONE component (`ThemeLabSections`) with a different `group` prop, so the examples
 // exist once. A missing import here is the failure mode this repo keeps re-finding: the route map
 // references an identifier that was never imported, Vite still builds, and the app renders
 // "<Name> is not defined" at runtime. Verify new routes in the browser, not by a green build.
-import AppearanceColourPage from '../pages/AppearanceColourPage.jsx';
-import AppearanceSurfacesPage from '../pages/AppearanceSurfacesPage.jsx';
-import AppearanceDataDisplayPage from '../pages/AppearanceDataDisplayPage.jsx';
-import AppearanceInteractivePage from '../pages/AppearanceInteractivePage.jsx';
-import AppearancePatternsPage from '../pages/AppearancePatternsPage.jsx';
-import AppearanceInfoPage from '../pages/AppearanceInfoPage.jsx';
-import AppearanceFormsPage from '../pages/AppearanceFormsPage.jsx';
-import ProtocolsPerformancePage from '../pages/ProtocolsPerformancePage.jsx';
+const AppearanceColourPage = lazy(() => import('../pages/AppearanceColourPage.jsx'));
+const AppearanceSurfacesPage = lazy(() => import('../pages/AppearanceSurfacesPage.jsx'));
+const AppearanceDataDisplayPage = lazy(() => import('../pages/AppearanceDataDisplayPage.jsx'));
+const AppearanceInteractivePage = lazy(() => import('../pages/AppearanceInteractivePage.jsx'));
+const AppearancePatternsPage = lazy(() => import('../pages/AppearancePatternsPage.jsx'));
+const AppearanceInfoPage = lazy(() => import('../pages/AppearanceInfoPage.jsx'));
+const AppearanceFormsPage = lazy(() => import('../pages/AppearanceFormsPage.jsx'));
+const ProtocolsPerformancePage = lazy(() => import('../pages/ProtocolsPerformancePage.jsx'));
 // MetaStackPipelinePage import REMOVED 2026-10-08 — the view was merged into Pipeline Graph Lab,
 // which imports the board directly. The file still exists as that board.
-import CreateProtocolsPage from '../pages/CreateProtocolsPage.jsx';
-import StrategyWizardPage from '../pages/StrategyWizardPage.jsx';
+const CreateProtocolsPage = lazy(() => import('../pages/CreateProtocolsPage.jsx'));
+const StrategyWizardPage = lazy(() => import('../pages/StrategyWizardPage.jsx'));
 
 // ── Automation ──
 
 // ── Research ──
-import ResearchNotesPage from '../pages/ResearchNotesPage.jsx';
-import StockInvestigationPage from '../pages/StockInvestigationPage.jsx';
-import SupportResistancePage from '../pages/SupportResistancePage.jsx';
-import VolatilityAnalysisPage from '../pages/VolatilityAnalysisPage.jsx';
-import TechnicalIndicatorsPage from '../pages/TechnicalIndicatorsPage.jsx';
-import PatternScannerPage from '../pages/PatternScannerPage.jsx';
-import MacroMonitorPage from '../pages/MacroMonitorPage.jsx';
-import EarningsCalendarPage from '../pages/EarningsCalendarPage.jsx';
-import EarningsWhispersPage from '../pages/EarningsWhispersPage.jsx';
-import PriceForecastPage from '../pages/PriceForecastPage.jsx';
-import SectorRotationPage from '../pages/SectorRotationPage.jsx';
-import MarketCorrelationsPage from '../pages/MarketCorrelationsPage.jsx';
-import ChartComparisonPage from '../pages/ChartComparisonPage.jsx';
-import AnalyseSymbolPage from '../pages/AnalyseSymbolPage.jsx';
-import NewsIntelPage from '../pages/NewsIntelPage.jsx';
-import EventsCalendarPage from '../pages/EventsCalendarPage.jsx';
-import SocialNetworksPage from '../pages/SocialNetworksPage.jsx';
+const ResearchNotesPage = lazy(() => import('../pages/ResearchNotesPage.jsx'));
+const StockInvestigationPage = lazy(() => import('../pages/StockInvestigationPage.jsx'));
+const SupportResistancePage = lazy(() => import('../pages/SupportResistancePage.jsx'));
+const VolatilityAnalysisPage = lazy(() => import('../pages/VolatilityAnalysisPage.jsx'));
+const TechnicalIndicatorsPage = lazy(() => import('../pages/TechnicalIndicatorsPage.jsx'));
+const PatternScannerPage = lazy(() => import('../pages/PatternScannerPage.jsx'));
+const MacroMonitorPage = lazy(() => import('../pages/MacroMonitorPage.jsx'));
+const EarningsCalendarPage = lazy(() => import('../pages/EarningsCalendarPage.jsx'));
+const EarningsWhispersPage = lazy(() => import('../pages/EarningsWhispersPage.jsx'));
+const PriceForecastPage = lazy(() => import('../pages/PriceForecastPage.jsx'));
+const SectorRotationPage = lazy(() => import('../pages/SectorRotationPage.jsx'));
+const MarketCorrelationsPage = lazy(() => import('../pages/MarketCorrelationsPage.jsx'));
+const ChartComparisonPage = lazy(() => import('../pages/ChartComparisonPage.jsx'));
+const AnalyseSymbolPage = lazy(() => import('../pages/AnalyseSymbolPage.jsx'));
+const NewsIntelPage = lazy(() => import('../pages/NewsIntelPage.jsx'));
+const EventsCalendarPage = lazy(() => import('../pages/EventsCalendarPage.jsx'));
+const SocialNetworksPage = lazy(() => import('../pages/SocialNetworksPage.jsx'));
 
 // ── Analysis / Speed ──
-import SpeedScannerPage from '../pages/SpeedScannerPage.jsx';
-import BtcSpeedTradingPage from '../pages/BtcSpeedTradingPage.jsx';
+const SpeedScannerPage = lazy(() => import('../pages/SpeedScannerPage.jsx'));
+const BtcSpeedTradingPage = lazy(() => import('../pages/BtcSpeedTradingPage.jsx'));
 
 // ── Portfolio / Trading212 ──
 // ⚠️ RESTORED 2026-10-01. This import was removed by scripts/delete-views.cjs when the
 // `mt5-demo-trading` map entry went: that page file is mapped to TWO ids, so removing one id must
 // not remove the import the other still needs. The script now checks whether any surviving map
 // entry still names the component before touching its import line.
-import Mt5TradingPage from '../pages/Mt5TradingPage.jsx';
+const Mt5TradingPage = lazy(() => import('../pages/Mt5TradingPage.jsx'));
 // Moved out of the deleted /automation/execution-queue page, 2026-10-02 — the owner asked for the
 // Protocol Queue tab to live in Protocols and the Scheduled Jobs tab in Status.
-import ProtocolQueuePage from '../pages/ProtocolQueuePage.jsx';
-import ScheduledJobsPage from '../pages/ScheduledJobsPage.jsx';
-import Mt5StatusPage from '../pages/Mt5StatusPage.jsx';
-import T212PortfolioPage from '../pages/T212PortfolioPage.jsx';
-import T212ISAPage from '../pages/T212ISAPage.jsx';
+const ProtocolQueuePage = lazy(() => import('../pages/ProtocolQueuePage.jsx'));
+const ScheduledJobsPage = lazy(() => import('../pages/ScheduledJobsPage.jsx'));
+const Mt5StatusPage = lazy(() => import('../pages/Mt5StatusPage.jsx'));
+const T212PortfolioPage = lazy(() => import('../pages/T212PortfolioPage.jsx'));
+const T212ISAPage = lazy(() => import('../pages/T212ISAPage.jsx'));
 // Accounts area — added 2026-11-06 (owner direction): the venues/accounts, and the data vendors.
-import BrokersPage from '../pages/BrokersPage.jsx';
-import VendorsPage from '../pages/VendorsPage.jsx';
+const BrokersPage = lazy(() => import('../pages/BrokersPage.jsx'));
+const VendorsPage = lazy(() => import('../pages/VendorsPage.jsx'));
 
 // ── Data ──
-import DataAreaLandingPage from '../pages/DataAreaLandingPage.jsx';
-import DatabaseTablesPage from '../pages/DatabaseTablesPage.jsx';
-import BacktestDataPage from '../pages/BacktestDataPage.jsx';
-import BacktestRunsPage from '../pages/BacktestRunsPage.jsx';
-import WalkForwardSurvivorsPage from '../pages/WalkForwardSurvivorsPage.jsx';
-import CurrentStrategyPage from '../pages/CurrentStrategyPage.jsx';
-import DataStatusPage from '../pages/DataStatusPage.jsx';
-import DataElementsPage from '../pages/DataElementsPage.jsx';
-import DecoderPage from '../pages/DecoderPage.jsx';
-import CacheMonitorPage from '../pages/CacheMonitorPage.jsx';
-import ActiveSymbolsPage from '../pages/ActiveSymbolsPage.jsx';
-import SymbolsBrowserPage from '../pages/SymbolsBrowserPage.jsx';
+const DataAreaLandingPage = lazy(() => import('../pages/DataAreaLandingPage.jsx'));
+const DatabaseTablesPage = lazy(() => import('../pages/DatabaseTablesPage.jsx'));
+const BacktestDataPage = lazy(() => import('../pages/BacktestDataPage.jsx'));
+const BacktestRunsPage = lazy(() => import('../pages/BacktestRunsPage.jsx'));
+const WalkForwardSurvivorsPage = lazy(() => import('../pages/WalkForwardSurvivorsPage.jsx'));
+const CurrentStrategyPage = lazy(() => import('../pages/CurrentStrategyPage.jsx'));
+const DataStatusPage = lazy(() => import('../pages/DataStatusPage.jsx'));
+const DataElementsPage = lazy(() => import('../pages/DataElementsPage.jsx'));
+const DecoderPage = lazy(() => import('../pages/DecoderPage.jsx'));
+const CacheMonitorPage = lazy(() => import('../pages/CacheMonitorPage.jsx'));
+const ActiveSymbolsPage = lazy(() => import('../pages/ActiveSymbolsPage.jsx'));
+const SymbolsBrowserPage = lazy(() => import('../pages/SymbolsBrowserPage.jsx'));
 // #958 — what the BROKERS offer (14,000+ instruments) versus what the app has onboarded (~218).
 // Distinct from Symbols Browser, which lists only the ONBOARDED set — the difference between the
 // two is the entire finding, so they must not be merged into one list.
-import BrokerCataloguePage from '../pages/BrokerCataloguePage.jsx';
-import ScreenerPage from '../pages/ScreenerPage.jsx';
-import SymbolDetailPage from '../pages/SymbolDetailPage.jsx';
-import ImportJobsPage from '../pages/ImportJobsPage.jsx';
-import ApiActivityPage from '../pages/ApiActivityPage.jsx';
-import ApiEndpointsPage from '../pages/ApiEndpointsPage.jsx';
-import SourcesPage from '../pages/SourcesPage.jsx';
-import ProviderHealthPage from '../pages/ProviderHealthPage.jsx';
-import MarketContextPage from '../pages/MarketContextPage.jsx';
-import SeasonalityHeatmapPage from '../pages/SeasonalityHeatmapPage.jsx';
-import GapScannerPage from '../pages/GapScannerPage.jsx';
-import RecentlyAnalysedSymbolsPage from '../pages/RecentlyAnalysedSymbolsPage.jsx';
-import PlatformComparisonsPage from '../pages/PlatformComparisonsPage.jsx';
+const BrokerCataloguePage = lazy(() => import('../pages/BrokerCataloguePage.jsx'));
+const ScreenerPage = lazy(() => import('../pages/ScreenerPage.jsx'));
+const SymbolDetailPage = lazy(() => import('../pages/SymbolDetailPage.jsx'));
+const ImportJobsPage = lazy(() => import('../pages/ImportJobsPage.jsx'));
+const ApiActivityPage = lazy(() => import('../pages/ApiActivityPage.jsx'));
+const ApiEndpointsPage = lazy(() => import('../pages/ApiEndpointsPage.jsx'));
+const SourcesPage = lazy(() => import('../pages/SourcesPage.jsx'));
+const ProviderHealthPage = lazy(() => import('../pages/ProviderHealthPage.jsx'));
+const MarketContextPage = lazy(() => import('../pages/MarketContextPage.jsx'));
+const SeasonalityHeatmapPage = lazy(() => import('../pages/SeasonalityHeatmapPage.jsx'));
+const GapScannerPage = lazy(() => import('../pages/GapScannerPage.jsx'));
+const RecentlyAnalysedSymbolsPage = lazy(() => import('../pages/RecentlyAnalysedSymbolsPage.jsx'));
+const PlatformComparisonsPage = lazy(() => import('../pages/PlatformComparisonsPage.jsx'));
 
 // ── Backtest / Strategies ──
-import BacktestProtocolsPage from '../pages/BacktestProtocolsPage.jsx';
-import BacktestStrategiesPage from '../pages/BacktestStrategiesPage.jsx';
-import ScenarioAnalysisPage from '../pages/ScenarioAnalysisPage.jsx';
+const BacktestProtocolsPage = lazy(() => import('../pages/BacktestProtocolsPage.jsx'));
+const BacktestStrategiesPage = lazy(() => import('../pages/BacktestStrategiesPage.jsx'));
+const ScenarioAnalysisPage = lazy(() => import('../pages/ScenarioAnalysisPage.jsx'));
 
 // ── Status / System ──
-import SystemLogPage from '../pages/SystemLogPage.jsx';
-import HealthDashboardPage from '../pages/HealthDashboardPage.jsx';
-import CommandsReferencePage from '../pages/CommandsReferencePage.jsx';
-import SetupWizardPage from '../pages/SetupWizardPage.jsx';
-import FaqPage from '../pages/FaqPage.jsx';
-import GlossaryPage from '../pages/GlossaryPage.jsx';
-import SettingsPage from '../pages/SettingsPage.jsx';
-import SettingsDatabasePage from '../pages/SettingsDatabasePage.jsx';
-import SettingsEducationPage from '../pages/SettingsEducationPage.jsx';
-import TradingSettingsPage from '../pages/TradingSettingsPage.jsx';
+const SystemLogPage = lazy(() => import('../pages/SystemLogPage.jsx'));
+const HealthDashboardPage = lazy(() => import('../pages/HealthDashboardPage.jsx'));
+const CommandsReferencePage = lazy(() => import('../pages/CommandsReferencePage.jsx'));
+const SetupWizardPage = lazy(() => import('../pages/SetupWizardPage.jsx'));
+const FaqPage = lazy(() => import('../pages/FaqPage.jsx'));
+const GlossaryPage = lazy(() => import('../pages/GlossaryPage.jsx'));
+const SettingsPage = lazy(() => import('../pages/SettingsPage.jsx'));
+const SettingsDatabasePage = lazy(() => import('../pages/SettingsDatabasePage.jsx'));
+const SettingsEducationPage = lazy(() => import('../pages/SettingsEducationPage.jsx'));
+const TradingSettingsPage = lazy(() => import('../pages/TradingSettingsPage.jsx'));
 // #617 — the settings split. General shed its META.Stack-layer sections to these three, so
 // each layer's configuration now sits on the page it governs.
-import AppearanceSettingsPage from '../pages/AppearanceSettingsPage.jsx';
-import ScoringSettingsPage from '../pages/ScoringSettingsPage.jsx';
-import AutomationSettingsPage from '../pages/AutomationSettingsPage.jsx';
-import ServerControlsPage from '../pages/ServerControlsPage.jsx';
-import ReportsPage from '../pages/ReportsPage.jsx';
-import CapabilityMapPage from '../pages/CapabilityMapPage.jsx';
-import MetaStackStatusPage from '../pages/MetaStackStatusPage.jsx';
-import QATestingPage from '../pages/QATestingPage.jsx';
-import TheoryRegistryPage from '../pages/TheoryRegistryPage.jsx';
-import DesignObservationsPage from '../pages/DesignObservationsPage.jsx';
-import SymbolPage from '../pages/SymbolPage.jsx';
-import ArchitectureFrameworkPage from '../pages/ArchitectureFrameworkPage.jsx';
-import UiReviewPage from '../pages/UiReviewPage.jsx';
-import DiagramsPage from '../pages/DiagramsPage.jsx';
-import BlockedSignalsPage from '../pages/BlockedSignalsPage.jsx';
+const AppearanceSettingsPage = lazy(() => import('../pages/AppearanceSettingsPage.jsx'));
+const ScoringSettingsPage = lazy(() => import('../pages/ScoringSettingsPage.jsx'));
+const AutomationSettingsPage = lazy(() => import('../pages/AutomationSettingsPage.jsx'));
+const ServerControlsPage = lazy(() => import('../pages/ServerControlsPage.jsx'));
+const ReportsPage = lazy(() => import('../pages/ReportsPage.jsx'));
+const CapabilityMapPage = lazy(() => import('../pages/CapabilityMapPage.jsx'));
+const MetaStackStatusPage = lazy(() => import('../pages/MetaStackStatusPage.jsx'));
+const QATestingPage = lazy(() => import('../pages/QATestingPage.jsx'));
+const TheoryRegistryPage = lazy(() => import('../pages/TheoryRegistryPage.jsx'));
+const DesignObservationsPage = lazy(() => import('../pages/DesignObservationsPage.jsx'));
+const SymbolPage = lazy(() => import('../pages/SymbolPage.jsx'));
+const ArchitectureFrameworkPage = lazy(() => import('../pages/ArchitectureFrameworkPage.jsx'));
+const UiReviewPage = lazy(() => import('../pages/UiReviewPage.jsx'));
+const DiagramsPage = lazy(() => import('../pages/DiagramsPage.jsx'));
+const BlockedSignalsPage = lazy(() => import('../pages/BlockedSignalsPage.jsx'));
 // #1190 — the trend READING experiment. Development because it is an experiment first.
-import TrendReadingPage from '../pages/TrendReadingPage.jsx';
+const TrendReadingPage = lazy(() => import('../pages/TrendReadingPage.jsx'));
 // Performance Change (2026-09-28) — the CHANGE lens over the same stored data: period over period,
 // not a running total. Sits beside Blocked Signals because both answer a question from the DB.
-import PerformanceChangePage from '../pages/PerformanceChangePage.jsx';
-import MetaStackExplorerPage from '../pages/MetaStackExplorerPage.jsx';
-import FileInventoryPage from '../pages/FileInventoryPage.jsx';
+const PerformanceChangePage = lazy(() => import('../pages/PerformanceChangePage.jsx'));
+const MetaStackExplorerPage = lazy(() => import('../pages/MetaStackExplorerPage.jsx'));
+const FileInventoryPage = lazy(() => import('../pages/FileInventoryPage.jsx'));
 
 // ── Lab ──
-import PositionLifecyclePage from '../pages/PositionLifecyclePage.jsx';
-import ResponsiveLayoutLabPage from '../pages/ResponsiveLayoutLabPage.jsx';
-import ChartsLabPage from '../pages/ChartsLabPage.jsx';
+const PositionLifecyclePage = lazy(() => import('../pages/PositionLifecyclePage.jsx'));
+const ResponsiveLayoutLabPage = lazy(() => import('../pages/ResponsiveLayoutLabPage.jsx'));
+const ChartsLabPage = lazy(() => import('../pages/ChartsLabPage.jsx'));
 // ⚠️ REMOVED 2026-10-13: `import ThemeLabPage from '../pages/ThemeLabPage.jsx';` — the page is
 // retired and deleted. If you are here because a route stopped resolving, the redirect lives in App.jsx
 // (/development/theme-lab → /appearance/layout-guide); do not re-add the import.
-import PipelineGraphLabPage from '../pages/PipelineGraphLabPage.jsx';
-import IdentityMapLabPage from '../pages/IdentityMapLabPage.jsx';
-import FeatureLabPage from '../pages/FeatureLabPage.jsx';
-import PreferenceLab from '../pages/PreferenceLab.jsx';
-import PerformanceLabPage from '../pages/PerformanceLabPage.jsx';
-import SnapshotReplayPage from '../pages/SnapshotReplayPage.jsx';
-import MetaStackCockpitPage from '../pages/MetaStackCockpitPage.jsx';
-import ScoringDebugLab from '../pages/ScoringDebugLab.jsx';
+const PipelineGraphLabPage = lazy(() => import('../pages/PipelineGraphLabPage.jsx'));
+const IdentityMapLabPage = lazy(() => import('../pages/IdentityMapLabPage.jsx'));
+const FeatureLabPage = lazy(() => import('../pages/FeatureLabPage.jsx'));
+const PreferenceLab = lazy(() => import('../pages/PreferenceLab.jsx'));
+const PerformanceLabPage = lazy(() => import('../pages/PerformanceLabPage.jsx'));
+const SnapshotReplayPage = lazy(() => import('../pages/SnapshotReplayPage.jsx'));
+const MetaStackCockpitPage = lazy(() => import('../pages/MetaStackCockpitPage.jsx'));
+const ScoringDebugLab = lazy(() => import('../pages/ScoringDebugLab.jsx'));
 
 // ── Training ──
-import TrainingCandlePatternsPage from '../pages/TrainingCandlePatternsPage.jsx';
-import CandlePatternsGuidePage from '../pages/CandlePatternsGuidePage.jsx';
+const TrainingCandlePatternsPage = lazy(() => import('../pages/TrainingCandlePatternsPage.jsx'));
+const CandlePatternsGuidePage = lazy(() => import('../pages/CandlePatternsGuidePage.jsx'));
 
 // ── Watchlists ──
-import UserWatchlistsPage from '../pages/UserWatchlistsPage.jsx';
+const UserWatchlistsPage = lazy(() => import('../pages/UserWatchlistsPage.jsx'));
 
 // ── Other ──
-import DailyBriefingPage from '../pages/DailyBriefingPage.jsx';
-import RiskControlsPage from '../pages/RiskControlsPage.jsx';
+const DailyBriefingPage = lazy(() => import('../pages/DailyBriefingPage.jsx'));
+const RiskControlsPage = lazy(() => import('../pages/RiskControlsPage.jsx'));
 // ⚠️ `ThemePage` (the Theme Packs gallery) was imported here until 2026-10-13, when the page was
 // retired (owner request) and its pack chooser moved to the Appearance area. The ORDER matters:
 // unregister the route, drop the import, THEN delete the file — deleting the file first leaves a stale
 // import, so the build fails and the repository looks broken rather than moved.
-import ScoringOverviewPage from '../pages/ScoringOverviewPage.jsx';
-import SnapshotLibraryPage from '../pages/SnapshotLibraryPage.jsx';
-import PersonalFinancesPage from '../pages/PersonalFinancesPage.jsx';
-import TradingStylesPage from '../pages/TradingStylesPage.jsx';
-import ObjectivesPage from '../pages/ObjectivesPage.jsx';
-import RoadmapPage from '../pages/RoadmapPage.jsx';
-import MonitoringPage from '../pages/MonitoringPage.jsx';
-import DashboardPage from '../pages/DashboardPage.jsx';
-import ScreenBoardPage from '../pages/ScreenBoardPage.jsx';
-import ScreenCockpitPage from '../pages/ScreenCockpitPage.jsx';
+const ScoringOverviewPage = lazy(() => import('../pages/ScoringOverviewPage.jsx'));
+const SnapshotLibraryPage = lazy(() => import('../pages/SnapshotLibraryPage.jsx'));
+const PersonalFinancesPage = lazy(() => import('../pages/PersonalFinancesPage.jsx'));
+const TradingStylesPage = lazy(() => import('../pages/TradingStylesPage.jsx'));
+const ObjectivesPage = lazy(() => import('../pages/ObjectivesPage.jsx'));
+const RoadmapPage = lazy(() => import('../pages/RoadmapPage.jsx'));
+const MonitoringPage = lazy(() => import('../pages/MonitoringPage.jsx'));
+const DashboardPage = lazy(() => import('../pages/DashboardPage.jsx'));
+const ScreenBoardPage = lazy(() => import('../pages/ScreenBoardPage.jsx'));
+const ScreenCockpitPage = lazy(() => import('../pages/ScreenCockpitPage.jsx'));
 
 // ── MAP ──────────────────────────────────────────────────────────────────────
 export const VIEW_COMPONENTS = {

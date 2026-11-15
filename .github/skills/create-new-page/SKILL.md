@@ -79,15 +79,23 @@ App.jsx holds only **6** remaining `secondaryView ===` special cases, and none o
 page. The route map is `src/core/view-routes.jsx`, whose own header is explicit:
 
 > *View Routes — Single source of truth mapping view IDs to page components.*
-> *1. Import the component below  2. Add an entry to VIEW_COMPONENTS  3. Add the view to nav-tree.js*
+> *1. Add a LAZY import below  2. Add an entry to VIEW_COMPONENTS  3. Add the view to nav-tree.js*
 
 ```js
-// src/core/view-routes.jsx — top, beside the other page imports
-import <PageName> from '../pages/<PageName>.jsx';
+// src/core/view-routes.jsx — beside the other LAZY page imports
+const <PageName> = lazy(() => import('../pages/<PageName>.jsx'));
 
 // then in the VIEW_COMPONENTS map
   'view-id': <PageName>,
 ```
+
+⚠️ **USE `lazy`, NOT A PLAIN `import`** (#1280, 2026-11-15). Every entry here is rendered as
+`VIEW_COMPONENTS[secondaryView]`, so a plain `import` puts the page in the **entry chunk** — which is
+downloaded by every user on first paint. All 153 pages were static until 2026-11-15; the entry chunk
+was 4.65 MB and within 354 KB of the PWA precache cap that **fails the build** when exceeded. Lazy
+imports cut it to 0.68 MB. `App.jsx` already supplies the `<Suspense>` boundary, so a plain `import`
+still *works* — it is just on the critical path for everyone. The C2 ratchet in
+`scripts/check-bundle-budget.mjs` fails the build if the entry chunk grows.
 
 ⚠️ The map's entries are indented with **2 spaces**, not 4 — an edit anchored on the wrong
 indentation fails to match and leaves the page unreachable while the import looks correct.

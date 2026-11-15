@@ -58,7 +58,20 @@
   overflow-x: auto; border: 1px solid var(--line); border-radius: 8px;
   max-height: 300px; overflow-y: auto;
 }
-.rll-table-wrap.rll-scroll-hint { box-shadow: inset -8px 0 12px -8px rgba(14,165,166,0.15); }undefined { position: sticky; }.rll-th-pri-4, .rll-th-pri-5 { display: none; }.rll-signal-badge {
+.rll-table-wrap.rll-scroll-hint { box-shadow: inset -8px 0 12px -8px rgba(14,165,166,0.15); }
+.rll-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
+.rll-table th {
+  text-align: left; padding: 0.4rem 0.5rem; background: rgba(128,128,128,0.04);
+  color: var(--ink-soft); font-weight: 600; font-size: 0.62rem;
+  text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--line);
+  white-space: nowrap; position: sticky; top: 0; z-index: 1;
+}
+.rll-th-pri-4, .rll-th-pri-5 { display: none; }
+.rll-table td {
+  padding: 0.35rem 0.5rem; border-bottom: 1px solid rgba(128,128,128,0.05);
+  white-space: nowrap;
+}
+.rll-signal-badge {
   font-size: 0.6rem; font-weight: 700; padding: 1px 6px; border-radius: 3px;
   text-transform: uppercase;
 }

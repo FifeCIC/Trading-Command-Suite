@@ -102,6 +102,40 @@ been `--ink` is not caught.
 (`red`, `white`) are equally theme-blind and are not counted. A declaration whose value is
 wrapped onto its own line is missed too. Writing one declaration per line avoids the second.
 
+### 🛑 Invalid CSS is INVISIBLE — enforced by a build gate
+
+> Measured 2026-11-15 (#1279). **20 stylesheets were invalid for a month** and nothing reported it,
+> because `vite.config.js` had `cssMinify: false` with the comment *"lightningcss is too strict"*.
+
+**A browser silently DROPS an invalid rule and renders the rest.** No error, no console message, no
+failing request. So invalid CSS is indistinguishable from *"that styling was never wanted"* — the
+repo's most expensive failure signature.
+
+| Do | Don't |
+|---|---|
+| Fix the CSS the gate names | Set `build.cssMinify: false` — that is what shipped the 20 broken files |
+| Read the `[C1]`/`[C2]` line and number it gives you | Assume "the build passed" means "the CSS applies" |
+
+```powershell
+node scripts/validate-css-parses.cjs              # prebuild form
+node scripts/validate-css-parses.cjs --self-test  # 11 cases, both directions
+```
+
+**Two checks, and the second is the surprising one.**
+
+- **C1 parse** — every `src/**/*.css` through the **same** parser the build minifies with, so the
+  gate cannot disagree with the build.
+- **C2 `undefined` token** — the corruption that actually happened, `}undefined { … }`, is
+  **syntactically VALID CSS**: `undefined` is a legal *type selector*, so a parser accepts a rule
+  targeting an element that does not exist. C1 alone passes it. C2 strips comments, then rejects
+  `undefined` as a selector or property.
+
+⚠️ **Never write `**/` inside a CSS comment.** Prose like `` `src/**/*.jsx` `` contains the comment
+terminator `*/`, so the comment **ends early** and the rest of the prose is parsed as CSS. This is
+what broke `metastack-cockpit.css`. Write *"every .jsx file under src/"* instead.
+
+⚠️ **A `*.module.css` is not immune.** Two of the 20 were modules.
+
 ### Spacing Scale
 
 | Token | Size | Usage |

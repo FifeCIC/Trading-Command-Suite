@@ -84,7 +84,6 @@ npm run start:prod    # Run production build
 ### Testing
 ```bash
 npm run test          # Unit tests
-npm run test:e2e      # End-to-end tests
 npm run test:cov      # Test coverage
 ```
 

@@ -599,9 +599,14 @@
 }
 .los-protocol { font-size: 0.82rem; color: var(--ink-soft); font-family: monospace; }
 
-  .so-strategy-key {
-    text-align: left;
-  }
+/* ⚠️ REPAIRED 2026-11-15. This block was written indented (as if inside a media query) but the
+   `@media (...) {` opener was never written, and its closing `}` was left behind at top level —
+   which made the file unparseable from 2026-06-24 onward. The stray `}` is removed and the
+   override is left at top level, which is what browsers were already applying (they ignore an
+   unexpected `}`), so rendering is unchanged. If this was meant to be mobile-only, wrap it in
+   `@media (max-width: 900px)`. */
+.so-strategy-key {
+  text-align: left;
 }
 
 /* ── Objectives Link ── */

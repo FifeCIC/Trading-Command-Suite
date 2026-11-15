@@ -1,4 +1,10 @@
 /**
+ * ── HISTORICAL (kept deliberately, #1277) ───────────────────────────────────────────────────────
+ * This is a POINT-IN-TIME probe, not maintained tooling. It is kept ONLY because tracked code
+ * cites it by name (see `rg -n "<this filename>"`), so deleting it would leave a dangling
+ * reference. It is NOT run by `prebuild`, has no npm script, and its measurement belongs to the
+ * issue it was written for — do not extend it; write a new probe and cite that instead.
+
  * measure-broker-clock-offset.cjs — is the future-lead explained by the TICK-LAG
  * bias in `detect_server_utc_offset()`?
  *
