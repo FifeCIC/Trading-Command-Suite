@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 191,
+  "count": 192,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -232,6 +232,16 @@
       "selfTest": false,
       "reaches": [
         "docs"
+      ]
+    },
+    {
+      "name": "audit-webroot-exposure.cjs",
+      "where": "repo",
+      "category": "audit",
+      "purpose": "does the local Apache hand out a secret-shaped path?",
+      "selfTest": true,
+      "reaches": [
+        "npm"
       ]
     },
     {

@@ -22,6 +22,8 @@
     "dompurify": "3.4.17"
   },
   "scripts": {
+    "audit:webroot": "node scripts/audit-webroot-exposure.cjs",
+    "audit:webroot:self-test": "node scripts/audit-webroot-exposure.cjs --self-test",
     "audit:basis-outcomes": "node scripts/measure-label-basis-outcomes.cjs",
     "audit:basis-outcomes:self-test": "node scripts/measure-label-basis-outcomes.cjs --self-test",
     "audit:calibration": "node scripts/audit-threshold-basis-calibration.cjs",
