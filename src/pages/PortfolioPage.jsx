@@ -5,6 +5,10 @@ import { apiGet } from '../core/api/client';
 import { feedUnavailable } from '../core/api/feed-state.js';
 import { timeAgo } from '../core/format-utils';
 import OrderModal from '../components/OrderModal';
+// ⚠️ ADDED 2026-11-14. The page applied `pf-page`, `pf-hero`, `pf-summary`, `pf-alloc-bar` and 4 more
+// defined ONLY in this sheet, and imported no stylesheet at all — so it rendered unstyled. Found by
+// `validate-css-imports.cjs`.
+import './portfolio.css';
 
 // ── Available data sources ──────────────────────────────────
 const PLATFORMS_DEMO_LIVE = [

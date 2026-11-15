@@ -24,6 +24,16 @@ instead of being resold as a closed product.
 Contributions and ideas are welcome. ⚠️ The project is engineered and maintained by one person, so
 reviews and replies may take time — that is the honest trade for a codebase this size.
 
+> ### 💚 [Support the project →](https://fifecic.github.io/Trading-Command-Suite/support/)
+>
+> This is one person's full-time work and it has no income. The whole app is given away — the scoring
+> engine, the risk controls, the position management, all of it — and it stays that way. If it earns
+> you something, or saves you something, [a tip or a sponsorship](https://fifecic.github.io/Trading-Command-Suite/support/)
+> is what keeps it being maintained. GitHub's **Sponsor** button on this page goes to the same place.
+>
+> ⚠️ **Nothing is withheld to make you pay.** There is no premium edition, no crippled build, and no
+> feature behind a licence check. The ask is voluntary and the app is complete without it.
+
 ---
 
 > ## 🛑 Read before you connect an account: [`DISCLAIMER.md`](DISCLAIMER.md)

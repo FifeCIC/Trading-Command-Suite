@@ -193,3 +193,40 @@
     transition: none;
   }
 }
+
+/* ── Threshold range map (#1275) ──────────────────────────────────────────────
+   A TABLE, not a chart: the values are exact and comparable, and a band is two numbers per row.
+   Colour is never the only signal — every verdict carries its own text, so this reads with the
+   palette removed (accessibility policy: never encode meaning in colour alone). */
+.dg-range { margin-top: 1.25rem; }
+.dg-range-head { font-size: 0.95rem; margin: 0 0 0.35rem; color: var(--ink); }
+.dg-range-note { font-size: 0.75rem; line-height: 1.5; color: var(--ink-soft); margin: 0 0 0.5rem; max-width: 90ch; }
+.dg-range-note code { font-family: var(--font-mono); font-size: 0.72rem; }
+.dg-range-note--warn { color: var(--ink); }
+
+.dg-range-tally { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0 0.75rem; }
+.dg-range-chip {
+  font-size: 0.72rem; padding: 2px 8px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--bg-elev); color: var(--ink);
+}
+.dg-range-chip--ok { border-color: var(--risk-normal); }
+.dg-range-chip--bad { border-color: var(--risk-high); font-weight: 600; }
+.dg-range-chip--unknown { border-color: var(--line); color: var(--ink-soft); }
+
+.dg-range-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+.dg-range-table th, .dg-range-table td {
+  text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top;
+}
+.dg-range-table thead th {
+  font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--ink-soft); border-bottom: 1px solid var(--border);
+}
+.dg-range-table tbody th { font-weight: 500; color: var(--ink); }
+.dg-range-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dg-range-sub { font-size: 0.68rem; color: var(--ink-soft); }
+
+.dg-range-row--bad { background: color-mix(in srgb, var(--risk-high) 8%, transparent); }
+.dg-range-badge { font-size: 0.7rem; white-space: nowrap; }
+.dg-range-badge--ok { color: var(--ink); }
+.dg-range-badge--bad { color: var(--ink); font-weight: 600; }
+.dg-range-badge--unknown { color: var(--ink-soft); }

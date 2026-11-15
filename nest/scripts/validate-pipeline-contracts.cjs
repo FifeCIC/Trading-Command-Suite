@@ -327,6 +327,17 @@ const WHITELIST = [
  */
 const CANARIES = [
   {
+    // #1275 - the marker is the MEASUREMENT, not the guard script. protocolBands and aboveFloor
+    // are what a consumer reads; if they leave this controller the floor stops being measured on
+    // the path the range map and the bot form use, and every bot silently reads "cannot judge" -
+    // which is the pass-looking state this invariant exists to prevent.
+    id: 'INV-THRESHOLD-IN-RANGE',
+    root: 'nest',
+    file: 'src/modules/scoring/protocol-gating.controller.ts',
+    markers: ['protocolBands', 'aboveFloor', 'MIN_FLOOR_SHARE_PCT'],
+    hint: 'The entry bar must be validated against BOTH measured ends of its protocol band: floor < bar <= ceiling (#1275).',
+  },
+  {
     id: 'INV-BAR-ORDER',
     root: 'nest',
     file: 'src/modules/directives/directives.service.ts',

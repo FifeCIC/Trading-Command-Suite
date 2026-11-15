@@ -12,6 +12,12 @@ import { useQuery } from '@tanstack/react-query'
 import { apiGet, apiPost } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
 import { formatTime, timeAgo } from '../core/format-utils';
+// ⚠️ ADDED 2026-11-14. This import was MISSING, so the page rendered with no styling at all: all 34
+// `mt5-*` class names it applies were defined only in `mt5-status.css`, which nothing imported, and
+// `.mt5-status-hero` was absent from the built bundle entirely. The page is a REGISTERED view
+// (`view-routes.jsx` `'mt5-status'`) so it is reachable by URL, which is what made the gap visible
+// only by measuring the bundle rather than the source.
+import './mt5-status.css';
 
 const FOREX_PAIRS = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'NZDUSD']
 const STATUS_QUERY_INTERVAL = 10_000 // 10s default, not 3-5s

@@ -48,6 +48,11 @@ async function run(arm) {
       timeframe: arm.timeframe,
       directionMode: 'long',
       newsExclusion: 'none',
+      // ⚠️ `fullScoreSeries` IS ASKED FOR SO THE NOISE FLOOR CAN BE MEASURED (2026-11-14).
+      // It changes nothing about the numbers below — `minComposite` already defaults to 0 here —
+      // it only adds the per-bar scores, which is the only way to see whether the entry bar sits
+      // ABOVE the score a protocol emits when nothing is happening.
+      fullScoreSeries: true,
     }),
   });
   const json = await res.json();
@@ -74,11 +79,70 @@ async function run(arm) {
     gap: N(s.breakEvenGapPp),
     refused: N(s.tradesRefusedUnaffordable),
     window: s.windowSource,
+    floor: noiseFloor(json.scoreSeries),
   };
 }
 
+/**
+ * noiseFloor() — the score a protocol emits most often, and how much of the run it is.
+ *
+ * ── WHY THIS EXISTS (measured 2026-11-14) ──
+ * A protocol scored on USDJPY/1h produced **11,945 readings in 7 days with only 16 distinct
+ * values**, and **84.6% of them were the identical 8.391608%** (= raw 60 of capacity 715). That is
+ * not noise on top of a signal; that IS the no-signal state, and it carries a non-zero score.
+ *
+ * The consequence is arithmetic, not opinion: a bot whose `minComposite` is at or below that modal
+ * value trades the protocol's *neutral* reading on every bar. Measured on the same protocol —
+ * entry bar 8.0 → 803 trades and −£1,002; bar 8.4 → 159 trades and +£66. The whole difference is
+ * whether the no-signal mode is admitted.
+ *
+ * ⚠️ `minComposite` is compared against `signalPct` (a percentage 0–100), NOT against the raw
+ * additive `composite` (mean ~63). Both the live gate (`head.compositePct`) and the backtest
+ * (`gated.signalPct`) read the percentage. Register row 178.
+ */
+function noiseFloor(series) {
+  if (!Array.isArray(series) || series.length === 0) return null;
+  const counts = new Map();
+  for (const row of series) {
+    const v = Number(row.signalPct);
+    if (!Number.isFinite(v)) continue;
+    counts.set(v, (counts.get(v) ?? 0) + 1);
+  }
+  if (counts.size === 0) return null;
+  let mode = null;
+  let n = 0;
+  for (const [v, c] of counts) if (c > n) { mode = v; n = c; }
+  const total = [...counts.values()].reduce((a, b) => a + b, 0);
+  return { mode, share: (100 * n) / total, total, distinct: counts.size };
+}
+
+/** Active bots per protocol, so the bar can be compared against the measured floor. */
+async function botsByProtocol() {
+  try {
+    const res = await fetch(`${API}/trading/strategies`);
+    if (!res.ok) return new Map();
+    const json = await res.json();
+    const list = Array.isArray(json) ? json : (json.strategies ?? []);
+    const map = new Map();
+    for (const b of list) {
+      if (!b || b.active === false || Number(b.active) === 0) continue;
+      const key = b.protocolId;
+      if (!key) continue;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push({ name: b.name, bar: N(b.minComposite) });
+    }
+    return map;
+  } catch {
+    // A bot list that cannot be read must not take the measurement down — it only removes the
+    // verdict, and the floor is still printed.
+    return new Map();
+  }
+}
+
+
 async function main() {
   const asJson = process.argv.includes('--json');
+  const bots = await botsByProtocol();
   const out = [];
   for (const arm of ARMS) out.push(await run(arm));
 
@@ -104,7 +168,38 @@ async function main() {
       `   avgWin ${r.avgWin.toFixed(2)}%  avgLoss ${r.avgLoss.toFixed(2)}%  ` +
       `breakEven ${r.breakEven === null ? '-' : r.breakEven.toFixed(1) + '%'}  gap ${r.gap === null ? '-' : r.gap + 'pp'}`,
     );
-    console.log(`   window ${r.window}\n`);
+    console.log(`   window ${r.window}`);
+
+    // ── THE NOISE FLOOR (2026-11-14) ─────────────────────────────────────────────────────────
+    // Printed on its own line and never merged into the performance numbers: it answers a
+    // different question — "is the entry bar above the score this protocol emits when nothing is
+    // happening?" A bar at or below the floor admits the no-signal state, which is arithmetic
+    // rather than judgement.
+    const f = r.floor;
+    if (!f) {
+      console.log('   floor   — could not be measured (no score series returned)\n');
+      continue;
+    }
+    console.log(
+      `   floor   ${f.mode.toFixed(2)}% is the MOST COMMON score — ${f.share.toFixed(1)}% of ${f.total} bars ` +
+      `(${f.distinct} distinct value(s) in the whole run)`,
+    );
+    const bars = bots.get(r.protocol) ?? [];
+    if (bars.length === 0) {
+      console.log('   bar     — no active bot on this protocol could be read, so CANNOT JUDGE\n');
+      continue;
+    }
+    for (const b of bars) {
+      if (b.bar == null) {
+        console.log(`   bar     ${b.name}: unreadable — cannot judge`);
+        continue;
+      }
+      const verdict = b.bar > f.mode
+        ? `✅ above the floor by ${(b.bar - f.mode).toFixed(2)}pp — admits genuine readings only`
+        : `🛑 AT OR BELOW THE FLOOR — trades the protocol's no-signal state on every bar`;
+      console.log(`   bar     ${b.name}: ${b.bar}% — ${verdict}`);
+    }
+    console.log('');
   }
 
   const ok = out.filter((r) => r.ok);
@@ -114,6 +209,15 @@ async function main() {
   const profitable = ok.filter((r) => r.netPnl > 0);
   console.log(`profitable: ${profitable.length} of ${ok.length}` +
     (profitable.length ? ` (${profitable.map((r) => r.protocol).join(', ')})` : ''));
+  const exposed = ok.filter((r) => {
+    const f = r.floor;
+    if (!f) return false;
+    return (bots.get(r.protocol) ?? []).some((b) => b.bar != null && b.bar <= f.mode);
+  });
+  console.log(
+    `entry bar at or below the noise floor: ${exposed.length} of ${ok.length}` +
+    (exposed.length ? ` (${exposed.map((r) => r.protocol).join(', ')})` : ''),
+  );
   console.log('');
 }
 

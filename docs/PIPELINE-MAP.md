@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**571** source files · **3227** declarations · **391** ratio sites · **1714** nodes · **179** unreferenced
+**571** source files · **3227** declarations · **392** ratio sites · **1714** nodes · **179** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -351,13 +351,13 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 3 sites — `round1((100*V1)/V2)`
 
-- `nest/src/modules/scoring/protocol-gating.controller.ts:409` — `(anonymous)()`
+- `nest/src/modules/scoring/protocol-gating.controller.ts:553` — `(anonymous)()`
   - `configuredCapacity>0?round1((100*neverCapacity)/configuredCapacity):0`
   - guarded by: `configuredCapacity>0`
-- `nest/src/modules/scoring/protocol-gating.controller.ts:412` — `(anonymous)()`
+- `nest/src/modules/scoring/protocol-gating.controller.ts:556` — `(anonymous)()`
   - `configuredCapacity>0?round1((100*p.peak)/configuredCapacity):0`
   - guarded by: `configuredCapacity>0`
-- `nest/src/modules/scoring/protocol-gating.controller.ts:418` — `(anonymous)()`
+- `nest/src/modules/scoring/protocol-gating.controller.ts:562` — `(anonymous)()`
   - `reachableCapacity>0?round1((100*p.peak)/reachableCapacity):null`
   - guarded by: `reachableCapacity>0`
 
@@ -1024,8 +1024,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/protocol-db.service.ts:1099 protocolNeedsEurUsd`
 - `nest/src/modules/scoring/protocol-db.service.ts:1115 getName`
 - `nest/src/modules/scoring/protocol-db.service.ts:491 getAllSlugs`
-- `nest/src/modules/scoring/protocol-gating.controller.ts:570 isIncluded`
-- `nest/src/modules/scoring/protocol-gating.controller.ts:575 effectiveMax`
+- `nest/src/modules/scoring/protocol-gating.controller.ts:714 isIncluded`
+- `nest/src/modules/scoring/protocol-gating.controller.ts:719 effectiveMax`
 - `nest/src/modules/scoring/protocol-gating.service.ts:1691 worker`
 - `nest/src/modules/scoring/protocol-health.service.ts:652 getLast`
 - `nest/src/modules/scoring/protocols.controller.ts:70 recordActivity`

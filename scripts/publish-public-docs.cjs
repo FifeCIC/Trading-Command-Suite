@@ -497,6 +497,12 @@ function publishWiki(repo, disclaimerBody, apply) {
     // every page without scrolling, and the owner reported on 2026-11-02 that the site was hard to
     // find. A link at the bottom of a long page is not a link a first-time visitor meets.
     ...(siteUrl ? [`**🌐 [Website](${siteUrl})** · **[Screenshots](${siteUrl}showcase/)**`, ''] : []),
+    // Owner, 2026-11-14: *"README and key places on Wiki and Website should have a Support Me link."*
+    // The sidebar is the "key place" on the wiki — it is on every page, above the fold. It points at
+    // the ONE support page rather than listing four donation options, because four equal buttons is a
+    // menu, not an ask (DONATION-LINKS.md §4), and the support page already marks Sponsors preferred.
+    '**💚 [Support this project](https://fifecic.github.io/Trading-Command-Suite/support/)** — the app is free, complete, and has no income.',
+    '',
   ];
   for (const sec of WIKI_SECTIONS) {
     nav.push(`**${sec.title}**`, '');
@@ -541,6 +547,14 @@ function publishWiki(repo, disclaimerBody, apply) {
     // reads a wiki page and wants the person behind it should not have to guess a domain.
     'Built by [Ryan Bayne](https://ryanbayne.uk) · [FifeCIC](https://fifecic.scot)',
     ...(siteUrl ? ['', `[Website](${siteUrl})`] : []),
+    // ⚠️ The ask belongs in the FOOTER as well as the sidebar, because a wiki page is the surface most
+    // likely to be read out of context (searched, linked, pasted into a chat) — the same reason the
+    // disclaimer is in both. Worded as a fact plus an ask, never as a performance claim: this wiki is
+    // read by people deciding whether to trust the app, and a money link beside a profit claim would
+    // undercut the one honest thing it says.
+    ...(siteUrl
+      ? ['', `💚 **[Support this project →](${siteUrl}support/)** — free, complete, no premium edition, and no income.`]
+      : []),
     '',
     '🛑 **Not financial advice.** The app ships unconfigured and is not set up to make money for you.' +
       ' Test on a demo account before connecting anything real.',

@@ -1,5 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { createChart, CandlestickSeries } from 'lightweight-charts';
+// ⚠️ ADDED 2026-11-14. The page applied `cpg-page`, `cpg-hero`, `cpg-toolbar` and 3 more classes
+// defined ONLY in this sheet, and imported no stylesheet at all — so it rendered unstyled. Found by
+// `validate-css-imports.cjs`, which exists because the same gap shipped on `/mt5-status`.
+import './candle-patterns-guide.css';
 
 // ── Chart Data → OHLC Converter ─────────────────────────────────────────────
 // SVG chart data uses: lower number = higher price (y=0 is top of chart).

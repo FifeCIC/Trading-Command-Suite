@@ -32,6 +32,7 @@ audit chain that can answer *"why did it buy that?"* for every order.
 | **Fix a problem** | [Troubleshooting](Troubleshooting) — the traps, with the misleading message each one produces |
 | **Ask or vote** | [Discussions](https://github.com/FifeCIC/Trading-Command-Suite/discussions) |
 | **Report a defect** | [Issues](https://github.com/FifeCIC/Trading-Command-Suite/issues) — see [how to report one](https://github.com/FifeCIC/Trading-Command-Suite/discussions/1161) |
+| **Support the project** | [Donate or sponsor](https://fifecic.github.io/Trading-Command-Suite/support/) — the app is given away complete, and it has no income |
 
 ## What is unusual about it
 
@@ -65,5 +66,6 @@ grows and never need chasing. The exact figures are generated and build-checked 
 | Website | [fifecic.github.io/Trading-Command-Suite](https://fifecic.github.io/Trading-Command-Suite/) |
 | Community | [Discord](https://discord.gg/8gRFkhbbfg) · [Reddit](https://www.reddit.com/r/TradingCommandSuite/) |
 | Maintained by | one person — reviews and replies may take time, which is the honest trade for a codebase this size |
+| Funding | **none** — no premium edition and nothing withheld. [Support the project](https://fifecic.github.io/Trading-Command-Suite/support/) if it earns you something |
 
 Contributions are welcome: see [Contributing](Contributing).

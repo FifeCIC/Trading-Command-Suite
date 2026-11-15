@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 229,
+  "count": 232,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1509,6 +1509,17 @@
       ]
     },
     {
+      "name": "validate-css-imports.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a stylesheet nothing loads is a page that renders unstyled",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
       "name": "validate-css-literals.cjs",
       "where": "repo",
       "category": "validator",
@@ -1600,6 +1611,17 @@
       "where": "nest",
       "category": "validator",
       "purpose": "every directive class in the library must be REGISTERED (#1169)",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-directive-versions.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a directive edit must ANNOUNCE itself (#1274)",
       "selfTest": true,
       "reaches": [
         "prebuild",
@@ -2062,6 +2084,16 @@
       "where": "repo",
       "category": "validator",
       "purpose": "a theory is only a theory if it can be refuted.",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-threshold-in-range.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "INV-THRESHOLD-IN-RANGE (#1275).",
       "selfTest": true,
       "reaches": [
         "npm"

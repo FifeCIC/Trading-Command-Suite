@@ -98,6 +98,10 @@
     "validate:no-notice-bar": "node ./scripts/validate-no-notice-bar.cjs",
     "test:no-notice-bar": "node ./scripts/validate-no-notice-bar.cjs --self-test",
     "validate:directive-registration": "node nest/scripts/validate-directive-registration.cjs",
+    "validate:directive-versions": "node scripts/validate-directive-versions.cjs",
+    "validate:css-imports": "node scripts/validate-css-imports.cjs",
+    "test:css-imports": "node scripts/validate-css-imports.cjs --self-test",
+    "test:directive-versions": "node scripts/validate-directive-versions.cjs --self-test",
     "validate:directive-registration:self-test": "node nest/scripts/validate-directive-registration.cjs --self-test",
     "validate:directive-id-references": "node scripts/validate-directive-id-references.cjs",
     "validate:directive-id-references:self-test": "node scripts/validate-directive-id-references.cjs --self-test",
@@ -117,7 +121,10 @@
     "report:bot-rules": "node scripts/report-bot-rule-coverage.cjs",
     "db:backup": "pwsh -NoProfile -File scripts/backup-db.ps1",
     "db:backup:drill": "pwsh -NoProfile -File scripts/restore-drill.ps1",
-    "generate:strategy-seed": "node scripts/generate-strategy-seed.cjs"
+    "generate:strategy-seed": "node scripts/generate-strategy-seed.cjs",
+    "audit:threshold-range": "node scripts/validate-threshold-in-range.cjs",
+    "audit:threshold-range:strict": "node scripts/validate-threshold-in-range.cjs --strict",
+    "test:threshold-range": "node scripts/validate-threshold-in-range.cjs --self-test"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.20",

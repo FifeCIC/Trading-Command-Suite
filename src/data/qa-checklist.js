@@ -8442,6 +8442,18 @@ const QA_CHECKLIST = [
   //    15 full (12 unique capabilities — 3 handoffs re-declare a name an earlier one already owns)
   //    and 6 Notes (QA only). Every entry below carries its own measured expected result.
       {
+          id: 'qa-threshold-range-001',
+          area: 'Scoring / Entry bars',
+          system: 'scripts/validate-threshold-in-range.cjs + GET /api/scoring/gated/thresholds + /development/diagrams',
+          name: 'A bot whose entry bar sits at or below its protocol noise floor is reported, not hidden',
+          procedure: 'Run `npm run audit:threshold-range` and open `http://localhost:5173/development/diagrams` (the Threshold range map below the diagram card). Then run `npm run test:threshold-range`.',
+          expected: 'The audit prints one block per out-of-range bot naming the bar and the floor, a separate "CANNOT BE JUDGED" list, and exits **0** (report-only). --strict exits 1. The page shows three tallies (in range / out of range / cannot judge) and a row per active bot with bar, floor, ceiling and verdict — measured 2026-11-14: **29 in range · 21 out of range · 14 cannot judge**. The self-test prints 13/13.',
+          category: 'Guard',
+          priority: 'high',
+          invariant: 'INV-THRESHOLD-IN-RANGE',
+          versionNote: '2026-11-14 - #1275. The ceiling was guarded and the floor was not, so 21 of 64 active bots traded their protocol no-signal state. The floor is the modal signalPct and is per protocol (xau and momentum 0.00%, forex 8.40%).',
+        },
+        {
         id: 'qa-hygiene-001',
         area: 'Build gates / Credentials',
         system: 'scripts/lib/mysql-cli.cjs + scripts/lib/mysql-credential.ps1 + scripts/validate-repo-hygiene.cjs',

@@ -191,6 +191,9 @@ export class ProtocolGatingController {
         // Three outcomes, kept distinct on purpose. "no data" is NOT "cannot fire" —
         // conflating them is how a protocol looks broken when it is merely unmeasured.
         clears: achieved == null ? 'no-data' : achieved >= Number(b.minComposite) ? 'yes' : 'no',
+        // #1275 — filled in below, once the protocol's floor has been measured.
+        floorPct: null as number | null,
+        aboveFloor: 'no-data' as 'yes' | 'no' | 'no-data',
       };
     });
 
@@ -248,6 +251,103 @@ export class ProtocolGatingController {
       protocolCeilings = {};
     }
 
+    // ── Per-PROTOCOL measured FLOOR (#1275) ──────────────────────────────────────────────────────
+    //
+    // The modal `signalPct` — the score the protocol emits when nothing is happening. Same source,
+    // same `SCALE_EPOCH` bound and same window as the ceiling, so the two ends of the band can never
+    // be measured on different scales (which is the #1115 defect, one layer down).
+    //
+    // ⚠️ ONE ROW PER DISTINCT VALUE, reduced here rather than in SQL. MySQL has no MODE(), and the
+    // alternatives (`GROUP_CONCAT` ordered by count, or a window function) either truncate silently
+    // at `group_concat_max_len` or turn one query into an unreadable subquery. The distinct count is
+    // small in practice — measured 16 to 123 per protocol — so the reduction is cheap and the
+    // arithmetic stays visible.
+    //
+    // ⚠️ A FLOOR IS ONLY BELIEVABLE WITH ENOUGH READINGS AND A DOMINANT SHARE. Below both bounds it
+    // is `null`, which the payload distinguishes from `0.00` — "not measured" and "measures zero"
+    // are different answers and only one of them is safe to gate on.
+    const MIN_FLOOR_SAMPLES = 100;
+    const MIN_FLOOR_SHARE_PCT = 10;
+    let protocolBands: Record<string, {
+      floorPct: number | null;
+      floorSharePct: number | null;
+      distinctValues: number;
+      samples: number;
+      ceilingPct: number | null;
+      legalFrom: string;
+      legalTo: string;
+      verdict: 'measured' | 'too-few-samples' | 'no-dominant-value' | 'no-readings';
+    }> = {};
+    try {
+      const values = await this.prisma.$queryRawUnsafe<Array<{
+        protocolId: string; signalPct: number; n: bigint;
+      }>>(`
+        SELECT ss.protocolId AS protocolId, ss.signalPct AS signalPct, COUNT(ss.id) AS n
+        FROM score_snapshot ss
+        WHERE ss.signalPct IS NOT NULL
+          AND ss.snappedAt >= '${SCALE_EPOCH}'
+          AND ss.snappedAt >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${WINDOW_DAYS} DAY)
+        GROUP BY ss.protocolId, ss.signalPct
+      `);
+
+      const perProtocol = new Map<string, { total: number; distinct: number; mode: number; modeN: number }>();
+      for (const v of values) {
+        const key = String(v.protocolId);
+        const n = Number(v.n);
+        const value = Number(v.signalPct);
+        const cur = perProtocol.get(key);
+        if (!cur) {
+          perProtocol.set(key, { total: n, distinct: 1, mode: value, modeN: n });
+          continue;
+        }
+        cur.total += n;
+        cur.distinct += 1;
+        if (n > cur.modeN) { cur.mode = value; cur.modeN = n; }
+      }
+
+      for (const [protocolId, agg] of perProtocol) {
+        const sharePct = (100 * agg.modeN) / agg.total;
+        let verdict: 'measured' | 'too-few-samples' | 'no-dominant-value';
+        let floorPct: number | null;
+        if (agg.total < MIN_FLOOR_SAMPLES) {
+          verdict = 'too-few-samples';
+          floorPct = null;
+        } else if (sharePct < MIN_FLOOR_SHARE_PCT) {
+          verdict = 'no-dominant-value';
+          floorPct = null;
+        } else {
+          verdict = 'measured';
+          floorPct = Math.round(agg.mode * 100) / 100;
+        }
+        const ceilingPct = protocolCeilings[protocolId]?.ceilingPct ?? null;
+        protocolBands[protocolId] = {
+          floorPct,
+          floorSharePct: Math.round(sharePct * 10) / 10,
+          distinctValues: agg.distinct,
+          samples: agg.total,
+          ceilingPct,
+          legalFrom: floorPct == null ? 'unknown' : `> ${floorPct}%`,
+          legalTo: ceilingPct == null ? 'unknown' : `<= ${ceilingPct}%`,
+          verdict,
+        };
+      }
+    } catch (err) {
+      // Same rule as the ceiling: a failed measurement must not render as "nothing to warn about".
+      this.logger.warn(`Per-protocol floor lookup failed: ${(err as Error).message}`);
+      protocolBands = {};
+    }
+
+    // Enrich each bot with the two-sided verdict. A bot whose protocol has no measured floor keeps
+    // `aboveFloor: 'no-data'` — NOT 'yes'. Assuming safety from an absent measurement is how the
+    // six bots in #1275 stayed invisible.
+    for (const r of rows) {
+      const band = protocolBands[r.protocolId];
+      if (!band || band.floorPct == null) continue;
+      r.floorPct = band.floorPct;
+      // `<=` on purpose: the floor value IS the no-signal score, so a bar equal to it admits it.
+      r.aboveFloor = r.thresholdPct > band.floorPct ? 'yes' : 'no';
+    }
+
     return {
       generatedAt: new Date().toISOString(),
       windowDays: WINDOW_DAYS,
@@ -268,6 +368,33 @@ export class ProtocolGatingController {
        */
       protocolCeilings,
       /**
+       * ── THE FLOOR (2026-11-14, #1275) — the mirror of the ceiling ─────────────────────────────
+       *
+       * ⚠️ A PROTOCOL'S "NOTHING IS HAPPENING" STATE CARRIES A NON-ZERO SCORE, and that score is
+       * the single most common value it ever produces. Measured: `forex-session-v1-long` produced
+       * 11,945 readings in 7 days with **16 distinct values**, of which **84.6% were the identical
+       * 8.391608%** (= raw 60 of a 715 capacity). A bot whose `minComposite` is at or below that
+       * value trades the no-signal state on every bar — which is arithmetic, not judgement.
+       *
+       * `ceiling` alone could not catch it: a bar can sit comfortably UNDER the ceiling and still
+       * be BELOW the floor. `assertCeilingAllowsActivation()` validated one end of the range only.
+       *
+       * ⚠️ THE FLOOR IS PER PROTOCOL AND CANNOT BE A CONSTANT. Measured the same day over each
+       * protocol's own window: `xau-speed-v1-long` 0.00% (68.6% of bars), `momentum-stock-v1-long`
+       * 0.00% (30.4%), `forex-session-v1-long` 8.40% (47.1%). Two protocols encode "nothing" as
+       * zero and one encodes it as 8.4 — a single number would be wrong for at least one of them.
+       *
+       * ⚠️ `share` IS PART OF THE ANSWER, NOT DECORATION. A "mode" that appears in 2% of readings
+       * is not a no-signal state, it is a coincidence. `distinctValues` beside it says how
+       * quantised the protocol is: 23 distinct values in a whole run means the score moves in
+       * visible steps and a threshold can land between them.
+       *
+       * ⚠️ MEASURED OVER `trading_strategy.transaction`-visible WINDOW DAYS, from `score_snapshot`
+       * — the same source and the same `SCALE_EPOCH` bound as the ceiling, so the two ends of the
+       * band are never measured on different scales.
+       */
+      protocolBands,
+      /**
        * ⚠️ THE WINDOW `protocolCeilings` WAS MEASURED OVER (#1117). Stated because the defect this
        * replaced was a ceiling whose basis was invisible: the query read `score` (pruned at **30
        * days**) while its comment claimed *"ALL-TIME, NOT WINDOWED"*, understating ceilings by up to
@@ -281,6 +408,19 @@ export class ProtocolGatingController {
        * that a threshold may be unreachable, never invent headroom.
        */
       ceilingWindowDays: resolveRetentionDays('score_snapshot'),
+      /**
+       * How to read the two ends together. Stated in the payload so a consumer cannot compute a
+       * verdict from one end and believe it validated the range.
+       */
+      bandRule: {
+        legal: 'floorPct < thresholdPct <= ceilingPct',
+        why:
+          'Below or equal to the floor trades the protocol’s no-signal state on every bar; above the ' +
+          'ceiling the bot can never fire. Both ends are measured, never typed.',
+        equalToFloor:
+          'EQUAL IS NOT SAFE — the floor value IS the no-signal score, so a bar equal to it admits that ' +
+          'score. The comparison is therefore `<=`, not `<`.',
+      },
       bots: rows,
       summary: {
         total: rows.length,
@@ -289,6 +429,10 @@ export class ProtocolGatingController {
         // The number that would have flagged the 2026-09-10 outage immediately.
         activeCannotFire: rows.filter((r) => r.active && r.clears === 'no').length,
         activeNoData: rows.filter((r) => r.active && r.clears === 'no-data').length,
+        // #1275 — the OTHER end of the same range. Distinct from `activeCannotFire`: a bot that
+        // cannot fire does nothing (safe, wasted); a bot below the floor TRADES NOISE (not safe).
+        activeAtOrBelowFloor: rows.filter((r) => r.active && r.aboveFloor === 'no').length,
+        activeFloorNoData: rows.filter((r) => r.active && r.aboveFloor === 'no-data').length,
       },
     };
   }

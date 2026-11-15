@@ -8,11 +8,12 @@
  * CODE-HEALTH-MARKER — written by scripts/audit-code-health.cjs; re-run it rather than editing.
  */
 
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { annotateSource, claimsFor, evaluateClaims, summarise } from '../core/diagram-claims';
 import { useThemedMermaid, readStatusColors, renderMermaidSvg } from '../core/mermaid-theme';
+import ThresholdRangeMap from '../components/ThresholdRangeMap.jsx';
 // Shell chrome is shared, not re-invented: the verdict block IS a notice, so it uses the
 // canonical notice stylesheet rather than a second colour recipe. See diagrams-page.css.
 import '../components/notice-block.css';
@@ -2033,6 +2034,13 @@ export default function DiagramsPage() {
       <div ref={containerRef} className="dg-card">
         <div key={diagram.id} id={`mermaid-${diagram.id}`} style={{ minHeight: '200px' }} />
       </div>
+
+      {/* ── THE NUMBERS MAP (#1275) ─────────────────────────────
+          Deliberately OUTSIDE the diagram tabs: it answers a different question from every picture
+          above. Those show where the algorithm goes; this shows whether the numbers it carries down
+          those routes are legal. A missing one of these two is not a missing step — the gate
+          `composite < minComposite` was already drawn correctly while six bots traded noise. */}
+      <ThresholdRangeMap />
 
       {/* ── Claim verification ──────────────────────────────────
           The verdict for every claim registered in src/core/diagram-claims.js. Renders
