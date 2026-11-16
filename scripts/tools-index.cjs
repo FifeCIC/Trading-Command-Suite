@@ -53,6 +53,7 @@ const { spawnSync } = require('child_process');
 // here was byte-identical to `scripts/lib/mysql-cli.cjs`'s, and the duplication guard failed the
 // build on the pair (2026-09-29).
 const { runCases } = require('./lib/validator-helpers.cjs');
+const { agentPath } = require('./lib/agent-paths.cjs');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const NEST = path.join(REPO_ROOT, 'nest');
@@ -83,12 +84,14 @@ const SCAN_DIRS = [
  */
 function referenceFiles() {
   const out = [];
-  const add = (p) => fs.existsSync(p) && out.push(p);
+  const add = (p) => p && fs.existsSync(p) && out.push(p);
 
   add(path.join(REPO_ROOT, 'package.json'));
   add(path.join(NEST, 'package.json'));
-  add(path.join(REPO_ROOT, '.github', 'AGENT-ATTENTION.md'));
-  add(path.join(REPO_ROOT, 'NEXT-AGENT.md'));
+  // Agent process material moved to the docs store on 2026-11-16 (owner: keep the technique private).
+  // Indexed when the store is mounted, skipped silently when it is not — this is an index, not a gate.
+  add(agentPath('AGENT-ATTENTION.md'));
+  add(agentPath('NEXT-AGENT.md'));
   // Docs-as-data + the two handbooks: where procedures actually live.
   add(path.join(REPO_ROOT, 'src', 'data', 'qa-checklist.js'));
   add(path.join(REPO_ROOT, 'src', 'data', 'known-features.js'));

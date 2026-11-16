@@ -94,3 +94,21 @@ this here?* If yes, it belongs elsewhere.
 The complete set — environment traps, pipeline invariants, UI and accessibility policy, database
 discipline, decision authority — is maintained with the project documentation outside this
 repository. This file is the part that applies to anyone reading the code.
+
+```
+…\Trading-Command-Suite-Documentation\agent-ops\
+    instructions\      the rule corpus (19 files) — read before structural work
+    agents\            agent definitions
+    skills\            reusable procedures
+    AGENT-ATTENTION.md      current traps and standing directions
+    PRIMARY-GOALS.md · REVIEW-QUEUE.md · NEXT-AGENT.md
+    archive\ · issue-cache\
+```
+
+Those files are deliberately **not** in this repository: the product repo shows engineering
+standards, not the process that produced them. Resolve them through
+`scripts/lib/agent-paths.cjs` rather than hard-coding a path — it checks the docs store, falls back to
+the old in-repo location for older commits, and returns `null` when neither is present.
+
+⚠️ When the docs store is not mounted, anything that depends on it must report **SKIPPED**, never
+pass. A check that cannot read its input has not checked anything.

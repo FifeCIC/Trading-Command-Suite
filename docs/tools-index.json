@@ -59,9 +59,7 @@
       "category": "audit",
       "purpose": "what did the Signal denominator actually do over time?",
       "selfTest": false,
-      "reaches": [
-        "docs"
-      ]
+      "reaches": null
     },
     {
       "name": "audit-dev-window-coverage.cjs",
@@ -170,9 +168,7 @@
       "category": "audit",
       "purpose": "answers \"why is the Signal denominator 725?\" (#781 follow-up)",
       "selfTest": false,
-      "reaches": [
-        "docs"
-      ]
+      "reaches": null
     },
     {
       "name": "audit-strategy-realism.cjs",
@@ -310,9 +306,7 @@
       "category": "database",
       "purpose": "print the REAL columns and types for one or more tables, from the live database.",
       "selfTest": true,
-      "reaches": [
-        "docs"
-      ]
+      "reaches": null
     },
     {
       "name": "seed-arch.cjs",
@@ -833,9 +827,7 @@
       "category": "tool",
       "purpose": "#613 — convert MyISAM tables to InnoDB, one at a time, verifying every step.",
       "selfTest": false,
-      "reaches": [
-        "docs"
-      ]
+      "reaches": null
     },
     {
       "name": "migrate-strategy-keys.cjs",

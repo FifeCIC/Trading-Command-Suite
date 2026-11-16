@@ -29,8 +29,23 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
-const STATE_PATH = path.join(ROOT, '.github', 'agent-state.json');
-const SNAPSHOT_PATH = path.join(ROOT, '.github', 'issue-cache', 'snapshot.md');
+/**
+ * ⚠️ AGENT STATE LIVES IN THE DOCS STORE (owner, 2026-11-16). It used to sit in `.github/`, which is
+ * a tracked folder — so every claim, heartbeat and cached issue snapshot was published. Resolved
+ * through the shared library index rather than a hard-coded path.
+ *
+ * When the store is not mounted this STOPS with an explanation. Writing a claim file back into the
+ * repo would quietly re-publish exactly what was just removed.
+ */
+const { agentPath, agentWritable } = require('./lib/agent-paths.cjs');
+const STATE_PATH = agentWritable('agent-state.json');
+const SNAPSHOT_PATH = agentPath('issue-cache', 'snapshot.md');
+if (!STATE_PATH) {
+  console.error(
+    '[agent-claim] agent state lives in the docs store, which is not mounted (G:). Mount it and retry \u2014 refusing to write a claim into the repository.',
+  );
+  process.exit(2);
+}
 const REPO = process.env.GITHUB_REPOSITORY || 'FifeCIC/Trading-Command-Suite';
 
 const SNAPSHOT_TTL_MS = 5 * 60 * 1000; // 5 minutes

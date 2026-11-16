@@ -73,6 +73,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { agentPath } = require('./lib/agent-paths.cjs');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 /**
@@ -91,12 +92,12 @@ const REPO_ROOT = path.resolve(__dirname, '..');
  * mount that is regularly unmounted on this machine, and a build that goes red because a network
  * drive is offline would teach everyone to ignore this gate — which is worse than not having it.
  */
-const DOCS_STORE_INSTRUCTIONS = 'G:\\My Drive\\Project Management\\Live\\Trading-Command-Suite-Documentation\\agent-ops\\instructions';
-const INSTRUCTIONS_DIR =
-  [path.join(REPO_ROOT, '.github', 'instructions'), DOCS_STORE_INSTRUCTIONS].find((p) => fs.existsSync(p)) || null;
-const AGENTS_DIR = path.join(REPO_ROOT, '.github', 'agents');
-const ATTENTION_BOARD = path.join(REPO_ROOT, '.github', 'AGENT-ATTENTION.md');
-const LEGACY_HANDOFF_DIR = path.join(REPO_ROOT, '.github', 'handoffs');
+// Every agent path goes through the shared index (scripts/lib/agent-paths.cjs), so moving the
+// library again is a one-line change there rather than a hunt for hard-coded `.github/...` strings.
+const INSTRUCTIONS_DIR = agentPath('instructions');
+const AGENTS_DIR = agentPath('agents');
+const ATTENTION_BOARD = agentPath('AGENT-ATTENTION.md');
+const LEGACY_HANDOFF_DIR = agentPath('handoffs');
 
 const failures = [];
 const warnings = [];
@@ -157,7 +158,7 @@ for (const f of instructionFiles) {
 
 // ── 2. single canonical handoff directory ────────────────────────────────────
 
-if (fs.existsSync(LEGACY_HANDOFF_DIR)) {
+  if (LEGACY_HANDOFF_DIR && fs.existsSync(LEGACY_HANDOFF_DIR)) {
   const legacy = fs.readdirSync(LEGACY_HANDOFF_DIR).filter((f) => f.endsWith('.md'));
   fail(
     'duplicate-handoff-dir',
@@ -496,7 +497,7 @@ const AGENT_CAMEL_TRAPS = {
 };
 
 function checkAgentFiles() {
-  if (!fs.existsSync(AGENTS_DIR)) {
+  if (!AGENTS_DIR || !fs.existsSync(AGENTS_DIR)) {
     warn('agents-dir-missing', '.github/agents does not exist', 'With no agent folder, the picker offers only built-in agents.');
     return 0;
   }
