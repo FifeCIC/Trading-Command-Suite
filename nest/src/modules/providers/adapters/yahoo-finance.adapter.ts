@@ -38,6 +38,29 @@ import {
  * (see `getCandlesRange`). A timeframe with no entry falls back to daily rather than throwing,
  * because a wrong-resolution answer the caller can SEE beats an exception it cannot act on.
  */
+/**
+ * 🛑 YAHOO REJECTS A REQUEST WITHOUT A BROWSER User-Agent — measured 2026-11-16, and it is why
+ * every historical window capture failed with `provider-unavailable`.
+ *
+ *   fetch(url)                                     -> HTTP 429, 19-byte body
+ *   fetch(url, { headers: { 'User-Agent': … } })   -> HTTP 200, 468 bars
+ *
+ * Node's built-in `fetch` sends no `User-Agent` (or a bare `node` one), and Yahoo throttles that.
+ * The previous code called `fetch(url)` bare on EVERY path here, so all five calls were exposed.
+ *
+ * ⚠️ THE FAILURE WAS INVISIBLE, WHICH IS WHAT MADE IT EXPENSIVE. The callers already handled "no
+ * answer" correctly — `getCandlesRange()` returns `null` (UNKNOWN) and the period importer reported
+ * `provider-unavailable` — so nothing lied. But `provider-unavailable` reads as "the provider is
+ * down", not "we never identified ourselves", and the capture tool had no usable way to fetch a past
+ * window for ANY symbol. A correct null is still a null; the cause was in the request, not the market.
+ */
+const YAHOO_HEADERS: Record<string, string> = {
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+    + 'Chrome/120.0.0.0 Safari/537.36',
+  Accept: 'application/json,text/plain,*/*',
+};
+
 const YAHOO_RANGE_INTERVAL: Record<string, string> = {
   '1m': '1m',
   '5m': '5m',
@@ -107,7 +130,7 @@ export class YahooFinanceAdapter implements IProviderAdapter {
       await this.rateLimit();
       const ySymbol = this.toYahooSymbol(symbol);
       const url = `${this.baseUrl}/v8/finance/chart/${encodeURIComponent(ySymbol)}?interval=1d&range=1d`;
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: YAHOO_HEADERS });
 
       if (res.status === 429) { this.hitRateLimit(); return null; }
       if (!res.ok) { this.logger.warn(`Yahoo quote ${symbol}: HTTP ${res.status}`); return null; }
@@ -140,7 +163,7 @@ export class YahooFinanceAdapter implements IProviderAdapter {
       const { yInterval, yRange } = this.toYahooParams(timeframe, limit);
 
       const url = `${this.baseUrl}/v8/finance/chart/${encodeURIComponent(ySymbol)}?interval=${yInterval}&range=${yRange}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: YAHOO_HEADERS });
 
       if (res.status === 429) { this.hitRateLimit(); return []; }
       if (!res.ok) { this.logger.warn(`Yahoo candles ${symbol}: HTTP ${res.status}`); return []; }
@@ -213,7 +236,7 @@ export class YahooFinanceAdapter implements IProviderAdapter {
       const url =
         `${this.baseUrl}/v8/finance/chart/${encodeURIComponent(ySymbol)}` +
         `?interval=${interval}&period1=${p1}&period2=${p2}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: YAHOO_HEADERS });
 
       if (res.status === 429) { this.hitRateLimit(); return null; }
       if (!res.ok) {
@@ -267,7 +290,7 @@ export class YahooFinanceAdapter implements IProviderAdapter {
       await this.rateLimit();
       const ySymbol = this.toYahooSymbol(symbol);
       const url = `${this.baseUrl}/v11/finance/quoteSummary/${encodeURIComponent(ySymbol)}?modules=assetProfile,price`;
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: YAHOO_HEADERS });
 
       if (res.status === 429) { this.hitRateLimit(); return null; }
       if (!res.ok) { this.logger.warn(`Yahoo profile ${symbol}: HTTP ${res.status}`); return null; }
@@ -293,7 +316,7 @@ export class YahooFinanceAdapter implements IProviderAdapter {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const res = await fetch(`${this.baseUrl}/v8/finance/chart/AAPL?interval=1d&range=1d`);
+      const res = await fetch(`${this.baseUrl}/v8/finance/chart/AAPL?interval=1d&range=1d`, { headers: YAHOO_HEADERS });
       return res.ok;
     } catch (err) {
       this.logger.error(`Yahoo healthCheck failed: ${(err as Error).message}`);

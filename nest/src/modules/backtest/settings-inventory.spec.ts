@@ -124,13 +124,15 @@ describe('settings inventory — the bot fields a backtest HONOURS, proven behav
     },
   );
 
-  it('the honoured set is exactly symbol, timeframe, protocolId, slPct, tpPct and minComposite', () => {
+  it('the honoured set is exactly symbol, timeframe, protocolId, slPct, tpPct, minComposite and maxHoldHours', () => {
     // ⚠️ THE CANARY FOR A SILENT WIDENING **AND** FOR A SILENT REMOVAL. `minComposite` joined this set
     // on 2026-10-22 (#1136): the bot's own entry bar now gates entries, so a run cannot take a trade
-    // the bot would skip. If that wire is ever removed, this fails rather than the inventory quietly
-    // reverting to "ignored".
+    // the bot would skip. `maxHoldHours` joined it on 2026-11-16 (#1136): the bot's own time stop now
+    // closes a trade at `entry + limit`, so a run cannot hold a trade the bot would have closed. Both
+    // were set on most active bots and read by nothing. If either wire is ever removed, this fails
+    // rather than the inventory quietly reverting to "ignored".
     expect(honouredBotFields.map((f) => f.key).sort()).toEqual(
-      ['minComposite', 'protocolId', 'slPct', 'symbol', 'timeframe', 'tpPct'].sort(),
+      ['maxHoldHours', 'minComposite', 'protocolId', 'slPct', 'symbol', 'timeframe', 'tpPct'].sort(),
     );
   });
 });
@@ -252,11 +254,12 @@ describe('settings inventory — the builder never fabricates a value', () => {
     // by driving the live page, where the inputs were simply absent.
     const { groups } = buildSettingsInventory({ settings: [] });
     const run = groups.find((g) => g.id === 'run')!;
-    expect(run.rows.map((r) => r.key)).toEqual(['minComposite', 'slPct', 'tpPct', 'timeframe']);
+    expect(run.rows.map((r) => r.key)).toEqual(['minComposite', 'maxHoldHours', 'slPct', 'tpPct', 'timeframe']);
     expect(run.rows.every((r) => r.applied === 'honoured')).toBe(true);
-    // The engine's own defaults — no bar, 1% / 1% — not null. A blank here would imply "no value"
-    // while a run silently brackets at 1% and applies no entry bar.
+    // The engine's own defaults — no bar, no time stop, 1% / 1% — not null. A blank here would imply
+    // "no value" while a run silently brackets at 1% and applies no entry bar.
     expect(run.rows.find((r) => r.key === 'minComposite')!.value).toBe(0);
+    expect(run.rows.find((r) => r.key === 'maxHoldHours')!.value).toBe(0);
     expect(run.rows.find((r) => r.key === 'slPct')!.value).toBe(1);
     expect(run.rows.find((r) => r.key === 'tpPct')!.value).toBe(1);
   });

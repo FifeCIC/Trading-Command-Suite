@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 193,
+  "count": 194,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -110,6 +110,16 @@
       "selfTest": false,
       "reaches": [
         "docs"
+      ]
+    },
+    {
+      "name": "audit-project-readiness.cjs",
+      "where": "repo",
+      "category": "audit",
+      "purpose": "new project bootstrap: what setup, scaffold, environment, guardrails are missing?",
+      "selfTest": true,
+      "reaches": [
+        "npm"
       ]
     },
     {
@@ -560,9 +570,7 @@
       "category": "tool",
       "purpose": "© 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite",
       "selfTest": true,
-      "reaches": [
-        "docs"
-      ]
+      "reaches": null
     },
     {
       "name": "delete-directive.cjs",

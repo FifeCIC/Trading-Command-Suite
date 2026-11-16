@@ -150,7 +150,9 @@
     "generate:strategy-seed": "node scripts/generate-strategy-seed.cjs",
     "audit:threshold-range": "node scripts/validate-threshold-in-range.cjs",
     "audit:threshold-range:strict": "node scripts/validate-threshold-in-range.cjs --strict",
-    "test:threshold-range": "node scripts/validate-threshold-in-range.cjs --self-test"
+    "test:threshold-range": "node scripts/validate-threshold-in-range.cjs --self-test",
+    "audit:readiness": "node scripts/audit-project-readiness.cjs",
+    "test:readiness": "node scripts/audit-project-readiness.cjs --self-test"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.20",

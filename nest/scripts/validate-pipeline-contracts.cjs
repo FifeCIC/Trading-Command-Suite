@@ -41,7 +41,32 @@ const path = require('path');
 
 const NEST_ROOT = path.resolve(__dirname, '..');
 const REPO_ROOT = path.resolve(NEST_ROOT, '..');
-const CONTRACTS_DOC = path.join(REPO_ROOT, '.github', 'instructions', 'meta-stack-contracts.instructions.md');
+
+/**
+ * 🛑 THE RULE CORPUS IS NO LONGER IN THE REPO — resolved from either location, and SKIPPED LOUDLY
+ * when neither is present. Added 2026-11-16, matching the resolver `validate-agent-docs.cjs` and
+ * `validate-output-style-sync.cjs` adopted in commit `bdfde054`.
+ *
+ * Owner, 2026-11-16: the internal development process should not be published, so the 19 instruction
+ * files moved to the docs store under `agent-ops/instructions` and `.github/copilot-instructions.md`
+ * became the published replacement. That commit updated TWO of the THREE consumers — this file still
+ * read the old repo path and hard-failed with `no invariants found`, turning the whole backend build
+ * red for a reason that named a missing document rather than the move.
+ *
+ * ⚠️ SKIP, DO NOT FAIL, WHEN THE DOCS STORE IS ABSENT. `G:` is a Google Drive mount that is regularly
+ * unmounted here. A gate that goes red because a network drive is offline teaches everyone to ignore
+ * it, which is worse than not having it — that reasoning is the owner's and it applies verbatim here.
+ * The skip is printed, never silent: "cannot judge" must not look like "checked and fine".
+ */
+const DOCS_STORE_INSTRUCTIONS =
+  'G:\\My Drive\\Project Management\\Live\\Trading-Command-Suite-Documentation\\agent-ops\\instructions';
+const INSTRUCTIONS_DIR =
+  [path.join(REPO_ROOT, '.github', 'instructions'), DOCS_STORE_INSTRUCTIONS].find((p) =>
+    fs.existsSync(p),
+  ) || null;
+const CONTRACTS_DOC = INSTRUCTIONS_DIR
+  ? path.join(INSTRUCTIONS_DIR, 'meta-stack-contracts.instructions.md')
+  : null;
 const QA_CHECKLIST = path.join(REPO_ROOT, 'src', 'data', 'qa-checklist.js');
 const PROBE_SCRIPT = path.join(NEST_ROOT, 'scripts', 'contract-probe.cjs');
 
@@ -1372,15 +1397,31 @@ function checkTimeframeCoverage() {
 // ── 3. wiring: invariants <-> guards <-> QA mirror ────────────────────────
 
 function readInvariants() {
-  if (!fs.existsSync(CONTRACTS_DOC)) return [];
+  if (!CONTRACTS_DOC || !fs.existsSync(CONTRACTS_DOC)) return [];
   const doc = fs.readFileSync(CONTRACTS_DOC, 'utf8');
   return [...new Set(doc.match(/INV-[A-Z0-9-]+/g) || [])].sort();
 }
 
 function checkWiring() {
+  /**
+   * ⚠️ "CANNOT JUDGE" IS NOT "FAILED" HERE. When neither the repo nor the docs store holds the rule
+   * corpus, the invariant wiring cannot be checked at all — and reporting that as a contract
+   * VIOLATION is a false claim about the code. It is printed as SKIPPED and the build continues,
+   * which is the same decision `validate-agent-docs.cjs` made for the same reason (see the resolver
+   * comment at the top of this file).
+   */
+  if (!CONTRACTS_DOC) {
+    console.log(
+      '[pipeline-contracts] ⚠️  wiring checks SKIPPED — the rule corpus is not on this machine.\n'
+      + '    Looked in: .github/instructions/  and  the docs store under agent-ops/instructions.\n'
+      + '    This is NOT a pass: invariant <-> guard <-> QA wiring was NOT checked.',
+    );
+    return [];
+  }
+
   const ids = readInvariants();
   if (ids.length === 0) {
-    fail('wiring', 'no invariants found in meta-stack-contracts.instructions.md', 'The canonical contracts doc is missing or empty.');
+    fail('wiring', `no invariants found in ${path.basename(CONTRACTS_DOC)}`, 'The canonical contracts doc is present but holds no INV- ids, so the four-page mirror cannot be checked.');
     return ids;
   }
 

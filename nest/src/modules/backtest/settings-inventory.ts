@@ -74,6 +74,7 @@ export interface InventoryCounts {
  */
 const RUN_FIELDS: ReadonlyArray<{ key: string; label: string; applied: Applied; why: string; fallback: unknown }> = [
   { key: 'minComposite', label: 'Entry bar % (minComposite)', applied: 'honoured', why: 'The bot’s own entry gate. A score below it produces no trade — the same comparison the live loop makes, on the same percentage. Change it here to test a different bar without editing the bot.', fallback: 0 },
+  { key: 'maxHoldHours', label: 'Max hold (hours)', applied: 'honoured', why: 'The bot’s own time stop, in HOURS. A position held to entry + this limit closes at that bar’s close with exit reason TIME. Read before the bot’s own value and recorded in drivenBy.overridden, so a run reports that it measured a different hold. 0 = no limit.', fallback: 0 },
   { key: 'slPct', label: 'Stop loss %', applied: 'honoured', why: 'BacktestRunRequest.slPct — read before the bot’s own value and recorded in drivenBy.overridden. The bracket exit uses it.', fallback: 1 },
   { key: 'tpPct', label: 'Take profit %', applied: 'honoured', why: 'BacktestRunRequest.tpPct — same precedence. `doBrackets` is false unless BOTH are above zero.', fallback: 1 },
   { key: 'timeframe', label: 'Timeframe', applied: 'honoured', why: 'BacktestRunRequest.timeframe — only used when the window is a bar count; a stored period owns the timeframe.', fallback: '1d' },
@@ -98,7 +99,7 @@ const BOT_FIELDS: ReadonlyArray<{ key: string; label: string; applied: Applied; 
   { key: 'minComposite', label: 'Entry threshold (minComposite)', applied: 'honoured', why: 'The bot’s own entry bar, applied as a PERCENTAGE gate before a signal is recorded — the same comparison the live loop makes. A run cannot take an entry the bot would skip.' },
   { key: 'maxPositions', label: 'Max positions', applied: 'ignored', why: 'Zero references in backtest.service; the engine opens one position at a time per trade record.' },
   { key: 'cooldownMinutes', label: 'Cooldown (minutes)', applied: 'ignored', why: 'Zero references. The live loop enforces it between trades; the backtester does not.' },
-  { key: 'maxHoldHours', label: 'Max hold (hours)', applied: 'ignored', why: 'Zero references. The position time-stop is a live-loop service, not part of a run.' },
+  { key: 'maxHoldHours', label: 'Max hold (hours)', applied: 'honoured', why: 'The bot’s own TIME STOP, in hours, applied per trade: a position held to `entry + maxHoldHours` closes at that bar’s close with exit reason TIME. Live equivalent is position-time-stop.service.ts (SYSTEM_TIME_STOP). ⚠️ Set on 42 of 64 active bots and ignored by the engine until 2026-11-16, so older runs of these bots held trades far past this limit.' },
   { key: 'maxPyramidTiers', label: 'Max pyramid tiers', applied: 'ignored', why: 'Zero references. Pyramiding is applied live only.' },
   { key: 'exhaustionObserveEnabled', label: 'Exhaustion observe mode', applied: 'ignored', why: 'Zero references.' },
   { key: 'exhaustionDecelPct', label: 'Exhaustion deceleration %', applied: 'ignored', why: 'Zero references.' },

@@ -28,6 +28,9 @@ import { describeRunDifferences, type RunDifferenceSet } from './run-differences
 import { breakEvenFromOutcomes, medianBracket } from './break-even';
 import { decideEntry, refuseUnrunnableDirection } from './entry-side';
 import { applyAffordability } from './affordable-size';
+// ⚠️ The bot's own TIME STOP, extracted so the comparison is testable (#1136). Set on 42 of 64 active
+// bots and referenced zero times by this file before 2026-11-16.
+import { maxHoldExpired } from './max-hold';
 import { resolveFixedUnits } from './fixed-units';
 import { signalProfitFactor as signalProfitFactorOf, tradeProfitFactor as tradeProfitFactorOf } from './profit-factor';
 import {
@@ -282,6 +285,13 @@ export interface BacktestRunRequest {
    * same unit `trading_strategy.minComposite` holds (#1136). Absent/0 = no bar.
    */
   minComposite?: number;
+  /**
+   * The bot's own TIME STOP, in HOURS (#1136). Absent/0 = no limit.
+   *
+   * ⚠️ Applied per trade, because each simulated trade in a run is independent. The live equivalent is
+   * `position-time-stop.service.ts` (reason `SYSTEM_TIME_STOP`); the comparison lives in `max-hold.ts`.
+   */
+  maxHoldHours?: number;
   /** Weight overrides — keyed by directive ID, overrides default weights */
   weights?: Record<string, number>;
   /** Execution realism */
@@ -418,7 +428,14 @@ export interface TradeRecord {
   direction: 'LONG' | 'SHORT';
   pnl: number;
   pnlPct: number;
-  exitReason: 'TP' | 'SL' | 'TRAIL' | 'EOD';  // Take-profit, Stop-loss, tightened stop, End-of-data
+  /**
+   * How the trade ended.
+   *
+   * `TIME` was added 2026-11-16 (#1136) for the bot's own `maxHoldHours`. It is deliberately NOT
+   * `EOD`: end-of-data means the sample ran out, a time stop means the BOT decided to close, and
+   * collapsing them would make a truncated window indistinguishable from a strategy choice.
+   */
+  exitReason: 'TP' | 'SL' | 'TRAIL' | 'TIME' | 'EOD';  // Take-profit, Stop-loss, tightened stop, max hold, End-of-data
   /**
    * #R14 — the stop and target the trade was measured against, or `undefined` for a run made
    * before they were recorded. Optional on purpose: an old run has no levels and must be able to
@@ -500,6 +517,15 @@ export interface BotForBacktest {
    * that omits the same gate takes trades the bot never would.
    */
   minComposite?: number | null;
+  /**
+   * The bot's own TIME STOP, in HOURS (#1136).
+   *
+   * ⚠️ Set on **42 of 64 active bots** (measured 2026-11-16: 12h × 21, 24h × 11, 4h × 7, 120h × 2,
+   * 72h × 1) and referenced **zero** times by the backtester, so a run held trades past the point the
+   * live bot would have closed them. Live: `position-time-stop.service.ts` closes at
+   * `entry + maxHoldHours` with reason `SYSTEM_TIME_STOP`.
+   */
+  maxHoldHours?: number | null;
   baseSize?: number | null;
   mode: string;
   active: boolean;
@@ -599,6 +625,16 @@ export function mergeBotConfig(
     // before this change measured a LOWER bar than the bot uses. They are not comparable with new
     // runs, and `caveats` says so on every bot-driven result.
     minComposite: pick(request.minComposite, bot.minComposite, 'minComposite'),
+    // ⚠️ CARRIED NOW, AND IT CHANGES RESULTS (#1136, 2026-11-16). `maxHoldHours` was set on 42 of 64
+    // active bots and read by NOTHING in the engine, so a run held every trade until its stop, its
+    // target or the end of the data — days past the point the live bot would have closed it
+    // (`position-time-stop.service.ts`, `SYSTEM_TIME_STOP`). Hold time was therefore inflated and the
+    // exit reason belonged to a period the bot would no longer have been in the market.
+    //
+    // ⚠️ CONSEQUENCE, stated because it is not reversible by re-running: bot-driven runs stored before
+    // this change measured a trade population with no time stop. They are not comparable with new
+    // runs, and `caveats` says so on every bot-driven result.
+    maxHoldHours: pick(request.maxHoldHours, bot.maxHoldHours, 'maxHoldHours'),
   };
 
   const baseSize = bot.baseSize ?? null;
@@ -620,6 +656,12 @@ export function mergeBotConfig(
         + 'bot stored before 2026-10-22 did NOT apply it, so their trade counts are higher and the two '
         + 'are not comparable.'
       : 'ℹ️ The bot has no entry bar (minComposite 0), so this run applies none — matching the live path.',
+    // ⚠️ #1136 (2026-11-16) — the time stop IS applied now, and that makes old runs non-comparable.
+    (merged.maxHoldHours ?? 0) > 0
+      ? `ℹ️ The bot's time stop (${merged.maxHoldHours}h max hold) IS applied (#1136). Runs of this bot `
+        + 'stored before 2026-11-16 had NO time stop, so their trades could be held far past this limit: '
+        + 'their hold times are inflated and their exit reasons are not comparable with this run.'
+      : 'ℹ️ The bot has no max hold, so this run applies no time stop — matching the live path.',
     ...(merged.protocolId
       ? []
       : [
@@ -1256,6 +1298,10 @@ export class BacktestService {
       slPct = 1.0,
       tpPct = 1.0,
       minComposite = 0,
+      // ⚠️ The bot's own time stop, in HOURS (#1136). 0 = no limit, matching the live default when
+      // `maxHoldHours` is unset. Applied per trade — see `max-hold.ts` for why that is sound here and
+      // why `cooldownMinutes` is NOT (overlapping hypothetical trades make it ambiguous).
+      maxHoldHours = 0,
       slippage: rawSlippage,
       spread: rawSpread,
       stopPlan = null,
@@ -1765,6 +1811,32 @@ export class BacktestService {
             if (isLong ? fb.high >= tpPrice : fb.low <= tpPrice) {
               exitPrice = tpPrice;
               exitReason = 'TP';
+              exitDate = fb.timestamp.toISOString();
+              break;
+            }
+
+            // ── Does the BOT'S OWN TIME STOP expire on this bar? (#1136) ──────────────────────
+            // ── DECISION (2026-11-16, primary) ──
+            // WHAT:      the time stop is tested AFTER the stop and the target, and it closes at the
+            //            bar's CLOSE with exit reason `TIME`.
+            // WHY:       A stop or a target is a real price level this bar actually traded through; the
+            //            time stop is a decision to leave at the close. When both could fire on the same
+            //            bar, the level that was genuinely touched is the more defensible exit — booking
+            //            `TIME` first would invent an exit at the close while ignoring a level the
+            //            market traded through. This matters most across a market gap: a position held
+            //            past its limit while the market is shut can only be closed when a bar exists,
+            //            and on that reopen bar the resting stop is what would have filled first.
+            // INSTEAD OF: testing TIME first, which would have booked the reopen bar's close and
+            //            silently pretended the stop never fired. Measured on MSTR 5m (560 trades):
+            //            3 TIME exits — two at exactly 240 min with continuous bars, one at 1,060 min
+            //            across a weekend gap — versus 0 TIME exits with the knob off.
+            // REVERSE BY: moving this block above the SL/TP tests. Every affected trade would then
+            //            exit at the bar close instead of at its stop, so stored runs are not comparable.
+            // REGISTER:  docs/SETTLED-DECISIONS.md row 193
+            // GUARD:     nest/src/modules/backtest/max-hold.spec.ts (boundary + no-limit, canaried)
+            if (maxHoldExpired(currentBar.timestamp.getTime(), fb.timestamp.getTime(), maxHoldHours)) {
+              exitPrice = fb.close;
+              exitReason = 'TIME';
               exitDate = fb.timestamp.toISOString();
               break;
             }
