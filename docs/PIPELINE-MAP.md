@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **575** backend source files (specs excluded). Two access paths, because one
+Scanned **579** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -27,7 +27,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 ### `marketbar`
 
 - **writers (8):** `backtest-period.service.ts`, `import-jobs.service.ts`, `bar-refresh.service.ts`, `replay.service.ts`, `scoring.service.ts`, `tick-recorder.service.ts`, `trading-strategy.service.ts`, `webhooks.controller.ts`
-- **readers (25):** `alert-trigger.service.ts`, `backtest-period.service.ts`, `backtest.controller.ts`, `backtest.service.ts`, `directive-preview.service.ts`, `import-jobs.service.ts`, `indicators.service.ts`, `bar-refresh.service.ts`, `freshness.service.ts`, `market-data.service.ts`, `correlation.service.ts`, `replay.service.ts`, `research-overview.service.ts`, `weekend-gap-risk.service.ts`, `trading-scheduler.service.ts`, `outcome-tracker.service.ts`, `scoring.service.ts`, `tick-recorder.service.ts`, `snapshot-comparison.service.ts`, `snapshots.module.ts`, `strategies.controller.ts`, `symbols.controller.ts`, `symbols.service.ts`, `system-health.service.ts`, `trading-strategy.service.ts`
+- **readers (26):** `alert-trigger.service.ts`, `backtest-period.service.ts`, `backtest.controller.ts`, `backtest.service.ts`, `directive-preview.service.ts`, `import-jobs.service.ts`, `indicators.service.ts`, `bar-refresh.service.ts`, `freshness.service.ts`, `market-data.service.ts`, `correlation.service.ts`, `replay.service.ts`, `research-overview.service.ts`, `weekend-gap-risk.service.ts`, `trading-scheduler.service.ts`, `movers-treatment.service.ts`, `outcome-tracker.service.ts`, `scoring.service.ts`, `tick-recorder.service.ts`, `snapshot-comparison.service.ts`, `snapshots.module.ts`, `strategies.controller.ts`, `symbols.controller.ts`, `symbols.service.ts`, `system-health.service.ts`, `trading-strategy.service.ts`
 
 ## Score
 
@@ -49,14 +49,14 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 ### `trading_strategy`
 
 - **writers (2):** `speed-scan.controller.ts`, `trading-strategy.service.ts`
-- **readers (28):** `app.controller.ts`, `alert-trigger.service.ts`, `architecture.service.ts`, `ab-test.service.ts`, `automation.controller.ts`, `experiment-review.service.ts`, `backtest.controller.ts`, `backtest.service.ts`, `bar-refresh.service.ts`, `progression.service.ts`, `mt5.controller.ts`, `replay.service.ts`, `exit-consensus.service.ts`, `protocol-gating.controller.ts`, `protocol-health.service.ts`, `strategy-derivation.service.ts`, `signal-envelope.service.ts`, `signal-queue.service.ts`, `symbol-protocol-authority.service.ts`, `symbol-resolver.service.ts`, `symbols.service.ts`, `bot-performance.service.ts`, `execution-feasibility.service.ts`, `first-run-seed.service.ts`, `mt5-trading.service.ts`, `pyramid-policy.service.ts`, `trade-history.controller.ts`, `trading-strategy.service.ts`
+- **readers (29):** `app.controller.ts`, `alert-trigger.service.ts`, `architecture.service.ts`, `ab-test.service.ts`, `automation.controller.ts`, `experiment-review.service.ts`, `backtest.controller.ts`, `backtest.service.ts`, `bar-refresh.service.ts`, `progression.service.ts`, `mt5.controller.ts`, `replay.service.ts`, `exit-consensus.service.ts`, `movers-treatment.service.ts`, `protocol-gating.controller.ts`, `protocol-health.service.ts`, `strategy-derivation.service.ts`, `signal-envelope.service.ts`, `signal-queue.service.ts`, `symbol-protocol-authority.service.ts`, `symbol-resolver.service.ts`, `symbols.service.ts`, `bot-performance.service.ts`, `execution-feasibility.service.ts`, `first-run-seed.service.ts`, `mt5-trading.service.ts`, `pyramid-policy.service.ts`, `trade-history.controller.ts`, `trading-strategy.service.ts`
 
 ## Gate / queue
 
 ### `strategy_signal_queue`
 
 - **writers (3):** `automation-loop.service.ts`, `signal-queue.service.ts`, `trading-strategy.service.ts`
-- **readers (3):** `automation-loop.service.ts`, `signal-queue.service.ts`, `trading-strategy.service.ts`
+- **readers (4):** `automation-loop.service.ts`, `movers-treatment.service.ts`, `signal-queue.service.ts`, `trading-strategy.service.ts`
 
 ## Execute
 
@@ -68,7 +68,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 ### `trade`
 
 - **writers (5):** `automation-loop.service.ts`, `paper-trading.service.ts`, `mt5.controller.ts`, `position-sync.service.ts`, `trade-recorder.service.ts`
-- **readers (24):** `ab-test.service.ts`, `experiment-review.service.ts`, `backtest.controller.ts`, `paper-trading.service.ts`, `performance.service.ts`, `progression.service.ts`, `position-sync.service.ts`, `research-overview.service.ts`, `risk.controller.ts`, `decision-chain.service.ts`, `edge-statistics.service.ts`, `pnl-statistics.service.ts`, `stack-performance.service.ts`, `screener.service.ts`, `signal-envelope.service.ts`, `symbols.service.ts`, `bot-performance.service.ts`, `duplicate-guard.service.ts`, `execution-feasibility.service.ts`, `exit-quality-bars.ts`, `mt5-trading.service.ts`, `trade-history.controller.ts`, `trade-recorder.service.ts`, `trading-strategy.service.ts`
+- **readers (25):** `ab-test.service.ts`, `experiment-review.service.ts`, `backtest.controller.ts`, `paper-trading.service.ts`, `performance.service.ts`, `progression.service.ts`, `position-sync.service.ts`, `research-overview.service.ts`, `risk.controller.ts`, `decision-chain.service.ts`, `edge-statistics.service.ts`, `movers-treatment.service.ts`, `pnl-statistics.service.ts`, `stack-performance.service.ts`, `screener.service.ts`, `signal-envelope.service.ts`, `symbols.service.ts`, `bot-performance.service.ts`, `duplicate-guard.service.ts`, `execution-feasibility.service.ts`, `exit-quality-bars.ts`, `mt5-trading.service.ts`, `trade-history.controller.ts`, `trade-recorder.service.ts`, `trading-strategy.service.ts`
 
 ### `order`
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**575** source files · **3236** declarations · **394** ratio sites · **1720** nodes · **180** unreferenced
+**579** source files · **3253** declarations · **395** ratio sites · **1726** nodes · **181** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -93,7 +93,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 **This is the #1069 shape.** The computation is identical after normalisation, but the sites disagree about the conditions they apply — a different sign test, a different guard, or a different value when the computation cannot run. Read the `conditions:` and `guarded by:` lines: that is where two copies stop agreeing.
 
-### 30 sites — `((V1-V2)/V2)*100`
+### 31 sites — `((V1-V2)/V2)*100`
 
 - `nest/src/modules/backtest/backtest.controller.ts:856` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
@@ -112,7 +112,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:134` — `calculate()` → `dist20`
   - `sma20>0?((lastClose-sma20)/sma20)*100:0`
   - guarded by: `sma20>0`
-- … and 22 more
+- … and 23 more
 
 ### 27 sites — `(V1/V2)*100`
 
@@ -153,9 +153,9 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - `(earlyEntropy-lateEntropy)/ENTROPY_MAX`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:789` — `calculate()` → `bandwidth`
   - `(bb.upper[bb.upper.length-1]-bb.lower[bb.lower.length-1])/bb.middle[bb.middle.length-1]`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:443` — `calculate()` → `bandwidth`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:480` — `calculate()` → `bandwidth`
   - `(upper-lower)/lastEMA`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:802` — `calculate()` → `longGap`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:839` — `calculate()` → `longGap`
   - `(lastClose-longStop)/lastATR`
 - … and 11 more
 
@@ -260,7 +260,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - `(OVERSOLD-currentRsi)/OVERSOLD`
 - `nest/src/modules/directives/implementations/falling-risk-pyramid.directive.ts:150` — `calculate()` → `drawdownFromHigh`
   - `(recentHigh-currentPrice)/recentHigh`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:608` — `calculate()` → `dist`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:645` — `calculate()` → `dist`
   - `(lastClose-lastSAR)/lastClose`
 - `nest/src/modules/risk/risk.service.ts:76` — `calculateTakeProfit()` → `slDistance`
   - `(entryPrice-stopLossPrice)/entryPrice`
@@ -399,10 +399,10 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 2 sites — `(V1-V2)/(C)`
 
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:710` — `calculate()` → `pctB`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:747` — `calculate()` → `pctB`
   - `(lastClose-lower)/(upper-lower||1)`
   - conditions: `upper-lower||1`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:997` — `calculate()` → `adSlope`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:1087` — `calculate()` → `adSlope`
   - `(recent[recent.length-1]-recent[0])/(Math.abs(recent[0])||1)`
   - conditions: `Math.abs(recent[0])||1`
 
@@ -420,7 +420,7 @@ _… and 2 further group(s)._
 
 Identical after normalisation: variable names differ, the computation does not.
 
-### 30 sites — `((V1-V2)/V2)*100`
+### 31 sites — `((V1-V2)/V2)*100`
 
 - `nest/src/modules/backtest/backtest.controller.ts:856` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
@@ -439,7 +439,7 @@ Identical after normalisation: variable names differ, the computation does not.
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:134` — `calculate()` → `dist20`
   - `sma20>0?((lastClose-sma20)/sma20)*100:0`
   - guarded by: `sma20>0`
-- … and 22 more
+- … and 23 more
 
 ### 27 sites — `(V1/V2)*100`
 
@@ -480,9 +480,9 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(earlyEntropy-lateEntropy)/ENTROPY_MAX`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:789` — `calculate()` → `bandwidth`
   - `(bb.upper[bb.upper.length-1]-bb.lower[bb.lower.length-1])/bb.middle[bb.middle.length-1]`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:443` — `calculate()` → `bandwidth`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:480` — `calculate()` → `bandwidth`
   - `(upper-lower)/lastEMA`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:802` — `calculate()` → `longGap`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:839` — `calculate()` → `longGap`
   - `(lastClose-longStop)/lastATR`
 - … and 11 more
 
@@ -548,7 +548,7 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(closes[last-1]+opens[last-1])/2`
 - `nest/src/modules/directives/implementations/mt5-engulfing.directive.ts:117` — `calculate()` → `prevMidpoint`
   - `(prev.high+prev.low)/2`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:388` — `calculate()` → `midBand`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:425` — `calculate()` → `midBand`
   - `(upperBand+lowerBand)/2`
 - `nest/src/modules/directives/implementations/price-time-gap.directive.ts:269` — `calculateVIC()` → `avgVolume`
   - `(prevBar.volume+currBar.volume)/2`
@@ -586,7 +586,7 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(currentPrice-nearestSupport.price)/nearestSupport.price`
 - `nest/src/modules/directives/implementations/micro-sr-levels.directive.ts:286` — `calculate()` → `distPct`
   - `(nearestResistance.price-currentPrice)/currentPrice`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:998` — `calculate()` → `priceSlope`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:1088` — `calculate()` → `priceSlope`
   - `(recentPrices[recentPrices.length-1]-recentPrices[0])/recentPrices[0]`
 - `nest/src/modules/directives/implementations/session-open-effect.directive.ts:176` — `calculate()` → `preOpenReturn`
   - `(preOpenEnd-preOpenStart)/preOpenStart`
@@ -642,7 +642,7 @@ _… and 37 further group(s)._
 
 Numeric literals blanked. **This is where divergent maths hides** — same structure, a different number doing the work.
 
-### 40 sites — `((VN-VN)/VN)*N`
+### 41 sites — `((VN-VN)/VN)*N`
 
 - `nest/src/modules/automation/stop-guardian.service.ts:2173` — `observeExhaustion()` → `decelPct`
   - `((prior-recent)/prior)*100`
@@ -660,7 +660,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `((lastClose-shortExit)/lastClose)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:46` — `calculate()` → `distance`
   - `((longExit-lastClose)/lastClose)*100`
-- … and 32 more
+- … and 33 more
 
 ### 36 sites — `(VN-VN)/VN`
 
@@ -769,7 +769,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `(closes[last-1]+opens[last-1])/2`
 - `nest/src/modules/directives/implementations/mt5-engulfing.directive.ts:117` — `calculate()` → `prevMidpoint`
   - `(prev.high+prev.low)/2`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:388` — `calculate()` → `midBand`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:425` — `calculate()` → `midBand`
   - `(upperBand+lowerBand)/2`
 - `nest/src/modules/directives/implementations/price-time-gap.directive.ts:269` — `calculateVIC()` → `avgVolume`
   - `(prevBar.volume+currBar.volume)/2`
@@ -962,7 +962,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/directives/implementations/market-regime.directive.ts:116 smooth`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:252 extract`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:71 stubResult`
-- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:1166 mid`
+- `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:1256 mid`
 - `nest/src/modules/directives/implementations/mt5-indicators.directives.ts:41 avg`
 - `nest/src/modules/directives/implementations/pattern-density-sr.directive.ts:130 binPrice`
 - `nest/src/modules/directives/implementations/session-open-effect.directive.ts:75 s`
@@ -1019,6 +1019,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/averaging-scorer.ts:56 getPolicy`
 - `nest/src/modules/scoring/averaging-scorer.ts:60 evaluate`
 - `nest/src/modules/scoring/exit-consensus.service.ts:264 assessAll`
+- `nest/src/modules/scoring/movers-treatment.service.ts:336 build`
 - `nest/src/modules/scoring/pnl-statistics.service.ts:165 empty`
 - `nest/src/modules/scoring/pnl-statistics.service.ts:237 inPopulation`
 - `nest/src/modules/scoring/protocol-db.service.ts:1099 protocolNeedsEurUsd`

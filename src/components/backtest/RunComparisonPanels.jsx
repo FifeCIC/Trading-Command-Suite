@@ -110,6 +110,8 @@ export function ScoreTable({ scoreSeries }) {
             cells in the DOM for one panel and made the tab feel broken (measured 2026-10-27: 1,728
             rows from a single run). Sorting still governs WHICH hundred you see, and the count below
             the table says how many are hidden rather than pretending the list is complete.
+            ⚠️ That count did not exist until 2026-11-16 (#1135) — this comment described an intention,
+            not the code. Do not delete the paragraph below without keeping the disclosure.
           */}
           {sort.sorted.slice(0, 100).map((s, i) => (
             <tr key={`${s.barAt}-${i}`}>
@@ -124,6 +126,17 @@ export function ScoreTable({ scoreSeries }) {
           ))}
         </tbody>
       </table>
+      {/*
+        ⚠️ THIS USED TO BE MISSING, AND THE COMMENT ABOVE CLAIMED IT EXISTED (#1135, 2026-11-16). The
+        cap rendered 100 of ~1,700 rows and said nothing, so a reader had no way to tell a complete
+        list from a truncated one — the "plausible output, no error" shape. The comment said "the
+        count below the table says how many are hidden"; there was no count. Now there is.
+      */}
+      {sort.sorted.length > 100 && (
+        <p className="muted" style={{ margin: '0.4rem 0 0', fontSize: '0.75rem' }}>
+          Showing 100 of {sort.sorted.length} scored bars — the column headers change which hundred.
+        </p>
+      )}
     </div>
   );
 }

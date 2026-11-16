@@ -120,7 +120,34 @@ export function useRefreshPulse() {
 
     read();
     const timer = setInterval(read, TICK_MS);
-    const unsubscribe = queryClient.getQueryCache().subscribe(read);
+
+    /**
+     * ⚠️ THE CACHE SUBSCRIPTION IS DEFERRED, AND THAT IS LOAD-BEARING.
+     *
+     * The query cache notifies its subscribers SYNCHRONOUSLY when a NEW query is registered — and
+     * registration happens while a component is RENDERING its `useQuery(...)` call. Calling `read()`
+     * inline at that moment runs `setPulse()` from inside another component's render, and React logs:
+     *
+     *   Cannot update a component (`Breadcrumbs`) while rendering a different component (`X`)
+     *
+     * Measured 2026-11-16 on `/development/movers-treatment` (both new panels). It also means a state
+     * update can be dropped, so the countdown could silently stop moving — a debug warning AND a
+     * quiet correctness problem in the same line.
+     *
+     * Deferring to a microtask keeps the behaviour identical (the bar re-reads on the next tick
+     * anyway — `TICK_MS` is 500ms) without ever crossing a render boundary. `pending` collapses a
+     * burst of notifications into one read rather than queueing one microtask per event.
+     */
+    let pending = false;
+    const onCacheEvent = () => {
+      if (pending) return;
+      pending = true;
+      queueMicrotask(() => {
+        pending = false;
+        read();
+      });
+    };
+    const unsubscribe = queryClient.getQueryCache().subscribe(onCacheEvent);
 
     return () => {
       clearInterval(timer);

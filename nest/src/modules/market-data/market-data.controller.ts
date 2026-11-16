@@ -7,6 +7,7 @@ import { FreshnessService } from './freshness.service';
 import { PriceRefreshService } from './price-refresh.service';
 import { MarketDataService } from './market-data.service';
 import { BarRefreshService } from './bar-refresh.service';
+import { MarketMoversService } from './market-movers.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 import { Mt5BridgeConfig } from '../providers/mt5/mt5-bridge.config';
 
@@ -21,6 +22,7 @@ export class MarketDataController {
     private readonly modeService: ModeService,
     private readonly barRefresh: BarRefreshService,
     private readonly mt5Config: Mt5BridgeConfig,
+    private readonly marketMoversService: MarketMoversService,
   ) {}
 
   private modeMeta() {
@@ -170,6 +172,31 @@ export class MarketDataController {
       lookback || '15m',
       limit ? parseInt(limit) : 20,
     );
+  }
+
+  /**
+   * `GET /api/market-data/market-movers` — the MARKET-WIDE feed (#1283).
+   *
+   * ⚠️ DELIBERATELY A DIFFERENT ROUTE FROM `top-movers` ABOVE, NOT AN OPTION ON IT.
+   * `top-movers` answers "what is TCS doing with OUR registered symbols?" — it walks `symbol` and
+   * returns movers *within our universe*. This answers "what should we consider at all?", which is a
+   * different question with a different upstream, and a strategy that needs discovery cannot be
+   * served by a list of symbols we were already pointed at. Merging them behind a flag is how the two
+   * get confused later.
+   *
+   * ⚠️ `stale: true` IS A REFUSAL, NOT A WARNING. Only the caller that would TRADE on this list has to
+   * honour it; the page shows it either way.
+   */
+  @Get('market-movers')
+  @ApiOperation({
+    summary: 'Market-wide top winners / losers / most-active from a ready-made provider',
+    description:
+      'Filtered to tradable instruments, with every exclusion reported and the provider timestamp ' +
+      'returned so staleness is visible. Distinct from /top-movers, which is restricted to the ' +
+      'registered symbol universe.',
+  })
+  async getMarketMovers(@Query('force') force?: string) {
+    return this.marketMoversService.getMovers({ force: force === 'true' || force === '1' });
   }
 
   @Post('refresh')

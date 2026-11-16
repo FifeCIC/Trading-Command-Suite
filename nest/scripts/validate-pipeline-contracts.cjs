@@ -327,6 +327,28 @@ const WHITELIST = [
  */
 const CANARIES = [
   {
+    // #1274 - the MECHANISM is the hash comparison against a stored artefact, so the markers are the
+    // two failure names and the stripped-comment hasher. If any of them leaves this script, the gate
+    // still "runs" and still prints a reassuring line while comparing nothing - and 0 of 489
+    // protocol_directive_entry rows carry a stored parameter, so the source IS the configuration.
+    id: 'INV-DIRECTIVE-VERSION-ANNOUNCED',
+    root: 'repo',
+    file: 'scripts/validate-directive-versions.cjs',
+    markers: ['directivesInFile', 'hashOf', 'directive-versions.json'],
+    hint: 'A directive source edit must bump `readonly version`; the gate compares a comment-stripped per-directive hash and must report STALE and VERSION-SILENT separately, for ALL 144 directives (#1274, #1284).',
+  },
+  {
+    // #1281 - the movers-treatment view collapses several facts into ONE word, and the whole value
+    // of it is that the word means the right thing. If `classifyTreatment` or the six-state names
+    // leave this service, the page still renders with plausible output and an operator concludes
+    // "TCS ignored a 40% mover" when it in fact refused it with a reason.
+    id: 'INV-TREATMENT-SIX-STATES',
+    root: 'nest',
+    file: 'src/modules/scoring/movers-treatment.service.ts',
+    markers: ['classifyTreatment', 'no-data', 'volumeSpike', 'hotCandidates'],
+    hint: 'A mover is exactly one of traded/queued/refused/scored/unscored/no-data, decided in ONE place, and no-data is never a flat price (#1281).',
+  },
+  {
     // #1275 - the marker is the MEASUREMENT, not the guard script. protocolBands and aboveFloor
     // are what a consumer reads; if they leave this controller the floor stops being measured on
     // the path the range map and the bot form use, and every bot silently reads "cannot judge" -

@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 192,
+  "count": 193,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1212,6 +1212,17 @@
       "purpose": "an ENABLED MT5 route must name the venue's ticker (#1009).",
       "selfTest": true,
       "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-chart-api.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a v4 chart call is a page that fails to render",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
         "npm"
       ]
     },

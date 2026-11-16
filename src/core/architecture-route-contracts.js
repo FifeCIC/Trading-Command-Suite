@@ -177,6 +177,90 @@ export const ROUTE_CONTRACTS = [
         status: 'active',
       },
   
+      /* — batch #55 — new/changed endpoints (2026-11-13 to 2026-11-15, 13 handoffs) — */
+      {
+        route: 'GET /api/supporter/status',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'SupporterController / SupporterService',
+        contract:
+          'NEW (#1147 §2.2). Whether an in-app support prompt may appear NOW, plus the reasoning. The VERDICT is ' +
+          'computed server-side (`eligible`) rather than shipping raw inputs, so only one definition of the cadence ' +
+          'exists. Returns `{ status, eligible, reason, detail, enabled, cadenceDays, daysActive, lastShownAt, ' +
+          'lastResponse, daysSinceLastShown, snoozedUntil, targets[] }`. `reason` is one of eligible | disabled | ' +
+          'snoozed | too-new | recently-shown | unavailable. ⚠️ EVERY failure path returns `eligible: false` with ' +
+          "`status: 'unavailable'` — an unreadable setting, install age or prompt history must never produce a prompt, " +
+          'because the deleted 2026-09-17 donation panel appeared exactly when the app could not answer. `daysActive` ' +
+          'comes from ProgressionService rather than a second derivation. A new installation is never asked: the first ' +
+          'ask waits for `cadenceDays` of use.',
+        status: 'active',
+      },
+      {
+        route: 'POST /api/supporter/interaction',
+        method: 'POST',
+        permission: 'Authenticated operator access',
+        owner: 'SupporterController / SupporterService',
+        contract:
+          'NEW (#1147 §2.2). ONE endpoint for the prompt history, because shown-and-answered are one record. ' +
+          '`{ kind?, context? }` records a SHOWN event (this is what starts the cooldown — without it a user who ' +
+          'ignored the prompt would be asked on every request); `{ kind?, response, context? }` records the answer, ' +
+          'where response is one of dismissed | snoozed | donated | opened | muted. Side effects: `snoozed` sets ' +
+          '`supporter.snoozedUntil` +30 days, `muted` sets `supporter.enabled` false, `donated` sets snoozedUntil to ' +
+          'the cadence, and `dismissed`/`opened` change no frequency. Writes to `supporter_interaction` (a NEW modelled ' +
+          'table). ⚠️ An unknown kind or response is REFUSED with 400 rather than stored: the store decides whether to ' +
+          'ask again, so an unrecognised row would sit there looking like an answer while the user is asked anyway.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/scoring/movers-treatment',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'MoversTreatmentController / MoversTreatmentService',
+        contract:
+          'NEW (#1281). Top N winners and losers by `changePct` over a bounded bar window — four queries regardless ' +
+          'of universe size — each annotated with score, protocol assignments, queue depth, open positions, trades ' +
+          'today, the last `decision_log` entry, volume ratio and hot-candidate status, then reduced by ' +
+          '`classifyTreatment()` to ONE of six ordered states: `traded` > `queued` > `refused` > `scored` > ' +
+          '`unscored` > `no-data`. The ordering is the decision — a refusal outranks a score (a score alone hides the ' +
+          'reason) and a pending queue row outranks a refusal (newer work). ⚠️ `no-data` means NO BARS and is reported ' +
+          'as "cannot judge", never as a flat price: the page must never print 0.00% for a symbol it could not read. ' +
+          'First reader of `hotStockEnabled` / `hotStockDetectionMode` (display only — nothing is sized, ordered or ' +
+          'time-stopped differently; `hotStockAllocation` and `hotStockMaxHoldHours` remain unread). Query: ' +
+          '`?timeframe&bars&limit`. Guarded by INV-TREATMENT-SIX-STATES.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/scoring/gated/thresholds',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'ProtocolGatingController',
+        contract:
+          'CHANGED (#1275, register row 181). The ceiling was guarded and the FLOOR was not. Additive: `protocolBands[]` ' +
+          'carries each protocol measured noise floor (the MODAL `signalPct`, not the mean), its share of readings, its ' +
+          'distinct-value count, the ceiling, and the legal interval between them; every bot row gains `floorPct` and ' +
+          '`aboveFloor`. Measured 2026-11-14: 21 of 64 active bots sat AT OR BELOW their floor, so they were trading ' +
+          'their protocol no-signal state on every bar. ⚠️ A below-floor bar is a LIVE TRADING CONFIGURATION, so this ' +
+          'is reported and never a build gate — refusing the build would either block unrelated work or silently stop a ' +
+          'bot (same reasoning as the activation ceiling, which refuses at ACTIVATION instead). Overlaps the earlier ' +
+          'ceiling contract: `activeCannotFire` still reports a bar ABOVE the measured ceiling.',
+        status: 'active',
+      },
+      {
+        route: 'GET /api/directives/:id/params',
+        method: 'GET',
+        permission: 'Authenticated operator access',
+        owner: 'DirectivesController',
+        contract:
+          'CHANGED (#1268). `ema-structure` is now PARAMETERISED: `emaShort` (2-100, default 20) and `emaLong` ' +
+          '(5-200, default 50) resolve through `resolveParams()`, so a protocol can finally ask for a SHORT structure ' +
+          'test — lengths in single digits, where price hugging a fast average IS the signal. Before this, all 11 ' +
+          'protocols containing the directive were locked to 20/50. Defaults reproduce the pre-change score on all 24 ' +
+          'fixtures, proved by re-implementing the old formula literally and comparing, not asserted. An inverted pair ' +
+          'clamps to `long - 1` and REPORTS it (`metadata.fastEmaClamped` plus the reason text) — a silent swap would ' +
+          'change which average is "fast" while the score still looked normal. The contract is unchanged for every ' +
+          'other directive: `parameterised: false`.',
+        status: 'active',
+      },
       /* — batch #54 — new/changed endpoints (2026-11-08 to 2026-11-13, 21 handoffs) — */
       {
         route: 'GET /api/brokers/status',
@@ -329,41 +413,6 @@ export const ROUTE_CONTRACTS = [
           '⚠️ This is a guardrail, not a licence (#809), and it is NOT `experience-levels.js`, which is a chosen display preference.',
         status: 'active',
       },
-      /* — #1147 — the Supporter Programme (named by the owner 2026-11-15) — */
-      {
-        route: 'GET /api/supporter/status',
-        method: 'GET',
-        permission: 'Authenticated operator access',
-        owner: 'SupporterController / SupporterService',
-        contract:
-          'NEW (#1147 §2.2). Whether an in-app support prompt may appear NOW, plus the reasoning. The VERDICT is ' +
-          'computed server-side (`eligible`) rather than shipping raw inputs, so only one definition of the cadence ' +
-          'exists. Returns `{ status, eligible, reason, detail, enabled, cadenceDays, daysActive, lastShownAt, ' +
-          'lastResponse, daysSinceLastShown, snoozedUntil, targets[] }`. `reason` is one of eligible | disabled | ' +
-          'snoozed | too-new | recently-shown | unavailable. ⚠️ EVERY failure path returns `eligible: false` with ' +
-          "`status: 'unavailable'` — an unreadable setting, install age or prompt history must never produce a prompt, " +
-          'because the deleted 2026-09-17 donation panel appeared exactly when the app could not answer. `daysActive` ' +
-          'comes from ProgressionService rather than a second derivation. A new installation is never asked: the first ' +
-          'ask waits for `cadenceDays` of use.',
-        status: 'active',
-      },
-      {
-        route: 'POST /api/supporter/interaction',
-        method: 'POST',
-        permission: 'Authenticated operator access',
-        owner: 'SupporterController / SupporterService',
-        contract:
-          'NEW (#1147 §2.2). ONE endpoint for the prompt history, because shown-and-answered are one record. ' +
-          '`{ kind?, context? }` records a SHOWN event (this is what starts the cooldown — without it a user who ' +
-          'ignored the prompt would be asked on every request); `{ kind?, response, context? }` records the answer, ' +
-          'where response is one of dismissed | snoozed | donated | opened | muted. Side effects: `snoozed` sets ' +
-          '`supporter.snoozedUntil` +30 days, `muted` sets `supporter.enabled` false, `donated` sets snoozedUntil to ' +
-          'the cadence, and `dismissed`/`opened` change no frequency. Writes to `supporter_interaction` (a NEW modelled ' +
-          'table). ⚠️ An unknown kind or response is REFUSED with 400 rather than stored: the store decides whether to ' +
-          'ask again, so an unrecognised row would sit there looking like an answer while the user is asked anyway.',
-        status: 'active',
-      },
-
       {
         route: 'GET /api/trading/mt5/account',
         method: 'GET',

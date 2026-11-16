@@ -1,10 +1,14 @@
 /* backtest-lab.css — the Backtest Lab page and its score-detail component (#823, #1134).
  *
- * ⚠️ ONE STYLESHEET, TWO CONSUMERS. Was `protocol-backtest.css`, loaded by the retired
- * Protocol Backtesting page. On 2026-10-22 that page was merged into `/lab/backtest` and its
- * score table became `src/components/backtest/ProtocolScoreDetail.jsx`, which imports this file
- * directly. Keeping one file means the merged page and the drill-down cannot drift apart — a
- * second `.pb-*` sheet is the duplication `validate-duplication.cjs` exists to catch.
+ * ⚠️ ONE STYLESHEET, SEVERAL CONSUMERS. Was `protocol-backtest.css`, loaded by the retired
+ * Protocol Backtesting page. On 2026-10-22 that page was merged into `/lab/backtest`, and its score
+ * table became `src/components/backtest/ProtocolScoreDetail.jsx`, which imported this file directly.
+ * Keeping one file means the merged page and the drill-down cannot drift apart — a second `.pb-*`
+ * sheet is the duplication `validate-duplication.cjs` exists to catch.
+ *
+ * ⚠️ `ProtocolScoreDetail.jsx` WAS DELETED 2026-11-16 (#1135) — it was imported by nothing. This
+ * stylesheet is NOT dead with it: `BacktestPage`, `BacktestDataPage`, `CurrentStrategyPage` and
+ * `BacktestSettingsInventory` all import it, so the `.pb-*` and `.bt-*` rules below are live.
  *
  * ⚠️ THE TABLE IS NOT RESTYLED HERE. It uses the global `.bt-table` (src/core/tables.css), because
  * 69 table families with 69 arrangements was the drift that file removed, and

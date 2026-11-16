@@ -8,6 +8,14 @@ const VIEW_META = {
   // #1190 — the trend READING experiment. `review: 'pending'` because the owner has not looked at
   // it yet; it becomes 'approved' when they have, and claiming otherwise would be a claim without
   // an observation behind it.
+  '/development/movers-treatment': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Movers & Treatment',
+    file: 'src/pages/MoversTreatmentPage.jsx',
+    css: 'src/pages/MoversTreatmentPage.css',
+    api: ['GET /api/scoring/movers-treatment'],
+  },
   '/development/trend-reading': {
     tier: 'premium',
     review: 'pending',
@@ -671,9 +679,10 @@ const VIEW_META = {
     ],
   },
   // ⚠️ `'protocol-backtest'` RETIRED 2026-10-22 (#1134). The page was merged into `/lab/backtest` —
-  // the protocol surface is now the "Protocols" subject toggle there, and its score table is the
-  // `ProtocolScoreDetail` drill-down. `verify-view-meta-routes.cjs` fails if an entry outlives its
-  // route, which is exactly what caught this one needing removal rather than a label tweak.
+  // the protocol surface is now the "Protocols" subject toggle there, and its per-bar table is
+  // `RunComparisonPanels.ScoreTable` (the `ProtocolScoreDetail` component named here until 2026-11-16
+  // was imported by nothing and has been deleted, #1135). `verify-view-meta-routes.cjs` fails if an
+  // entry outlives its route, which is exactly what caught this one needing removal.
   // ⚠️ ADDED 2026-10-17. `verify-view-meta-routes.cjs` found this leaf registered in `nav-tree.js`
   // with no metadata, so the page rendered "No metadata registered" — reachable but undocumented.
   // The nav entry was added for #823 Stage 1 without this half; the sweep is what caught it.

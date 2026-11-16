@@ -447,21 +447,36 @@ export const BOT_RULES: BotRule[] = [
       'chose, which is evidence for a fiction. Arms nothing unless `exhaustionObserveEnabled` is on ' +
       'AND this is set.' },
 
-  // ── declared but enforced nowhere ──────────────────────────────────────────────────────────
-  { field: 'hotStockEnabled', label: 'Hot stock enabled', stage: 'sizing', enforcement: 'none', enforcedBy: null,
-    summary: 'Declared for the #339 Hot Stock Picks integration.',
-    caveat: '⚠️ NO READER ANYWHERE. Persisted, offered in the create form, and enforced nowhere.' },
+  // ── hot-stock detection: TWO of four now have a reader, two still do not ────────────────
+  // 2026-11-15 (#1281). `hotStockEnabled` and `hotStockDetectionMode` feed the candidate
+  // computation in `scoring/movers-treatment.service.ts` (`hotCandidates()`), which is what
+  // `GET /api/scoring/movers-treatment` and the Movers & Treatment page read. That makes the mode
+  // REAL for the first time — discovered symbols are surfaced, and nothing is traded on them.
+  //
+  // ⚠️ STILL NOT ENFORCED, and the distinction matters: detection is a DISPLAY decision, not a
+  // money-path one. `hotStockAllocation` and `hotStockMaxHoldHours` have no reader, so a hot-stock
+  // position is sized by the bot's normal sizing and held by its normal time-stop. Saying
+  // "hot-stock mode works" would be a capability claim this code cannot support.
+  { field: 'hotStockEnabled', label: 'Hot stock enabled', stage: 'sizing', enforcement: 'display-only',
+    enforcedBy: 'nest/src/modules/scoring/movers-treatment.service.ts',
+    summary: 'Marks the bot as one that wants discovered movers. Read by the movers-treatment view.',
+    caveat:
+      '⚠️ DISPLAY ONLY — it selects which symbols are SHOWN as candidates for this bot and places ' +
+      'no order. Turning it on does not make the bot trade anything it was not already trading.' },
+  { field: 'hotStockDetectionMode', label: 'Hot stock detection mode', stage: 'sizing', enforcement: 'display-only',
+    enforcedBy: 'nest/src/modules/scoring/movers-treatment.service.ts',
+    summary: 'top-scoring | volume-spike | all — which qualifying symbols count as candidates.',
+    caveat:
+      '⚠️ An unrecognised or NULL mode selects NOTHING (deliberately: a typo must not behave like ' +
+      '"all"). Canaried in movers-treatment.spec.ts.' },
   { field: 'hotStockAllocation', label: 'Hot stock allocation', stage: 'sizing', enforcement: 'none', enforcedBy: null,
     summary: 'Declared: a separate allocation % for hot-stock trades.',
-    caveat: '⚠️ NO READER ANYWHERE.' },
-  { field: 'hotStockDetectionMode', label: 'Hot stock detection mode', stage: 'sizing', enforcement: 'none', enforcedBy: null,
-    summary: 'Declared: top-scoring | volume-spike | all.',
-    caveat: '⚠️ NO READER ANYWHERE.' },
+    caveat: '⚠️ STILL NO READER ANYWHERE. A discovered symbol is sized by the bot\'s normal sizing.' },
   { field: 'hotStockMaxHoldHours', label: 'Hot stock max hold', stage: 'exit', enforcement: 'none', enforcedBy: null,
     summary: 'Declared: a shorter hold limit for hot-stock positions.',
     caveat:
-      '⚠️ NO READER ANYWHERE — and notably the time-stop reads `maxHoldHours` only, so this does NOT ' +
-      'shorten anything.' },
+      '⚠️ STILL NO READER ANYWHERE — and notably the time-stop reads `maxHoldHours` only, so this ' +
+      'does NOT shorten anything.' },
 ];
 
 /** Rules that can actually stop or shape a live trade. */

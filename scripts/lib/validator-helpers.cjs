@@ -132,4 +132,63 @@ function stripComments(src) {
     .join('\n');
 }
 
-module.exports = { walkFiles, loadTree, runCases, runSelfTest, walkSourceFiles, stripComments, SKIP_SPEC, SOURCE_EXT };
+/**
+ * Blank out comments — and optionally string literals — while PRESERVING newlines and character
+ * offsets, so a scanner can report an accurate line number after stripping.
+ *
+ * ⚠️ WHY THIS IS SHARED. `validate-css-parses.cjs` and `validate-chart-api.cjs` each hand-rolled this
+ * loop, and `validate-duplication.cjs` failed the build on the pair. Extraction removes the class;
+ * banking the pair would only have removed the complaint.
+ *
+ * ⚠️ WHY NOT THE `stripComments` ABOVE. That one is LINE-BASED and DELETES lines, so every line number
+ * after the first removed line is wrong. It is right for "is this identifier mentioned anywhere", and
+ * wrong for "report the line this hazard is on" — which is what both of these guards must do.
+ *
+ * @param {string} source
+ * @param {{ blankStrings?: boolean }} [opts] - also blank string literals (for scanning for CALLS,
+ *   where a quoted example must not count as code). Default false: the string is kept verbatim and
+ *   only protects comment markers inside it, which is what a token scan needs.
+ * @returns {string} same length and newline layout as the input
+ */
+function blankComments(source, opts = {}) {
+  const blankStrings = opts.blankStrings === true;
+  let out = '';
+  let i = 0;
+  while (i < source.length) {
+    const ch = source[i];
+    const next = source[i + 1];
+    if (ch === '/' && next === '/') {
+      while (i < source.length && source[i] !== '\n') {
+        out += ' ';
+        i++;
+      }
+      continue;
+    }
+    if (ch === '/' && next === '*') {
+      let j = i + 2;
+      while (j < source.length && !(source[j] === '*' && source[j + 1] === '/')) j++;
+      const closed = j < source.length;
+      const body = source.slice(i, closed ? j + 2 : source.length);
+      out += body.replace(/[^\n]/g, ' ');
+      i = closed ? j + 2 : source.length;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') {
+      const quote = ch;
+      let j = i + 1;
+      while (j < source.length && source[j] !== quote) {
+        if (source[j] === '\\') j++;
+        j++;
+      }
+      const body = source.slice(i, Math.min(j + 1, source.length));
+      out += blankStrings ? body.replace(/[^\n]/g, ' ') : body;
+      i = j + 1;
+      continue;
+    }
+    out += ch;
+    i++;
+  }
+  return out;
+}
+
+module.exports = { blankComments, walkFiles, loadTree, runCases, runSelfTest, walkSourceFiles, stripComments, SKIP_SPEC, SOURCE_EXT };

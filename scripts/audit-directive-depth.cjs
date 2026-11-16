@@ -34,7 +34,27 @@
  * plausible, and wrong, with no error behind it. A constant counts toward `headroom` only if it does
  * not appear as a parameter `default:` in the same file; the `p` column shows how many are exposed.
  *
- * Usage (repo root):  node logs/audit-directive-depth.cjs
+ * ── 🛑 REV 5: WHAT "0 UNTURNED" DOES **NOT** MEAN — read this before quoting it (#1284) ──────────
+ * Measured 2026-11-16. This file counts **module-level UPPER_SNAKE** constants whose name matches
+ * `TUNING_WORD` (PERIOD|LOOKBACK|THRESHOLD|…). So its headline — `113 knobs, 113 exposed, 0
+ * unturned` — is TRUE and NARROW. It means *"every module-level upper-snake tuning constant is
+ * exposed as a parameter"*. It does **not** mean a directive's numbers are settable, and three
+ * shapes are structurally invisible to it:
+ *
+ *   • a lowercase, FUNCTION-SCOPED const — `donchian-breakout` carried `const period = 20` and
+ *     reported `knobs=0, unexposed=0`;
+ *   • an INLINE ARGUMENT — `momentum-roc` called `roc(closes, 12)` and reported the same;
+ *   • an INLINE LITERAL in a comparison — `momentum-roc` tested `current > 5` and `current < -5`.
+ *
+ * All three were real, all three are now parameters, and this audit reported `0 unturned` before AND
+ * after — it cannot distinguish the two states. **Do not treat `0 unturned` as "parameterisation is
+ * complete"**, and do not drive that work from this number alone: `directive-parameters.spec.ts`
+ * (baseline + liveness per declared param) is the check that can actually fail, and
+ * `validate-directive-versions.cjs` is what notices a source change. Widening this detector is
+ * tracked in #1284; it is deliberately NOT hacked in here, because a regex broadened to catch inline
+ * literals would start counting `score: 0` return calibrations as tunable knobs.
+ *
+ * Usage (repo root):  node scripts/audit-directive-depth.cjs
  * Emits:              logs/directive-audit.json  |  prints summary + the high-headroom rows
  */
 const fs = require('fs');

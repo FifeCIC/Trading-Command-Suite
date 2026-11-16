@@ -77,19 +77,73 @@ function codeOf(source) {
     .trim();
 }
 
-/** A directive's file → its identity and the hash of its CODE (comments removed). */
-function fingerprint(source) {
-  const idMatch = source.match(/readonly id = '([^']+)'/);
-  const versionMatch = source.match(/readonly version = '([^']+)'/);
-  if (!idMatch) return null;
-  if (!versionMatch) {
-    return { id: idMatch[1], version: null, hash: hashOf(codeOf(source)) };
-  }
-  return { id: idMatch[1], version: versionMatch[1], hash: hashOf(codeOf(source)) };
-}
+/**
+ * NOTE: the old `fingerprint(source)` helper was REMOVED 2026-11-16. It read only the first
+ * `readonly id` in a file, which is exactly the assumption that left 51 directives unguarded. Keeping
+ * it beside `directivesInFile()` would be a second implementation of the same idea, and only one of
+ * the two would get the next fix.
+ */
 
 function hashOf(text) {
   return createHash('sha256').update(text).digest('hex').slice(0, 16);
+}
+
+/**
+ * directivesInFile() — EVERY directive in a file, each with its own identity and its own hash.
+ *
+ * 🛑 THIS REPLACED A ONE-DIRECTIVE-PER-FILE ASSUMPTION, measured 2026-11-16.
+ *
+ * The previous version read the FIRST `readonly id` in a file and hashed the WHOLE file. That is
+ * wrong twice over, and both mistakes were silent:
+ *
+ *   1. **The directory glob was `*.directive.ts` — so `*.directives.ts` (PLURAL) was never opened.**
+ *      `momentum-and-macro.directives.ts` (30 directives) and `mt5-indicators.directives.ts` (17)
+ *      were invisible in their entirety.
+ *   2. **A file declaring more than one directive recorded only the first one.** `surge.directive.ts`
+ *      declares two; `mtf-confluence` and `vwap-confluence` likewise. The second was dropped.
+ *
+ * Measured consequence: the guard printed **`✅ OK — 93 directive(s)`** while the library holds
+ * **144**. **51 directives — 35% — could be edited with no version bump and nothing failed.** That
+ * is the precise failure this guard exists to prevent, occurring inside the guard.
+ *
+ * ⚠️ SEGMENTS START AT THE PREVIOUS CLASS END, NOT AT THE CLASS ITSELF. A directive's tunable
+ * defaults live in a module-level `const X_PARAMS` declared ABOVE its class (see `WILLIAMS_R_PARAMS`
+ * in `mt5-indicators.directives.ts`). Hashing only the class body would let a parameter's `default`
+ * change without moving the hash — a behaviour change reported as no change, which is the one
+ * direction this file must never produce.
+ *
+ * ⚠️ IMPORTS AND COMMENTS ARE STRIPPED FIRST. Without that, an unrelated import edit would flag
+ * every directive in a shared file, and the predictable response to that noise is an allowlist —
+ * which is worse than no guard.
+ */
+function directivesInFile(source) {
+  const usable = source.replace(/^\s*import[\s\S]*?;\s*$/gm, ' ');
+  const starts = [...usable.matchAll(/export\s+class\s+\w+\s+implements\s+IDirective/g)].map((m) => m.index);
+  const out = [];
+  for (let i = 0; i < starts.length; i++) {
+    /**
+     * ⚠️ THE PREAMBLE MUST START *AFTER* THE PREVIOUS CLASS CLOSES, or class i-1 is counted twice and
+     * the file reports its own directives as duplicates. That exact bug fired on the first run of this
+     * rewrite (5 duplicate-id problems), which is why the boundary is `lastIndexOf('\n}')` — a
+     * top-level class in this directory closes with `}` in column 0.
+     */
+    let preambleFrom = 0;
+    if (i > 0) {
+      const prevClose = usable.lastIndexOf('\n}', starts[i]);
+      preambleFrom = prevClose >= 0 ? prevClose + 2 : starts[i];
+    }
+    const classEnd = i + 1 < starts.length ? starts[i + 1] : usable.length;
+    const segment = usable.slice(preambleFrom, classEnd);
+    const idMatch = segment.match(/readonly\s+id\s*=\s*'([^']+)'/);
+    if (!idMatch) continue;
+    const versionMatch = segment.match(/readonly\s+version\s*=\s*'([^']+)'/);
+    out.push({
+      id: idMatch[1],
+      version: versionMatch ? versionMatch[1] : null,
+      hash: hashOf(codeOf(segment)),
+    });
+  }
+  return out;
 }
 
 /** Every directive class in the library, keyed by its runtime id. */
@@ -97,22 +151,25 @@ function scan() {
   const out = new Map();
   const problems = [];
   for (const file of fs.readdirSync(SRC).sort()) {
-    if (!file.endsWith('.directive.ts')) continue;
+    // ⚠️ BOTH suffixes. `*.directives.ts` (plural) is where the two largest directive files live.
+    if (!file.endsWith('.directive.ts') && !file.endsWith('.directives.ts')) continue;
     const source = fs.readFileSync(path.join(SRC, file), 'utf8');
-    const fp = fingerprint(source);
-    if (!fp) {
-      problems.push(`${file}: declares no \`readonly id\``);
+    const found = directivesInFile(source);
+    if (!found.length) {
+      problems.push(`${file}: declares no \`export class … implements IDirective\``);
       continue;
     }
-    if (fp.version === null) {
-      problems.push(`${fp.id} (${file}): declares no \`readonly version\`, so a change cannot announce itself`);
-      continue;
+    for (const fp of found) {
+      if (fp.version === null) {
+        problems.push(`${fp.id} (${file}): declares no \`readonly version\`, so a change cannot announce itself`);
+        continue;
+      }
+      if (out.has(fp.id)) {
+        problems.push(`duplicate id '${fp.id}' — ${file} and another file both declare it`);
+        continue;
+      }
+      out.set(fp.id, { version: fp.version, hash: fp.hash, file });
     }
-    if (out.has(fp.id)) {
-      problems.push(`duplicate id '${fp.id}' — ${file} and another file both declare it`);
-      continue;
-    }
-    out.set(fp.id, { version: fp.version, hash: fp.hash, file });
   }
   return { directives: out, problems };
 }

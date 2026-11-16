@@ -52,11 +52,13 @@ import { PnlStatisticsService } from './pnl-statistics.service';
 import { EdgeController } from './edge.controller';
 import { StrategyRegistryController } from './strategy-registry.controller';
 import { StrategyRegistryService } from './strategy-registry.service';
-
+
+import { MoversTreatmentController } from './movers-treatment.controller';
+import { MoversTreatmentService } from './movers-treatment.service';
 @Module({
   imports: [DatabaseModule, DirectivesModule, NotificationsModule, CalibrationModule, MarketDataModule, CalendarModule, ProvidersModule, forwardRef(() => PortfolioModule)],
-  controllers: [ScoringController, ArenaController, ProtocolsController, ProtocolGatingController, SpeedScanController, SeasonalityController, MetaStackVersioningController, DecisionChainController, ScoringStrategyController, EdgeController, StrategyRegistryController, ExitConsensusController],
-  providers: [ScoringService, ScoreHistoryService, ScoreVelocityService, DirectiveImpactService, ScoringSchedulerService, AveragingScorer, ProtocolGatingService, ProtocolConsensusService, OutcomeTrackerService, SpeedScanService, SeasonalityService, SeasonalAffinityService, TickRecorderService, TimezoneService, MicroTrendDetector, RiskGatingEngine, SectorRotationService, MacroSnapshotService, EurUsdCacheService, StackPerformanceService, MetaStackVersioningService, StrategyDerivationService, ProtocolDbService, QuoteGateway, DecisionChainService, ScoringStrategyService, ProtocolHealthService, EdgeStatisticsService, PnlStatisticsService, StrategyRegistryService, ExitConsensusService],
+  controllers: [ScoringController, ArenaController, ProtocolsController, ProtocolGatingController, SpeedScanController, SeasonalityController, MetaStackVersioningController, DecisionChainController, ScoringStrategyController, EdgeController, StrategyRegistryController, ExitConsensusController, MoversTreatmentController],
+  providers: [ScoringService, ScoreHistoryService, ScoreVelocityService, DirectiveImpactService, ScoringSchedulerService, AveragingScorer, ProtocolGatingService, ProtocolConsensusService, OutcomeTrackerService, SpeedScanService, SeasonalityService, SeasonalAffinityService, TickRecorderService, TimezoneService, MicroTrendDetector, RiskGatingEngine, SectorRotationService, MacroSnapshotService, EurUsdCacheService, StackPerformanceService, MetaStackVersioningService, StrategyDerivationService, ProtocolDbService, QuoteGateway, DecisionChainService, ScoringStrategyService, ProtocolHealthService, EdgeStatisticsService,   PnlStatisticsService, StrategyRegistryService, ExitConsensusService, MoversTreatmentService],
   exports: [ScoringService, ScoreHistoryService, ScoreVelocityService, DirectiveImpactService, AveragingScorer, ProtocolGatingService, ProtocolConsensusService, OutcomeTrackerService, SpeedScanService, SeasonalityService, SeasonalAffinityService, TickRecorderService, TimezoneService, MicroTrendDetector, RiskGatingEngine, MacroSnapshotService, StackPerformanceService, MetaStackVersioningService, StrategyDerivationService, ProtocolDbService, DecisionChainService, EdgeStatisticsService, PnlStatisticsService, ProtocolHealthService, StrategyRegistryService, ExitConsensusService],
 })
 export class ScoringModule {}

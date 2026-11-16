@@ -52,6 +52,15 @@
 export type SettingClass = 'runtime' | 'secret' | 'per-user';
 export type SettingType = 'number' | 'boolean' | 'string';
 
+/**
+ * ⚠️ SPLIT OUT 2026-11-16 (#1283). The market-wide movers filter policy lives in its own file and is
+ * spread into `SETTINGS` below, because adding it inline pushed this register past the owner's
+ * 1,500-line warning threshold (`scripts/audit-code-health.cjs`) — and the answer to that is the
+ * SHAPE, never a re-baseline. `SETTINGS_BY_KEY`, the resolver and the seeder all see these rows
+ * exactly as if they were declared inline; this file remains the ONE owner of the schema.
+ */
+import { MARKET_MOVERS_SETTINGS } from './market-movers.settings';
+
 export interface SettingDefinition {
   /** `global_setting.key` for class 'runtime'; the env var name for class 'secret'. */
   key: string;
@@ -929,6 +938,12 @@ export const SETTINGS: SettingDefinition[] = [
       'point it elsewhere without a rebuild.',
     userChangeable: true,
   },
+
+  // ── Market-wide movers (#1283) — declared in `market-movers.settings.ts` ───────────────────
+  // Those five rows decide WHICH SYMBOLS THE APP WILL CONSIDER TRADING (min price, min volume,
+  // instrument class, feed staleness, list size). They live in their own module to keep this
+  // register under its size threshold; the spread keeps one owner of the schema.
+  ...MARKET_MOVERS_SETTINGS,
 ];
 
 export const SETTINGS_BY_KEY: ReadonlyMap<string, SettingDefinition> = new Map(

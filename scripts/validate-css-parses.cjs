@@ -46,6 +46,9 @@
  */
 const fs = require('node:fs');
 const path = require('node:path');
+// SHARED, NOT LOCAL — `scripts/lib/validator-helpers.cjs`. The line-preserving comment blanker
+// was hand-rolled here AND in `validate-chart-api.cjs`; `validate-duplication.cjs` failed the pair.
+const { blankComments, walkFiles } = require('./lib/validator-helpers.cjs');
 
 const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'src');
@@ -60,64 +63,13 @@ try {
   process.exit(2);
 }
 
-function listStylesheets(dir, out = []) {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, e.name);
-    if (e.isDirectory()) {
-      if (e.name !== 'node_modules') listStylesheets(p, out);
-    } else if (e.name.endsWith('.css')) {
-      out.push(p);
-    }
-  }
-  return out;
-}
-
 /**
  * Remove block comments while respecting strings, so a comment that merely MENTIONS a corruption
  * shape cannot trip the token check. Newlines are preserved so reported line numbers stay true.
  */
-function stripComments(code) {
-  let out = '';
-  let i = 0;
-  let quote = null;
-  while (i < code.length) {
-    const ch = code[i];
-    const next = code[i + 1];
-    if (quote) {
-      out += ch;
-      if (ch === '\\') {
-        out += next || '';
-        i += 2;
-        continue;
-      }
-      if (ch === quote) quote = null;
-      i++;
-      continue;
-    }
-    if (ch === '"' || ch === "'") {
-      quote = ch;
-      out += ch;
-      i++;
-      continue;
-    }
-    if (ch === '/' && next === '*') {
-      let j = i + 2;
-      while (j < code.length && !(code[j] === '*' && code[j + 1] === '/')) j++;
-      const closed = j < code.length;
-      const body = code.slice(i, closed ? j + 2 : code.length);
-      out += body.replace(/[^\n]/g, ' ');
-      i = closed ? j + 2 : code.length;
-      continue;
-    }
-    out += ch;
-    i++;
-  }
-  return out;
-}
-
 /** C2 — `undefined` used as a selector or a property, outside comments. */
 function findUndefinedTokens(code) {
-  const stripped = stripComments(code);
+  const stripped = blankComments(code);
   const hits = [];
   const lines = stripped.split('\n');
   for (let n = 0; n < lines.length; n++) {
@@ -153,7 +105,7 @@ function problems(code, filename = 'inline.css') {
 }
 
 function check() {
-  const files = listStylesheets(SRC);
+  const files = walkFiles(SRC, /\.css$/);
   if (files.length === 0) {
     console.error('✖ No stylesheets found under src/ — CANNOT JUDGE.');
     process.exit(2);

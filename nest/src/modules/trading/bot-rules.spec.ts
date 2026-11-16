@@ -96,9 +96,28 @@ describe('bot-rules registry — a bot declared once', () => {
    * That combination is the whole problem: every signal a reader has says "this works", and the one
    * thing that would tell them otherwise is this declaration. If hot-stock trading is built, this
    * test fails and must be updated deliberately.
+   *
+   * ⚠️ UPDATED DELIBERATELY 2026-11-15 (#1281). Two of the four now have a reader — but a DISPLAY
+   * reader, not a trading one. `hotStockEnabled` and `hotStockDetectionMode` select which symbols the
+   * Movers & Treatment view shows as candidates for a bot; nothing is sized, ordered or time-stopped
+   * differently. So the guard is NARROWED, not removed: it now asserts that these two can never be
+   * upgraded to `live` without someone noticing, and that the other two stay unread.
+   *
+   * ⚠️ Do NOT delete this test on the grounds that "hot-stock works now". Detection is not trading,
+   * and a discovered symbol is still sized by the bot's normal sizing and held by its normal
+   * time-stop.
    */
-  it('reports the hot-stock fields as enforced nowhere', () => {
-    for (const field of ['hotStockEnabled', 'hotStockAllocation', 'hotStockDetectionMode', 'hotStockMaxHoldHours']) {
+  it('reports hot-stock DETECTION as display-only and the rest as enforced nowhere', () => {
+    // Detection: read for display, and must say so — never `live`.
+    for (const field of ['hotStockEnabled', 'hotStockDetectionMode']) {
+      const rule = BOT_RULES.find((r) => r.field === field);
+      expect(rule).toBeDefined();
+      expect(rule!.enforcement).toBe('display-only');
+      expect(rule!.enforcedBy).toContain('movers-treatment.service.ts');
+      expect(rule!.caveat).toMatch(/DISPLAY ONLY|selects NOTHING/);
+    }
+    // Sizing and hold: still nothing reads them.
+    for (const field of ['hotStockAllocation', 'hotStockMaxHoldHours']) {
       const rule = BOT_RULES.find((r) => r.field === field);
       expect(rule).toBeDefined();
       expect(rule!.enforcement).toBe('none');

@@ -339,32 +339,69 @@ export class ChaikinMoneyFlowDirective implements IDirective {
 // 5. Donchian Channel Breakout
 // =====================================================================
 
+/**
+ * ⚠️ `period` WAS A HARDCODED `const period = 20` (found 2026-11-16), and this is one of the cases
+ * `audit-directive-depth.cjs` reports as CLEAN — it printed `113 knobs, 113 exposed, 0 unexposed`
+ * while this literal sat here. A named-constant audit cannot see a locally-scoped `const`, so its
+ * "0 unexposed" is a false-clean, not a fact.
+ *
+ * Why it matters: a 20-bar channel is 100 minutes on 5m and a month on 1d. The SAME directive
+ * therefore means a completely different thing per timeframe, and until now no protocol could say
+ * which it wanted. That is the difference between "we have a breakout directive" and "we have a
+ * breakout strategy".
+ */
+const DONCHIAN_PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'period',
+    label: 'Channel lookback',
+    type: 'number',
+    default: 20,
+    min: 3,
+    max: 120,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why:
+      'A 20-bar channel spans 100 minutes on 5m but a whole month on 1d, so the same number is a '
+      + 'different strategy at every timeframe. Exposing it lets a fast protocol ask for a 10-bar '
+      + 'channel and a slow one for 55, without either needing its own copy of the directive.',
+    source: 'mt5-indicators.directives.ts:367 inline literal `const period = 20`',
+  },
+];
+
 @Injectable()
 export class DonchianBreakoutDirective implements IDirective {
   readonly id = 'donchian-breakout';
   readonly name = 'Donchian Channel Breakout';
   readonly description =
-    '20-bar high/low channel. Break above the prior high = bullish breakout, break below the prior low = bearish. Symmetric. Derived from MT5 Donchian Channel.';
+    'N-bar high/low channel. Break above the prior high = bullish breakout, break below the prior low = bearish. Symmetric. Derived from MT5 Donchian Channel.';
   readonly priority = 55;
   // ⚠️ maxScore corrected 100 → 75 (2026-10-20, #1131). MODE 9 measured
   // the highest score this directive's own return arithmetic can produce as 75;
   // the extra 25 points were permanent, unearnable capacity in every
   // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
   readonly maxScore = 75;
-  readonly version = '1.1.0';
+  // 1.1.0 → 1.2.0: `period` became a parameter. Required by INV-DIRECTIVE-VERSION-ANNOUNCED, because
+  // the source changed and 0 of 489 protocol_directive_entry rows carry a stored parameter — so the
+  // source IS the configuration and this edit re-scores every protocol carrying the directive.
+  readonly version = '1.2.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
+  readonly params = DONCHIAN_PARAMS;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const period = values.period as number;
     const { bars } = input;
-    const MIN = 25;
+    // Two bars of headroom beyond the channel: `hh[hh.length - 2]` reads the PRIOR bar's high, so the
+    // series must contain the channel plus that offset bar.
+    const MIN = period + 5;
 
     if (bars.length < MIN) {
       return { score: 0, confidence: 0.1, signalClass: 'neutral', reason: `Need ${MIN} bars, have ${bars.length}` };
     }
 
-    const period = 20;
     const highs = bars.map((b) => b.high);
     const lows = bars.map((b) => b.low);
     const closes = bars.map((b) => b.close);
@@ -373,28 +410,28 @@ export class DonchianBreakoutDirective implements IDirective {
 
     const lastClose = closes[closes.length - 1];
     // Channel from PRIOR bars only — exclude the active candle so a breakout is
-    // measured against the prior 20-bar high/low, not the current bar's own range.
+    // measured against the prior N-bar high/low, not the current bar's own range.
     const upperBand = hh[hh.length - 2];
     const lowerBand = ll[ll.length - 2];
 
     if (lastClose > upperBand) {
-      return { score: 75, confidence: 0.7, signalClass: 'bullish', reason: `Price ${lastClose} broke above prior Donchian high ${upperBand.toFixed(2)}` };
+      return { score: 75, confidence: 0.7, signalClass: 'bullish', reason: `Price ${lastClose} broke above prior ${period}-bar Donchian high ${upperBand.toFixed(2)}` };
     }
 
     if (lastClose < lowerBand) {
-      return { score: 75, confidence: 0.7, signalClass: 'bearish', reason: `Price ${lastClose} broke below prior Donchian low ${lowerBand.toFixed(2)}` };
+      return { score: 75, confidence: 0.7, signalClass: 'bearish', reason: `Price ${lastClose} broke below prior ${period}-bar Donchian low ${lowerBand.toFixed(2)}` };
     }
 
     const midBand = (upperBand + lowerBand) / 2;
     if (lastClose > midBand) {
-      return { score: 55, confidence: 0.5, signalClass: 'bullish', reason: `Price in upper half of Donchian channel` };
+      return { score: 55, confidence: 0.5, signalClass: 'bullish', reason: `Price in upper half of ${period}-bar Donchian channel` };
     }
 
     if (lastClose < midBand) {
-      return { score: 55, confidence: 0.5, signalClass: 'bearish', reason: `Price in lower half of Donchian channel` };
+      return { score: 55, confidence: 0.5, signalClass: 'bearish', reason: `Price in lower half of ${period}-bar Donchian channel` };
     }
 
-    return { score: 35, confidence: 0.3, signalClass: 'neutral', reason: `Price at Donchian channel midline` };
+    return { score: 35, confidence: 0.3, signalClass: 'neutral', reason: `Price at ${period}-bar Donchian channel midline` };
   }
 }
 
@@ -835,35 +872,88 @@ export class ATRTrailingStopDirective implements IDirective {
 // 12. Momentum ROC — Rate of Change
 // =====================================================================
 
+/**
+ * ⚠️ THREE VALUES WERE INVISIBLE LITERALS (found 2026-11-16): `roc(closes, 12)`, `current > 5` and
+ * `current < -5`. Like `donchian-breakout`, this directive is reported CLEAN by
+ * `audit-directive-depth.cjs` (`0 unexposed`) because the audit reads named constants and these were
+ * inline arguments — so the "0 unexposed" figure is a false-clean rather than a measurement.
+ *
+ * Why it matters for a momentum strategy: `roc(period)` IS the horizon of the signal. ROC(12) on 5m
+ * looks back one hour; ROC(12) on 1h looks back half a day. And `strongPct = 5` decides what counts as
+ * "accelerating" — the number that separates a drift from a momentum leg. Neither was settable, so
+ * every protocol using this directive was forced onto one horizon.
+ */
+const MOMENTUM_ROC_PARAMS: readonly NumericParamSpec[] = [
+  {
+    key: 'period',
+    label: 'ROC lookback',
+    type: 'number',
+    default: 12,
+    min: 2,
+    max: 60,
+    step: 1,
+    unit: 'bars',
+    chart: 'series',
+    why:
+      'ROC(12) is one hour of history on 5m and half a day on 1h, so the period is the horizon of the '
+      + 'whole signal. A momentum-chasing protocol wants a short ROC; a trend-confirmation protocol '
+      + 'wants a long one. Both can now exist without a second copy of the directive.',
+    source: 'mt5-indicators.directives.ts:863 inline literal `roc(closes, 12)`',
+  },
+  {
+    key: 'strongPct',
+    label: 'Strong-momentum threshold',
+    type: 'number',
+    default: 5,
+    min: 0.5,
+    max: 50,
+    step: 0.5,
+    unit: '%',
+    chart: 'threshold',
+    why:
+      'The line between "drifting up" and "accelerating": above it the directive returns its top score '
+      + '(80) and below it 55. On a quiet instrument 5% is unreachable; on a small cap it is routine. '
+      + 'Symmetric — the strong-negative branch uses the same value with the sign flipped, so the '
+      + 'directive cannot end up biased toward one direction by a one-sided edit.',
+    source: 'mt5-indicators.directives.ts:878 inline literal `current > 5` (and `current < -5`)',
+  },
+];
+
 @Injectable()
 export class MomentumROCDirective implements IDirective {
   readonly id = 'momentum-roc';
   readonly name = 'Momentum Rate of Change';
   readonly description =
-    'ROC(12) crossing above zero = bullish momentum shift. ROC rising with high value = accelerating trend. Derived from MT5 Momentum/ROC.';
+    'ROC crossing above zero = bullish momentum shift. ROC rising with high value = accelerating trend. Derived from MT5 Momentum/ROC.';
   readonly priority = 45;
   // ⚠️ maxScore corrected 100 → 80 (2026-10-20, #1131). MODE 9 measured
   // the highest score this directive's own return arithmetic can produce as 80;
   // the extra 20 points were permanent, unearnable capacity in every
   // protocol denominator. See node nest/scripts/directive-guard.cjs (MODE 9).
   readonly maxScore = 80;
-  readonly version = '1.0.0';
+  // 1.0.0 → 1.1.0: `period` and `strongPct` became parameters (INV-DIRECTIVE-VERSION-ANNOUNCED).
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly params = MOMENTUM_ROC_PARAMS;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
+    const { values } = resolveParams(this.id, this.params, input.params);
+    const period = values.period as number;
+    const strongPct = values.strongPct as number;
     const { bars } = input;
     const closes = bars.map((b) => b.close);
-    const MIN = 15;
+    // ROC consumes `period` bars to produce its first value, and the branches read back three values
+    // (`current`, `prev`, `prev2`), so the series needs that much history plus the two lookbacks.
+    const MIN = period + 3;
 
     if (closes.length < MIN) {
       return { score: 0, confidence: 0.1, signalClass: 'neutral', reason: `Need ${MIN} bars, have ${closes.length}` };
     }
 
-    const rocVals = roc(closes, 12);
+    const rocVals = roc(closes, period);
     const current = rocVals[rocVals.length - 1];
     const prev = rocVals[rocVals.length - 2];
-    const prev2 = rocVals[rocVals.length - 3];
 
     if (current == null) {
       return { score: 0, confidence: 0.1, signalClass: 'neutral', reason: 'ROC unavailable' };
@@ -871,25 +961,25 @@ export class MomentumROCDirective implements IDirective {
 
     // Zero-line cross up
     if (current > 0 && prev <= 0) {
-      return { score: 70, confidence: 0.65, signalClass: 'bullish', reason: `ROC crossed above zero (${current.toFixed(1)}%) — momentum shift` };
+      return { score: 70, confidence: 0.65, signalClass: 'bullish', reason: `ROC(${period}) crossed above zero (${current.toFixed(1)}%) — momentum shift` };
     }
 
     // Strong positive momentum
-    if (current > 5 && current > prev) {
-      return { score: 80, confidence: 0.7, signalClass: 'bullish', reason: `ROC ${current.toFixed(1)}% — strong accelerating momentum` };
+    if (current > strongPct && current > prev) {
+      return { score: 80, confidence: 0.7, signalClass: 'bullish', reason: `ROC(${period}) ${current.toFixed(1)}% > ${strongPct}% — strong accelerating momentum` };
     }
 
     // Positive
     if (current > 0) {
-      return { score: 55, confidence: 0.5, signalClass: 'bullish', reason: `ROC ${current.toFixed(1)}% — positive momentum` };
+      return { score: 55, confidence: 0.5, signalClass: 'bullish', reason: `ROC(${period}) ${current.toFixed(1)}% — positive momentum` };
     }
 
     // Negative and worsening
-    if (current < -5) {
-      return { score: 10, confidence: 0.6, signalClass: 'bearish', reason: `ROC ${current.toFixed(1)}% — strong negative momentum` };
+    if (current < -strongPct) {
+      return { score: 10, confidence: 0.6, signalClass: 'bearish', reason: `ROC(${period}) ${current.toFixed(1)}% < -${strongPct}% — strong negative momentum` };
     }
 
-    return { score: 25, confidence: 0.3, signalClass: 'neutral', reason: `ROC ${current.toFixed(1)}% — weak momentum` };
+    return { score: 25, confidence: 0.3, signalClass: 'neutral', reason: `ROC(${period}) ${current.toFixed(1)}% — weak momentum` };
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "tradingcs",
-  "version": "0.163.0",
+  "version": "0.164.0",
   "releaseStage": "alpha",
   "private": true,
   "license": "AGPL-3.0",
@@ -106,6 +106,8 @@
     "validate:css-imports": "node scripts/validate-css-imports.cjs",
     "validate:css-parses": "node scripts/validate-css-parses.cjs",
     "test:css-parses": "node scripts/validate-css-parses.cjs --self-test",
+    "validate:chart-api": "node scripts/validate-chart-api.cjs",
+    "test:chart-api": "node scripts/validate-chart-api.cjs --self-test",
     "test:css-imports": "node scripts/validate-css-imports.cjs --self-test",
     "test:directive-versions": "node scripts/validate-directive-versions.cjs --self-test",
     "validate:directive-registration:self-test": "node nest/scripts/validate-directive-registration.cjs --self-test",

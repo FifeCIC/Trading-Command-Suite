@@ -62,8 +62,12 @@ const EquityCurveChart = lazy(() => import('../components/backtest/charts/Equity
  * The split was about STORAGE and OUTPUT SHAPE, never about scoring.
  *
  * So: the Lab runs the STORING engine (`/api/backtest/run`) for both subjects, and the per-bar score
- * table survives as a DRILL-DOWN (`ProtocolScoreDetail`) that explains a window without pretending
- * to be a measurement.
+ * table survives as `RunComparisonPanels.ScoreTable` — the reading of THIS run, part of its own
+ * result rather than a comparison.
+ *
+ * ⚠️ CORRECTED 2026-11-16 (#1135): this comment used to say the per-bar table was a DRILL-DOWN named
+ * `ProtocolScoreDetail`. That component was imported by NOTHING for over a month — it is now deleted.
+ * See the note at the `ScoreSeriesTable` import below.
  *
  * ── THE WINDOW DEFAULTS TO THE FROZEN DEVELOPMENT PERIOD ─────────────────────────────────────────
  * `dev-window-v1` was seeded on 2026-10-22 (21 rows, one per symbol × timeframe) and until this
@@ -98,6 +102,14 @@ const DirectiveSettingsPanel = lazy(() => import('../components/backtest/Directi
  * render the A/B comparison, which moved to `/lab/current-strategy` (owner direction: the strategies
  * page was *"displaying results twice"*). Only `ScoreTable` is still used here — the per-bar reading
  * of THIS run is part of its own result, not a comparison.
+ *
+ * ⚠️ `ProtocolScoreDetail.jsx` DELETED 2026-11-16 (#1135). It was a 420-line second per-bar surface
+ * that called `POST /api/replay/run` directly, and **nothing imported it** — three documents described
+ * it as the live drill-down while this page rendered `ScoreTable` instead. Two measured reasons it
+ * could not simply be mounted: an ad-hoc replay hits the engine's 20 s deadline on a multi-protocol
+ * frozen window, and `ScoreTable` above already shows every per-bar figure such a drill-down would
+ * (signal %, opportunity %, points, risk ×, signal, passed). Git holds it if an ad-hoc replay surface
+ * is wanted later; it is not a capability that was lost, because it was never reachable.
  */
 const ScoreSeriesTable = lazy(() =>
   import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.ScoreTable })));

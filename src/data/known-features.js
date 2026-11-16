@@ -228,7 +228,11 @@ export const KNOWN_FEATURES = {
   // 2026-08-06/09/11 — Handoff Batch (Strategy Forms, Broker Config, Symbols Ladder, Shared Utils)
   'ScoringStrategy Auto-Create (watchlist link)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
   'Broker Config Service (broker_config)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'hotStock Columns (ScoringStrategy)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  // ⚠️ CORRECTED 2026-11-15 (#1281). This read `devCompletion: 'complete'` while NOTHING read the
+  // columns — the precise combination of signals that made the gap invisible (see bot-rules.spec.ts).
+  // As of #1281 two of the four columns have a DISPLAY reader (detection feeds the Movers &
+  // Treatment view); allocation and max-hold are still unread, so 'partial' is the honest value.
+  'hotStock Columns (ScoringStrategy)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'partial' },
   'Strategy Form Full Column Exposure (#590)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'both', devCompletion: 'complete' },
   'Score-to-Max Ratio Display': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Shared Core Utility Migration (17 files)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
@@ -1024,4 +1028,27 @@ export const KNOWN_FEATURES = {
     'Backtest period library (named, reusable windows)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
     'Database backup with restore proof': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'partial' },
     'Fresh-cadence scoring with starved-data warnings': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  // ── batch #55 (2026-11-15) — 13 handoffs (2026-11-13 → 2026-11-15): all full.
+  //    Theme: THE APP STOPS TRUSTING ITS OWN INSTRUMENTS. A build gate that had failed on every run
+  //    for seven weeks taught everyone to ignore it; a stylesheet nothing imported rendered three
+  //    pages unstyled; a component the docs named was imported by nothing; a module referenced only
+  //    in a comment scored as live. Each fix came with the guard that makes the class fail the build,
+  //    because the instance is the excuse and the guard is the deliverable.
+  //    ⚠️ 13 handoffs declare 13 unique capability names — no row here was already recorded by
+  //    batch #54, and none of these re-declares another. Their QA entries are separate: two
+  //    (`qa-threshold-range-001`, `qa-movers-treatment-001`) had already landed with the work.
+  //    uiSurfaces: 0 is a FINDING, not a blank (6 of these — five build gates plus an audit CLI).
+    'Code-health reachability — commentary is not a reference': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Tunable EMA structure lengths': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Directive change announcement': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+    'Stylesheet reachability gate': { dataPersistence: 'none', uiSurfaces: 3, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Noise-floor measurement for protocol entry bars': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+    'Threshold A/B pairs registered per focus protocol': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'Threshold range map + INV-THRESHOLD-IN-RANGE': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Supporter Programme prompts': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Tool library triage + flag safety': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'CSS Validity Gate (invalid stylesheets block the build)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Per-route code splitting (lazy page loading)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Bundle Size Guard (PWA cliff + growth ratchet)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Movers & Treatment (six ordered states per mover)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
 };

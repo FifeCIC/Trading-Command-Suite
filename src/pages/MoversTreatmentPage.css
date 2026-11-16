@@ -1,0 +1,462 @@
+/* MoversTreatmentPage.css — #1276.
+ *
+ * ⚠️ EVERY token here is checked by `scripts/validate-css-tokens.cjs` against the 152 declared
+ * custom properties. An undefined token is NOT an error at runtime — the declaration is silently
+ * dropped and the element inherits — so the page looks "nearly right" while the colour is wrong.
+ * Run `node scripts/validate-css-tokens.cjs` after editing.
+ */
+
+.mt-page {
+  padding: 1.25rem 1.5rem 3rem;
+  color: var(--ink);
+  max-width: 1500px;
+}
+
+.mt-header h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.25rem;
+}
+
+.mt-sub {
+  margin: 0 0 1rem;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  max-width: 78ch;
+}
+
+/* ── Strategy panel: visibly inactive, with its reason ─────────────────────────────────────── */
+.mt-strategy {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--bg-elev);
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.mt-strategy--inactive {
+  opacity: 0.85;
+}
+
+.mt-strategy-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.mt-strategy-head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.mt-strategy-tag {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  padding: 0.12rem 0.4rem;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+}
+
+.mt-strategy p {
+  margin: 0 0 0.4rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  max-width: 95ch;
+}
+
+.mt-strategy-why {
+  color: var(--text-faint);
+}
+
+/* ── Controls ──────────────────────────────────────────────────────────────────────────────── */
+.mt-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.9rem;
+}
+
+.mt-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mt-controls select {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.82rem;
+}
+
+.mt-controls button {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.36rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.mt-controls button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.mt-controls button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.mt-stamp {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  margin-left: auto;
+}
+
+/* ── Tallies ───────────────────────────────────────────────────────────────────────────────── */
+.mt-tallies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.mt-tally {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 5.5rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.mt-tally-n {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.mt-tally-l {
+  font-size: 0.66rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* ── Tables ────────────────────────────────────────────────────────────────────────────────── */
+.mt-side {
+  margin-bottom: 1.25rem;
+}
+
+.mt-side h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.mt-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.mt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.mt-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-elev);
+  color: var(--text-dim);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.mt-table tbody td {
+  padding: 0.32rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.mt-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.mt-sym strong {
+  font-family: var(--font-mono);
+}
+
+.mt-type {
+  margin-left: 0.35rem;
+  font-size: 0.64rem;
+  color: var(--text-faint);
+}
+
+.mt-move {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.mt-up { color: var(--risk-normal); }
+.mt-down { color: var(--risk-high); }
+
+.mt-num {
+  font-family: var(--font-mono);
+  color: var(--ink-soft);
+}
+
+.mt-dim { color: var(--text-faint); }
+.mt-warn { color: var(--risk-high); font-weight: 600; }
+
+.mt-badge {
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.mt-hot {
+  font-size: 0.8rem;
+  cursor: help;
+}
+
+/* ⚠️ Six states are distinguished by the BADGE TEXT and a subtle background tint, never by colour
+ * alone (accessibility: state must survive a monochrome render). Thick coloured left bars are
+ * banned repo-wide by `scripts/validate-no-notice-bar.cjs` — the owner asked for that chrome
+ * removed everywhere, so this uses uniform 1px rules and a tint instead. */
+.mt-t-traded   { background: color-mix(in srgb, var(--risk-normal) 7%, transparent); }
+.mt-t-queued   { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.mt-t-refused  { background: color-mix(in srgb, var(--risk-high) 7%, transparent); }
+.mt-t-scored   { background: transparent; }
+.mt-t-unscored { background: color-mix(in srgb, var(--line) 22%, transparent); }
+.mt-t-nodata   { background: color-mix(in srgb, var(--risk-high) 12%, transparent); }
+
+/* ── Verdict sentences ─────────────────────────────────────────────────────────────────────── */
+.mt-verdicts {
+  border-top: 1px solid var(--line);
+  padding-top: 0.75rem;
+}
+
+.mt-verdicts h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.88rem;
+}
+
+.mt-verdicts ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.mt-verdicts li {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.mt-note {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  max-width: 95ch;
+}
+
+.mt-note--warn {
+  color: var(--risk-high);
+  border: 1px solid var(--risk-high);
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+}
+
+/* ── Tabs — the two purposes, kept visibly distinct (#1283) ────────────────────────────────── */
+.mt-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.5rem;
+}
+
+.mt-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  text-align: left;
+  background: var(--panel);
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.mt-tab:hover {
+  border-color: var(--accent);
+}
+
+.mt-tab--on {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: var(--bg-elev);
+}
+
+.mt-tab-hint {
+  font-size: 0.68rem;
+  color: var(--text-faint);
+}
+
+.mt-tab--on .mt-tab-hint {
+  color: var(--text-dim);
+}
+
+/* ── Market-wide panel (#1283) ─────────────────────────────────────────────────────────────── */
+.mm-panel {
+  margin-bottom: 1.5rem;
+}
+
+.mm-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.75rem;
+}
+
+.mm-ok { color: var(--risk-normal); }
+.mm-bad { color: var(--risk-high); font-weight: 600; }
+
+.mm-banner {
+  border: 1px solid var(--risk-high);
+  border-radius: 6px;
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 0.9rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--risk-high) 8%, transparent);
+}
+
+.mm-counts {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-bottom: 0.5rem;
+}
+
+.mm-filters {
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  margin-bottom: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.mm-chip {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+  font-family: var(--font-mono);
+}
+
+.mm-lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.mm-list h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.mm-list h3.mm-up { color: var(--risk-normal); }
+.mm-list h3.mm-down { color: var(--risk-high); }
+
+.mm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.mm-table thead th {
+  text-align: left;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  padding: 0.25rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.mm-table tbody td {
+  padding: 0.25rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.mm-sym {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.mm-num {
+  font-family: var(--font-mono);
+  color: var(--ink-soft);
+}
+
+.mm-up { color: var(--risk-normal); }
+.mm-down { color: var(--risk-high); }
+.mm-dim { color: var(--text-faint); }
+
+.mm-table--excl {
+  margin-top: 0.6rem;
+}
+
+.mm-excluded button {
+  background: var(--panel);
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.mm-excluded button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

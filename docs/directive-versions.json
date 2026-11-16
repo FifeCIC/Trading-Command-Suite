@@ -7,377 +7,581 @@
     "Regenerate with: node scripts/validate-directive-versions.cjs --write"
   ],
   "directives": {
+    "accumulation-dist": {
+      "version": "1.0.0",
+      "hash": "88290920dfd5c084"
+    },
+    "adaptive-risk-monitor": {
+      "version": "2.0.0",
+      "hash": "8a23a7f094770c54"
+    },
+    "advanced-weekly-rhythm": {
+      "version": "2.0.0",
+      "hash": "dfe065deae850ea7"
+    },
     "adx": {
       "version": "2.0.1",
-      "hash": "b0393ef1183470e3"
+      "hash": "aefe218d3b93c451"
+    },
+    "adx-di-crossover": {
+      "version": "1.0.0",
+      "hash": "77ce1ea4c8da5c12"
+    },
+    "analyst-adjustments": {
+      "version": "3.0.0",
+      "hash": "bc5f7ffd581af4ca"
     },
     "atr-dip": {
       "version": "2.0.1",
-      "hash": "889201ad27709c2a"
+      "hash": "90bca035f23916d2"
+    },
+    "atr-trailing-stop": {
+      "version": "1.2.0",
+      "hash": "9fcc759abfe598b7"
+    },
+    "awesome-oscillator": {
+      "version": "1.1.0",
+      "hash": "223bb7926d38a556"
+    },
+    "basic-weekly-rhythm": {
+      "version": "3.0.0",
+      "hash": "293036d4557a3fae"
     },
     "bollinger-band-squeeze": {
       "version": "2.0.1",
-      "hash": "95526b4b12d37124"
+      "hash": "1c762f6dd58e5ad2"
     },
     "bollinger-bands": {
       "version": "1.1.0",
-      "hash": "dca87113bdf4c0cc"
+      "hash": "dd8362c399b2749b"
+    },
+    "bollinger-pct-b": {
+      "version": "1.0.0",
+      "hash": "1b08b8c9195d10ee"
     },
     "btc-halving-cycle": {
       "version": "2.0.0",
-      "hash": "678f0db5540d672b"
+      "hash": "e6f949efbaccd3d6"
     },
     "budget-gate": {
       "version": "1.1.0",
-      "hash": "40a9d973f40faa6a"
+      "hash": "be5878dcb2237734"
+    },
+    "bulls-bears-power": {
+      "version": "1.0.0",
+      "hash": "08c40a80501efd97"
     },
     "cad-usd-oil-correlation": {
       "version": "2.1.0",
-      "hash": "3042c8935b15acae"
+      "hash": "7b031f0887a326fc"
     },
     "candle-pressure": {
       "version": "1.1.0",
-      "hash": "e472f8b5cbbbdfcb"
+      "hash": "c0522b429d21492d"
     },
     "cci": {
       "version": "2.0.1",
-      "hash": "de31df9e3281c661"
+      "hash": "eeaa1acd71184ef2"
+    },
+    "chaikin-mf": {
+      "version": "1.1.0",
+      "hash": "1fba19375e7efe3d"
     },
     "chandelier-exit": {
       "version": "1.2.0",
-      "hash": "c7d38a0033ddab5e"
+      "hash": "1b1c1de29eb2ecaf"
     },
     "confluence-reversal-combo": {
       "version": "1.1.0",
-      "hash": "d4df7eddfd53d608"
+      "hash": "d0b5b417773b26dd"
+    },
+    "conviction-growth": {
+      "version": "2.0.0",
+      "hash": "f828ec0d3f094d84"
     },
     "crypto-fear-greed": {
       "version": "2.1.0",
-      "hash": "7b8ecf42c1b59160"
+      "hash": "c376e336b07bb510"
     },
     "crypto-weekend-effect": {
       "version": "2.0.0",
-      "hash": "e4167f88e8fd49b5"
+      "hash": "25a419a88a6262ce"
+    },
+    "demarker": {
+      "version": "1.0.0",
+      "hash": "34f372bfd0fefb91"
     },
     "dilution-impact": {
       "version": "1.4.0",
-      "hash": "69d121db6435d406"
+      "hash": "c6e9be6c73d6df64"
+    },
+    "dividend-yield-attractive": {
+      "version": "2.0.0",
+      "hash": "e140483203dea8cf"
     },
     "doji-pattern": {
       "version": "1.1.0",
-      "hash": "376f88187811a3ae"
+      "hash": "0457fcc2deeef17a"
+    },
+    "donchian-breakout": {
+      "version": "1.2.0",
+      "hash": "cdcc19ac45dbe738"
     },
     "dxy-regime": {
       "version": "2.0.1",
-      "hash": "b52be4f8d4867ee6"
+      "hash": "3ac109180e98353e"
+    },
+    "earnings-implementation": {
+      "version": "2.0.0",
+      "hash": "c8d4a857a4a6bce2"
     },
     "earnings-momentum": {
       "version": "1.1.0",
-      "hash": "a71f9ec4aff04746"
+      "hash": "a40c461851689ce0"
     },
     "earnings-proximity": {
       "version": "2.0.2",
-      "hash": "703a7a3c2f074f94"
+      "hash": "326bb63571ba5259"
+    },
+    "earnings-whispers": {
+      "version": "2.0.0",
+      "hash": "ca06917fbba90f24"
+    },
+    "ease-of-movement": {
+      "version": "1.0.0",
+      "hash": "106d5e719b27c28b"
     },
     "ema-structure": {
       "version": "2.1.0",
-      "hash": "1bb617ec681640ad"
+      "hash": "eb95293b683836ea"
     },
     "engulfing-pattern": {
       "version": "1.1.0",
-      "hash": "bfeb4610e015ee04"
+      "hash": "4ccea3db7a1f4727"
     },
     "fair-value-gap": {
       "version": "1.1.0",
-      "hash": "629c8b1b71c93eb8"
+      "hash": "a56c4aa2535d3b6c"
     },
     "falling-risk-pyramid": {
       "version": "1.1.0",
-      "hash": "b1f7855978ab7228"
+      "hash": "ecfff8bf0cc3d41f"
     },
     "fibonacci-levels": {
       "version": "1.1.0",
-      "hash": "873ca70ab8dbcbe9"
+      "hash": "333dd4d0b85e04d0"
+    },
+    "force-index": {
+      "version": "1.0.0",
+      "hash": "c95939256805018e"
+    },
+    "friday-positioning": {
+      "version": "3.0.0",
+      "hash": "b253deb3c70df80c"
     },
     "fx-timing": {
       "version": "0.2.0",
-      "hash": "544c91a81263ef73"
+      "hash": "ecd9032a60bc5218"
     },
     "gap-scanner": {
       "version": "1.1.0",
-      "hash": "4f112dafa514f1e5"
+      "hash": "0f95bae90de64131"
     },
     "gold-macro-correlation": {
       "version": "2.1.0",
-      "hash": "f8e4c1190141e3cb"
+      "hash": "f71d8fdf0f589b85"
     },
     "gold-round-numbers": {
       "version": "1.4.0",
-      "hash": "50c1cd5824ff333b"
+      "hash": "b79bf08fc6d3bbd5"
     },
     "gold-session-profile": {
       "version": "1.3.0",
-      "hash": "b92deb33e2e8f0a4"
+      "hash": "302ba2ae182a1001"
     },
     "hammer-pattern": {
       "version": "1.1.0",
-      "hash": "c3e298e55bcf7669"
+      "hash": "2ecce569d5ce36fa"
     },
     "hurst-memory": {
       "version": "1.1.0",
-      "hash": "61ed65c11160be52"
+      "hash": "4b3654fb92f326a9"
+    },
+    "ichimoku-cloud": {
+      "version": "1.1.0",
+      "hash": "8532ba91fedd279b"
     },
     "insider-activity": {
       "version": "1.2.1",
-      "hash": "863bb8c099dad76b"
+      "hash": "928353e10872fa0f"
     },
     "institutional-footprint": {
       "version": "1.1.0",
-      "hash": "b8e3b92deb09e5a6"
+      "hash": "dbefd3a2559f8410"
+    },
+    "institutional-timing": {
+      "version": "3.0.0",
+      "hash": "bd55d05835f9ac2e"
+    },
+    "intraday-u-pattern": {
+      "version": "2.0.0",
+      "hash": "2745b8d23c1f5cd9"
+    },
+    "isa-reset": {
+      "version": "3.0.0",
+      "hash": "a12d15c69c3c6d40"
+    },
+    "keltner-channel": {
+      "version": "1.0.0",
+      "hash": "3e0b27b7b0189b81"
+    },
+    "like-zacks": {
+      "version": "2.0.0",
+      "hash": "a6cb6fe1108f9b75"
     },
     "liquidity-check": {
       "version": "1.1.0",
-      "hash": "578bcb0aae49cea2"
+      "hash": "291fccbd14bbb539"
     },
     "liquidity-sweep": {
       "version": "1.1.0",
-      "hash": "c97773e7a8728c8b"
+      "hash": "bd20bd218de9177f"
     },
     "ma-crossover": {
       "version": "1.1.0",
-      "hash": "606fa2670ef96582"
+      "hash": "f281f2936e52a01b"
+    },
+    "macd": {
+      "version": "2.0.0",
+      "hash": "9c1c9ccd6572eee0"
     },
     "macd-crossover": {
       "version": "2.0.1",
-      "hash": "bedb376d7c16741b"
+      "hash": "d1a2ca0f01227bee"
     },
     "macd-divergence": {
       "version": "1.1.0",
-      "hash": "cbd7bbe6423293a8"
+      "hash": "592d4c51819bf74b"
     },
     "market-entropy": {
       "version": "1.1.0",
-      "hash": "29dd2cf229c41232"
+      "hash": "f56723cc8076a1f1"
     },
     "market-memory-zones": {
       "version": "1.1.0",
-      "hash": "61500c7a372839a8"
+      "hash": "741ed88ea2873caf"
     },
     "market-regime": {
       "version": "1.1.0",
-      "hash": "c6b6d4e75098159f"
+      "hash": "ac9cd0833b32ebf8"
     },
     "market-structure-bos": {
       "version": "1.1.0",
-      "hash": "dfb7ad3ae2582f91"
+      "hash": "8451a24d745fb76c"
+    },
+    "mean-reversion": {
+      "version": "2.0.0",
+      "hash": "2d95d6690f6adb7b"
     },
     "mfi": {
       "version": "2.1.0",
-      "hash": "93b1904490a8cbea"
+      "hash": "16dd5e3503f7fb9f"
     },
     "mfi-overbought": {
       "version": "1.0.0",
-      "hash": "634e58f6b712ca1f"
+      "hash": "3c988ed549497f9b"
     },
     "micro-sr-levels": {
       "version": "1.1.0",
-      "hash": "efb62a858286b04a"
+      "hash": "f0840fc7453b5a1e"
+    },
+    "midweek-momentum": {
+      "version": "2.0.0",
+      "hash": "d927c2b294e57a32"
     },
     "momentum-continuation-combo": {
       "version": "1.1.0",
-      "hash": "617f2e40e06dd637"
+      "hash": "98c8e81c47472fa6"
     },
     "momentum-exhaustion": {
       "version": "1.1.0",
-      "hash": "185f0c36b0f39ec1"
+      "hash": "1a452ef1c930172d"
+    },
+    "momentum-roc": {
+      "version": "1.1.0",
+      "hash": "e6c4676903921d88"
     },
     "monday-effect": {
       "version": "2.0.0",
-      "hash": "14ed76b90e12fd6f"
+      "hash": "1bd051d802f01c50"
+    },
+    "moving-averages": {
+      "version": "2.0.0",
+      "hash": "d9a3ce5eced4a27c"
     },
     "mt5-dark-cloud-piercing": {
       "version": "1.1.0",
-      "hash": "d55a8c0f456c8420"
+      "hash": "866e60c9a2dcd947"
     },
     "mt5-engulfing": {
       "version": "1.1.0",
-      "hash": "6ad93f1b63a35816"
+      "hash": "1e50a8bcb141c414"
     },
     "mt5-engulfing-cci": {
       "version": "1.1.0",
-      "hash": "eed12520b2c1fa99"
+      "hash": "91987b35a306bdc6"
     },
     "mt5-hammer": {
       "version": "1.1.0",
-      "hash": "a5855f2d822b596b"
+      "hash": "b2ca2d0ef2da0b85"
     },
     "mt5-harami": {
       "version": "1.1.0",
-      "hash": "56126c7102cf9eda"
+      "hash": "ac4efd9f0dc1dc30"
     },
     "mt5-star-doji": {
       "version": "1.1.0",
-      "hash": "4d89cdf463b4900a"
+      "hash": "ae2b5d2093c4928a"
     },
     "mtf-confluence-conservative": {
       "version": "1.1.0",
-      "hash": "6420de4ceb35b90a"
+      "hash": "ca71bb4920c7914b"
+    },
+    "mtf-confluence-weighted": {
+      "version": "1.0.0",
+      "hash": "2d131ea36305e244"
     },
     "multi-timeframe-trend": {
       "version": "1.1.0",
-      "hash": "2c8aad54aae6506d"
+      "hash": "b89a52747d192221"
     },
     "news-catalyst-strength": {
       "version": "1.0.0",
-      "hash": "b8505d57cc83161d"
+      "hash": "0dad4e0947507fd8"
+    },
+    "nvda-earnings-momentum": {
+      "version": "2.0.0",
+      "hash": "22ab7fd76c1b3667"
     },
     "obv": {
       "version": "1.1.0",
-      "hash": "7365d80cd68b9f92"
+      "hash": "9fa22818fb3df489"
     },
     "obv-divergence": {
       "version": "1.1.0",
-      "hash": "723e910b88e4dde5"
+      "hash": "f5235f8c7af1eb1f"
     },
     "overhead-supply-pressure": {
       "version": "1.1.0",
-      "hash": "560fd50e686dadc4"
+      "hash": "c4dd06ae44c02133"
     },
     "panic-exhaustion-absorption": {
       "version": "1.1.0",
-      "hash": "4fae724767febd14"
+      "hash": "3ddc106f3a694c97"
+    },
+    "parabolic-sar": {
+      "version": "1.0.0",
+      "hash": "e4e830a2d54dc173"
     },
     "pattern-density-sr": {
       "version": "1.1.0",
-      "hash": "7224ec08d26b0af3"
+      "hash": "86b1240e3a985dc1"
+    },
+    "pin-bar-pattern": {
+      "version": "2.0.0",
+      "hash": "2f543d6ecf0024f8"
     },
     "position-size-confidence": {
       "version": "1.1.0",
-      "hash": "60a3129c10e7d1e6"
+      "hash": "cd73eacfc8b94f94"
     },
     "position-size-kelly": {
       "version": "1.1.0",
-      "hash": "c8929b29fa857433"
+      "hash": "e511d1245c377155"
     },
     "price-above-sma": {
       "version": "1.1.0",
-      "hash": "7d6da5f7ee85769c"
+      "hash": "cf7ed06c01fcea32"
+    },
+    "price-above-sma-50": {
+      "version": "2.0.0",
+      "hash": "f669e18921bf139c"
     },
     "price-action": {
       "version": "1.1.0",
-      "hash": "c254cbd82162c6c7"
+      "hash": "1fed603c81844884"
     },
     "price-time-gap": {
       "version": "1.1.0",
-      "hash": "9693f37336810b28"
+      "hash": "129ac11adbcc2d2b"
     },
     "range-contraction": {
       "version": "1.1.0",
-      "hash": "47256c461d06c79b"
+      "hash": "2b6651b5a9157b7c"
     },
     "regime-shift-exit": {
       "version": "1.1.0",
-      "hash": "0fd47b8f7c228ca1"
+      "hash": "780418c90982e07f"
+    },
+    "resistance-levels-strategy": {
+      "version": "2.0.0",
+      "hash": "e328c6f7d094566c"
     },
     "rollover-risk": {
       "version": "1.1.0",
-      "hash": "2fa37caf028139e2"
+      "hash": "16fedf5d806ac084"
     },
     "rsi-divergence": {
       "version": "1.1.0",
-      "hash": "d1183a272cc443ae"
+      "hash": "d99bd18c133fa650"
     },
     "rsi-overbought": {
       "version": "2.0.1",
-      "hash": "fe34389672b286c3"
+      "hash": "9b43a35afcfa296a"
     },
     "rsi-oversold": {
       "version": "2.1.0",
-      "hash": "a5def923713c42f6"
+      "hash": "2943a9930117f425"
     },
     "session-open-effect": {
       "version": "1.2.0",
-      "hash": "66b4433762cf5372"
+      "hash": "740c1db44ccdab24"
     },
     "session-timing-filter": {
       "version": "2.0.0",
-      "hash": "d640ef52d73d4cd4"
+      "hash": "384b4344f53aa061"
     },
     "sigma-score": {
       "version": "1.1.0",
-      "hash": "4f2523daa71a4a45"
+      "hash": "2eeb24d78570baa8"
+    },
+    "sp500-regime": {
+      "version": "2.0.0",
+      "hash": "bca20441d9202f48"
     },
     "speed-momentum": {
       "version": "1.1.0",
-      "hash": "cb94f3730aaf94b0"
+      "hash": "0beda348ad735ce6"
+    },
+    "spike-hold-confirmation": {
+      "version": "1.0.0",
+      "hash": "57ab484e55747c4d"
+    },
+    "spy-month-end-rebalancing": {
+      "version": "3.0.0",
+      "hash": "72456b9a4e493cfe"
+    },
+    "spy-options-expiry": {
+      "version": "3.0.0",
+      "hash": "74c6198cea775736"
+    },
+    "spy-qqq-relative-strength": {
+      "version": "2.0.0",
+      "hash": "e86cb90cc293e6c7"
     },
     "stoch-rsi": {
       "version": "1.0.0",
-      "hash": "b315a91e189fb64e"
+      "hash": "22cd199e0d2b20ec"
     },
     "stochastic": {
       "version": "2.2.0",
-      "hash": "1768484f0ca7a803"
+      "hash": "3489ac28f6fde67a"
+    },
+    "supertrend": {
+      "version": "1.2.0",
+      "hash": "edba1601a929aa04"
     },
     "support-resistance-levels": {
       "version": "1.3.0",
-      "hash": "e26a82df6127be46"
+      "hash": "1a90e2e20743af1f"
     },
     "surge-detection": {
       "version": "1.0.0",
-      "hash": "fa0032a1235b18e3"
+      "hash": "62673237a40ac5bb"
+    },
+    "surge-exhaustion": {
+      "version": "1.0.0",
+      "hash": "49970abd078d3f34"
     },
     "target-achieved": {
       "version": "1.1.0",
-      "hash": "36867ac675bf4b21"
+      "hash": "6cc726cfeab01a26"
     },
     "three-soldiers-pattern": {
       "version": "1.1.0",
-      "hash": "866417c27e9082ba"
+      "hash": "59c933e69f740b0c"
+    },
+    "time-based-support": {
+      "version": "2.0.0",
+      "hash": "5e17241d4642aac5"
     },
     "time-stop": {
       "version": "1.1.0",
-      "hash": "350bc6f6b3e1fd95"
+      "hash": "8da35997969b001a"
+    },
+    "tsla-sentiment-amplifier": {
+      "version": "2.0.0",
+      "hash": "12cd0f6335bcd951"
+    },
+    "vix-strategy": {
+      "version": "2.0.0",
+      "hash": "3764f63f2d66b619"
     },
     "volatility-envelope": {
       "version": "1.1.0",
-      "hash": "ad5a0adba78236fe"
+      "hash": "3ff8effc78ba001c"
+    },
+    "volatility-tools": {
+      "version": "2.0.0",
+      "hash": "cfa8fa1a1a9330c0"
     },
     "volume-boundary": {
       "version": "1.1.0",
-      "hash": "8a9c530aa17e1c8c"
+      "hash": "1e4cb6fddbb59dec"
     },
     "volume-confirmation": {
       "version": "1.1.0",
-      "hash": "f12ba50725c68095"
+      "hash": "db3711fba95ae8ac"
     },
     "volume-rhythm": {
       "version": "1.1.0",
-      "hash": "85b5dbdb71b437ac"
+      "hash": "45e2e4fa1ac551a9"
     },
     "volume-surge": {
       "version": "1.1.0",
-      "hash": "f8a465cd7c0372d7"
+      "hash": "f0a8e3a4a8274740"
     },
     "vwap": {
       "version": "1.2.0",
-      "hash": "4c893ea1489348b9"
+      "hash": "d7e8bf5aee369f7c"
+    },
+    "vwap-confluence-bands": {
+      "version": "1.1.0",
+      "hash": "ce18954f415b2bd1"
     },
     "vwap-confluence-simple": {
       "version": "1.1.0",
-      "hash": "f195d46a5da6f5c4"
+      "hash": "711ed5a1913d493a"
     },
     "weekend-gap-bias": {
       "version": "1.0.0",
-      "hash": "133249a1594eac93"
+      "hash": "c9fa4c2e392253a2"
+    },
+    "weekly-rhythm-strategy": {
+      "version": "3.0.0",
+      "hash": "9b93402775430d14"
     },
     "wick-filter": {
       "version": "1.1.0",
-      "hash": "a7f8da6613befd8e"
+      "hash": "d726e303b44747ed"
+    },
+    "williams-r": {
+      "version": "1.0.0",
+      "hash": "943840e66178d8bb"
     },
     "zigzag-swing-detector": {
       "version": "1.1.0",
-      "hash": "545a2a77af696604"
+      "hash": "0a0d9dc32f6f3de1"
     }
   }
 }

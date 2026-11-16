@@ -381,7 +381,24 @@ const ASSIGNMENTS: Array<{ symbol: string; protocolSlug: string; priority?: numb
   // assignment GRML is in none of them, so **no bars are fetched for it**. Its price history
   // is therefore reachable only on demand from the bridge
   // (`/candles?symbol=GRML&timeframe=1d`), which is what `ReplayService.loadBars()` falls
-  // back to. Assign a protocol only when one actually fits the instrument.
+  // ── MOMENTUM CANDIDATE (2026-11-16, #1285) ──  //
+  // The momentum-candidate-v1-long protocol was created through `POST /api/scoring/protocols` and a
+  // bot was created and subscribed through the API — but scoring resolves a protocol's symbols from
+  // THIS TABLE (`symbol_protocol_assignment`), and **no API writes it**: the only writer in the repo
+  // is the seeder below. So an active protocol with no row here scores **0 snapshots** while looking
+  // perfectly healthy in the UI — the same defect the paired-legs block above records, and the one
+  // `INV-NO-SYMBOL-GUESSING` exists to catch ("WIRED TO NOTHING").
+  //
+  // Measured before this row existed: `symbol_protocol_assignment` had 54 rows across 31 symbols and
+  // 34 protocols, and it held **0** for `momentum-candidate-v1-long`, so a scoring run for MSTR wrote
+  // no snapshot for it while writing 56 for XAUUSD in the same pass.
+  //
+  // MSTR chosen deliberately: the strategy targets symbols that have ALREADY made a large move, and
+  // MSTR is the highest-bar-count stock in our own universe (~8,700 5m bars) as well as a regular
+  // member of the market-wide movers feed. It is a real instrument the strategy would want, not a
+  // placeholder — assignment to a symbol the strategy would never target would make the demonstration
+  // meaningless.
+  { symbol: 'MSTR', protocolSlug: 'momentum-candidate-v1-long' },
 ];
 
 

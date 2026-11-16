@@ -8,11 +8,12 @@ import { PriceRefreshService } from './price-refresh.service';
 import { BarRefreshService } from './bar-refresh.service';
 import { MarketDataController } from './market-data.controller';
 import { MarketDataService } from './market-data.service';
+import { MarketMoversService } from './market-movers.service';
 
 @Module({
   imports: [DatabaseModule, ImportJobsModule, ProvidersModule, SymbolsModule],
   controllers: [MarketDataController],
-  providers: [MarketDataService, FreshnessService, PriceRefreshService, BarRefreshService],
+  providers: [MarketDataService, FreshnessService, PriceRefreshService, BarRefreshService, MarketMoversService],
   exports: [MarketDataService, FreshnessService, PriceRefreshService, BarRefreshService],
 })
 export class MarketDataModule {}

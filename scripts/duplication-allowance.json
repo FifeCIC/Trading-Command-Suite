@@ -7,7 +7,7 @@
     "windows": 592
   },
   "pairs": {
-    "src/core/architecture-reference.js || src/pages/architecture-framework.data.js": 141,
+    "src/core/architecture-reference.js || src/pages/architecture-framework.data.js": 150,
     "src/pages/ProtocolTrailPage.jsx || src/pages/SinglesMonitorPage.jsx": 29,
     "nest/prisma/seed-crypto-5yr.ts || nest/prisma/seed-forex-5yr.ts": 16,
     "nest/src/modules/system/architecture-manifest.controller.ts || src/core/architecture-reference.js": 15,

@@ -509,6 +509,11 @@ export const NAV_TREE = {
       // Development because it is an experiment first: does seeing the fitted line and the invalidation
       // level help you judge a score, or is it noise? Observation only — nothing in scoring reads it.
       { id: 'trend-reading', label: 'Trend Reading', icon: '📐' },
+  // #1281 — movers and treatment. Owner, 2026-11-15: *"I would like to see a list of all the
+  // winners and losers and how TCS is treating them in terms of scoring, trading, monitoring and
+  // decisions made."* Development because it began as an experiment; the observation is general
+  // and the strategy panel inside it is INACTIVE with its reason until a protocol exists.
+  { id: 'movers-treatment', label: 'Movers & Treatment', icon: '🏆' },
       // 2026-09-28 — the CHANGE view. Every trading page rendered a snapshot; only PerformanceLab
       // had a time axis. This is Development because it is an EXPERIMENT first: does seeing the
       // period-over-period delta help you judge a system, or is it noise? Read-only by design —
