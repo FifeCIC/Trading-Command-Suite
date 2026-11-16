@@ -75,7 +75,25 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
-const INSTRUCTIONS_DIR = path.join(REPO_ROOT, '.github', 'instructions');
+/**
+ * ⚠️ THE RULE CORPUS MOVED OUT OF THE REPOSITORY (owner, 2026-11-16).
+ *
+ * *"please move all of those"* — all 19 instruction files now live in the docs store, because this
+ * repository is public and internal agent process does not belong in a product repo. What is left
+ * behind is `.github/copilot-instructions.md`: the safety-critical rules, written for contributors.
+ *
+ * Two locations are tried, in order, so the same script works on this machine and on a fresh clone:
+ *   1. `.github/instructions/` — the old location, kept first so a checkout of an older commit
+ *      still validates what that commit actually contains;
+ *   2. the docs store — where the corpus lives now.
+ *
+ * ⚠️ WHEN NEITHER IS PRESENT THE CHECKS ARE **SKIPPED, LOUDLY**, not failed. `G:` is a Google Drive
+ * mount that is regularly unmounted on this machine, and a build that goes red because a network
+ * drive is offline would teach everyone to ignore this gate — which is worse than not having it.
+ */
+const DOCS_STORE_INSTRUCTIONS = 'G:\\My Drive\\Project Management\\Live\\Trading-Command-Suite-Documentation\\agent-ops\\instructions';
+const INSTRUCTIONS_DIR =
+  [path.join(REPO_ROOT, '.github', 'instructions'), DOCS_STORE_INSTRUCTIONS].find((p) => fs.existsSync(p)) || null;
 const AGENTS_DIR = path.join(REPO_ROOT, '.github', 'agents');
 const ATTENTION_BOARD = path.join(REPO_ROOT, '.github', 'AGENT-ATTENTION.md');
 const LEGACY_HANDOFF_DIR = path.join(REPO_ROOT, '.github', 'handoffs');
@@ -93,18 +111,21 @@ function warn(rule, message, hint) {
 
 // ── load ─────────────────────────────────────────────────────────────────────
 
-if (!fs.existsSync(INSTRUCTIONS_DIR)) {
-  console.error(`[agent-docs] ✖ ${path.relative(REPO_ROOT, INSTRUCTIONS_DIR)} not found`);
-  process.exit(1);
+if (!INSTRUCTIONS_DIR) {
+  notes.push(
+    'instruction-file checks SKIPPED — the rule corpus is not on this machine (moved to the docs store on 2026-11-16; `.github/copilot-instructions.md` is the published subset)',
+  );
 }
 
-const instructionFiles = fs
-  .readdirSync(INSTRUCTIONS_DIR)
-  .filter((f) => f.endsWith('.md'))
-  .map((name) => {
-    const full = path.join(INSTRUCTIONS_DIR, name);
-    return { name, full, body: fs.readFileSync(full, 'utf8') };
-  });
+const instructionFiles = INSTRUCTIONS_DIR
+  ? fs
+      .readdirSync(INSTRUCTIONS_DIR)
+      .filter((f) => f.endsWith('.md'))
+      .map((name) => {
+        const full = path.join(INSTRUCTIONS_DIR, name);
+        return { name, full, body: fs.readFileSync(full, 'utf8') };
+      })
+  : [];
 
 notes.push(`scanned ${instructionFiles.length} instruction file(s)`);
 

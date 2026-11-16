@@ -47,7 +47,17 @@ const os = require('os');
 const path = require('path');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
-const MIRROR = path.join(REPO_ROOT, '.github', 'instructions', 'output-style-guide.instructions.md');
+/**
+ * ⚠️ THE MIRROR MOVED OUT OF THE REPOSITORY (owner, 2026-11-16). The rule corpus now lives in the
+ * docs store, so the mirror is resolved from two candidates: the old in-repo path (so checking out
+ * an older commit still checks what that commit contains) and the docs-store copy.
+ * When neither exists the check reports UNVERIFIED — it must never claim the pair agrees.
+ */
+const DOCS_STORE_MIRROR =
+  'G:\\My Drive\\Project Management\\Live\\Trading-Command-Suite-Documentation\\agent-ops\\instructions\\output-style-guide.instructions.md';
+const MIRROR_SOURCE = path.join(REPO_ROOT, '.github', 'instructions', 'output-style-guide.instructions.md');
+/** Whichever copy exists. `readOrNull` below reports a missing one rather than throwing. */
+const MIRROR = fs.existsSync(MIRROR_SOURCE) ? MIRROR_SOURCE : DOCS_STORE_MIRROR;
 
 /** The portable source, in the owner's VS Code prompt folder. */
 function sourcePath() {
