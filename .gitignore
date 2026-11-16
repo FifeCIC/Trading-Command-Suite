@@ -144,3 +144,23 @@ nest/*.txt
 # fleet is built locally and never committed (#1258, register row 177).
 nest/src/modules/trading/strategy-seed-generated.ts
 nest/src/modules/trading/strategy-seed-generated.local.ts
+
+# ── Agent library: MUST NEVER BE PUBLISHED (owner, 2026-11-16) ──────────────────────────────────
+# `git` ignores nothing by default — `.github/` is an ordinary tracked folder and a leading dot only
+# hides it from `ls`. The whole rule corpus, attention board, agent definitions and skills were
+# therefore public until this was fixed. They live in the docs store now, resolved through
+# `scripts/lib/agent-paths.cjs`.
+#
+# These patterns are a SEATBELT, not the mechanism: they stop a future session recreating one of
+# these paths and publishing it again. Deleting the files was the fix; this is what keeps the fix
+# from being undone by accident.
+.github/instructions/
+.github/agents/
+.github/skills/
+.github/archive/
+.github/hooks/
+.github/agent-state.json
+.github/AGENT-ATTENTION.md
+.github/PRIMARY-GOALS.md
+.github/REVIEW-QUEUE.md
+NEXT-AGENT.md
