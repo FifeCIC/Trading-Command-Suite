@@ -18,6 +18,12 @@ export const KNOWN_FEATURES = {
   'ExitSignalService (Multi-factor)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'RateLimitGovernor (9 providers)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
   'TimezoneService (IANA-aware)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  // Added 2026-11-17 from handoffs 1283 / 1285 / 1287, which were otherwise unrecorded here.
+  // ⚠️ 'Market Movers Service' is END-OF-DAY only on this machine — it builds an overnight
+  // watchlist and is NOT an intraday discovery source. Saying otherwise would overstate it.
+  'Market Movers Service (end-of-day)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'screening', devCompletion: 'partial' },
+  'Momentum Candidate Protocol (9 directives)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Extreme Mover Datasets (captured)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'evaluation', devCompletion: 'complete' },
   'Protocol System (44 protocols, DB-driven)': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Directive Registry (102 directives, DB-backed metadata)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Multi-Protocol SEES Arena': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },

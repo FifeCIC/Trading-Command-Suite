@@ -48,12 +48,22 @@ _Nothing yet._
 ### Added
 
 - **Top Movers** — a new strategy built on mover datasets, with its directive versions recorded.
+- **Market-wide movers feed** — `GET /api/market-data/market-movers`, with its filter thresholds as
+  settings. The only provider on this machine serves movers end-of-day, so it builds an overnight
+  watchlist and is not an intraday discovery source (#1283).
+- **`momentum-candidate` protocol** (9 directives) and its bot, created through the API (#1285).
 - **`scripts/audit-webroot-exposure.cjs`** — asks the local web server whether any project folder
   serves `.git/config`, `.git/HEAD`, `.env` or `.htaccess`, and fails when one does. Written after
   `.git` was found readable in 18 of 31 local projects.
 
 ### Fixed
 
+- **Backtests honour each bot's `maxHoldHours`.** It was set on 42 of 64 active bots and read by
+  nothing, so runs held trades to the stop, the target or the end of the data — measured longest hold
+  67 hours on a 5m chart. A new `TIME` exit reason marks the close (#1136).
+- **Historical market data captures again.** The Yahoo adapter sent no `User-Agent` and was answered
+  with 429; with the header it returns 200, so backtest datasets can be captured for any symbol
+  (#1287).
 - **The public website is dark on every page.** The showcase and the 404 page were still light — the
   showcase used the app's light palette and the 404 followed the operating system's preference, so the
   site changed identity at a link click.
