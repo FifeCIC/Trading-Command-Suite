@@ -59,10 +59,28 @@ const MIRROR_SOURCE = path.join(REPO_ROOT, '.github', 'instructions', 'output-st
 /** Whichever copy exists. `readOrNull` below reports a missing one rather than throwing. */
 const MIRROR = fs.existsSync(MIRROR_SOURCE) ? MIRROR_SOURCE : DOCS_STORE_MIRROR;
 
-/** The portable source, in the owner's VS Code prompt folder. */
+/**
+ * The portable source.
+ *
+ * ⚠️ MEASURED 2026-11-17 — THE DECLARED LOCATION IS NOT WHERE THE FILE IS, and that is why this
+ * gate has been exiting UNVERIFIED instead of checking anything. The VS Code prompt folder
+ * (`%APPDATA%\Code\User\prompts\`) does not exist on this machine. The rules that are ACTUALLY
+ * loaded into every agent session live at `~/.copilot/instructions/output-style-guide.instructions.md`
+ * — confirmed by matching a section ("Mode first") that only that copy contains.
+ *
+ * So the real source is tried FIRST, and the declared location is kept as a fallback for a machine
+ * where VS Code prompts are still in use. Returning the first that exists matters: pointing at a
+ * path that holds nothing is what made this check silently unable to see its own input.
+ */
 function sourcePath() {
-  const appData = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
-  return path.join(appData, 'Code', 'User', 'prompts', 'output-style-guide.instructions.md');
+  const candidates = [
+    path.join(os.homedir(), '.copilot', 'instructions', 'output-style-guide.instructions.md'),
+    (() => {
+      const appData = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+      return path.join(appData, 'Code', 'User', 'prompts', 'output-style-guide.instructions.md');
+    })(),
+  ];
+  return candidates.find((p) => fs.existsSync(p)) || candidates[1];
 }
 
 const BEGIN = '<!-- MIRROR:BEGIN -->';
