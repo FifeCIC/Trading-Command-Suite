@@ -25,11 +25,176 @@ is where the reasoning was recorded at the time.
 **Entries are written per batched landing, not per commit.** A changelog entry is a claim that
 something changed in a way a user could notice; a refactor nobody can observe does not get a line.
 
+### Backfilled 2026-11-17
+
+Versions **0.149.0 → 0.164.0** were reconstructed from `git log`, because the file had been left at
+0.147.0 while sixteen versions shipped. Each line derives from the commit subject for that version
+range; internal-only commits (refactors, moves, test and documentation plumbing) were **omitted
+rather than dressed up as changes a user would notice**. Where a commit subject was too vague to
+support a specific claim, the entry says only what the commit actually asserted.
+
+⚠️ **This is a reconstruction, not a release log.** It is honest about its source and it is not
+guaranteed to name every change in those versions. Entries from 0.164.0 onward are written at the
+time, as the rule above requires.
+
 ---
 
 ## [Unreleased]
 
 _Nothing yet._
+
+## [0.164.0] — 2026-11-16
+
+### Added
+
+- **Top Movers** — a new strategy built on mover datasets, with its directive versions recorded.
+- **`scripts/audit-webroot-exposure.cjs`** — asks the local web server whether any project folder
+  serves `.git/config`, `.git/HEAD`, `.env` or `.htaccess`, and fails when one does. Written after
+  `.git` was found readable in 18 of 31 local projects.
+
+### Fixed
+
+- **The public website is dark on every page.** The showcase and the 404 page were still light — the
+  showcase used the app's light palette and the 404 followed the operating system's preference, so the
+  site changed identity at a link click.
+
+## [0.163.0] — 2026-11-15
+
+### Added
+
+- **Supporter Programme** — controller, service and prompt components.
+
+### Changed
+
+- CSS refactor across several pages for layout and readability.
+- Pipeline map documentation updated (source file and declaration counts).
+- Unused scripts and tests removed.
+
+## [0.162.0] — 2026-11-15
+
+### Added
+
+- Validation scripts for directive versions and threshold ranges.
+
+### Changed
+
+- Backtest page score-detail wording clarified.
+
+### Removed
+
+- Obsolete end-to-end test files and configuration.
+- The generated strategy seed data file.
+
+## [0.160.1] — 2026-11-13
+
+### Added
+
+- Script to generate strategy seed data from the live bot fleet.
+- Broker directory and accounts folded into one expandable table.
+
+### Fixed
+
+- **Database backups are restorable** — archives are verified, temporary files cleaned up, and a
+  stale backup is surfaced rather than silently offered.
+
+## [0.160.0] — 2026-11-13
+
+### Added
+
+- **Per-trade money-at-risk ceiling** as a configurable bot rule (#1257).
+
+### Changed
+
+- **The Discord feed uses one layout** for signals, wins and losses, with both protocol and bot on
+  every message and one fact per line.
+
+## [0.159.0] — 2026-11-12
+
+### Changed
+
+- Trading 212 integration handles orders per account.
+
+## [0.158.0] — 2026-11-10
+
+### Added
+
+- **In-app bug report** — captures console errors, failed requests and system state, shows the report
+  before anything is copied, and includes response data only when the user opts in (#1248).
+- **Help menu** in the topbar, linking issues, discussions, Discord and the wiki (#1248).
+- Release-stage gate and public-claims validator (#613, #1188).
+
+### Changed
+
+- UI review pass: low-quality features hidden, layout consistency improved.
+- Duplicate backtest archive index and stale archives removed.
+
+## [0.156.0] — 2026-11-07
+
+### Added
+
+- **Code-health audit** — per-file size, function length and comment-ratio reporting, written to
+  `docs/CODE-HEALTH.md` and `docs/code-health.json`.
+
+## [0.155.0] — 2026-11-07
+
+### Changed
+
+- UI review continued: low-quality features hidden from navigation.
+- Protocol slugs renamed for consistency.
+
+## [0.153.0] — 2026-11-05
+
+### Added
+
+- **Support page** listing every funding option.
+- Wiki **"Start here"** page with three reader paths.
+
+### Changed
+
+- **Experience level is honoured in navigation** — a first-time reader meets 68 pages rather than 87.
+- Per-bot pyramid rules.
+- Author credited in both footers; files attributed for anyone copying the project.
+
+### Fixed
+
+- Screenshot aspect ratios corrected.
+
+## [0.152.0] — 2026-11-03
+
+### Added
+
+- Protocol/bot pairing.
+
+### Changed
+
+- Landing page rebuilt in the app's own visual language.
+
+### Fixed
+
+- **Four critical dependency advisories** pinned to patched versions.
+
+## [0.150.0] — 2026-11-02
+
+### Changed
+
+- **Three protocols and three bots ship by default.** The rest are parked outside the seed, with the
+  reason recorded — an unshipped strategy is listed, not silently dropped.
+
+### Fixed
+
+- Duplicate name that stopped the backend compiling.
+
+## [0.149.0] — 2026-11-01
+
+### Changed
+
+- Directives rebuilt.
+- Changelog restarted honestly at 0.147.0 rather than back-filling claims it could not support.
+- Community links surfaced on the landing page.
+
+### Added
+
+- Standard public-repo files; README links to the site, wiki and screenshots.
 
 ## [0.147.0] — 2026-11-01
 
