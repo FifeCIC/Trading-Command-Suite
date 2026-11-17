@@ -2,6 +2,14 @@ node_modules/
 dist/
 .env
 .env.local
+
+# Docker env files — NEVER commit (#1252, corrected 2026-11-17).
+#
+# ⚠️ These two were tracked and PUBLIC from 2026-06-11 because this list held `.env` and
+# `.env.local` only — `.env.docker` matched no rule, so git tracked it like any other file.
+# `npm run setup-docker` / `scripts/setup-docker.sh` now generates both from placeholders.
+# A `.gitignore` entry does NOT untrack an existing file; that needs `git rm --cached`.
+.env.docker
 .DS_Store
 .vscode/
 

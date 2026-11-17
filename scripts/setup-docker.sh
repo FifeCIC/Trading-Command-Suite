@@ -78,6 +78,24 @@ EOF
     else
         ok ".env.docker exists"
     fi
+
+    # ⚠️ docker-compose.yml reads nest/.env.docker via `env_file`. Neither file is tracked any more
+    # (#1252): both held a real database password in a PUBLIC repo from 2026-06-11. This template is
+    # placeholders only — never commit the result.
+    if [ ! -f "nest/.env.docker" ]; then
+        warn "nest/.env.docker not found — creating from template"
+        cat > nest/.env.docker << 'EOF'
+# Docker environment for the NestJS service (read by docker-compose.yml: env_file)
+# ⚠️ Placeholders, not credentials (#1252). NEVER commit this file.
+DATABASE_URL=mysql://tradingcs:changeme@mysql:3306/tradingcs
+NODE_ENV=production
+PORT=3201
+QUEUE_MODE=off
+EOF
+        info "Created nest/.env.docker — set a real password if you need one"
+    else
+        ok "nest/.env.docker exists"
+    fi
 }
 
 # ─── Build flags ────────────────────────────────────────────
