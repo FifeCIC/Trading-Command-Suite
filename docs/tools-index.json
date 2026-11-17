@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 194,
+  "count": 196,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -265,6 +265,16 @@
       "where": "repo",
       "category": "check",
       "purpose": "bundle size is a property, so it needs a guard that can PASS",
+      "selfTest": true,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "check-handoff-staleness.cjs",
+      "where": "repo",
+      "category": "check",
+      "purpose": "a handoff that is written and never processed is invisible.",
       "selfTest": true,
       "reaches": [
         "npm"
@@ -570,7 +580,9 @@
       "category": "tool",
       "purpose": "© 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite",
       "selfTest": true,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "delete-directive.cjs",
@@ -1474,6 +1486,16 @@
       "selfTest": true,
       "reaches": [
         "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-news-dedupe.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "fails when the two news pipelines store the same story twice.",
+      "selfTest": false,
+      "reaches": [
         "npm"
       ]
     },
