@@ -1,15 +1,21 @@
 node_modules/
 dist/
-.env
-.env.local
 
-# Docker env files — NEVER commit (#1252, corrected 2026-11-17).
+# Every dotenv variant — nothing is ignored by git or GitHub unless it is written HERE (2026-11-17).
 #
-# ⚠️ These two were tracked and PUBLIC from 2026-06-11 because this list held `.env` and
-# `.env.local` only — `.env.docker` matched no rule, so git tracked it like any other file.
-# `npm run setup-docker` / `scripts/setup-docker.sh` now generates both from placeholders.
-# A `.gitignore` entry does NOT untrack an existing file; that needs `git rm --cached`.
-.env.docker
+# ⚠️ This list previously named `.env` and `.env.local` only. `.env.docker` matched no rule, so git
+# tracked it like any other file and it sat in this PUBLIC repo from 2026-06-11 with a real database
+# password in it (#1252 reduced 21 such files to 2; the 2 were these).
+#
+# GitHub ignores nothing on its own. Secret scanning only matches KNOWN token formats (AWS keys,
+# GitHub PATs). A password inside a mysql:// URL matches no pattern, so nothing would have flagged it.
+# A `.gitignore` entry also does NOT untrack a file that is already tracked — an operator must update
+# the index, and the value must be rotated regardless.
+.env*
+!.env.example
+!.env.example.*
+!.env.docker.example
+
 .DS_Store
 .vscode/
 
