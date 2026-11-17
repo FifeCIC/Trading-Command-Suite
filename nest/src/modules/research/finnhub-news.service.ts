@@ -10,6 +10,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { classifyNewsCategory, DEFAULT_NEWS_CATEGORY_ALLOWLIST } from '../news/news-taxonomy';
+import { isAlreadyInCanonicalNews } from './news-dedupe';
 import * as crypto from 'crypto';
 
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
@@ -84,6 +85,12 @@ export class FinnhubNewsService implements OnModuleInit {
         where: { sourceHash: hash },
       });
       if (exists) return false;
+
+      // ⚠️ ALSO skip anything the MAIN pipeline already holds (2026-11-17) — `sourceHash` only
+      // dedupes against this table. See `news-dedupe.ts` for why the WRITER must be guarded.
+      if (await isAlreadyInCanonicalNews(article.url, (u) =>
+        this.prisma.newsArticle.findUnique({ where: { url: u }, select: { id: true } }).then(Boolean),
+      )) return false;
 
       await (this.prisma as any).newsItem?.create({
         data: {

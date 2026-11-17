@@ -16,6 +16,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { classifyNewsCategory, DEFAULT_NEWS_CATEGORY_ALLOWLIST } from '../news/news-taxonomy';
+import { isAlreadyInCanonicalNews } from './news-dedupe';
 import * as crypto from 'crypto';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -114,6 +115,14 @@ export class RssScraperService implements OnModuleInit {
         where: { sourceHash: hash },
       });
       if (existing) return false;
+
+      // ⚠️ ALSO skip anything the MAIN pipeline already holds (2026-11-17). `sourceHash` only
+      // dedupes against this table, so without this check the same story was written twice —
+      // measured 17,245 of 28,350 rows duplicating a `newsarticle` URL. Guarding the WRITER is what
+      // makes the cleanup permanent: deleting the duplicates alone would be undone by the next poll.
+      if (await isAlreadyInCanonicalNews(article.link, (u) =>
+        this.prisma.newsArticle.findUnique({ where: { url: u }, select: { id: true } }).then(Boolean),
+      )) return false;
 
       // Match tickers in title + snippet
       const text = `${article.title} ${article.contentSnippet || ''}`.toUpperCase();

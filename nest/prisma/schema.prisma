@@ -166,7 +166,11 @@ model MarketBar {
   symbol            Symbol              @relation(fields: [symbolId], references: [id], onDelete: Cascade)
   recordingSession  TickRecordingSession? @relation(fields: [recordingSessionId], references: [id])
 
-  @@index([symbolId, timeframe, timestamp])
+  // ⚠️ DO NOT RE-ADD. A non-unique @@index on these exact columns is DEAD WEIGHT: the @@unique
+  // below it serves (symbolId), (symbolId,timestamp) and (symbolId,timestamp,timestamp-range)
+  // identically, and also enforces the constraint. Measured on the live table: EXPLAIN chose the
+  // UNIQUE index for every prefix shape and listed the other only as an unused possible_key.
+  // Dropping it reclaimed 203 MB of index. (#1288 / decision row 195)
   @@index([provider, importedAt])
   @@index([recordingSessionId])
   // Retention column — see the note on DirectiveOutcome.createdAt. `timestamp` was only ever the
@@ -873,16 +877,6 @@ model SymbolTechnical {
   @@index([symbolId, timeframe, indicator])
 }
 
-model DataSourcesMeta {
-  id          String   @id @default(uuid()) @db.VarChar(36)
-  name        String   @unique @db.VarChar(200)
-  type        String   @db.VarChar(50)
-  config      Json
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
 model ApiCredentials {
   id         String   @id @default(uuid()) @db.VarChar(36)
   provider   String   @db.VarChar(50)
@@ -990,30 +984,6 @@ model WatchlistItem {
   @@index([watchlistId])
   @@index([status])
   @@index([ticker])
-}
-
-model CronMeta {
-  id         String   @id @default(uuid()) @db.VarChar(36)
-  name       String   @unique @db.VarChar(200)
-  schedule   String   @db.VarChar(100)
-  lastRun    DateTime?
-  nextRun    DateTime?
-  status     String   @default("idle") @db.VarChar(50)
-  enabled    Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-}
-
-model ProcessMeta {
-  id         String   @id @default(uuid()) @db.VarChar(36)
-  name       String   @unique @db.VarChar(200)
-  pid        Int?
-  port       Int?
-  status     String   @default("stopped") @db.VarChar(50)
-  startedAt  DateTime?
-  stoppedAt  DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
 }
 
 model MarketSessions {
@@ -1288,18 +1258,6 @@ model ApiCalls {
   @@index([timestamp])
 }
 
-model CacheMeta {
-  id         String   @id @default(uuid()) @db.VarChar(36)
-  key        String   @unique @db.VarChar(200)
-  ttl        Int      @default(300)
-  hitCount   Int      @default(0)
-  missCount  Int      @default(0)
-  size       Int?
-  lastHit    DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-}
-
 model DecodedDocument {
   id                String   @id @default(uuid()) @db.VarChar(36)
   content           String   @db.Text
@@ -1311,48 +1269,6 @@ model DecodedDocument {
   createdAt         DateTime @default(now())
 
   @@index([format, createdAt])
-}
-
-model StrategyMeta {
-  id          String   @id @default(uuid()) @db.VarChar(36)
-  strategyId  String   @unique @db.VarChar(36)
-  category    String   @db.VarChar(50)
-  instrumentFocus Json
-  expectedReturn String? @db.VarChar(20)
-  maxDrawdown String?  @db.VarChar(20)
-  winRate     String?  @db.VarChar(20)
-  bestCondition String? @db.VarChar(50)
-  riskLevel   String   @db.VarChar(20)
-  timeHorizon String   @db.VarChar(20)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model WatchlistMeta {
-  id          String   @id @default(uuid()) @db.VarChar(36)
-  watchlistId String   @db.VarChar(36)
-  symbol      String   @db.VarChar(20)
-  addedAt     DateTime @default(now())
-  notes       String?  @db.Text
-
-  @@unique([watchlistId, symbol])
-  @@index([symbol])
-}
-
-model NewsMeta {
-  id          String   @id @default(uuid()) @db.VarChar(36)
-  symbol      String?  @db.VarChar(20)
-  headline    String   @db.Text
-  source      String   @db.VarChar(200)
-  url         String?  @db.VarChar(500)
-  sentiment   Float    @default(0)
-  fluffScore  Float    @default(0)
-  impact      String   @default("low") @db.VarChar(20)
-  publishedAt DateTime
-  ingestedAt  DateTime @default(now())
-
-  @@index([symbol, publishedAt])
-  @@index([publishedAt])
 }
 
 model OrderExecution {

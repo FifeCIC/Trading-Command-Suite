@@ -10,12 +10,12 @@
 -- directly shippable: `@default(now())` emits `DEFAULT CURRENT_TIMESTAMP(3)`, which MySQL evaluates
 -- in the SESSION timezone (SYSTEM = local). This app stores UTC, so a fresh install would write
 -- timestamps in the future with no error — the #844 fault. The generator applies that correction
--- (117 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
+-- (110 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
 --
 -- ⚠️ The prebuild gate caught this, and it is worth recording: validate-local-time-sources.cjs failed
 -- the build on the FIRST generated version and named every offending column.
 --
--- SCALE: 123 CREATE TABLE statements.
+-- SCALE: 116 CREATE TABLE statements.
 --
 -- WHAT IT DOES NOT COVER, and both are intentional:
 --   1. The 13 raw-managed tables (4 with checked-in DDL in prisma/raw-managed/, 9 created by
@@ -127,7 +127,6 @@ CREATE TABLE `MarketBar` (
     `recordingSessionId` VARCHAR(36) NULL,
     `importedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
-    INDEX `MarketBar_symbolId_timeframe_timestamp_idx`(`symbolId`, `timeframe`, `timestamp`),
     INDEX `MarketBar_provider_importedAt_idx`(`provider`, `importedAt`),
     INDEX `MarketBar_recordingSessionId_idx`(`recordingSessionId`),
     INDEX `MarketBar_timestamp_idx`(`timestamp`),
@@ -650,20 +649,6 @@ CREATE TABLE `SymbolTechnical` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `DataSourcesMeta` (
-    `id` VARCHAR(36) NOT NULL,
-    `name` VARCHAR(200) NOT NULL,
-    `type` VARCHAR(50) NOT NULL,
-    `config` JSON NOT NULL,
-    `active` BOOLEAN NOT NULL DEFAULT true,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
-    `updatedAt` DATETIME(3) NOT NULL,
-
-    UNIQUE INDEX `DataSourcesMeta_name_key`(`name`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- CreateTable
 CREATE TABLE `ApiCredentials` (
     `id` VARCHAR(36) NOT NULL,
     `provider` VARCHAR(50) NOT NULL,
@@ -763,38 +748,6 @@ CREATE TABLE `watchlist_item` (
     INDEX `watchlist_item_watchlistId_idx`(`watchlistId`),
     INDEX `watchlist_item_status_idx`(`status`),
     INDEX `watchlist_item_ticker_idx`(`ticker`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `CronMeta` (
-    `id` VARCHAR(36) NOT NULL,
-    `name` VARCHAR(200) NOT NULL,
-    `schedule` VARCHAR(100) NOT NULL,
-    `lastRun` DATETIME(3) NULL,
-    `nextRun` DATETIME(3) NULL,
-    `status` VARCHAR(50) NOT NULL DEFAULT 'idle',
-    `enabled` BOOLEAN NOT NULL DEFAULT true,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
-    `updatedAt` DATETIME(3) NOT NULL,
-
-    UNIQUE INDEX `CronMeta_name_key`(`name`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `ProcessMeta` (
-    `id` VARCHAR(36) NOT NULL,
-    `name` VARCHAR(200) NOT NULL,
-    `pid` INTEGER NULL,
-    `port` INTEGER NULL,
-    `status` VARCHAR(50) NOT NULL DEFAULT 'stopped',
-    `startedAt` DATETIME(3) NULL,
-    `stoppedAt` DATETIME(3) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
-    `updatedAt` DATETIME(3) NOT NULL,
-
-    UNIQUE INDEX `ProcessMeta_name_key`(`name`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -947,22 +900,6 @@ CREATE TABLE `ApiCalls` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `CacheMeta` (
-    `id` VARCHAR(36) NOT NULL,
-    `key` VARCHAR(200) NOT NULL,
-    `ttl` INTEGER NOT NULL DEFAULT 300,
-    `hitCount` INTEGER NOT NULL DEFAULT 0,
-    `missCount` INTEGER NOT NULL DEFAULT 0,
-    `size` INTEGER NULL,
-    `lastHit` DATETIME(3) NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
-    `updatedAt` DATETIME(3) NOT NULL,
-
-    UNIQUE INDEX `CacheMeta_key_key`(`key`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- CreateTable
 CREATE TABLE `DecodedDocument` (
     `id` VARCHAR(36) NOT NULL,
     `content` TEXT NOT NULL,
@@ -974,56 +911,6 @@ CREATE TABLE `DecodedDocument` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `DecodedDocument_format_createdAt_idx`(`format`, `createdAt`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `StrategyMeta` (
-    `id` VARCHAR(36) NOT NULL,
-    `strategyId` VARCHAR(36) NOT NULL,
-    `category` VARCHAR(50) NOT NULL,
-    `instrumentFocus` JSON NOT NULL,
-    `expectedReturn` VARCHAR(20) NULL,
-    `maxDrawdown` VARCHAR(20) NULL,
-    `winRate` VARCHAR(20) NULL,
-    `bestCondition` VARCHAR(50) NULL,
-    `riskLevel` VARCHAR(20) NOT NULL,
-    `timeHorizon` VARCHAR(20) NOT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
-    `updatedAt` DATETIME(3) NOT NULL,
-
-    UNIQUE INDEX `StrategyMeta_strategyId_key`(`strategyId`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `WatchlistMeta` (
-    `id` VARCHAR(36) NOT NULL,
-    `watchlistId` VARCHAR(36) NOT NULL,
-    `symbol` VARCHAR(20) NOT NULL,
-    `addedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
-    `notes` TEXT NULL,
-
-    INDEX `WatchlistMeta_symbol_idx`(`symbol`),
-    UNIQUE INDEX `WatchlistMeta_watchlistId_symbol_key`(`watchlistId`, `symbol`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `NewsMeta` (
-    `id` VARCHAR(36) NOT NULL,
-    `symbol` VARCHAR(20) NULL,
-    `headline` TEXT NOT NULL,
-    `source` VARCHAR(200) NOT NULL,
-    `url` VARCHAR(500) NULL,
-    `sentiment` DOUBLE NOT NULL DEFAULT 0,
-    `fluffScore` DOUBLE NOT NULL DEFAULT 0,
-    `impact` VARCHAR(20) NOT NULL DEFAULT 'low',
-    `publishedAt` DATETIME(3) NOT NULL,
-    `ingestedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
-
-    INDEX `NewsMeta_symbol_publishedAt_idx`(`symbol`, `publishedAt`),
-    INDEX `NewsMeta_publishedAt_idx`(`publishedAt`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

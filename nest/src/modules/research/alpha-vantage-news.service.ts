@@ -10,6 +10,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
+import { isAlreadyInCanonicalNews } from './news-dedupe';
 import * as crypto from 'crypto';
 
 const AV_BASE = 'https://www.alphavantage.co/query';
@@ -123,6 +124,12 @@ export class AlphaVantageNewsService implements OnModuleInit {
         where: { sourceHash: hash },
       });
       if (existing) return false;
+
+      // ⚠️ ALSO skip anything the MAIN pipeline already holds (2026-11-17) — `sourceHash` only
+      // dedupes against this table. See `news-dedupe.ts` for why the WRITER must be guarded.
+      if (await isAlreadyInCanonicalNews(article.url, (u) =>
+        this.prisma.newsArticle.findUnique({ where: { url: u }, select: { id: true } }).then(Boolean),
+      )) return false;
 
       // Collect all mentioned tickers
       const tickers = new Set<string>([queryTicker]);

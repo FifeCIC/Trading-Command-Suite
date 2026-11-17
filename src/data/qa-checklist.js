@@ -445,6 +445,17 @@ const QA_CHECKLIST = [
     priority: 'medium',
     versionNote: 'Sprint 2026-07-07 — #104',
   },
+  {
+    id: 'qa-backtest-library-sets-001',
+    area: 'Backtest',
+    system: 'src/core/backtest/period-sets.js + BacktestPeriodsPanel.jsx + GET /api/backtest/periods',
+    name: 'A captured multi-symbol period shows as ONE set, and edit/delete reach the API',
+    procedure: 'Open /lab/backtest-data. Count sets, not rows. Expand a set whose members do not all have bars. Edit the note on a set. Then delete a set that a backtest run references.',
+    expected: '`GET /api/backtest/periods` returning 48 rows across 7 names renders **7 set cards**, each expandable to its members — not 48 flat entries. A set where only some members have bars reads **partly captured**, never a plain row count. Saving the note issues one `PATCH /api/backtest/periods/:id` per member and the card shows the new note. Deleting a referenced set without cascade is **refused by the server and the refusal is rendered** (via `noticeFromError`), not swallowed — the set stays. Canary: break a `PATCH` response and confirm the card reverts rather than showing the optimistic text.',
+    category: 'UI',
+    priority: 'high',
+    versionNote: '2026-11-17 — #1291. `backtest_period` is ONE SYMBOL PER ROW, so rendering rows hid the set. Also fixed a blank page: `summary.totalBars.toLocaleString()` on a `?? {}` default threw behind the error boundary. Sets are DB-only and deliberately not seeded — after a reinstall the library is empty and that is correct.',
+  },
 
   // ═══════════════════════════════════════════════════
   // DUPLICATE PREVENTION

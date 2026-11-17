@@ -227,3 +227,156 @@
     white-space: normal;
   }
 }
+
+/* ── The LIBRARY: one block per named set (#1288) ────────────────────────────────────────────
+ * A set is one piece of stored evidence, so it is drawn as one card. The flat per-symbol table is
+ * still there, inside the card, because that is the shape the ENGINE needs — but it is no longer the
+ * shape the READER meets first. Measured before this: 20 rows sharing 1 name and repeating the same
+ * paragraph 20 times.
+ */
+.btp-library-note {
+  margin: var(--space-md, 12px) 0 0;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.btp-set {
+  margin-top: var(--space-md, 12px);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: var(--space-md, 12px);
+  background: var(--panel);
+}
+
+/* ⚠️ State is carried by the LABEL and the border STYLE, never by colour alone — a reader in
+ * monochrome still gets "partly captured" from the text. No thick coloured left bar: that chrome is
+ * banned repo-wide by validate-no-notice-bar.cjs. */
+.btp-set--partial { border-style: dashed; }
+.btp-set--empty { border-style: dotted; }
+
+.btp-set-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm, 8px);
+  flex-wrap: wrap;
+}
+
+.btp-set-toggle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.btp-set-toggle:hover .btp-set-name {
+  color: var(--accent);
+}
+
+.btp-set-name {
+  font-weight: 600;
+}
+
+.btp-health {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.btp-health--ready { border-color: var(--accent); color: var(--accent); }
+.btp-health--studied { border-color: var(--color-grid); color: var(--ink-soft); }
+.btp-health--partial,
+.btp-health--empty { border-color: var(--color-warning); color: var(--color-warning); }
+
+.btp-set-facts {
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+}
+
+.btp-set-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btp-danger {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+/* The reason the set exists. Clamped so a long reasoning does not push the members off-screen, with
+ * the full text available on hover and to a screen reader (clamping is CSS only, the DOM keeps it). */
+.btp-set-note {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 100ch;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.btp-set-note--empty {
+  color: var(--color-muted);
+  font-style: italic;
+  display: block;
+}
+
+.btp-note-drift {
+  color: var(--color-warning);
+}
+
+.btp-set-warn {
+  margin: 6px 0 0;
+  font-size: 0.74rem;
+  color: var(--color-warning);
+}
+
+.btp-edit {
+  margin-top: var(--space-md, 12px);
+  padding-top: var(--space-md, 12px);
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: var(--space-sm, 8px);
+}
+
+.btp-edit label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+
+.btp-edit input,
+.btp-edit textarea {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.btp-edit-actions {
+  display: flex;
+  gap: var(--space-sm, 8px);
+  align-items: center;
+  flex-wrap: wrap;
+}

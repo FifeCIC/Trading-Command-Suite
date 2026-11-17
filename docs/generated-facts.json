@@ -20,7 +20,7 @@
     },
     "prismaModels": {
       "label": "Prisma models (declared)",
-      "value": 123,
+      "value": 116,
       "unit": "",
       "source": "nest/prisma/schema.prisma",
       "how": "node scripts/db-schema.cjs --pattern, or: Select-String nest/prisma/schema.prisma '^\\s*model '"

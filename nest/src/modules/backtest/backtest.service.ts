@@ -31,6 +31,9 @@ import { applyAffordability } from './affordable-size';
 // ⚠️ The bot's own TIME STOP, extracted so the comparison is testable (#1136). Set on 42 of 64 active
 // bots and referenced zero times by this file before 2026-11-16.
 import { maxHoldExpired } from './max-hold';
+// ⚠️ The unmonitored-hole threshold, extracted so it has ONE definition and a test that can fail
+// (#1286). Its guard used to skip the entry bar, so the hole right after entry went unmeasured.
+import { isBarHole } from './bar-gap';
 import { resolveFixedUnits } from './fixed-units';
 import { signalProfitFactor as signalProfitFactorOf, tradeProfitFactor as tradeProfitFactorOf } from './profit-factor';
 import {
@@ -1782,11 +1785,18 @@ export class BacktestService {
              * the exit REASON is a guess: the level that would have fired during the hole was never
              * seen. Flagged per trade rather than excluded, so a run can report how much of its
              * population is contaminated instead of quietly averaging over it.
+             *
+             * ⚠️ #1286 — THIS USED TO SAY `if (future > day + 1)`, which is FALSE on the loop's first
+             * iteration (`future === day + 1`). The pair `(bars[day], bars[day + 1])` — ENTRY BAR →
+             * FIRST FORWARD BAR — was therefore never measured, so a position opened on the last bar
+             * before the machine slept reported `spansGap = 0` for the very hole that swallowed it.
+             * On the first iteration `bars[future - 1]` IS the entry bar, which is precisely what the
+             * flag means, so the guard is removed rather than widened.
+             *
+             * The threshold lives in `bar-gap.ts` so it has one definition and a test that can fail.
              */
-            if (future > day + 1) {
-              const stepMin = (fb.timestamp.getTime() - bars[future - 1].timestamp.getTime()) / 60_000;
-              if (stepMin > barMinutes * 12 && stepMin > 60) spansGap = true;
-            }
+            const stepMs = fb.timestamp.getTime() - bars[future - 1].timestamp.getTime();
+            if (isBarHole(stepMs, barMinutes)) spansGap = true;
 
             // ── Excursion, measured on the RAW bar extremes, before any stop test ──
             const adversePct = isLong

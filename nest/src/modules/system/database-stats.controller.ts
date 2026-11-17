@@ -37,7 +37,10 @@ export class DatabaseStatsController {
       'BacktestRun',
       'BacktestTrade',
       'SymbolTechnical',
-      'StrategyMeta',
+      // ⚠️ 'StrategyMeta' removed 2026-11-17 (#1288): the `strategymeta` table was dropped. It held
+      // 0 rows, was declared in no schema or DDL, and had no reader — it was a duplicate of
+      // `trading_strategy`. Leaving the name here would have made this sweep silently skip it, which
+      // reads identically to "the table is empty".
       'StrategyPerformance',
       'Watchlist',
       'UserPreferences',

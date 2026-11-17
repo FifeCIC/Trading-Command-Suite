@@ -25,10 +25,11 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost } from '../../core/api/client';
+import { apiGet, apiPost, apiPatch, apiDelete } from '../../core/api/client';
 import NoticeBlock from '../NoticeBlock';
 import { notice } from '../../core/notices/registry';
 import { noticeFromError } from '../../core/notices/from-error.js';
+import { groupPeriods, setHealth } from '../../core/backtest/period-sets.js';
 import './backtest-panel-base.css';
 import './backtest-periods-panel.css';
 
@@ -76,6 +77,15 @@ export default function BacktestPeriodsPanel({ onRunPeriod }) {
   const [selected, setSelected] = useState('');
   const [lastImport, setLastImport] = useState(null);
   const [open, setOpen] = useState(false);
+  /**
+   * Library state. `expanded` holds set keys so several sets can be open at once — a library where
+   * opening one closes another is a slideshow, not a library.
+   */
+  const [expanded, setExpanded] = useState(() => new Set());
+  const [editingKey, setEditingKey] = useState(null);
+  const [draftName, setDraftName] = useState('');
+  const [draftNote, setDraftNote] = useState('');
+  const [confirmDeleteKey, setConfirmDeleteKey] = useState(null);
 
   const listQuery = useQuery({
     queryKey: ['bt-periods'],
@@ -111,10 +121,78 @@ export default function BacktestPeriodsPanel({ onRunPeriod }) {
     },
   });
 
+  /**
+   * Rename / re-note a whole SET.
+   *
+   * ⚠️ A SET IS ONE PIECE OF REASONING, SO ITS NOTE IS WRITTEN TO EVERY MEMBER. `backtest_period` is
+   * one row per symbol, so editing a single row would leave the set with nine old notes and one new
+   * one — and the library would then have to guess which is "the" reason. `noteVariants` in the
+   * grouping is what surfaces that drift if it ever happens some other way.
+   */
+  const editSetMutation = useMutation({
+    mutationFn: async ({ set, nextName, nextNote }) => {
+      const ids = set.periods.map((p) => p.id);
+      for (const id of ids) {
+        await apiPatch(`/api/backtest/periods/${id}`, {
+          name: nextName,
+          note: nextNote || null,
+        });
+      }
+      return { count: ids.length };
+    },
+    onSuccess: () => {
+      setEditingKey(null);
+      qc.invalidateQueries({ queryKey: ['bt-periods'] });
+    },
+  });
+
+  /**
+   * Delete a whole SET.
+   *
+   * ⚠️ THE SERVER REFUSES while a backtest run still references a member (`cascade` is opt-in), and
+   * that refusal is the CORRECT behaviour — deleting the label a run was measured against would make
+   * the run's period unnameable. So this does not pass `cascade`: the error is shown, and the owner
+   * decides. The bars themselves are retained either way; they belong to the symbol, not the label.
+   */
+  const deleteSetMutation = useMutation({
+    mutationFn: async (set) => {
+      for (const p of set.periods) {
+        await apiDelete(`/api/backtest/periods/${p.id}`);
+      }
+      return { count: set.periods.length };
+    },
+    onSuccess: () => {
+      setConfirmDeleteKey(null);
+      qc.invalidateQueries({ queryKey: ['bt-periods'] });
+    },
+  });
+
   const selectedPeriod = periods.find((p) => p.id === selected) ?? null;
   const captured = captureMutation.data;
   const importResult = lastImport;
   const importing = captureMutation.isPending || reimportMutation.isPending;
+
+  const sets = groupPeriods(periods);
+  const toggleSet = (key) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  const startEdit = (set) => {
+    setEditingKey(set.key);
+    setDraftName(set.name);
+    setDraftNote(set.note ?? '');
+    setConfirmDeleteKey(null);
+  };
+
+  const HEALTH_LABEL = {
+    ready: 'ready to measure',
+    studied: 'already measured',
+    partial: 'partly captured',
+    empty: 'no bars',
+  };
 
   return (
     <section className="bt-panel btp" aria-labelledby="btp-heading">
@@ -258,64 +336,210 @@ export default function BacktestPeriodsPanel({ onRunPeriod }) {
       )}
 
       {periods.length > 0 && (
-        // ⚠️ `.bt-table` is the GLOBAL table style (src/index.css) — reused, not restated. `.btp-list`
-        // carries only this panel's own top margin. The duplicate-block gate (INV-NO-NEW-DUPLICATION)
-        // is what caught the first version copying the table styles locally.
-        <table className="bt-table btp-list">
-          <thead>
-            <tr>
-              <th scope="col"><span className="sr-only">Select</span></th>
-              <th scope="col">Name</th>
-              <th scope="col">Symbol</th>
-              <th scope="col">Window (UTC)</th>
-              <th scope="col">Bars</th>
-              <th scope="col">Runs</th>
-              <th scope="col"><span className="sr-only">Actions</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            {periods.map((p) => (
-              <tr key={p.id} className={p.id === selected ? 'btp-row-selected' : ''}>
-                <td>
-                  <input
-                    type="radio"
-                    name="btp-period"
-                    checked={p.id === selected}
-                    onChange={() => setSelected(p.id)}
-                    aria-label={`Select period ${p.name} for ${p.symbol} ${p.timeframe}`}
-                  />
-                </td>
-                <td>
-                  <div className="btp-name">{p.name}</div>
-                  {p.note && <div className="btp-note">{p.note}</div>}
-                </td>
-                <td>{p.symbol} · {p.timeframe}</td>
-                <td className="btp-window">{shortStamp(p.from)} → {shortStamp(p.to)}</td>
-                <td>
-                  {/* ⚠️ `null` and `0` are different facts and are rendered differently:
-                      null = never imported, 0 = imported and the window is empty. */}
-                  {p.barCount === null
-                    ? <span className="btp-none" title="No import has run for this period yet">not imported</span>
-                    : p.barCount === 0
-                    ? <span className="btp-zero" title="An import ran and found no bars">0 — empty</span>
-                    : p.barCount.toLocaleString()}
-                </td>
-                <td>{p.runs}</td>
-                <td>
+        <p className="btp-library-note">
+          <b>{sets.length}</b> {sets.length === 1 ? 'set' : 'sets'} · <b>{periods.length}</b> stored
+          {periods.length === 1 ? ' period' : ' periods'}. Nothing in this library is seeded — every
+          row was captured here, by hand, on purpose.
+        </p>
+      )}
+
+      {sets.map((set) => {
+        const health = setHealth(set);
+        const isOpen = expanded.has(set.key);
+        const isEditing = editingKey === set.key;
+        const isConfirmingDelete = confirmDeleteKey === set.key;
+        return (
+          <div key={set.key} className={`btp-set btp-set--${health}`}>
+            <div className="btp-set-head">
+              <button
+                type="button"
+                className="btp-set-toggle"
+                aria-expanded={isOpen}
+                onClick={() => toggleSet(set.key)}
+              >
+                <span aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+                <span className="btp-set-name">{set.name}</span>
+              </button>
+              <span className={`btp-health btp-health--${health}`}>{HEALTH_LABEL[health]}</span>
+
+              <span className="btp-set-facts">
+                <b>{set.symbols}</b> {set.symbols === 1 ? 'symbol' : 'symbols'} · {set.timeframe} ·{' '}
+                {shortStamp(set.from)} → {shortStamp(set.to)} · <b>{set.totalBars.toLocaleString()}</b> bars
+                {set.totalRuns > 0 ? ` · ${set.totalRuns} run${set.totalRuns === 1 ? '' : 's'}` : ' · never measured'}
+              </span>
+
+              <span className="btp-set-actions">
+                <button type="button" className="bt-panel-btn bt-panel-btn-sm" onClick={() => startEdit(set)}>
+                  {isEditing ? 'Editing…' : 'Edit name & note'}
+                </button>
+                {isConfirmingDelete ? (
+                  <>
+                    <button
+                      type="button"
+                      className="bt-panel-btn bt-panel-btn-sm btp-danger"
+                      onClick={() => deleteSetMutation.mutate(set)}
+                      disabled={deleteSetMutation.isPending}
+                    >
+                      {deleteSetMutation.isPending ? 'Deleting…' : `Confirm — delete ${set.symbols}`}
+                    </button>
+                    <button
+                      type="button"
+                      className="bt-panel-btn bt-panel-btn-sm"
+                      onClick={() => setConfirmDeleteKey(null)}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
                   <button
                     type="button"
                     className="bt-panel-btn bt-panel-btn-sm"
-                    onClick={() => reimportMutation.mutate(p.id)}
-                    disabled={reimportMutation.isPending}
+                    onClick={() => {
+                      setConfirmDeleteKey(set.key);
+                      setEditingKey(null);
+                    }}
                   >
-                    Re-import
+                    Delete
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+                )}
+              </span>
+            </div>
+
+            {/* ── the reason it was stored ─────────────────────────────────────────────────── */}
+            {set.note && (
+              <p className="btp-set-note">
+                {set.note}
+                {set.noteVariants > 1 && (
+                  <span className="btp-note-drift">
+                    {' '}⚠️ its {set.symbols} rows carry {set.noteVariants} different notes — editing
+                    the set below will make them agree.
+                  </span>
+                )}
+              </p>
+            )}
+            {!set.note && (
+              <p className="btp-set-note btp-set-note--empty">
+                No note — nothing records WHY this window was kept. Use <b>Edit name &amp; note</b> to
+                write it down; a window nobody can identify gets measured twice by accident.
+              </p>
+            )}
+
+            {set.neverImported > 0 && (
+              <p className="btp-set-warn">
+                ⚠️ {set.neverImported} of {set.symbols} rows have never been imported — this set is
+                INCOMPLETE, and a backtest over it covers fewer symbols than its name says.
+              </p>
+            )}
+            {set.emptyWindows > 0 && (
+              <p className="btp-set-warn">
+                ⚠️ {set.emptyWindows} of {set.symbols} rows imported and found NO bars. That is a
+                finding about the window, not a quiet success.
+              </p>
+            )}
+
+            {isEditing && (
+              <div className="btp-edit">
+                <label>
+                  Name
+                  <input
+                    type="text"
+                    value={draftName}
+                    onChange={(e) => setDraftName(e.target.value)}
+                    maxLength={120}
+                  />
+                </label>
+                <label className="btp-note-field">
+                  Why this set exists
+                  <textarea
+                    value={draftNote}
+                    onChange={(e) => setDraftNote(e.target.value)}
+                    rows={3}
+                    placeholder="The biggest mover in the window, the catalyst, what you expect to learn…"
+                  />
+                </label>
+                <div className="btp-edit-actions">
+                  <button
+                    type="button"
+                    className="bt-panel-btn"
+                    onClick={() => editSetMutation.mutate({ set, nextName: draftName.trim(), nextNote: draftNote })}
+                    disabled={!draftName.trim() || editSetMutation.isPending}
+                  >
+                    {editSetMutation.isPending ? 'Saving…' : `Save to all ${set.symbols} rows`}
+                  </button>
+                  <button type="button" className="bt-panel-btn" onClick={() => setEditingKey(null)}>
+                    Cancel
+                  </button>
+                  <span className="btp-hint">
+                    A set is one reason, so the note is written to every row in it. Renaming the set
+                    renames all {set.symbols}.
+                  </span>
+                </div>
+                {editSetMutation.isError && (
+                  <NoticeBlock notice={noticeFromError(editSetMutation.error, 'TCS-SYS-007', { operation: 'rename or re-note this set' })} compact />
+                )}
+              </div>
+            )}
+
+            {deleteSetMutation.isError && confirmDeleteKey === null && (
+              <NoticeBlock
+                notice={noticeFromError(deleteSetMutation.error, 'TCS-SYS-007', { operation: 'delete this set' })}
+                compact
+              />
+            )}
+
+            {/* ── the members. One row per symbol, which is what the ENGINE needs. ──────────── */}
+            {isOpen && (
+              <table className="bt-table btp-list">
+                <thead>
+                  <tr>
+                    <th scope="col"><span className="sr-only">Select</span></th>
+                    <th scope="col">Symbol</th>
+                    <th scope="col">Bars</th>
+                    <th scope="col">Runs</th>
+                    <th scope="col"><span className="sr-only">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {set.periods.map((p) => (
+                    <tr key={p.id} className={p.id === selected ? 'btp-row-selected' : ''}>
+                      <td>
+                        <input
+                          type="radio"
+                          name="btp-period"
+                          checked={p.id === selected}
+                          onChange={() => setSelected(p.id)}
+                          aria-label={`Select period ${p.name} for ${p.symbol} ${p.timeframe}`}
+                        />
+                      </td>
+                      <td>{p.symbol}</td>
+                      <td>
+                        {/* ⚠️ `null` and `0` are different facts and are rendered differently:
+                            null = never imported, 0 = imported and the window is empty. */}
+                        {p.barCount === null
+                          ? <span className="btp-none" title="No import has run for this period yet">not imported</span>
+                          : p.barCount === 0
+                          ? <span className="btp-zero" title="An import ran and found no bars">0 — empty</span>
+                          : p.barCount.toLocaleString()}
+                      </td>
+                      <td>{p.runs}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="bt-panel-btn bt-panel-btn-sm"
+                          onClick={() => reimportMutation.mutate(p.id)}
+                          disabled={reimportMutation.isPending}
+                        >
+                          Re-import
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        );
+      })}
 
       {selectedPeriod && onRunPeriod && (
         <div className="btp-run">

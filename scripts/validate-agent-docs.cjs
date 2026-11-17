@@ -435,8 +435,14 @@ if (docsMissingHeader.length) {
 // still NAMES it. An instruction that does not name a location is how handoffs end up back in a
 // retired directory, which is the exact bug this file exists to catch.
 
-const HANDOFF_RULE = path.join(INSTRUCTIONS_DIR, 'agent-handoff.instructions.md');
-if (fs.existsSync(HANDOFF_RULE)) {
+// ⚠️ `INSTRUCTIONS_DIR` is NULL when the corpus is not on this machine (agentPath returns null), and
+// this line used to call `path.join(null, …)` and CRASH. That contradicts the contract declared at the
+// top of the load section — "the checks are SKIPPED, LOUDLY, not failed" — and a crash is neither
+// skipped nor loud: it reads as a broken repository and sends the reader hunting for a corrupt install.
+// Measured 2026-11-16 with the docs store unreachable: TypeError ERR_INVALID_ARG_TYPE at this line.
+// Found while running the gate chain for an unrelated change; recorded rather than silently absorbed.
+const HANDOFF_RULE = INSTRUCTIONS_DIR ? path.join(INSTRUCTIONS_DIR, 'agent-handoff.instructions.md') : null;
+if (HANDOFF_RULE && fs.existsSync(HANDOFF_RULE)) {
   const ruleBody = fs.readFileSync(HANDOFF_RULE, 'utf8');
   if (!/Trading-Command-Suite-Documentation[\\/]+handoff/i.test(ruleBody)) {
     fail(

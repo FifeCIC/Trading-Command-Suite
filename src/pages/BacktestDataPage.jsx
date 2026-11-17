@@ -79,7 +79,25 @@ export default function BacktestDataPage() {
   };
 
   const data = inventory.data ?? {};
-  const summary = data.summary ?? {};
+  /**
+   * ⚠️ NUMERIC DEFAULTS, NOT `?? {}`. Measured 2026-11-17: with `const summary = data.summary ?? {}`
+   * the header called `summary.totalBars.toLocaleString()` on `undefined` and the WHOLE PAGE died —
+   * `TypeError: Cannot read properties of undefined (reading 'toLocaleString')` at this file:232, so
+   * the library, the filter chips and the period panel all vanished behind the error boundary. The
+   * payload loses `summary` whenever the API answers with something other than the expected shape
+   * (a proxy 502 while the backend restarts is enough).
+   *
+   * An empty object is not a safe default for a field that is then dereferenced: it moves the failure
+   * from "no data" to "cannot read property of undefined", which is strictly worse because it takes
+   * the rest of the page with it. Zeros are honest here — nothing is known, so nothing is claimed.
+   */
+  const summary = {
+    totalSymbols: 0,
+    symbolsWithBars: 0,
+    totalBars: 0,
+    totalBacktestRuns: 0,
+    ...(data.summary ?? {}),
+  };
   const symbols = Array.isArray(data.symbols) ? data.symbols : [];
 
   const filtered = useMemo(() => {
