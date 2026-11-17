@@ -277,6 +277,7 @@
       "purpose": "a handoff that is written and never processed is invisible.",
       "selfTest": true,
       "reaches": [
+        "prebuild",
         "npm"
       ]
     },
@@ -580,9 +581,7 @@
       "category": "tool",
       "purpose": "© 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite",
       "selfTest": true,
-      "reaches": [
-        "docs"
-      ]
+      "reaches": null
     },
     {
       "name": "delete-directive.cjs",

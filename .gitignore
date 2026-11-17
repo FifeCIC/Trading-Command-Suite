@@ -157,6 +157,7 @@ nest/src/modules/trading/strategy-seed-generated.local.ts
 .github/instructions/
 .github/agents/
 .github/skills/
+.github/prompts/
 .github/archive/
 .github/hooks/
 .github/agent-state.json
@@ -164,3 +165,12 @@ nest/src/modules/trading/strategy-seed-generated.local.ts
 .github/PRIMARY-GOALS.md
 .github/REVIEW-QUEUE.md
 NEXT-AGENT.md
+
+# ⚠️ `.github/prompts/` WAS MISSING FROM THIS LIST AND WAS THEREFORE PUBLIC (found 2026-11-17).
+# A prompt is method, not product: it tells a reader how the work is done, which is exactly what the
+# owner asked to keep private (*"I do not want to teach other developers my skills"*). It is also the
+# folder the client LOADS prompts from, so it cannot simply be moved elsewhere — the same constraint
+# that put the rule corpus here in the first place. Gitignored, not relocated.
+#
+# ⚠️ A `.md` written for one task does not become safe by being short. If it states a principle, a
+# threshold or a reason, it belongs in this list before it is written — not after it is noticed.
