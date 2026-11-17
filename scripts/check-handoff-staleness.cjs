@@ -14,11 +14,18 @@
  *
  *   node scripts/check-handoff-staleness.cjs            # report; exit 1 when any handoff is stale
  *   node scripts/check-handoff-staleness.cjs --days 7   # change the threshold
- *   node scripts/check-handoff-staleness.cjs --report   # advisory: always exit 0 (for prebuild)
+ *   node scripts/check-handoff-staleness.cjs --report   # advisory: always exit 0
+ *   node scripts/check-handoff-staleness.cjs --prebuild # BLOCKING on stale, tolerant when unmounted
+ *   node scripts/check-handoff-staleness.cjs --dir <p>  # point at another folder (used to canary this)
  *   node scripts/check-handoff-staleness.cjs --self-test
  *
  * ⚠️ Exit 2 means "could not judge" — the docs store is not mounted. That is NOT a pass: the owner's
  * G: drive drops out, and a check that reports clean while reading nothing is worse than no check.
+ *
+ * ⚠️ `--prebuild` IS THE ONE TOLERANCE, AND IT IS NARROW: a stale handoff fails the build (the
+ * owner asked for that), but an unmounted store returns 0 because a build must not go red for a
+ * network drive. The failure and the tolerance are stated separately on purpose — collapsing them
+ * would make "stale" indistinguishable from "could not look".
  */
 
 const fs = require('node:fs');
@@ -105,13 +112,16 @@ function main() {
   if (argv.includes('--self-test')) return runSelfTest();
 
   const reportOnly = argv.includes('--report');
+  const prebuild = argv.includes('--prebuild');
   const dIdx = argv.indexOf('--days');
   const days = dIdx >= 0 ? Number(argv[dIdx + 1]) : DEFAULT_DAYS;
+  const dirIdx = argv.indexOf('--dir');
+  const dir = dirIdx >= 0 ? argv[dirIdx + 1] : path.join(agentHome(), '..', 'handoff');
 
-  const dir = path.join(agentHome(), '..', 'handoff');
   if (!fs.existsSync(dir)) {
     console.log(`[handoffs] ⚠ SKIPPED — the handoff folder is not mounted (${dir}). This is NOT a pass.`);
-    return 2;
+    // In prebuild a missing store is tolerated (network drive); everywhere else it is exit 2.
+    return prebuild ? 0 : 2;
   }
 
   const files = fs.readdirSync(dir).map((name) => ({ name, mtimeMs: fs.statSync(path.join(dir, name)).mtimeMs }));
