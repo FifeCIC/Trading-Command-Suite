@@ -2,11 +2,10 @@
  * change-suggestions.service.ts — THE QUEUE OF CHANGES WE INTEND TO TRY.
  * =======================================================================
  *
- * Owner, 2026-11-18: *"Create a new procedure for suggested/queued changes to make to a protocol…
- * We will also display that same information in the Strategies area on the strategies page so that at
- * the end: the combined suggestion changes to try for both protocol and bot are in one place.
- * Eventually we will automate backtesting and A/B comparison to try changes automatically and I think
- * this is a key step towards guiding that for a bit."*
+ * Decided 2026-11-18 at the owner's direction: a new procedure for suggested/queued changes to a
+ * protocol, shown on the Protocols page AND in the Strategies area, so the combined protocol and bot
+ * suggestions to try end up in one place — and a key step towards automating backtesting and A/B
+ * comparison of those changes later.
  *
  * ── WHY THIS IS A TABLE AND NOT A LIST IN A DOCUMENT ──────────────────────────────────────────────
  * A suggested change has a LIFECYCLE: `queued → accepted → applied`, or `rejected`, or `blocked` when

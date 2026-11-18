@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnApplicationBootstrap } from '@nestjs/common';
 import { Prisma, Symbol } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { ModeService } from '../../config/mode.service';
@@ -28,7 +28,7 @@ export interface SymbolSource {
 type SourceMap = Map<string, SymbolSource[]>;
 
 @Injectable()
-export class SymbolsService {
+export class SymbolsService implements OnApplicationBootstrap {
   private readonly logger = new Logger(SymbolsService.name);
 
   constructor(
@@ -37,6 +37,32 @@ export class SymbolsService {
     private readonly adapterFactory: AdapterFactory,
     private readonly symbolProtocolAuthority: SymbolProtocolAuthorityService,
   ) {}
+
+  /**
+   * Warm the provenance map once at boot, OFF the request path.
+   *
+   * ⚠️ Deliberately `void`, not `await`: this is a page decoration, and making boot wait on a
+   * multi-second aggregation is the defect that was already fixed once for the ProtocolHealth
+   * audits (the API went from ~107s to 5–20s to first `200` by moving them behind `void`).
+   *
+   * ⚠️ It does NOT replace `refreshSourceMapWithinBudget`. The warm-up is a courtesy that makes the
+   * first page load instant; the budget is the guarantee that the endpoint cannot die on the
+   * gateway timeout if the table grows again.
+   */
+  onApplicationBootstrap(): void {
+    void (async () => {
+      try {
+        const symbols = await this.prisma.symbol.findMany({ select: { id: true } });
+        if (symbols.length === 0) return;
+        await this.refreshSourceMap(symbols.map((s) => s.id));
+      } catch (err) {
+        this.logger.warn(
+          `Boot warm-up of the data-source map failed — the first /api/symbols request will ` +
+            `rebuild it (bounded by ${SymbolsService.COLD_WAIT_MS}ms): ${String(err)}`,
+        );
+      }
+    })();
+  }
 
   /**
    * Data-source map cache — `symbolId` → the providers that delivered bars.
@@ -53,10 +79,21 @@ export class SymbolsService {
    *     DISTINCT (symbolId, provider) ....... 5,203ms
    *     + an index on (symbolId, provider) .. 5,356ms   built in 47.8s; EXPLAIN reports key=NULL
    *
-   * So the query is not the thing to fix — **querying it per request is.** Adding this lookup
-   * took `/api/symbols` from instant to 4.7–7.0s, which the API flagged itself:
-   * `WARN [SlowRequest] GET /api/symbols — 5558ms`. An endpoint that answers correctly in seven
-   * seconds is still a regression — correctness is not a budget.
+   * ⚠️ RE-MEASURED 2026-11-18 — the table has grown 3.3x and the numbers above are no longer the
+   * ones in force. **1,981,356 rows, and the plain `GROUP BY` takes 47,212ms.** That is past the
+   * API's own 30s request budget, so the FIRST `/api/symbols` after a restart returned
+   * `504 TCS-SYS-005` and `/watchlists/active-symbols` rendered nothing — a page that is correct
+   * by construction and unusable by timing.
+   *
+   * The 2026-09-23 index attempt was not wrong, it was **not covering**: `_max(timestamp)` still
+   * had to fetch rows, so the planner scanned instead. A COVERING
+   * `(symbolId, provider, timestamp)` index measures **4,325ms** — 10.9x faster — and is declared
+   * on `MarketBar` in `schema.prisma` with the same measurement beside it.
+   *
+   * ⚠️ A faster query does NOT make it safe to run per request. 4s of database work for 114 rows of
+   * page decoration is still a regression, so the cache stays AND the cold path is now bounded by
+   * `COLD_WAIT_MS` below. Neither change substitutes for the other: the index bounds the cost, the
+   * budget bounds the WAIT.
    *
    * ⚠️ The data is near-static, which is what makes a cache honest rather than a fudge:
    * **3 symbols** have EVER been delivered by more than one provider. A 10-minute TTL costs
@@ -69,6 +106,18 @@ export class SymbolsService {
 
   /** How long a source map is trusted before it is rebuilt. See `sourceCache`. */
   private static readonly SOURCE_TTL_MS = 10 * 60 * 1000;
+
+  /**
+   * How long ONE request will wait for a COLD map before serving it as unknown.
+   *
+   * ⚠️ This exists because the alternative is a request that dies inside the gateway timeout and
+   * returns nothing at all. Measured 2026-11-18 with the covering index absent: the aggregation took
+   * 47s, the client's 30s interceptor fired first, and the page showed an empty body with a 504 —
+   * a page that cannot be distinguished from one that was deleted. A budget turns "the whole page
+   * is gone" into "the provenance column says unknown and fills in on the next request", which is
+   * the honest state and the one `sources: null` already means.
+   */
+  private static readonly COLD_WAIT_MS = 8000;
 
   // ── DECISION (2026-10-09, primary) ──
   // WHAT:      Runtime symbol registration is a RECORD OF USER DATA and is deliberately NOT seeded.
@@ -222,8 +271,11 @@ export class SymbolsService {
           );
         }
       } else {
-        // Nothing to serve yet — this is the one request that pays for the aggregation.
-        byId = await this.refreshSourceMap(symbols.map((s) => s.id));
+        // Nothing to serve yet — the first request after boot. BOUNDED, not awaited indefinitely:
+        // see COLD_WAIT_MS. On expiry this throws, the catch below sets `sources: null` (lookup
+        // UNKNOWN — never `[]`, which would mean "no provider ever delivered a bar"), and the
+        // in-flight refresh keeps running so the next request finds a warm map.
+        byId = await this.refreshSourceMapWithinBudget(symbols.map((s) => s.id));
       }
 
       for (const d of decorated) {
@@ -252,6 +304,42 @@ export class SymbolsService {
    * cache-miss pile-up, and the failure mode that makes a cache slower than no cache.
    */
   private refreshInFlight: Promise<SourceMap> | null = null;
+
+  /**
+   * refreshSourceMapWithinBudget() — a COLD request waits for the refresh, but never past
+   * `COLD_WAIT_MS`.
+   *
+   * ⚠️ The race loser is deliberately NOT cancelled. `refreshSourceMap`'s own `finally` clears
+   * `refreshInFlight` when the query actually finishes, so abandoning the await here leaves the
+   * work running and the NEXT request is served from its result. That is why this throws instead of
+   * returning `new Map()`: an empty map would be indistinguishable from "no provider has ever
+   * delivered a bar" at the call site, which is the opposite conclusion.
+   */
+  private async refreshSourceMapWithinBudget(symbolIds: string[]): Promise<SourceMap> {
+    const refresh = this.refreshSourceMap(symbolIds);
+    // A rejection we race past would otherwise surface as an unhandled rejection.
+    refresh.catch(() => {});
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () =>
+          reject(
+            new Error(
+              `data-source map still rebuilding after ${SymbolsService.COLD_WAIT_MS}ms — ` +
+                'served as UNKNOWN; the refresh continues and the next request uses it',
+            ),
+          ),
+        SymbolsService.COLD_WAIT_MS,
+      );
+    });
+
+    try {
+      return await Promise.race([refresh, timedOut]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
 
   private async refreshSourceMap(symbolIds: string[]): Promise<SourceMap> {
     // Explicit `!== null`, not truthiness — a Promise is always truthy, and the linter is right

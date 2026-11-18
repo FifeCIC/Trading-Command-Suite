@@ -193,6 +193,16 @@ model MarketBar {
   // THIRD column of the indexes above, so the prune `WHERE timestamp < cutoff` could not use one.
   @@index([timestamp])
   @@unique([symbolId, timeframe, timestamp])
+  // ⚠️ COVERING index for the provenance aggregation — `GROUP BY symbolId, provider` with
+  // `MAX(timestamp)` in `symbols.service.ts` (`withDataSources`). Measured on the live table
+  // 2026-11-18: **47,212ms → 4,325ms** on 1,981,356 rows.
+  //
+  // ⚠️ This REPLACES an earlier finding, and the difference is the third column. An index on
+  // `(symbolId, provider)` alone was tried on 2026-09-23, took 47.8s to build, and EXPLAIN reported
+  // `key=NULL` — it was NOT useless in principle, it was **not covering**: `_max(timestamp)` still
+  // had to fetch rows, so a scan won. Appending `timestamp` makes the whole aggregation index-only,
+  // which is why it is used. Any future attempt MUST keep the timestamp column.
+  @@index([symbolId, provider, timestamp], map: "marketbar_symbol_provider_ts_idx")
 }
 
 model ImportRun {

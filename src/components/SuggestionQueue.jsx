@@ -2,9 +2,9 @@
  * SuggestionQueue — the queued changes we intend to TRY, shown wherever they are needed.
  *
  * ── ONE COMPONENT, TWO PAGES, ON PURPOSE ─────────────────────────────────────────────────────────
- * Owner, 2026-11-18: *"Display the queued suggested changes on the protocols page… We will also
- * display that same information in the Strategies area on the strategies page so that at the end: the
- * combined suggestion changes to try for both protocol and bot are in one place."*
+ * Decided 2026-11-18 at the owner's direction: the queued suggestions belong on the Protocols page
+ * AND, unchanged, in the Strategies area, so that in the end the combined protocol and bot
+ * suggestions to try sit in one place.
  *
  * ⚠️ If the Protocols page and the Strategies page each rendered their own list, the two would drift
  * and the reader would have to decide which one to believe — the same defect the repo records for
