@@ -489,6 +489,28 @@ const QA_CHECKLIST = [
     priority: 'high',
     versionNote: '2026-11-19 — #1299. Owner: *"We cannot activate every symbol that appears in top losers or top winners."* Two guarantees, both proven live: insert-only discovery (`created=120` then `created=0 existing=147`, `active` unchanged at 78), and a lowercase/mapped `type` vocabulary. ⚠️ The second guard exists because the first version wrote `STOCK` ×120 and nothing reported it — the column collates `utf8mb4_unicode_ci`, so SQL matched both spellings while `symbols.service.ts`\'s case-sensitive `isEquity` answered `false` and skipped the entire 5-adapter profile chain. Canaried by mutating the mapping (`3 failed → 26 passed`, restore byte-identical) and live by setting `BP.type = \'STOCK\'`, which still returned `profileStatus="ok"`.',
   },
+  {
+    id: 'qa-backtest-direction-001',
+    area: 'Backtesting / comparison lab',
+    system: 'nest/src/modules/backtest/direction-from-protocol.ts + backtest.service.ts resolveDirectionMode()',
+    name: 'A short-protocol backtest trades without being told which side to open',
+    procedure: 'Run `POST /api/backtest/run` with a short protocol and NO `directionMode`, e.g. `{ "periodId": "<a movers-losers period id>", "protocolId": "momentum-stock-v1-short" }`. Then run the same request again with `"directionMode": "short"`. Compare `stats.totalTrades` on both.',
+    expected: 'Both runs return the **same** trade count (measured: **173 and 173**, net −5,132.27, win 40%). Before the fix the first returned `signals=0 trades=0` — a complete result with zero trades, where `totalSignals`, `tradesRefusedUnaffordable` and `signalsWithoutTrade` all read `0` and only `breakEvenUnavailable: "no-trades"` hinted at a problem. A long protocol must be unaffected: omitting the field still runs long.',
+    category: 'Guard',
+    priority: 'high',
+    versionNote: '2026-11-19 — #1300. `run()` defaulted `directionMode` to `\'long\'`, so every short protocol backtested without an explicit direction silently discarded 100% of its signals via `blockedBy: \'direction-mode\'`. The side now derives from `protocol.directionMode` (`SHORT_ONLY`/`LONG_ONLY`); an explicit request still wins untouched. Canaried `1 failed → 5 passed`, restore byte-identical. ⚠️ I first misread this as the SHORT SIDE BEING UNWIRED and posted that to #770 — the comparison varied in a second way I had not checked. Corrected on #770 within minutes.',
+  },
+  {
+    id: 'qa-movers-entry-gate-001',
+    area: 'Data and providers',
+    system: 'nest/src/modules/market-data/market-movers.service.ts entryGate() + the movers payload',
+    name: 'A stale or delayed movers list states that entry is refused, in numbers',
+    procedure: 'Call `GET /api/market-data/market-movers` and read `entryAllowed` and `entryRefusalReason`. Then raise `movers.maxDelayMinutes` above the reported `delayedByMinutes` (PUT the setting), call again, and compare. Then set it back.',
+    expected: 'With a delay past the limit: `entryAllowed: false` and a reason naming both numbers — measured live as *"the exchange delay is 20 minutes, past the 15-minute limit"*. With the limit raised above the delay: `entryAllowed: true` and `entryRefusalReason: null`. ⚠️ An unreadable `ageMinutes` (null) must refuse as "cannot be judged", never pass as fresh — while an unreadable `delayedByMinutes` passes, because a provider that declares no delay has not claimed one.',
+    category: 'Guard',
+    priority: 'high',
+    versionNote: '2026-11-19 — #1283. The feed reported `stale: true` and `delayedBy: 20` and nothing acted on either. `stale` and `delayed` are observations; `entryAllowed` is the decision, so a consumer has nothing to ignore. ⚠️ **Not yet enforced by a trading consumer, because none exists** — #1283 stays open on exactly that. Register row 215, 🟡 partial. Canaried by disabling the null-age branch: `1 failed → 7 passed`, restore byte-identical.',
+  },
 
   // ═══════════════════════════════════════════════════
   // DUPLICATE PREVENTION

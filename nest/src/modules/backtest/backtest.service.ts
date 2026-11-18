@@ -27,6 +27,7 @@ import { computeEquityPath, type EquityPoint, type EquitySummary } from './equit
 import { describeRunDifferences, type RunDifferenceSet } from './run-differences';
 import { breakEvenFromOutcomes, medianBracket } from './break-even';
 import { decideEntry, refuseUnrunnableDirection } from './entry-side';
+import { directionFromProtocol } from './direction-from-protocol';
 import { applyAffordability } from './affordable-size';
 // ⚠️ The bot's own TIME STOP, extracted so the comparison is testable (#1136). Set on 42 of 64 active
 // bots and referenced zero times by this file before 2026-11-16.
@@ -1366,6 +1367,53 @@ export class BacktestService {
     }
   }
 
+  /**
+   * resolveDirectionMode() — a run's SIDE, derived from the protocol when the caller did not say.
+   *
+   * ── THE DEFECT THIS CLOSES (measured 2026-11-19) ─────────────────────────────────────────────
+   * `run()` defaulted `directionMode` to `'long'`, so a **short** protocol backtested without an
+   * explicit direction ran with the wrong side and `decideEntry()` discarded every `SELL`/`STRONG_SELL`
+   * as `blockedBy: 'direction-mode'`. The run then reported a **successful, complete result with zero
+   * trades** — and every counter agreed with it:
+   *
+   *     totalSignals: 0 · tradesRefusedUnaffordable: 0 · signalsWithoutTrade: 0
+   *     breakEvenUnavailable: "no-trades"
+   *
+   * Measured on `movers-losers-2026-11-10` / APPS / 5m: without a direction **0 trades**; with
+   * `directionMode: 'short'` **173 trades**. Same data, same protocol — only the omitted field
+   * differed. Nothing threw, and "never trades" is exactly what a broken strategy looks like.
+   *
+   * ⚠️ **This is not a coercion, and it cannot pick a wrong side.** A `SHORT_ONLY` protocol run long
+   * blocks 100% of its signals, so there is no configuration in which the old default measured
+   * anything. The protocol's own direction is the only side a caller can have meant. An EXPLICIT
+   * `directionMode` always wins untouched, so a deliberate contrarian run (`SHORT_ONLY` measured long)
+   * still works and still records what was asked for.
+   *
+   * ⚠️ **A missing protocol falls back to `'long'` rather than throwing.** The protocol is validated
+   * further down the run path, which owns that error message; raising a second, different error here
+   * would replace a useful one with a worse one.
+   */
+  private async resolveDirectionMode(
+    requested: BacktestRunRequest['directionMode'],
+    protocolId: string,
+  ): Promise<'long' | 'short' | 'both'> {
+    if (requested) return requested;
+    let protocolDirection: string | null = null;
+    try {
+      const protocol = await this.prisma.protocol.findUnique({
+        where: { slug: protocolId },
+        select: { directionMode: true },
+      });
+      protocolDirection = protocol?.directionMode ?? null;
+    } catch (err) {
+      this.logger.warn(
+        `Could not read the direction of protocol ${protocolId}: ${(err as Error).message} — ` +
+          "the run will default directionMode to 'long'.",
+      );
+    }
+    return directionFromProtocol(requested, protocolDirection);
+  }
+
   async run(request: BacktestRunRequest): Promise<BacktestResult> {
     // ── #965 item 3 — resolve a BOT-DRIVEN request before anything is defaulted ──────────────
     const resolved = await this.resolveBotDrivenRequest(request);
@@ -1444,8 +1492,11 @@ export class BacktestService {
       stopPlan = null,
       assetClass,
       newsExclusion = 'none',
-      // #1155 — 'long' is the default, so an existing caller's run is byte-for-byte the same.
-      directionMode = 'long',
+      // #1155 — 'long' was an unconditional default, which silently ran every SHORT protocol with the
+      // wrong side and reported a complete result with zero trades. It is now DERIVED from the
+      // protocol's own `directionMode` when the caller omits it — see resolveDirectionMode().
+      // The default survives only as the fallback when the protocol cannot be read.
+      directionMode: requestedDirectionMode,
       // #1176 — 'flat' is the default so an existing caller's run is byte-for-byte the same. See the
       // field comment on `BacktestRunRequest.equityMode` for why BOTH modes are kept rather than
       // replacing the flat one.
@@ -1505,6 +1556,13 @@ export class BacktestService {
     // 2026-09-08: unscoped and custom-weight backtests previously fell into a
     // second scoring implementation. Require the canonical protocol identity.
     if (!protocolId) throw new Error('Backtest requires protocolId for canonical META.Stack scoring.');
+
+    /**
+     * The side this run may open. Explicit request wins; otherwise the PROTOCOL decides — never a
+     * blanket `'long'`, which silently produced zero-trade "complete" results for every short protocol
+     * (measured 2026-11-19: 0 trades without it, 173 with it, same data and protocol).
+     */
+    const directionMode = await this.resolveDirectionMode(requestedDirectionMode, protocolId);
 
     /**
      * ── REFUSE 'both' (owner direction, confirmed 2026-11-01) ───────────────────────────────────────

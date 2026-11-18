@@ -105,7 +105,72 @@ function extractMirrorBody(text) {
   return norm(text.slice(b + BEGIN.length, e)).replace(/^\n+/, '').replace(/\n+$/, '\n');
 }
 
+/**
+ * ── THE THIRD COPY ────────────────────────────────────────────────────────────────────────────────
+ *
+ * There are THREE copies of this document, and until 2026-11-18 this check knew about two:
+ *
+ *   LIBRARY   ReactStackCore/agent-library/instructions/…   ← `npm run library:install --apply` DEPLOYS THIS over the source
+ *   SOURCE    ~/.copilot/instructions/…                     ← what every agent session receives
+ *   MIRROR    the docs store copy                           ← what this check compares against SOURCE
+ *
+ * ⚠️ THE FAILURE THIS PREVENTS, MEASURED 2026-11-18: the library copy was two whole sections behind
+ * the source — it had **7** `## ` headings against the source's **10**, missing `🥇 Mode first` and
+ * `⛔ The no-wall rule` entirely. `library:install --apply` copies library → source, so running it
+ * would have **deleted both sections from the file every agent obeys**, with no warning, no error,
+ * and no backup. The two missing sections are the ones that govern the shape of every reply.
+ *
+ * ⚠️ ADVISORY, ALWAYS — never fatal, in any mode. The library lives in a DIFFERENT repository that
+ * another agent may be mid-edit in; this repo's build must not red for that. The point is only that
+ * the risk stops being silent: the build now says the install would lose specific sections, by name.
+ *
+ * ⚠️ COMPARES `## ` HEADINGS, NOT BYTES. The library is deliberately not byte-identical (it carries
+ * the same explanatory header), and a byte comparison would fail for reasons that are not this. A
+ * missing HEADING is the thing that loses a rule.
+ */
+const LIBRARY_SOURCE = 'C:\\wamp64\\www\\ReactStackCore\\agent-library\\instructions\\output-style-guide.instructions.md';
+
+/** `## ` headings present in `from` and absent from `to`. Empty when `to` is null (cannot compare). */
+function missingSections(from, to) {
+  if (!from || !to) return [];
+  const have = new Set(
+    to
+      .split(/\r?\n/)
+      .filter((l) => /^## /.test(l))
+      .map((l) => l.trim()),
+  );
+  return from
+    .split(/\r?\n/)
+    .filter((l) => /^## /.test(l))
+    .map((l) => l.trim())
+    .filter((h) => !have.has(h));
+}
+
+/** Print the third-copy advisory. Never exits, never changes the exit code. */
+function reportLibraryDrift(sourceText) {
+  const libraryText = readOrNull(LIBRARY_SOURCE);
+  if (libraryText === null) {
+    console.log('[style-sync] ℹ third copy: not on this machine — library install risk NOT assessed');
+    return;
+  }
+  const missing = missingSections(sourceText, libraryText);
+  if (!missing.length) {
+    console.log('[style-sync] ✅ third copy: library is not missing any section of the source');
+    return;
+  }
+  console.log(
+    `[style-sync] ⚠ THIRD COPY IS BEHIND — \`npm run library:install --apply\` would DELETE ` +
+      `${missing.length} section(s) from the source, which every agent obeys:`,
+  );
+  for (const h of missing) console.log(`[style-sync]     ${h}`);
+  console.log('[style-sync]   Library:  ' + LIBRARY_SOURCE);
+  console.log('[style-sync]   Port these into the library BEFORE any install. Advisory only — the');
+  console.log('[style-sync]   library is another repository and never blocks this build.');
+}
+
 function main() {
+  if (process.argv.includes('--self-test')) return selfTest();
+
   const sync = process.argv.includes('--sync');
   const report = process.argv.includes('--report');
   const src = sourcePath();
@@ -142,6 +207,9 @@ function main() {
   if (mirrorText === null) {
     stop(2, `[style-sync] ✖ mirror not found: ${path.relative(REPO_ROOT, MIRROR)}`);
   }
+
+  // Printed in every mode and never fatal — see the doc comment on `reportLibraryDrift`.
+  reportLibraryDrift(sourceText);
 
   const expected = norm(sourceText).replace(/\n+$/, '\n');
   const actual = extractMirrorBody(mirrorText);
@@ -191,6 +259,68 @@ function main() {
     `[style-sync]     source: ${JSON.stringify(b[line] ?? '<end of file>')}`,
     '[style-sync]   Repair with:  node scripts/validate-output-style-sync.cjs --sync',
   ]);
+}
+
+/**
+ * Self-test for the THIRD-COPY advisory.
+ *
+ * ⚠️ A guard that has never been observed to fail is a decoration, and this one is easy to write in
+ * a way that can never fire: `missingSections(from, null)` returns `[]` by design (nothing to
+ * compare), so a test that only ever passes `null` would report a clean bill of health for a library
+ * it never read. The cases below assert BOTH directions, and the "identical" case is what proves the
+ * function is not simply returning everything.
+ */
+function selfTest() {
+  const source = [
+    '# Title',
+    '## 🥇 Mode first',
+    'body',
+    '## ⛔ The no-wall rule — checkable',
+    'body',
+    '## Core rules',
+    '### a sub-heading is not a section for this comparison',
+    '## Reusable blocks',
+  ].join('\n');
+
+  const behind = ['# Title', '## Core rules', '## Reusable blocks'].join('\n');
+  const equal = ['# Title', '## 🥇 Mode first', '## ⛔ The no-wall rule — checkable', '## Core rules', '## Reusable blocks'].join('\n');
+
+  const cases = [
+    ['a library two sections behind is REPORTED', () => missingSections(source, behind).length === 2],
+    [
+      'and the missing sections are NAMED, not just counted',
+      () => missingSections(source, behind).join('|').includes('Mode first'),
+    ],
+    ['an identical library reports NOTHING', () => missingSections(source, equal).length === 0],
+    ['an unreadable library (null) reports NOTHING — cannot compare', () => missingSections(source, null).length === 0],
+    ['an unreadable SOURCE reports NOTHING — cannot compare', () => missingSections(null, equal).length === 0],
+    [
+      'a library with EXTRA sections is not a failure — extra is not loss',
+      () => missingSections(behind, source).length === 0,
+    ],
+    [
+      '`### ` sub-headings are not treated as sections',
+      () => !missingSections(source, equal).some((h) => h.startsWith('###')),
+    ],
+  ];
+
+  let failed = 0;
+  for (const [name, fn] of cases) {
+    let ok = false;
+    try {
+      ok = fn() === true;
+    } catch {
+      ok = false;
+    }
+    console.log(`  ${ok ? '✅' : '✖ '} ${name}`);
+    if (!ok) failed++;
+  }
+  console.log(
+    failed === 0
+      ? `[style-sync] ✅ self-test ${cases.length}/${cases.length} — the third-copy advisory can fire and can stay quiet`
+      : `[style-sync] ✖ self-test: ${failed} of ${cases.length} FAILED`,
+  );
+  process.exit(failed === 0 ? 0 : 1);
 }
 
 main();

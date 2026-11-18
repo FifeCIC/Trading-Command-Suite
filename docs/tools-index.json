@@ -1552,7 +1552,7 @@
       "where": "repo",
       "category": "validator",
       "purpose": "keeps the versioned style guide in step with its portable source.",
-      "selfTest": false,
+      "selfTest": true,
       "reaches": [
         "prebuild",
         "npm"

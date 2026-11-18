@@ -133,6 +133,90 @@ export interface MarketMovers {
    * `SymbolDiscoveryService`. `null` when persistence is switched off.
    */
   persisted: { created: number; existing: number } | null;
+  /**
+   * ── MAY THIS LIST BE USED TO OPEN A POSITION? (#1283) ───────────────────────────────────────────
+   *
+   * `stale` and `delayed` are OBSERVATIONS. This is the DECISION, made once here so that no consumer
+   * has to re-derive it — and so a consumer that would ignore an advisory flag has nothing to ignore.
+   *
+   * ⚠️ **THE FAILURE THIS PREVENTS.** The feed reported `stale: true` and `delayedBy: 20` and NOTHING
+   * acted on either. The page showed a warning; a trading path would have entered on prices 20 minutes
+   * old, and the fill would look normal. An advisory flag on a money path is a flag that gets skipped,
+   * and "we told you in the payload" is not a guard.
+   *
+   * ⚠️ **NO TRADING CONSUMER EXISTS YET** (measured 2026-11-19 — the only readers are UI components).
+   * That is precisely why the decision belongs in the payload NOW: the strategy's entry path is the
+   * next thing built, and it must inherit a decided answer rather than an invitation to judge.
+   *
+   * ⚠️ **THE THRESHOLD IS NOT A SECOND NUMBER.** It reuses `movers.maxDelayMinutes` — the same setting
+   * the display banner reads — so there is one place to change it and no way for the banner and the
+   * entry rule to disagree. A separate entry tolerance was considered and rejected: two numbers with
+   * no measured difference between them is a setting nobody can justify later.
+   */
+  entryAllowed: boolean;
+  /** Why entry is refused, in the reader's words. `null` when `entryAllowed` is true. */
+  entryRefusalReason: string | null;
+}
+
+/**
+ * entryGate() — may this list be used to OPEN A POSITION, and if not, why not.
+ *
+ * ── DECISION (2026-11-19, TCS-Dev) ──
+ * WHAT:       The movers payload carries `entryAllowed` + `entryRefusalReason` — a DECISION — in
+ *             addition to the observations `stale` and `delayed`.
+ * WHY:        The feed reported `stale: true` and `delayedBy: 20` against a 15-minute gate and
+ *             NOTHING acted on either. A trading path entering on 20-minute-old prices produces a
+ *             fill that looks completely normal. An advisory flag on a money path is a flag that
+ *             gets skipped, and the strategy's entry path is the next thing built.
+ * INSTEAD OF: Leaving `stale`/`delayed` for each consumer to judge, which is how the warning and the
+ *             behaviour diverged in the first place.
+ * REVERSE BY: Drop the two payload fields and the `entryGate` call; nothing is stored or migrated.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 215
+ * GUARD:     nest/src/modules/market-data/market-movers.entry-gate.spec.ts
+ *
+ * A pure function for the same reason `classifyInstrument()` is one: the decision is the thing a
+ * money path will depend on, and a decision buried in a payload literal behind three `await`s has no
+ * assertion.
+ *
+ * ⚠️ IT TAKES THE MEASURED FACTS, NOT THE FLAGS. Deriving `entryAllowed` from `stale`/`delayed` alone
+ * would make the reason string impossible to write honestly ("delayed" without the minutes), and the
+ * reader needs the number to judge it.
+ */
+export function entryGate(input: {
+  ageMinutes: number | null;
+  maxAgeMinutes: number;
+  delayedByMinutes: number | null;
+  maxDelayMinutes: number;
+}): { allowed: boolean; reason: string | null } {
+  const reasons: string[] = [];
+
+  // An unreadable age is NOT freshness. `null` means the provider gave no usable timestamp, and
+  // treating that as "fine" is how a feed with no clock becomes a feed with no limit.
+  if (input.ageMinutes === null) {
+    reasons.push(
+      'the provider gave no usable timestamp, so the age of this list cannot be judged — it is not '
+        + 'verifiably fresh',
+    );
+  } else if (input.ageMinutes > input.maxAgeMinutes) {
+    reasons.push(
+      `this list is ${Math.round(input.ageMinutes)} minutes old, past the ${input.maxAgeMinutes}-minute `
+        + 'freshness limit',
+    );
+  }
+
+  if (input.delayedByMinutes !== null && input.delayedByMinutes > input.maxDelayMinutes) {
+    reasons.push(
+      `the exchange delay is ${input.delayedByMinutes} minutes, past the ${input.maxDelayMinutes}-minute `
+        + 'limit, so every quote in this list is that far behind',
+    );
+  }
+
+  if (reasons.length === 0) return { allowed: true, reason: null };
+  return {
+    allowed: false,
+    reason: `Entry is refused: ${reasons.join('; and ')}. A mover entry on a stale or delayed list `
+      + 'fills at a price that no longer exists.',
+  };
 }
 
 /**
@@ -270,6 +354,19 @@ export class MarketMoversService {
     const { ageMinutes, stale } = staleness(result.lastUpdated, now, maxAgeMinutes);
     const delayed = result.delayedByMinutes !== null && result.delayedByMinutes > maxDelayMinutes;
 
+    /**
+     * ⚠️ THE ENTRY DECISION IS COMPUTED ONCE, HERE, AND PUT ON THE PAYLOAD. `stale` and `delayed`
+     * are observations a consumer can ignore; `entryAllowed` is a decision it cannot re-derive
+     * differently. Reuses `maxAgeMinutes` / `maxDelayMinutes` — the same settings the display banner
+     * reads — so the banner and the entry rule cannot disagree (#1283).
+     */
+    const gate = entryGate({
+      ageMinutes,
+      maxAgeMinutes,
+      delayedByMinutes: result.delayedByMinutes,
+      maxDelayMinutes,
+    });
+
     const payload: MarketMovers = {
       source: `${result.provider}:${result.provider === 'yahoo' ? 'screener/predefined/saved' : 'stable/biggest-*'}`,
       provider: result.provider,
@@ -278,6 +375,8 @@ export class MarketMoversService {
       stale,
       delayedByMinutes: result.delayedByMinutes,
       delayed,
+      entryAllowed: gate.allowed,
+      entryRefusalReason: gate.reason,
       fetchedAt: now.toISOString(),
       cached: false,
       counts: {
