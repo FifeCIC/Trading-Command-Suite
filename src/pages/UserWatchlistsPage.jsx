@@ -334,9 +334,9 @@ export default function UserWatchlistsPage() {
         <div className="wl-split">
           {/* ── Left: Accordion List ── */}
           <div className="wl-list-pane">
-            {/* ⚠️ ONE LIST, NOT TWO (owner, 2026-11-06: *"Remove <div.wl-group-label> Built-in
+            {/* ⚠️ ONE LIST, NOT TWO (owner directive, 2026-11-06): Remove <div.wl-group-label> Built-in
                 Watchlists and make <div.wl-list-header> ★ Trading212 Portfolio appear in the full list
-                instead"*). The built-ins were in their own group behind a heading, which pushed the
+                instead). The built-ins were in their own group behind a heading, which pushed the
                 one built-in below a label that told the reader nothing. They now sit first inside the
                 single list, under the same count. */}
             <div className="wl-group">

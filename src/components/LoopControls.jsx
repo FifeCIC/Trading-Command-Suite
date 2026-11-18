@@ -20,9 +20,9 @@
  * board (`WidgetBoard`), which is also used by other boards. Putting automation controls inside that
  * generic component would couple every board to the automation loop — so this renders beside it.
  *
- * ⚠️ IT NOW RENDERS INSIDE A WIDGET, NOT ABOVE THE BOARD (owner, 2026-11-06): *"Merge `<div.lc-strip>`
+ * ⚠️ IT NOW RENDERS INSIDE A WIDGET, NOT ABOVE THE BOARD (owner directive, 2026-11-06): Merge `<div.lc-strip>`
  * … into `<li.wb-library-item>` … so that widget becomes system status with the control over the loop
- * which is a key functionality."* So the loop's controls belong to the **System Status** widget
+ * which is a key functionality. So the loop's controls belong to the **System Status** widget
  * (`widgets/builtin-widgets.jsx`), and `variant="embedded"` drops this component's own panel chrome
  * so the strip does not draw a second border inside a card that already has one.
  *

@@ -2,10 +2,10 @@
  * symbol-discovery.service.ts — movers are RECORDED as symbols, never ACTIVATED as symbols.
  * ==========================================================================================
  *
- * Owner, 2026-11-18: *"We will need the data to be stored in the database with normal symbol records:
+ * Owner directive, 2026-11-18: We will need the data to be stored in the database with normal symbol records:
  * they just won't be set as active until the users actions or a bot trades so that will need to be
  * looked at. We cannot activate every symbol that appears in top losers or top winners else by the end
- * of a month we'll have hundreds of active symbols being monitored."*
+ * of a month we'll have hundreds of active symbols being monitored.
  *
  * ── THE ARITHMETIC THAT MAKES THIS A HARD RULE, NOT A PREFERENCE ──
  * The feed offers ~95 gainers and ~174 losers *per fetch* (measured 2026-11-18). At one poll every five
@@ -101,9 +101,9 @@ export function symbolType(quoteType?: string | null): string {
  * ── DECISION (2026-11-18, TCS-Dev) ──
  * WHAT:       Discovery is INSERT-ONLY, always `active: false`, and the type vocabulary it writes is
  *             the COLUMN'S (lowercase, mapped) rather than the feed's.
- * WHY:        Owner, 2026-11-18: "We cannot activate every symbol that appears in top losers or top
+ * WHY:        owner directive, 2026-11-18: We cannot activate every symbol that appears in top losers or top
  *             winners else by the end of a month we'll have hundreds of active symbols being
- *             monitored." ~95 gainers + ~174 losers per fetch, and `symbol.active` is what scoring
+ *             monitored. ~95 gainers + ~174 losers per fetch, and `symbol.active` is what scoring
  *             and monitoring read — so activating on sight is unbounded, and produces a universe
  *             indistinguishable from one the owner chose. The vocabulary half is not cosmetic
  *             either: the column collates `utf8mb4_unicode_ci`, so SQL matches both spellings and

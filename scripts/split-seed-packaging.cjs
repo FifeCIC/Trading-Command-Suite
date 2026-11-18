@@ -4,9 +4,9 @@
  *
  * ── WHY THIS EXISTS ──
  *
- * Owner, 2026-11-02: *"I'm planning to package only 2-3 strategies with the app for the public and
+ * Owner directive, 2026-11-02: I'm planning to package only 2-3 strategies with the app for the public and
  * so the rest will need to exist in my database OR/AND user files on my system: removed from seed
- * data."*
+ * data.
  *
  * `protocols-seed-data.ts` (48 protocols) and `strategy-seed-data.ts` (40 bots) are what a NEW
  * installation receives. Shipping all 88 makes every fresh install inherit this machine's

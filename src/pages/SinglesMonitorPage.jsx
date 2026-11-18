@@ -47,9 +47,9 @@ export default function SinglesMonitorPage() {
   const [countdown, setCountdown] = useState(null);
 
   /**
-   * AUTO-PICK A SYMBOL (owner, 2026-11-07: *"This page doesn't load a symbol by default … lets
+   * AUTO-PICK A SYMBOL (owner directive, 2026-11-07): This page doesn't load a symbol by default … lets
    * automatically load one that has had recent activity, I will let you choose which data value is
-   * best for that"*).
+   * best for that).
    *
    * CHOSEN VALUE: **most recently scored**. `/api/scoring/recently-analysed` is ordered by scoring
    * time, so its first row is the symbol the pipeline touched last — the one most likely to have a

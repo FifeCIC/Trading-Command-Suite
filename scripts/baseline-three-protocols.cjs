@@ -2,8 +2,8 @@
 /**
  * baseline-three-protocols.cjs — the shipped three, measured on the canonical window.
  *
- * Owner, 2026-11-02: *"goal to make the 3 whole strategies profit regularly… When backtesting
- * protocols shows that plenty signals will be generated we will move onto Backtesting Strategies."*
+ * Owner directive, 2026-11-02: goal to make the 3 whole strategies profit regularly… When backtesting
+ * protocols shows that plenty signals will be generated we will move onto Backtesting Strategies.
  *
  * So the FIRST question is not profit, it is SIGNALS: does the protocol produce enough entries to
  * even be judged? A protocol that scores every bar and never crosses its threshold is not a bad

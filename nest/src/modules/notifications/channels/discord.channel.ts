@@ -441,10 +441,10 @@ export class DiscordChannel {
   /**
    * buildFeedEmbed() — ONE layout for all three public message kinds.
    *
-   * Owner, 2026-11-12: *"The messages sent to Discord for signals, wins and losses aren't layed out
+   * Owner directive, 2026-11-12: The messages sent to Discord for signals, wins and losses aren't layed out
    * the same… a uniformal approach should be applied and ensure that both protocol and bot is
    * included. Put the information on additional lines too and maybe we could use rocket emoji on a
-   * $50 profit."*
+   * $50 profit.
    *
    * ⚠️ WHY THIS IS ONE FUNCTION AND NOT THREE BRANCHES. It used to build a SIGNAL embed with NO
    * fields at all and a closed-trade embed with ONE (`Profit`), so a single feed produced two

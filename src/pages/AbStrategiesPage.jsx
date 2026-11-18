@@ -13,9 +13,9 @@
  *   /trading/ab-strategies?test=<id>           → an OFFICIAL test: control vs variant snapshots,
  *                                                the recorded change, and the measured configs.
  *
- * ⚠️ THE SYMBOL IS THE CONSTANT (owner, 2026-09-22): *"A/B testing of strategies is not meant to be
+ * ⚠️ THE SYMBOL IS THE CONSTANT (owner directive, 2026-09-22): A/B testing of strategies is not meant to be
  * different symbols... The symbol is the one thing that isn't to change when we copy a strategy for
- * A/B testing."* A pair must therefore trade the SAME market: what varies between a strategy and
+ * A/B testing. A pair must therefore trade the SAME market: what varies between a strategy and
  * its copy is the playbook (protocol / timeframe / execution policy), never the symbol. Two
  * strategies on DIFFERENT symbols are independent — framing them as "A vs B" would claim a copy
  * lineage that does not exist — so a cross-symbol link is REFUSED with the reason, never silently
@@ -392,8 +392,8 @@ function PairSide({ side, strategy, name }) {
 
 /**
  * PairTable — the index as a TABLE: one pair = TWO rows (A shaded, B plain) carrying each side's
- * realised record, orderable by the profit difference (B − A). Owner, 2026-09-22: *"a table... all
- * A and B rows together — two rows, slightly different shading"* + *"order by profit difference
+ * realised record, orderable by the profit difference (B − A). Owner directive, 2026-09-22: a table... all
+ * A and B rows together — two rows, slightly different shading + *"order by profit difference
  * between the A's and the B's in order to determine the best B out of ALL B's"*.
  *
  * ⚠️ WHAT THE P&L COLUMNS ARE — AND ARE NOT. They are REALISED closes attributed to the strategy's
@@ -652,8 +652,8 @@ export default function AbStrategiesPage() {
     ?? key.slice(0, 8);
 
   // EVERY eligible pair, for the index. `?pair=` is a drill-down INTO this set, never a substitute
-  // for it — owner, 2026-09-22: "the view is designed to list all pairs... not a comparison for
-  // one pair".
+  // for it — owner directive, 2026-09-22: the view is designed to list all pairs... not a comparison for
+  // one pair.
   const pairGroups = useMemo(() => buildPairs(strategies), [strategies]);
   const totalPairs = pairGroups.reduce((n, g) => n + g.pairs.length, 0);
 
@@ -938,9 +938,9 @@ export default function AbStrategiesPage() {
                 </button>
               </div>
             </div>
-            {/* ⚠️ MOVED INTO THE ℹ POPOVER (2026-11-07). Owner: *"Move <p.listMeta>115 eligible pairs ·
+            {/* ⚠️ MOVED INTO THE ℹ POPOVER (2026-11-07). Owner directive: Move <p.listMeta>115 eligible pairs ·
                 every pair trades ONE symbol… to an information popout like we have on many other
-                pages now"*. The count is still on screen in the group headings below and in the
+                pages now. The count is still on screen in the group headings below and in the
                 pair list itself; this paragraph was three clauses of method (one-symbol rule, the
                 current ordering, the shown/total split) sitting above the thing it described.
                 `aria-live` keeps the ordering announcement audible while it is behind a trigger —
@@ -1117,8 +1117,8 @@ export default function AbStrategiesPage() {
 
       {/*
         EXPERIMENT DECISIONS — the answer to "what do I DO about these tests?" (#1201).
-        Owner, 2026-11-06: "agentic AI needs to be able to pick up A/B tests and decide how to
-        proceed, else we will have clutter and strategies that run for months needlessly."
+        owner directive, 2026-11-06: agentic AI needs to be able to pick up A/B tests and decide how to
+        proceed, else we will have clutter and strategies that run for months needlessly.
 
         ⚠️ THREE STATES, NEVER TWO. "Nothing needs a decision", "the check failed" and "still
         loading" must never render the same — collapsing them is how a dead experiment stays

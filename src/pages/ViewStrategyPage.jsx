@@ -495,7 +495,7 @@ function BotRecord({ query, row }) {
 /**
  * RouteAccountPanel — which BROKER BRIDGE fills this bot's orders, and the way to re-select it.
  *
- * WHY IT EXISTS (owner, 2026-10-11): *"when we view a bot there is no way to re-select a broker"* —
+ * WHY IT EXISTS (owner directive, 2026-10-11): when we view a bot there is no way to re-select a broker —
  * asked while the Pepperstone demo the bot's symbol was routed to had expired. Two facts were true
  * at once, and neither was visible anywhere near the bot:
  *
@@ -1169,7 +1169,7 @@ export default function ViewStrategyPage() {
 
       {/* WHERE THE BOT'S ORDERS ACTUALLY GO — the account is chosen per SYMBOL (symbol_route),
           not per bot, and nothing on this page said which bridge fills them or how to move them
-          (owner, 2026-10-11: "no way to re-select a broker"). Mt5-venue bots only; a bot on
+          (owner directive, 2026-10-11: no way to re-select a broker). Mt5-venue bots only; a bot on
           another venue does not travel through `symbol_route` at all. */}
       {bot.brokerId === 'mt5' && <RouteAccountPanel bot={bot} />}
 

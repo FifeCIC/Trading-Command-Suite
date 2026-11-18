@@ -370,7 +370,7 @@ export default function StrategyLibraryPage() {
                   <section className="sl-section">
                     <h3>Overview</h3>
                     <div className="sl-prose">{strategy.overview}</div>
-                    {/* The OPTIONAL live half (owner, 2026-11-18). Rendered only when the strategy
+                    {/* The OPTIONAL live half. Rendered only when the strategy
                         declares one, so a theory page never links to a route that does not exist —
                         and the link is a real <a>, outside the card's toggle <button>, because a
                         link nested inside a button is neither valid nor keyboard-operable. */}

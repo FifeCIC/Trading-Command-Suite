@@ -80,8 +80,8 @@ function versionsAgree(a, b) {
 /**
  * stageBlocks(next, stage) — does moving to `next` contradict the DECLARED release stage?
  *
- * ⚠️ WHY THIS EXISTS. Owner, 2026-11-09: *"I've decided the project is still in alpha so lets not
- * move onto 1.0.0 just yet."* That is a decision, and a decision nobody can violate by running the
+ * ⚠️ WHY THIS EXISTS. Owner directive, 2026-11-09: I've decided the project is still in alpha so lets not
+ * move onto 1.0.0 just yet. That is a decision, and a decision nobody can violate by running the
  * normal command is not recorded — it is a preference. `bump-version.cjs` was the exact command that
  * could undo it, silently, in one word (`major`).
  *

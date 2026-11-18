@@ -214,10 +214,10 @@ function HScroll({ children, label }) {
 }
 
 /* ── MT5 Portfolio Summary ──
-   Owner, 2026-11-06: *"Surely we can add more information … Lets hide some of that additional
+   Owner directive, 2026-11-06: Surely we can add more information … Lets hide some of that additional
    information if the widget is too small for it. Rather than just relying on scroll bar lets add
    buttons for scrolling information sideways. Also position the information so it's always two
-   rows. Right now it's one with a lot of empty space below each piece of data."*
+   rows. Right now it's one with a lot of empty space below each piece of data.
    So: TWO rows (the column count is derived from the item count, so it cannot drift back into one
    row), ◀ ▶ buttons only when the row is wider than the tile, and the least load-bearing figure
    drops out below a container width where it would be unreadable. */
@@ -855,9 +855,9 @@ function HotPicksWidget() {
             {/* Colour = the SERVER's classification (`pick.signal`), not a remembered 0-100 bar.
                 Measured 2026-09-20: ranked `score` is 29-57 — a display number with no owning bar,
                 and the client never re-derives a classification from a number (#847). */}
-            {/* ⚠️ THE NUMBER NEEDED A UNIT (owner, 2026-11-06: *"right now there's some very small
+            {/* ⚠️ THE NUMBER NEEDED A UNIT (owner directive, 2026-11-06): right now there's some very small
                 numbers listed, not sure if its the SIGNAL score which is often low or it's a
-                percentage without the %"*). It is the SEES composite score out of 100 from
+                percentage without the %). It is the SEES composite score out of 100 from
                 `/api/scoring/ranked` — not a percentage — and composites are compressed, which is why
                 29-57 looks low. Shown as `n/100` with the signal named beside it so the number cannot
                 be read as a confidence percentage. */}

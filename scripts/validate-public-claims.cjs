@@ -3,8 +3,8 @@
  * validate-public-claims.cjs — the public pages must state facts the repository can prove.
  *
  * ── WHY THIS EXISTS ─────────────────────────────────────────────────────────────
- * Owner, 2026-11-09: *"apply alpha to github pages and wiki … we need to cleanup better as the app's
- * file management has been unprofessional."*
+ * Owner directive, 2026-11-09: apply alpha to github pages and wiki … we need to cleanup better as the app's
+ * file management has been unprofessional.
  *
  * Two claims on the public surfaces were already wrong, and both were wrong in a way nothing could
  * catch, because a public page is the one surface no other validator reads:

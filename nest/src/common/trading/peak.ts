@@ -4,8 +4,8 @@
  *
  * ── WHY THIS EXISTS ──
  *
- * Owner, 2026-09-25: *"another later-afternoon to evening drift into the red after sitting with
- * profit… it was steady and we bled that instead of slowly bringing trailing stop up."*
+ * Owner directive, 2026-09-25: another later-afternoon to evening drift into the red after sitting with
+ * profit… it was steady and we bled that instead of slowly bringing trailing stop up.
  *
  * Measured that day: FOUR positions were in profit and closed red, three of them by the time
  * stop, and two indices surrendered ~90% of their best move. But **none of that was readable

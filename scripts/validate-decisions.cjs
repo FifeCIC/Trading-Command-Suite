@@ -6,8 +6,8 @@
  *
  * WHY THIS EXISTS
  * ---------------
- * Owner, 2026-09-24: *"make decisions. With those decisions written into issues and doc comments.
- * We can easily find them and change them if they aren't working out so well."*
+ * Owner directive, 2026-09-24: make decisions. With those decisions written into issues and doc comments.
+ * We can easily find them and change them if they aren't working out so well.
  *
  * "Easily find them" and "change them" are both **findability** properties, and findability is
  * exactly the kind of property that decays silently. So two things are checked:

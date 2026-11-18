@@ -74,9 +74,9 @@ export const NAV_TREE = {
     views: [
       { id: 'active-symbols', label: 'Active Symbols', icon: '★' },
       { id: 'user-watchlists', label: 'Watchlists', icon: '⊞' },
-      // #1297 — the movers question BOUNDED BY OUR OWN UNIVERSE. Owner, 2026-11-18: *"[Our registered
+      // #1297 — the movers question BOUNDED BY OUR OWN UNIVERSE. Owner directive, 2026-11-18: [Our registered
       // symbols] can be moved to a new page in the Watchlists area … as they're two totally different
-      // concepts."* It belongs here because a symbol is "ours" by virtue of
+      // concepts. It belongs here because a symbol is "ours" by virtue of
       // `symbol_protocol_assignment`, which is a Watchlists concern; the unbounded, market-wide
       // question stayed in Development.
       { id: 'registered-movers', label: 'Registered Movers', icon: '🏆' },
@@ -474,10 +474,10 @@ export const NAV_TREE = {
   // so Development's explanatory notes appeared to describe Appearance. A comment block and the entry
   // it explains must stay adjacent.
   //
-  // ⚠️ SAMPLE VIEWS MUST USE THIS APP'S OWN REAL DATA. Owner, 2026-10-13: *"I sometimes mention using
+  // ⚠️ SAMPLE VIEWS MUST USE THIS APP'S OWN REAL DATA. Owner directive, 2026-10-13: I sometimes mention using
   // dummy/demo data. I don't want that applied actually. Only use this apps own real data to create
   // examples but when we update React Stack Core (my boilerplate) we will convert them to a variety of
-  // topics with demo data."* So a gallery example renders a REAL view of this app — never a fixture.
+  // topics with demo data. So a gallery example renders a REAL view of this app — never a fixture.
   // Invented content here would be indistinguishable from a working feature, which is the defect this
   // repo has already paid for more than once.
   //
@@ -552,12 +552,12 @@ export const NAV_TREE = {
       // is an EXPERIMENT first: does seeing the exit reasons help, or is it noise? Register row 36
       // constrains how it may be framed (a thin funnel is not a fault), not whether it exists.
       { id: 'blocked-signals', label: 'Blocked Signals', icon: '🚦' },
-      // #1190 — the trend READING experiment (owner, 2026-11-03: *"do this as an experimental feature"*).
+      // #1190 — the trend READING experiment (owner directive, 2026-11-03): do this as an experimental feature).
       // Development because it is an experiment first: does seeing the fitted line and the invalidation
       // level help you judge a score, or is it noise? Observation only — nothing in scoring reads it.
       { id: 'trend-reading', label: 'Trend Reading', icon: '📐' },
-      // #1281 — the market-wide movers feed. Owner, 2026-11-15: *"I would like to see a list of all
-      // the winners and losers and how TCS is treating them…"*, narrowed 2026-11-18: *"can then focus
+      // #1281 — the market-wide movers feed. Owner directive, 2026-11-15: I would like to see a list of all
+      // the winners and losers and how TCS is treating them…, narrowed 2026-11-18: *"can then focus
       // on being fed by a live market feed of the top winners and losers"*. The treatment half moved
       // to `/watchlists/registered-movers`; what is left here is the unbounded discovery question,
       // which stays in Development because it began as an experiment and the strategy on top of it is

@@ -92,8 +92,8 @@ function classifyStorage({ scored, snapshotted, reachable }) {
 /**
  * `--compare <slugA> <slugB>` — the CONTROL/VARIANT report for a copied configuration.
  *
- * ⚠️ WHY THIS IS A FLAG AND NOT A NEW TOOL (owner, 2026-11-03: *"consider how realistic it is at this
- * point to continue adding complexity"*). The comparison needs exactly what this file already
+ * ⚠️ WHY THIS IS A FLAG AND NOT A NEW TOOL (owner directive, 2026-11-03): consider how realistic it is at this
+ * point to continue adding complexity). The comparison needs exactly what this file already
  * queries — both protocols' stored scores, tick counts, and per-directive breakdowns. A second tool
  * would duplicate the connection layer, the staleness rules and the parser, and only one of the two
  * copies would get the next fix. One flag, one entry point.

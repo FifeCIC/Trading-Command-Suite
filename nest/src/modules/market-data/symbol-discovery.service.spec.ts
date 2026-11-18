@@ -1,9 +1,9 @@
 /**
  * symbol-discovery.service.spec.ts — the rule the owner stated, pinned so it cannot be softened.
  *
- * Owner, 2026-11-18: *"they just won't be set as active until the users actions or a bot trades …
+ * Owner directive, 2026-11-18: they just won't be set as active until the users actions or a bot trades …
  * We cannot activate every symbol that appears in top losers or top winners else by the end of a month
- * we'll have hundreds of active symbols being monitored."*
+ * we'll have hundreds of active symbols being monitored.
  *
  * ⚠️ THE FAILURE THIS GUARDS IS THE QUIET ONE. An `upsert` with `update: { active: false }` would
  * DEACTIVATE a symbol the owner had activated — silently, on every re-discovery — which removes it from

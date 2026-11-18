@@ -4,11 +4,7 @@ import './strategy-live.css';
 /**
  * MostActivePage — the "Most active" list as RESEARCH, not as a strategy.
  *
- * Owner, 2026-11-18: *"Now we're going to also create a new page in the Research area for Most Active
- * … which I'm tempted to turn into a strategy but I'm not sure what the strategy would be: it seems
- * like a potential list of volatile stocks and not really always trending strongly."*
- *
- * ── WHY THIS IS RESEARCH AND NOT A STRATEGY PAGE ───────────────────────────────────────────────
+ * --- WHY THIS IS RESEARCH AND NOT A STRATEGY PAGE -------------------------------------------------
  * The owner's own suspicion is correct, and it is worth writing down so nobody "promotes" this later
  * without answering it: **volume is not direction.** "Top gainers" and "top losers" are ranked by a
  * SIGNED move, so each carries an implied side. "Most active" is ranked by an UNSIGNED quantity — a

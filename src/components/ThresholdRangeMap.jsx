@@ -2,9 +2,9 @@
  * ThresholdRangeMap — the NUMBERS map, not the steps map (#1275).
  * ==============================================================
  *
- * Owner, 2026-11-14: *"I wanted all steps, all possible decisions, to be clearly mapped in the
+ * Owner directive, 2026-11-14: I wanted all steps, all possible decisions, to be clearly mapped in the
  * Diagrams page and architecture documentation: the idea is to form the connections that clarify an
- * algorithm essentially."*
+ * algorithm essentially.
  *
  * ⚠️ WHY THIS IS NOT A FLOWCHART, AND WHY THAT MATTERS.
  * The Diagrams page already draws every step and every branch of the pipeline — including the gate

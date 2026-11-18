@@ -11,9 +11,9 @@ import {
  * BacktestExperimentsPanel — the registry that #1295 found was 0.75% adopted.
  *
  * ── WHY THIS PAGE EXISTS ────────────────────────────────────────────────────────────────────────
- * Owner, 2026-11-18: *"Are you registering all A/B tests somewhere so they can be tracked by both
+ * Owner directive, 2026-11-18: Are you registering all A/B tests somewhere so they can be tracked by both
  * user and agentic AI rather than forgotten about? I'm concerned at the huge amount of tests being
- * built… I can't afford to spend tokens for every step."*
+ * built… I can't afford to spend tokens for every step.
  *
  * Measured before this: 1,722 backtest runs, **13** filed into an experiment, and 6 of 11
  * experiments were empty shells. The automation registry already had a page (`/trading/ab-strategies`);

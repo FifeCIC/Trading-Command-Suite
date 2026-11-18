@@ -20,8 +20,8 @@ import { SessionTag, ALL_HOURS_VALUE } from './session-window';
  * WHAT:      The generated fleet is loaded from a LOCAL, GITIGNORED file (`strategy-seed-generated.
  *            local.ts`) and never committed. The repository ships only `HAND_AUTHORED_TRADING_
  *            STRATEGIES`.
- * WHY:       Owner, 2026-11-13: *"Our installation data needs to be strong but not all of my protocols
- *            and all of my bots: avoid giving away all strategies."* The repo is PUBLIC — verified
+ * WHY:       Owner directive, 2026-11-13: Our installation data needs to be strong but not all of my protocols
+ *            and all of my bots: avoid giving away all strategies. The repo is PUBLIC — verified
  *            `"visibility":"PUBLIC"` — and commit `24e70aeb` published **72 bot definitions** with every
  *            size, threshold, stop and session window in them. That was my landing for #1258, which
  *            generated the seed "*so a reinstall restores all 75 bots*" without asking whether a public

@@ -259,9 +259,9 @@ export function everyCadenceStale(
  * ── DECISION (2026-11-13, owner) ──
  * WHAT:      Score on the FINEST cadence that has fresh data, instead of scoring the protocol's
  *            base cadence when that base is stale.
- * WHY:       Owner, 2026-11-13: *"Scoring old data is pointless … That's almost like saying we've
+ * WHY:       Owner directive, 2026-11-13: Scoring old data is pointless … That's almost like saying we've
  *            designed it to score for the sake of it. We're developing an app that should be seeking
- *            the next best update as the market changes every second of the day."* Measured cost of
+ *            the next best update as the market changes every second of the day. Measured cost of
  *            the old behaviour: 108 GER40 snapshots in two hours, EVERY ONE a composite of 89, all
  *            computed from a base `1m` series frozen 7.6 hours earlier — a constant score feeding six
  *            `auto` bots whose entry threshold is 10. A frozen bar does not score low; it scores the

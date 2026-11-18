@@ -124,8 +124,8 @@
 .t212p-hint--stale { color: var(--color-warning); font-weight: 600; }
 
 /* ── Grand total — now the FIRST TILE of the summary grid ───────────────────────────────────────
-   ⚠️ WAS its own full-width row above the grid (owner, 2026-11-06: *"a lot of area for a small amount
-   of information"*). The dead `.t212p-grand-total` / `.t212p-grand-label` / `.t212p-grand-value` rules
+   ⚠️ WAS its own full-width row above the grid (owner directive, 2026-11-06): a lot of area for a small amount
+   of information). The dead `.t212p-grand-total` / `.t212p-grand-label` / `.t212p-grand-value` rules
    were removed with it. As a tile it reads with the figures it relates to instead of taking a whole
    line to itself.
    ⚠️ Accent border, not accent text: this is the one number that spans EVERY enabled account, while

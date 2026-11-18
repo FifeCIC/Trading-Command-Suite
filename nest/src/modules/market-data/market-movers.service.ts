@@ -2,10 +2,10 @@
  * market-movers.service.ts — a MARKET-WIDE winners/losers feed, from a ready-made provider (#1283).
  *
  * ── WHY THIS IS SEPARATE FROM `getTopMovers()` ──
- * Owner, 2026-11-16: *"we would ideally use a ready made source of top movers: top winners and top
+ * Owner directive, 2026-11-16: we would ideally use a ready made source of top movers: top winners and top
  * losers. It doesn't make sense to only process our registered symbols for the strategy I want the
  * app to support. That doesn't mean it's not a good idea to have a page that shows us the top movers
- * out of the symbols that are registered — those are two separate purposes/features."*
+ * out of the symbols that are registered — those are two separate purposes/features.
  *
  * They are two different questions and must not share an implementation:
  *

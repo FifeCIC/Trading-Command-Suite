@@ -2,8 +2,8 @@
  * MoversTreatmentPage — the MARKET-WIDE question: what is moving anywhere, that we are not watching?
  * =================================================================================================
  *
- * Owner, 2026-11-18: *"We need to separate [Our registered symbols] and [Market-wide] as they're two
- * totally different concepts."* … *"[this page] can then focus on being fed by a live market feed of
+ * Owner directive, 2026-11-18: We need to separate [Our registered symbols] and [Market-wide] as they're two
+ * totally different concepts. … *"[this page] can then focus on being fed by a live market feed of
  * the top winners and losers."*
  *
  * ── THE SPLIT, AND WHICH HALF LIVES WHERE ────────────────────────────────────────────────────────
@@ -24,8 +24,8 @@
  * has no treatment to show.
  *
  * ── ⚠️ THE STRATEGY IS A STATUS, NOT A PANEL ──
- * Owner, 2026-11-18: *"which basically constitutes a status (do not need all the text displayed until
- * the user hovers over the status)."* It stays on THIS page because this is where the discovery side
+ * Owner directive, 2026-11-18: which basically constitutes a status (do not need all the text displayed until
+ * the user hovers over the status). It stays on THIS page because this is where the discovery side
  * of the strategy is being built; the Watchlists page is an operational view.
  *
  * ── ⚠️ WITHHELD FROM OTHER USERS BY DEFAULT ──

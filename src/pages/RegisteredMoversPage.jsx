@@ -2,7 +2,7 @@
  * RegisteredMoversPage — "today's biggest movers WE HOLD, and what TCS actually did about each".
  * =============================================================================================
  *
- * Owner, 2026-11-18: *"[Our registered symbols] can be moved to a new page in the Watchlists area"* …
+ * Owner directive, 2026-11-18: [Our registered symbols] can be moved to a new page in the Watchlists area …
  * *"as they're two totally different concepts."* This is that page. The market-wide question — what is
  * moving anywhere that we are NOT looking at — stayed on `/development/movers-treatment`, which is a
  * live market feed rather than a question about our own universe.
@@ -30,14 +30,14 @@
  * is the "plausible output, no error" failure this repo keeps re-paying for.
  *
  * ── ⚠️ THE STRATEGY IS A STATUS, NOT A PANEL ──
- * Owner, 2026-11-18: *"which basically constitutes a status (do not need all the text displayed until
- * the user hovers over the status)."* It was three paragraphs of explanation above the data. It is now
+ * Owner directive, 2026-11-18: which basically constitutes a status (do not need all the text displayed until
+ * the user hovers over the status). It was three paragraphs of explanation above the data. It is now
  * one `StatusCard` whose justification is on demand. The reason it is INACTIVE is still stated — a
  * capability that silently vanishes is worse than one that is visibly not ready (#1277) — it is just
  * no longer the loudest thing on the page.
  *
  * ── ⚠️ NO VISIBLE PAGE TITLE ──
- * Owner, 2026-11-18: *"Remove Element: <h2> Movers & Treatment"* — the nav and the breadcrumb already
+ * Owner directive, 2026-11-18: Remove Element: <h2> Movers & Treatment — the nav and the breadcrumb already
  * say where you are, so a third copy is chrome. `<h1 className="sr-only">` keeps the accessibility
  * requirement (*"Every page MUST have exactly one <h1>"*) satisfied without drawing it; the
  * explanation that used to sit under the title moved behind the ℹ.

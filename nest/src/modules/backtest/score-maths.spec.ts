@@ -443,8 +443,8 @@ describe('tradeTotals — profit capture', () => {
   });
 
   /**
-   * The MONEY pair (owner, 2026-11-04): *"money values telling me the theoretic trading outcome if we
-   * took profit at the highest value of each position as recorded."*
+   * The MONEY pair (owner directive, 2026-11-04): money values telling me the theoretic trading outcome if we
+   * took profit at the highest value of each position as recorded.
    *
    * canary: drop the `- commissionSafe` term and the commission case fails; accept a missing
    * `positionSize` as 0 and the "excluded, not zeroed" case fails.

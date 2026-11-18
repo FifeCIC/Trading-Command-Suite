@@ -137,8 +137,8 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   '/trading/trading-plans',
 
   // ── Pack 8: the movers pair (2026-11-18) ──────────────────────────────────────────────────────
-  // Owner: *"this new page should be set as hidden from other users among the other pages that are
-  // only seen on my system. Can we set a rule for any new pages to default to that state."*
+  // Owner directive: this new page should be set as hidden from other users among the other pages that are
+  // only seen on my system. Can we set a rule for any new pages to default to that state.
   //
   // ⚠️ THE RULE IS NOW ENFORCED, NOT REMEMBERED. `scripts/validate-page-visibility.cjs` runs in
   // `prebuild` and FAILS when a nav-visible route is in neither this set nor the frozen baseline of
@@ -153,8 +153,8 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   '/development/movers-treatment',
 
   // ── Pack 9: the Strategies area (2026-11-18) ───────────────────────────────────────────────────
-  // Owner: *"I would like a Strategies area (again)! … The area will list all strategies in a separate
-  // category in its left hand menu for quick access."* The area itself is wanted; what is WITHHELD is
+  // Owner directive: I would like a Strategies area (again)! … The area will list all strategies in a separate
+  // category in its left hand menu for quick access. The area itself is wanted; what is WITHHELD is
   // the two custom live views and the Research page, because their numbers describe strategies that
   // have no protocol yet — the same reason as the movers pair above.
   //
@@ -174,8 +174,8 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
 /**
  * OWNER_SEES_WITHHELD — the curator switch for `filterHiddenViews`.
  *
- * Owner, 2026-11-06: *"Reminder that hiding pages is for other users only and I want to be able to
- * see them."* Before this constant, `DEFAULT_HIDDEN_ROUTES` removed the entry from HIS rail too, so
+ * Owner directive, 2026-11-06: Reminder that hiding pages is for other users only and I want to be able to
+ * see them. Before this constant, `DEFAULT_HIDDEN_ROUTES` removed the entry from HIS rail too, so
  * every "hide" also hid the page from the person deciding it needed work.
  *
  * ⚠️ IT IS `true` FOR EVERYONE RIGHT NOW, and that is a KNOWN, TEMPORARY gap rather than a design:
@@ -371,8 +371,8 @@ export function filterHiddenViews(tree, hiddenRoutes, { keepWithheld = false } =
      renders on every page) does not allocate for nothing. */
   const scoped = stripHiddenAreas(tree);
   if (!hiddenRoutes || hiddenRoutes.size === 0) return scoped;
-  /* ⚠️ CURATOR MODE (owner, 2026-11-06): *"hiding pages is for other users only and I want to be able
-     to see them"* … *"change the colour of the text in the menu for pages that will be hidden for
+  /* ⚠️ CURATOR MODE (owner directive, 2026-11-06): hiding pages is for other users only and I want to be able
+     to see them … *"change the colour of the text in the menu for pages that will be hidden for
      other users so I know which ones still need work done to them."*
      So a withheld view is KEPT and TAGGED (`withheld: true`) rather than removed; the rail colours
      the tag. Nothing else about the tree changes. */

@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPatch, apiDelete } from '../core/api/client';
 import { feedUnavailable } from '../core/api/feed-state.js';
 import PageInfoPopover from '../components/PageInfoPopover';
+import SuggestionQueue from '../components/SuggestionQueue';
 import { getProtocolType, getProtocolTiming } from '../core/protocol-utils';
 import { timeAgo, formatDateTime } from '../core/format-utils';
 import './protocols-page-b.css';
@@ -262,8 +263,8 @@ export default function ProtocolsPageB({ initialProtocolId }) {
     if (hideInactive) list = list.filter(p => p.active !== false);
     // Sort
     //
-    // ⚠️ `focus-first` is the DEFAULT (#1187). The owner, 2026-11-03: *"I want our focus ones to be
-    // more prominent in much of our other work and when I do manual testing."* With every protocol
+    // ⚠️ `focus-first` is the DEFAULT (#1187). The owner directive, 2026-11-03: I want our focus ones to be
+    // more prominent in much of our other work and when I do manual testing. With every protocol
     // activated on the same day, `active-first` separates nothing — it leaves the list in whatever
     // order the API returned, and a manual test starts by scrolling past 45 protocols nobody is
     // working on. Focus rank is the only thing that distinguishes them.
@@ -536,6 +537,19 @@ export default function ProtocolsPageB({ initialProtocolId }) {
                   </button>
                 </div>
               </div>
+
+              {/*
+                ── QUEUED CHANGES FOR THIS PROTOCOL (owner, 2026-11-18) ──────────────────────────────
+                Placed directly under the header, not at the bottom, because it answers "what are we
+                about to try on this protocol?" — a question about the protocol's identity, not a
+                footnote. It also lists this protocol's SUBSCRIBING BOTS' suggestions (one call to
+                GET /api/suggestions/protocol/:slug), so a protocol change and the bot change it
+                depends on are read together instead of on two different pages.
+              */}
+              <SuggestionQueue
+                protocolSlug={selectedProto.slug}
+                title="Queued changes — this protocol and its bots"
+              />
 
               {/* Adaptive Target detail — shown whenever it's ON, and whenever the
                   operator tried to enable it and was refused. The point is that a reader

@@ -692,8 +692,8 @@ export default function T212PortfolioPage() {
   return (
     <div className="t212p-page">
       {/* ── ONE summary block ──────────────────────────────────────────────────────────────────
-          ⚠️ THE TOP OF THIS PAGE WAS MOSTLY AIR (owner, 2026-11-06: *"the top area is low value
-          right now … a space at the top that's too big"*). Four stacked full-width rows — a header
+          ⚠️ THE TOP OF THIS PAGE WAS MOSTLY AIR (owner directive, 2026-11-06): the top area is low value
+          right now … a space at the top that's too big). Four stacked full-width rows — a header
           whose only child is an `h1` the shell HIDES, the grand total, a hint paragraph and a
           LastUpdated line — each costing its own margin to say very little, and all of it leaving the
           right half of the page empty. Measured: the page began at y=191 and the grand total at y=239,
@@ -736,8 +736,7 @@ export default function T212PortfolioPage() {
 
           {investActive && (
             <>
-              {/* ⚠️ THE TILES DID NOT ADD UP, and the labels were the reason (owner, 2026-11-06:
-                  *"we have Invested and cash shows zero so not sure about the maths"*).
+              {/* ⚠️ THE TILES DID NOT ADD UP, and the labels were the reason (owner directive, 2026-11-06): we have Invested and cash shows zero so not sure about the maths).
                   Measured against `/api/portfolio/trading212/validate`:
                     Σ(quantity × avgPrice)    = 11,835.92 = `invested`
                     Σ(quantity × currentPrice)=  8,675.38 = `total`
@@ -790,10 +789,10 @@ export default function T212PortfolioPage() {
       </section>
 
       {/* ── Combined positions (all enabled accounts + MT5) ─────────────────────────────────────
-          ⚠️ THE HOVER IS THE FEATURE, NOT THE ROW (owner, 2026-11-06): *"The tables hover over row
+          ⚠️ THE HOVER IS THE FEATURE, NOT THE ROW (owner directive, 2026-11-06): The tables hover over row
           changes display the same information and its not even inline with columns … Expand on the
           hover over approach before we pack the initial rows of the table full of information which
-          doesn't have a lot of room for that."*
+          doesn't have a lot of room for that.
           So the six columns stay exactly as they were, and a detail row opens UNDER the hovered row —
           full table width, so every fact lines up with the columns above it instead of floating in a
           browser tooltip. Keyboard reaches it too: focusing the row opens the panel, Escape closes it.
@@ -821,7 +820,7 @@ export default function T212PortfolioPage() {
             {/*
               ⚠️ A STALE SNAPSHOT MUST NOT READ AS CURRENT HOLDINGS (2026-11-18).
 
-              Owner: *"The table has numerous symbols that I do not have in any of my accounts."*
+              Owner directive: The table has numerous symbols that I do not have in any of my accounts.
               They were right that the rows did not match the account, and the reason was not demo
               data: the Trading212 rows are a DB SNAPSHOT written by an import, and nothing on this
               page said WHEN it was taken or that it is not a live read. A 3-month-old snapshot and a

@@ -310,9 +310,9 @@ describe('DiscordChannel — public feed policy', () => {
   });
 
   /**
-   * ⚠️ THE LAYOUT IS THE FEATURE (owner, 2026-11-12): *"The messages sent to Discord for signals,
+   * ⚠️ THE LAYOUT IS THE FEATURE (owner directive, 2026-11-12): The messages sent to Discord for signals,
    * wins and losses aren't layed out the same… a uniformal approach should be applied and ensure
-   * that both protocol and bot is included."*
+   * that both protocol and bot is included.
    *
    * These tests exist because the OLD defect was invisible: two of the three kinds had a different
    * number of fields, and nothing failed. A published message cannot be un-published, so the shape

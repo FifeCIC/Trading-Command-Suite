@@ -1,8 +1,8 @@
 /**
  * agent-paths.cjs — ONE place that knows where agent material lives.
  *
- * Owner, 2026-11-16: *"Ideally they would all be part of one library anyway where they're easy to
- * manage. I think we have a lot of discussion notes/roadmapping/agent rules scattered."*
+ * Owner directive, 2026-11-16: Ideally they would all be part of one library anyway where they're easy to
+ * manage. I think we have a lot of discussion notes/roadmapping/agent rules scattered.
  *
  * This module is that library's index. Every script asks it for a file instead of hard-coding
  * `.github/…`, so moving the library again is a change to ONE constant.

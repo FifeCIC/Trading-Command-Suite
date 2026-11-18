@@ -263,8 +263,8 @@ export default function SignalCard({ envelope, dismissHours, onDismissed, defaul
                 * The percentage above divides by the protocol's FULL directional capacity; this
                 * divides by the capacity that actually READ. Both are true, they answer different
                 * questions, and showing only the first made a diluted denominator look like a dead
-                * market (owner, 2026-10-13: "a whole bunch of directives score low, always, as if
-                * the market data never shows a good opportunity").
+                * market (owner directive, 2026-10-13: a whole bunch of directives score low, always, as if
+                * the market data never shows a good opportunity).
                 *
                 * ⚠️ DISPLAY ONLY. `envelope.signal` (server-owned) still decides BUY/HOLD/SELL and
                 * the pre-trade gate is untouched. Conviction RISES on a quiet tick — inherent to

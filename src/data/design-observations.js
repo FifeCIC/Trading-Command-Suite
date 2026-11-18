@@ -4,8 +4,8 @@
  *
  * WHY THIS EXISTS (review row R21, answered 2026-09-24; issue #990)
  * -----------------------------------------------------------------
- * Owner, 2026-09-24: *"Are we noting observations for review and consideration? This is important for
- * re-considering designs."*
+ * Owner directive, 2026-09-24: Are we noting observations for review and consideration? This is important for
+ * re-considering designs.
  *
  * The honest answer at the time was **no**. Three homes existed and this observation was in none of
  * the reviewable ones:

@@ -63,8 +63,8 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
   // ═══════════════════════════════════════════════════════════════════════════════════════════
   // CLASS 1 — ACTIVITY AND TRADING HISTORY: SHORT.
   //
-  // Owner, 2026-10-04: *"When I said 60 days I meant general trading history and app activity —
-  // not strictly meaning everything or including bars for backtesting."*
+  // Owner directive, 2026-10-04: When I said 60 days I meant general trading history and app activity —
+  // not strictly meaning everything or including bars for backtesting.
   //
   // These tables describe WHAT THE APP DID. Nothing downstream reads them as input, so their depth
   // buys nothing but diagnostics, and a recent window is enough to answer "what happened?" about
@@ -116,9 +116,9 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
   // ═══════════════════════════════════════════════════════════════════════════════════════════
   // CLASS 2 — EVIDENCE FOR BACKTESTING: LONG.
   //
-  // Owner, 2026-10-04: *"I understand the benefit of storing a year or even more of bar data and
+  // Owner directive, 2026-10-04: I understand the benefit of storing a year or even more of bar data and
   // potentially key news headlines, articles etc. For the purpose of backtesting relevant
-  // directives that read that."*
+  // directives that read that.
   //
   // ⚠️ **THE REASON IS OPPOSITE TO CLASS 1.** These tables are not a record of what the app did —
   // they are **INPUTS A DIRECTIVE READS**. A directive declares how much history it needs
@@ -138,9 +138,9 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
 
   // ══ NEWS — DELIBERATELY UNBOUNDED, and that IS the owner's ask. Read before adding a bound. ══
   //
-  // Owner, 2026-10-04: *"I understand the benefit of storing a year or even more of bar data and
+  // Owner directive, 2026-10-04: I understand the benefit of storing a year or even more of bar data and
   // potentially key news headlines, articles etc. For the purpose of backtesting relevant
-  // directives that read that."*
+  // directives that read that.
   //
   // **"Storing" is the requirement — not "pruning at N days".** Directives read headlines and
   // sentiment (`news-momentum`, `earnings-momentum`, `crypto-fear-greed`), and a backtest cannot
@@ -199,6 +199,52 @@ export function resolveRetentionDays(table: string): number {
   const config = RETENTION_TABLES[table];
   if (!config) return 0;
   return Number.parseInt(process.env[config.envKey] || String(config.defaultDays), 10);
+}
+
+/**
+ * ── THE `score` ROW CAP — a second kind of bound, declared here for the same reason ─────────────
+ *
+ * ⚠️ THIS IS NOT A RETENTION WINDOW. `RETENTION_TABLES` above bounds each table by TIME; this bounds
+ * `score` by ROWS PER PAIR. It lived as a bare `throttleScores(100)` in a call site until 2026-11-18
+ * (#1245), where it was the only bound in the system with no declared reason, no env override and no
+ * record — and it was deleting **~25,924 of every 26,198 rows** the retention pass removed.
+ *
+ * ⚠️ WHAT 100 ACTUALLY COSTS, MEASURED 2026-11-18. It is not "a lot of history"; at a 2-minute
+ * scoring tick a hot `(symbol, protocol)` pair reaches 100 rows in about **4.2 HOURS**:
+ *
+ *   pairs whose whole retained history is under 6 hours : **89 of 170**
+ *   rows read for `?days=1`, `?days=7` — identical      : **9,048** (a 4.2-hour span)
+ *
+ * So any reader that asks `score` for a window longer than a few hours gets a partial answer, which
+ * is why `GET /api/scoring/gated/reachable-capacity` now reports `coverage.truncated`. `score` also
+ * carries the per-directive `breakdown` json that `score_snapshot` has no column for, so this cap is
+ * the reason that detail is unavailable beyond ~4 hours.
+ *
+ * ⚠️ THE VALUE IS NOT CHANGED HERE. Raising it would change what every analysis surface sees — that
+ * is a decision with a cost in rows, not a tidy-up, and it is deliberately left to the owner. What
+ * this declaration buys is that the number has a name, a reason, an override and one home.
+ */
+export const SCORE_KEEP_PER_GROUP = {
+  /** Rows kept per `(symbolId, strategyId)` in `score`. */
+  defaultRows: 100,
+  /** Env override, read through `resolveScoreKeepPerGroup()`. */
+  envKey: 'DATA_RETENTION_SCORE_KEEP_PER_GROUP',
+  label: 'per-pair row cap on score',
+  /**
+   * ⚠️ `score_snapshot` IS NOT AFFECTED and must not be. It is the long history and the source of
+   * the rarity percentiles (90-day window); this cap applies only to `score`.
+   */
+  affects: 'score only',
+} as const;
+
+/**
+ * resolveScoreKeepPerGroup() — the effective row cap, env override applied.
+ * A non-positive or unparseable value falls back to the default rather than capping at 0, because
+ * "delete everything" is not a thing any caller can have meant.
+ */
+export function resolveScoreKeepPerGroup(): number {
+  const raw = Number.parseInt(process.env[SCORE_KEEP_PER_GROUP.envKey] || '', 10);
+  return Number.isFinite(raw) && raw > 0 ? raw : SCORE_KEEP_PER_GROUP.defaultRows;
 }
 
 /** Table → retention date column, derived. */

@@ -39,8 +39,8 @@ import NoticeBlock from '../NoticeBlock';
 import { noticeFromError } from '../../core/notices/from-error.js';
 import RsiDivergenceChart from './RsiDivergenceChart.jsx';
 /**
- * ⚠️ THE ACCEPTED TABLE STYLE, IMPORTED RATHER THAN REINVENTED (owner, 2026-11-01: *"This table … needs
- * styling from one of the accepted designs in the Appearance area"*).
+ * ⚠️ THE ACCEPTED TABLE STYLE, IMPORTED RATHER THAN REINVENTED (owner directive, 2026-11-01): This table … needs
+ * styling from one of the accepted designs in the Appearance area).
  *
  * `dv-table` is the **dense-read** table the Appearance area lists as one of five accepted purposes —
  * owner score 4/10 for the PAGE, with the praise aimed at the table itself: *"a simplistic solution"*.

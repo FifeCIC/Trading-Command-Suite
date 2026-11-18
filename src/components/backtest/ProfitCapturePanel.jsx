@@ -6,8 +6,8 @@
  * up for all backtesting positions opened what does it show? … It might also be more useful to update
  * the backtesting pages with the slippage value and the app does the calculation."*
  *
- * Then, on the first cut (owner, 2026-11-04): *"I want to see money values telling me the theoretic
- * trading outcome if we took profit at the highest value of each position as recorded."* So the tiles
+ * Then, on the first cut (owner directive, 2026-11-04): I want to see money values telling me the theoretic
+ * trading outcome if we took profit at the highest value of each position as recorded. So the tiles
  * are MONEY first — the theoretical "sold at its best" total against what the run actually realised —
  * and the percentages are the supporting detail underneath.
  *

@@ -62,8 +62,8 @@ const DEFAULT_MAX_SCORE_AGE_MINUTES = 180;
 /**
  * Cache window per CADENCE. A protocol's freshness window is a property of the horizon it trades,
  * not a global constant — a 5-minute scalp is dead after 30 minutes while a daily swing protocol is
- * perfectly current after two days. Owner, 2026-10-19: *"it should be depending on the protocol
- * because some are scoring based on different targeted trading periods."*
+ * perfectly current after two days. Owner directive, 2026-10-19: it should be depending on the protocol
+ * because some are scoring based on different targeted trading periods.
  *
  * Resolution order (first wins):
  *   1. `protocol.maxScoreAgeMinutes` — explicit declaration on the registry row. Use this when the

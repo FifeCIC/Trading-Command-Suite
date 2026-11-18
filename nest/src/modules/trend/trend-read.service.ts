@@ -10,9 +10,9 @@ import { readTrend, TREND_MIN_BARS, type TrendBarLike, type TrendRead } from './
  * THIS IS AN OBSERVATION SURFACE, NOT A SIGNAL SOURCE
  * ============================================================================================
  *
- * Owner, 2026-11-03: *"explain to me how other bots and AI trading agents or algorithms determine
+ * Owner directive, 2026-11-03: explain to me how other bots and AI trading agents or algorithms determine
  * trend, just like a trader might draw a predicted trend on a chart — is this app doing that and is
- * it even possible?"* … and then: *"yes use the research you just explained to me and do this as an
+ * it even possible? … and then: *"yes use the research you just explained to me and do this as an
  * experimental feature."*
  *
  * So this endpoint exists to make the app's own scoring LEGIBLE. A directive returns `score/max`,

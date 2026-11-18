@@ -4,8 +4,8 @@
  *
  * WHY THIS EXISTS (issue #944, built 2026-09-24 under primary-agent authority)
  * ---------------------------------------------------------------------------
- * Owner, 2026-09-21: *"we might need to list our theories, potentially on the goals page, and use
- * that to list the A/B testing goals."*
+ * Owner directive, 2026-09-21: we might need to list our theories, potentially on the goals page, and use
+ * that to list the A/B testing goals.
  *
  * And, 2026-09-24: *"multiple levels of sanity checks or complex algorithms infused with
  * methodology is the permission I'm giving you."*

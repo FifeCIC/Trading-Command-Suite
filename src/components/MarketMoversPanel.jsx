@@ -19,10 +19,10 @@
  * ⚠️ `showExcluded` defaults to whether the exclusion audit is relevant to the chosen lists — the
  * audit explains rows MISSING from the feed, which only matters when the reader can see the feed.
  *
- * Owner, 2026-11-16: *"we would ideally use a ready made source of top movers: top winners and top
- * losers. It doesn't make sense to only process our registered symbols for the strategy I want the
- * app to support. That doesn't mean it's not a good idea to have a page that shows us the top movers
- * out of the symbols that are registered — those are two separate purposes/features."*
+ * WHY THE UNIVERSE IS UNBOUNDED: the point of a movers strategy is discovery — a symbol cannot be a
+ * mover if we only ever look at the ones we already hold. "What is moving anywhere" and "what is TCS
+ * doing with the symbols we hold" are two different questions with two different data sources, and
+ * merging them behind a flag is how they get confused later.
  *
  * ⚠️ THIS IS THE DISCOVERY SIDE, AND IT IS DELIBERATELY A DIFFERENT PANEL FROM THE TREATMENT TABLE.
  *
@@ -64,14 +64,23 @@ const fmtAge = (m) => {
   return `${(m / 1440).toFixed(1)} days`;
 };
 
-/** The three feed lists, in render order. `key` is the field on the API response. */
+/**
+ * The three feed lists, in render order. `key` is the field on the API response.
+ *
+ * ⚠️ `defaultSort` IS NOT COSMETIC (added 2026-11-18 after the owner reported the table "isn't wired
+ * to today's top winners"). The feed arrives ORDERED BY ITS PROVIDER'S SCREENER, NOT by the percentage
+ * column — measured: 16.10, 10.31, 8.57, **12.38**, 8.20. Left unsorted, a reader sees a "top gainers"
+ * table whose numbers do not descend and reasonably concludes the data is wrong. Each list therefore
+ * opens on the column that IS its subject: gainers by change descending, losers by change ascending
+ * (biggest fall first), most-active by volume descending.
+ */
 const LIST_DEFS = [
-  { key: 'winners', title: '🏆 Top gainers', accent: 'mm-up' },
-  { key: 'losers', title: '🕳️ Top losers', accent: 'mm-down' },
-  { key: 'mostActive', title: '🔊 Most active', accent: '' },
+  { key: 'winners', title: '🏆 Top gainers', accent: 'mm-up', defaultSort: ['changePct', 'desc'] },
+  { key: 'losers', title: '🕳️ Top losers', accent: 'mm-down', defaultSort: ['changePct', 'asc'] },
+  { key: 'mostActive', title: '🔊 Most active', accent: '', defaultSort: ['volume', 'desc'] },
 ];
 
-function List({ title, rows, accent }) {
+function List({ title, rows, accent, defaultSort }) {
   /**
    * Sorting uses the SHARED rule (`core/use-sort`) — the same one every other table in the app uses.
    *
@@ -79,7 +88,8 @@ function List({ title, rows, accent }) {
    * load would throw that ranking away without saying so. No column is active until the reader clicks
    * one, and clicking the active column reverses it.
    */
-  const sort = useSort(rows, null, 'desc');
+  const [defKey, defDir] = defaultSort ?? [null, 'desc'];
+  const sort = useSort(rows, defKey, defDir);
 
   return (
     <section className="mm-list">
@@ -103,9 +113,14 @@ function List({ title, rows, accent }) {
             {sort.sorted.map((r) => (
               <tr key={`${title}-${r.ticker}`}>
                 <td className="mm-sym">{r.ticker}</td>
-                <td className="mm-num">{fmtPrice(r.price)}</td>
-                <td className={`mm-num ${r.changePct >= 0 ? 'mm-up' : 'mm-down'}`}>{fmtPct(r.changePct)}</td>
-                <td className="mm-num">{fmtVol(r.volume)}</td>
+                {/* ⚠️ `num` ON THE CELL AS WELL AS THE HEADER — the bug the owner reported as "columns
+                    aren't under their headers". `th.num` right-aligns the heading (from tables.css)
+                    while `td.mm-num` only set font and colour, so every numeric column had a
+                    right-aligned header over left-aligned values. A column's alignment is ONE fact and
+                    must be declared on both ends. */}
+                <td className="num mm-num">{fmtPrice(r.price)}</td>
+                <td className={`num mm-num ${r.changePct >= 0 ? 'mm-up' : 'mm-down'}`}>{fmtPct(r.changePct)}</td>
+                <td className="num mm-num">{fmtVol(r.volume)}</td>
               </tr>
             ))}
           </tbody>
@@ -120,8 +135,32 @@ export default function MarketMoversPanel({ lists = null }) {
 
   const q = useQuery({
     queryKey: ['market-movers'],
-    queryFn: () => apiGet('/api/market-data/market-movers'),
-    staleTime: 60_000,
+    /**
+     * ⚠️ `force=true` AND A 60s POLL (2026-11-18), because the requirement is minute-to-minute updates
+     * so that symbols starting to make big movements can be traded. That is the whole point of the
+     * movers strategies.
+     *
+     * Measured before this change, on a page left open: `staleTime: 60_000` with **no**
+     * `refetchInterval` meant the page NEVER polled — it refetched only on mount or window focus, so
+     * the list was frozen for as long as you looked at it. And the API holds a **5-minute** cache
+     * (`MarketMoversService.CACHE_TTL_MS`), so even a poll would have returned the same payload.
+     * Together those two made a "live" view that was up to five minutes stale by construction.
+     *
+     * `force=true` is an existing parameter on the route (`@Query('force')`), so this needs no backend
+     * change — the cache is bypassed by the caller that needs fresh data rather than shortened for
+     * every caller.
+     *
+     * ⚠️ THIS CANNOT BEAT THE PROVIDER. The response reports `exchangeDataDelayedBy` (measured: 20
+     * minutes) and the page prints it. A minute-by-minute poll of a 20-minute-delayed feed gives a
+     * smoother view of the same delay — it does not give minute-by-minute prices. True intraday
+     * velocity needs bars, which is #1301.
+     *
+     * Background tabs do not poll (React Query pauses `refetchInterval` when the document is hidden),
+     * so leaving the page open overnight is not 1,440 provider calls.
+     */
+    queryFn: () => apiGet('/api/market-data/market-movers?force=true'),
+    staleTime: 0,
+    refetchInterval: 60_000,
     retry: false,
   });
 
@@ -226,7 +265,13 @@ export default function MarketMoversPanel({ lists = null }) {
 
       <div className="mm-lists">
         {LIST_DEFS.filter((l) => !lists || lists.includes(l.key)).map((l) => (
-          <List key={l.key} title={l.title} rows={d[l.key] ?? []} accent={l.accent} />
+          <List
+            key={l.key}
+            title={l.title}
+            rows={d[l.key] ?? []}
+            accent={l.accent}
+            defaultSort={l.defaultSort}
+          />
         ))}
       </div>
 

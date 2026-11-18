@@ -279,8 +279,8 @@
 }
 
 /* ── The index (default view): every eligible pair + official tests ──
-   Owner, 2026-09-22: "the view is designed to list all pairs... It is not a comparison for one
-   pair" — so the list is the page, and ?pair= is the drill-down. Rows are compact on purpose:
+   owner directive, 2026-09-22: the view is designed to list all pairs... It is not a comparison for one
+   pair — so the list is the page, and ?pair= is the drill-down. Rows are compact on purpose:
    the index's job is WHICH pairs exist; the detail view shows everything. */
 .listSection {
   margin-bottom: 24px;
@@ -364,8 +364,8 @@
   /*
    * ⚠️ THE THIRD COLUMN WAS `auto`, AND THAT IS WHAT PUSHED "B" AROUND (fixed 2026-11-07).
    *
-   * Owner: *"The pill is different for each row and it pushes the middle information B to the left
-   * so all the status are not aligned for either A or B and it looks poor."* Exactly right: the tail
+   * Owner directive: The pill is different for each row and it pushes the middle information B to the left
+   * so all the status are not aligned for either A or B and it looks poor. Exactly right: the tail
    * holds `≠ 1 · pyramid` on one row and `≠ 3 · tradeThreshold, pyramid, timeframe` on the next, so
    * an `auto` column made columns 1 and 2 a different width on every row. The 1fr sides then had
    * nothing to align to.

@@ -19,6 +19,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import ToggleSwitch from '../components/ToggleSwitch';
 import NoticeBlock from '../components/NoticeBlock';
+import SuggestionQueue from '../components/SuggestionQueue';
 import { filterStrategies, isActiveStrategy, isTradingStrategy, isScoringStrategy, isFaultyStrategy, matchesBotSearch } from '../core/strategy-filters';
 import { useSort } from '../core/use-sort';
 import StrategyFaultBadge from '../components/StrategyFaultBadge';
@@ -411,6 +412,22 @@ export default function StrategiesListPage() {
         {/* The page title lives in the breadcrumb (`.main-top-row`), and `index.css` hides a
             page-level `h1` — so it is kept only for the "exactly one h1" landmark rule. */}
         <h1>Trading Bots</h1>
+
+        {/*
+          ── THE COMBINED QUEUE OF CHANGES WE INTEND TO TRY (owner, 2026-11-18) ─────────────────────
+          *"We will also display that same information in the Strategies area on the strategies page so
+          that at the end: the combined suggestion changes to try for both protocol and bot are in one
+          place."*
+
+          ⚠️ IT SITS ABOVE THE TABLE, not beside the selected strategy, because its job is to answer
+          "what are we about to change?" before the reader starts filtering — and a queue that only
+          appears once a row is selected is a queue most readers never see.
+
+          ⚠️ IT SHOWS PROTOCOL ROWS TOO. `GET /api/suggestions` unfiltered returns every queued row
+          whatever its scope, which is the point: a bot change and the protocol change it depends on
+          must be read together, or the reader sees half the plan and treats it as the whole.
+        */}
+        <SuggestionQueue title="Queued changes — protocols and bots" />
 
         {/* ── Control bar ─────────────────────────────────────────────────────────────────────
             Modelled on `.lad-toolbar` (LadderPage, `/scoring/live-ordering-stack`): ONE panel row

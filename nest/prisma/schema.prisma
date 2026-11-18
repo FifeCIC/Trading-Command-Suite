@@ -3198,3 +3198,62 @@ model SupporterInteraction {
   @@map("supporter_interaction")
 }
 
+
+/// ── PROTOCOL / BOT CHANGE SUGGESTIONS — the queue of changes we intend to TRY ──────────────────
+///
+/// Owner, 2026-11-18: *"Create a new procedure for suggested/queued changes to make to a protocol…
+/// We will also display that same information in the Strategies area… so that at the end: the
+/// combined suggestion changes to try for both protocol and bot are in one place. Eventually we will
+/// automate backtesting and A/B comparison to try changes automatically."*
+///
+/// WHY A TABLE AND NOT A NOTE: a suggested change has a LIFECYCLE (queued → accepted → applied →
+/// reverted, or rejected→blocked). A note cannot hold a lifecycle, so a list of intended changes in
+/// prose decays into a wish list nobody can act on or audit.
+///
+/// ⚠️ THE DURABLE RECORD OF *WHY* IS THE ISSUE, NOT THIS ROW. `issueUrl` points at it. This table is
+/// the WORKING QUEUE — the same relationship the repo already uses for handoffs (the closed issue is
+/// durable; the handoff is working material).
+///
+/// ⚠️ `protocolSlug`, NOT a UUID foreign key. Measured 2026-11-19: `backtest/run` REJECTS a protocol
+/// UUID with *"not found or has no directive groups"* and wants the slug, and `protocolSlug` is the
+/// column `protocol_directive_change` already uses. Storing a UUID here would create a third
+/// convention for the same identity.
+model ProtocolChangeSuggestion {
+  id             String   @id @default(uuid()) @db.VarChar(36)
+  /// 'protocol' | 'bot' | 'strategy' — which surface the change targets.
+  scope          String   @default("protocol") @db.VarChar(20)
+  /// The protocol slug when `scope = 'protocol'`. NULL for bot-only suggestions.
+  protocolSlug   String?  @db.VarChar(100)
+  /// The bot (`trading_strategy.id`) when `scope = 'bot'`. NULL for protocol-only suggestions.
+  botId          String?  @db.VarChar(36)
+  /// 'add-directive' | 'remove-directive' | 'reweight-group' | 'missing-directive' | 'bot-rule' | 'param'
+  ///
+  /// ⚠️ `missing-directive` is a PLACEHOLDER, not an instruction: it names a directive that does not
+  /// exist yet. It is deliberately a row here and NOT a registered directive class, because a
+  /// directive that is selectable but scores nothing is the silent-zero failure this repo designs
+  /// against — a protocol could attach it and look healthy while reading 0.
+  kind           String   @db.VarChar(30)
+  /// The directive id, or the field name for a non-directive change (e.g. 'maxScore', 'tradeMode').
+  targetKey      String?  @db.VarChar(120)
+  /// What it is today. NULL means "does not exist yet" — which is NOT the same as zero.
+  currentValue   String?  @db.Text
+  /// What it should become — the parameter value, weight, or directive list being proposed.
+  suggestedValue String?  @db.Text
+  /// Why. Must be a measurement or a stated requirement, never "feels right".
+  rationale      String   @db.Text
+  /// 'queued' | 'accepted' | 'applied' | 'rejected' | 'blocked'
+  status         String   @default("queued") @db.VarChar(20)
+  /// 1 = do first, 5 = whenever. Kept numeric so the UI can order without parsing words.
+  priority       Int      @default(3)
+  /// The GitHub issue that owns the reasoning. NULL is allowed (a queued idea with no issue yet) and
+  /// is REPORTED as "no issue" rather than treated as satisfied.
+  issueUrl       String?  @db.VarChar(255)
+  createdBy      String   @db.VarChar(60)
+  createdAt      DateTime @default(now()) @db.DateTime(3)
+  updatedAt      DateTime @updatedAt @db.DateTime(3)
+
+  @@index([scope, status])
+  @@index([protocolSlug, status])
+  @@index([priority])
+  @@map("protocol_change_suggestion")
+}
