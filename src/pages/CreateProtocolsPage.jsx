@@ -16,7 +16,7 @@ import { apiGet, apiPost } from '../core/api/client';
 import { fetchScoringThresholds } from '../core/api/signals';
 import '../core/forms.css';
 import './create-protocols.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import NoticeBlock from '../components/NoticeBlock';
 import ProtocolSymbolsPanel from '../components/ProtocolSymbolsPanel';
 // `notice()` comes from the registry and `noticeFromError()` from the adapter — the adapter does not
@@ -363,11 +363,11 @@ export default function CreateProtocolsPage() {
     <div className="cp-page">
       <header className="cp-header">
         <h1>Protocol Builder
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Build a scoring protocol from directive groups. Protocols define WHAT to score —
           individual directives within each group contribute evidence toward a composite score.
           Risk groups gate Technical + Sentiment groups multiplicatively.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </header>
 

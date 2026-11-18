@@ -18,7 +18,7 @@ import { useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import ScoreCard from '../components/ScoreCard';
 import { LadderToolbar, LadderEmptyState, LadderExcludedDivider } from '../components/LadderPanels';
 import { matchesSearch } from '../core/score-card-view';
@@ -397,7 +397,7 @@ export default function LadderPage() {
       <header className="lad-header">
         <div>
           <h1>Ladder
-            <PageInfoPopover>
+            <PageInfoSlotContent>
               The original SEES view — a live-ranked card ladder. Every symbol in a
               protocol's paired symbols is ranked by scoring strength, and the cards
               slide into place as scores change. Reuses the same scoring data as the
@@ -419,7 +419,7 @@ export default function LadderPage() {
               <br /><br />
               Canonical detail: docs/scoring-architecture.md · Diagrams → “Why the Signal
               Reads Zero”.
-            </PageInfoPopover>
+            </PageInfoSlotContent>
           </h1>
           <p className="lad-subtitle">
             {selectedIds.length} protocol{selectedIds.length === 1 ? '' : 's'} · {passing.length} in ladder

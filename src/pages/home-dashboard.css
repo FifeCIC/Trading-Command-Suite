@@ -416,8 +416,8 @@
    (matches .sig-page / .sm-page conventions). */
 /* ⚠️ NO HORIZONTAL PADDING (2026-10-12). The dashboard is a full-bleed widget surface: the shell
    gives it a single full-width column, so any horizontal padding here is visible as a dead band down
-   each side of the screen. Owner: *"not touching the left and right sides of the screen. That would
-   be 100% width."* The tiles' own 12px grid margin still keeps their content off the glass. */
+   each side of the screen. Owner directive: not touching the left and right sides of the screen. That would
+   be 100% width. The tiles' own 12px grid margin still keeps their content off the glass. */
 .dash-page { padding: 1.25rem 0; }
 
 .dash-card-stats { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; }
@@ -428,8 +428,8 @@
 .dash-stat-value.err { color: var(--danger, var(--color-loss)); }
 
 /* ── Two-row figure grid (MT5 Portfolio, 2026-11-06) ─────────────────────────
-   Owner: *"position the information so it's always two rows. Right now it's one with a lot of empty
-   space below each piece of data."* The column count is set inline from the item count (ceil(n/2)),
+   Owner directive: position the information so it's always two rows. Right now it's one with a lot of empty
+   space below each piece of data. The column count is set inline from the item count (ceil(n/2)),
    so the row count cannot drift; `minmax(0, 1fr)` lets a figure shrink rather than force a scroll. */
 .dash-card-rows { display: grid; gap: 0.7rem 1.1rem; align-content: start; width: 100%; }
 .dash-card-rows > .dash-stat { min-width: 0; }

@@ -27,7 +27,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import styles from './accounts.module.css';
 
 const REFRESH_MS = 60_000;
@@ -95,7 +95,7 @@ export default function VendorsPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <h1>Vendors
-          <PageInfoPopover label="About this page">
+          <PageInfoSlotContent>
             Every source of data this app can draw on — market data, news, fundamentals and the
             brokers themselves — with the credentials state and the last health check each one
             reported.
@@ -107,7 +107,7 @@ export default function VendorsPage() {
             <br /><br />
             <strong>“unknown” is not “healthy”.</strong> It means no health check has run yet, which
             is a different fact from a failure.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </header>
 

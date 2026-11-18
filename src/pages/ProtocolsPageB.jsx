@@ -13,7 +13,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPatch, apiDelete } from '../core/api/client';
 import { feedUnavailable } from '../core/api/feed-state.js';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import SuggestionQueue from '../components/SuggestionQueue';
 import { getProtocolType, getProtocolTiming } from '../core/protocol-utils';
 import { timeAgo, formatDateTime } from '../core/format-utils';
@@ -363,9 +363,9 @@ export default function ProtocolsPageB({ initialProtocolId }) {
       <header className="prb-header">
         <div className="prb-header-left">
           <h1>Protocols Registry
-            <PageInfoPopover>
+            <PageInfoSlotContent>
               Complete registry of all scoring protocols. Enable/disable, view configuration, and see META.Stack connections. Page B — redesigned variant with theme-synced styling.
-            </PageInfoPopover>
+            </PageInfoSlotContent>
           </h1>
         </div>
       </header>
@@ -547,7 +547,7 @@ export default function ProtocolsPageB({ initialProtocolId }) {
                 depends on are read together instead of on two different pages.
               */}
               <SuggestionQueue
-                protocolSlug={selectedProto.slug}
+                protocolSlug={selectedProto.slug ?? selectedProto.id}
                 title="Queued changes — this protocol and its bots"
               />
 

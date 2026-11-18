@@ -476,7 +476,7 @@ const QA_CHECKLIST = [
     expected: 'With the route withheld: prebuild passes and prints "every route added since the rule is withheld". With it removed: **exit 1**, naming the exact route and telling you to add it to `DEFAULT_HIDDEN_ROUTES`. `--write` **refuses with exit 2** rather than adding the route to the baseline — the baseline may only shrink. `--report` prints every nav route marked WITHHELD or public, and pre-rule or NEW.',
     category: 'Guard',
     priority: 'high',
-    versionNote: '2026-11-18 — #1298. Owner: *"Can we set a rule for any new pages to default to that state."* `hidden-views.js` had claimed since 2026-11-01 that moving an id out of the withheld list IS the release, and nothing noticed a page added and never put in — a half-built page went public the moment its nav entry landed. 9 self-test cases; the ratchet direction is enforced in code, not in prose.',
+    versionNote: '2026-11-18 — #1298. Owner directive: Can we set a rule for any new pages to default to that state. `hidden-views.js` had claimed since 2026-11-01 that moving an id out of the withheld list IS the release, and nothing noticed a page added and never put in — a half-built page went public the moment its nav entry landed. 9 self-test cases; the ratchet direction is enforced in code, not in prose.',
   },
   {
     id: 'qa-movers-provider-001',
@@ -487,7 +487,7 @@ const QA_CHECKLIST = [
     expected: 'First call reports `created` > 0 with `provider=yahoo`; the second reports `created=0` with a matching `existing` count — the write is insert-only and idempotent. **`active` is identical before and after both calls** (measured: 78 → 78). The type query returns **0**, and a snapshot for a discovered ticker returns `profileStatus="ok"` with a named `profileAnsweredBy` and its `industry` — not `not-applicable`, which is what the uppercase spelling caused.',
     category: 'Data integrity',
     priority: 'high',
-    versionNote: '2026-11-19 — #1299. Owner: *"We cannot activate every symbol that appears in top losers or top winners."* Two guarantees, both proven live: insert-only discovery (`created=120` then `created=0 existing=147`, `active` unchanged at 78), and a lowercase/mapped `type` vocabulary. ⚠️ The second guard exists because the first version wrote `STOCK` ×120 and nothing reported it — the column collates `utf8mb4_unicode_ci`, so SQL matched both spellings while `symbols.service.ts`\'s case-sensitive `isEquity` answered `false` and skipped the entire 5-adapter profile chain. Canaried by mutating the mapping (`3 failed → 26 passed`, restore byte-identical) and live by setting `BP.type = \'STOCK\'`, which still returned `profileStatus="ok"`.',
+    versionNote: '2026-11-19 — #1299. Owner directive: We cannot activate every symbol that appears in top losers or top winners. Two guarantees, both proven live: insert-only discovery (`created=120` then `created=0 existing=147`, `active` unchanged at 78), and a lowercase/mapped `type` vocabulary. ⚠️ The second guard exists because the first version wrote `STOCK` ×120 and nothing reported it — the column collates `utf8mb4_unicode_ci`, so SQL matched both spellings while `symbols.service.ts`\'s case-sensitive `isEquity` answered `false` and skipped the entire 5-adapter profile chain. Canaried by mutating the mapping (`3 failed → 26 passed`, restore byte-identical) and live by setting `BP.type = \'STOCK\'`, which still returned `profileStatus="ok"`.',
   },
   {
     id: 'qa-backtest-direction-001',
@@ -510,6 +510,28 @@ const QA_CHECKLIST = [
     category: 'Guard',
     priority: 'high',
     versionNote: '2026-11-19 — #1283. The feed reported `stale: true` and `delayedBy: 20` and nothing acted on either. `stale` and `delayed` are observations; `entryAllowed` is the decision, so a consumer has nothing to ignore. ⚠️ **Not yet enforced by a trading consumer, because none exists** — #1283 stays open on exactly that. Register row 215, 🟡 partial. Canaried by disabling the null-age branch: `1 failed → 7 passed`, restore byte-identical.',
+  },
+  {
+    id: 'qa-change-queue-001',
+    area: 'Scoring',
+    system: 'nest/src/modules/suggestions/* + src/components/SuggestionQueue.jsx + GET/POST /api/suggestions',
+    name: 'A queued protocol change has a lifecycle, and an unbuilt directive is a placeholder not a directive',
+    procedure: 'Open `/protocols/protocols-registry`, select **Movers V1 (Long)** and read the "Queued changes" block. Then `POST /api/suggestions` with an empty rationale, then with a valid one. Then `GET /api/suggestions` and check `coverage`.',
+    expected: 'The panel lists this protocol\'s queued rows **and its bots\'**, with `missing-directive` rows dashed and carrying an **issue** link, and `currentValue` shown as *"does not exist yet"* rather than 0. The empty-rationale POST returns **400** naming rationale. `coverage.missingDirectives` counts the 9 placeholders separately and `withoutIssue` reports the 13 rows deliberately lacking one. The same queue appears at the top of `/trading/trading-bots`, unfiltered.',
+    category: 'Data integrity',
+    priority: 'high',
+    versionNote: '2026-11-19 — #1311. Owner: *"a key step towards guiding that for a bit"* before automating A/B trials. Register row 219, 🟢. ⚠️ `applied` is a RECORD not an action — the service never writes `protocol_directive_entry`, because that is a money-path edit. ⚠️ The placeholders are deliberately NOT registered directives: an attachable one that scores 0 is the silent zero #1300 fixed.',
+  },
+  {
+    id: 'qa-bullish-list-current-001',
+    area: 'Scoring',
+    system: 'nest/src/modules/scoring/protocols-seed-data.ts BULLISH_DIRECTIVES + nest/src/modules/directives/bullish-directives-current.spec.ts',
+    name: 'The hardcoded bullish set matches the directive classes',
+    procedure: 'Add `panic-exhaustion-absorption` back to `BULLISH_DIRECTIVES` in `protocols-seed-data.ts` and run `npm --prefix nest test -- --testPathPatterns=\"bullish-directives-current\"`. Then remove it and run again.',
+    expected: 'With the stale entry present: **2 failed**, the message naming `panic-exhaustion-absorption: class says \'neutral\'`. Removed: **8 passed**. ⚠️ The spec also asserts its own input (`bias.size > 50`) so a broken path fails instead of passing vacuously — the first version of this guard passed 8/8 WITH the stale entry present, which is why that assertion exists.',
+    category: 'Guard',
+    priority: 'high',
+    versionNote: '2026-11-19 — #1311. Four of eleven entries had gone neutral since the list was measured on 2026-11-02, so every derived short protocol was losing `earnings-proximity`, `panic-exhaustion-absorption`, `momentum-exhaustion` and `target-achieved` — silently, because `validate-protocol-directions.cjs` only checks the opposite direction. Fixed as a bug fix restoring intent, not a maths change.',
   },
 
   // ═══════════════════════════════════════════════════

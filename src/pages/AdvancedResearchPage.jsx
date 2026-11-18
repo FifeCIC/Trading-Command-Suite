@@ -17,7 +17,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './advanced-research.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 const AREAS = [
   { id: 'overview', name: 'Investigation Overview', desc: 'Price, conviction score, analyst consensus, earnings proximity', icon: '🔍' },
@@ -71,9 +71,9 @@ export default function AdvancedResearchPage() {
       <motion.header className="ar-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
           <h1>Advanced Research Engine
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Deep-dive analysis — real-time Finnhub data: quote, news sentiment, analyst targets, social buzz.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         </div>
       </motion.header>

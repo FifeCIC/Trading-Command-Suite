@@ -20,7 +20,7 @@ import { useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import NoticeBlock from '../components/NoticeBlock';
 // ⚠️ `buildScoreDisplay` and `describeThresholdScale` were REMOVED here 2026-10-09 (#1098 item
@@ -239,7 +239,7 @@ export default function SignalsOverviewPage() {
   const envelopes = Array.isArray(data?.envelopes) ? data.envelopes : [];
 
   // ── Filters and an ordering OVERRIDE (owner request, 2026-10-08) ──
-  // Owner: *"Lets consider more filters and ordering that overrides the default ordering"*.
+  // Owner directive: Lets consider more filters and ordering that overrides the default ordering.
   //
   // ⚠️ THE DEFAULT IS THE SERVER'S ORDER, and it is not arbitrary: `/api/signals/best` returns
   // envelopes sorted by `combinedStrength` desc (signal-envelope.service.ts:1554), which is
@@ -345,11 +345,11 @@ export default function SignalsOverviewPage() {
       <motion.header className="sig-header" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <h1>
           Signals
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             The best of opportunities, surfaced for action. Every active protocol is scored and only actionable
             BUY/SELL setups appear — ranked by combined strength (signal + opportunity). Contrast with Scoring
             (SEES monitoring — every ladder and all scores). Trades go through the same safety chain as the bot.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         {data && (
           <span className="sig-sub">

@@ -17,7 +17,7 @@ import { keepPreviousData } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import { TopRowSlotContent } from '../core/top-row-slot';
 import './protocols-ladder.css';
 
@@ -426,9 +426,9 @@ export default function SymbolsLadderPage() {
     <div className="pl-page">
       <motion.header className="pl-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <h1>Symbols Ladder
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Every symbol resolved from each active protocol — single-symbol protocols (e.g. XAUUSD) and watchlist-based protocols (e.g. Forex Majors). Scores come from the live protocol-driven pipeline.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </motion.header>
 

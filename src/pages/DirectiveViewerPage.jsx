@@ -15,7 +15,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import DirectiveScoringNote from '../components/DirectiveScoringNote';
 import BeginnerGuide from '../components/BeginnerGuide';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import { directionModeLabel, signalTone } from '../core/signal-utils';
 import { formatTimestamp } from '../core/format-utils';
 import './directive-viewer.css';
@@ -26,8 +26,8 @@ const READINESS_LABELS = { ready: 'READY', beta: 'BETA', alpha: 'ALPHA' };
  * DirectivePicker — the page's ENTRY POINT, and the search the owner asked for.
  *
  * ⚠️ WHY IT EXISTS (Page Walkthrough 2026-10-01, fixed 2026-10-06).
- * Owner: *"This page does not load anything and I think its meant to offer a breakdown of directives.
- * Ability to search directives."* The endpoint was fine — `GET /api/directives/:id/viewer` returns a
+ * Owner directive: This page does not load anything and I think its meant to offer a breakdown of directives.
+ * Ability to search directives. The endpoint was fine — `GET /api/directives/:id/viewer` returns a
  * full payload (readiness, nature, directionBias, requiredDataFeeds, scores, protocols). What was
  * missing was a way IN: the page read `?id=` and nothing else, so opening it from the navigation
  * produced "No directive selected" and no route forward. It was reachable only from a Protocol Trail
@@ -127,7 +127,7 @@ export default function DirectiveViewerPage() {
     return (
       <div className="dv-page">
         <header className="dv-header">
-          <h1>Directive Viewer<PageInfoPopover>Deep-dive on a single directive: metadata, recent scores, and the protocols that use it. Search below, or open via ?id=&lt;directiveId&gt;.</PageInfoPopover></h1>
+          <h1>Directive Viewer<PageInfoSlotContent>Deep-dive on a single directive: metadata, recent scores, and the protocols that use it. Search below, or open via ?id=&lt;directiveId&gt;.</PageInfoSlotContent></h1>
         </header>
         <DirectivePicker currentId="" />
       </div>
@@ -155,7 +155,7 @@ export default function DirectiveViewerPage() {
   return (
     <div className="dv-page">
       <header className="dv-header">
-        <h1>Directive Viewer<PageInfoPopover>Single-directive deep-dive — metadata, live score history, and the protocols that include it.</PageInfoPopover></h1>
+        <h1>Directive Viewer<PageInfoSlotContent>Single-directive deep-dive — metadata, live score history, and the protocols that include it.</PageInfoSlotContent></h1>
       </header>
 
       {/* The picker stays available once a directive is chosen, so switching does not mean editing

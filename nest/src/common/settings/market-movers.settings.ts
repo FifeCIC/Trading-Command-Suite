@@ -22,9 +22,9 @@ import type { SettingDefinition } from './settings-registry';
 
 export const MARKET_MOVERS_SETTINGS: SettingDefinition[] = [
 // ── Market-wide movers (#1283, 2026-11-16) ─────────────────────────────────────────────────
-// Owner: *"we would ideally use a ready made source of top movers: top winners and top losers.
+// Owner directive: we would ideally use a ready made source of top movers: top winners and top losers.
 // It doesn't make sense to only process our registered symbols for the strategy I want the app to
-// support."*
+// support.
 //
 // ⚠️ WHY THESE ARE SETTINGS AND NOT CONSTANTS IN `market-movers.service.ts`.
 // The filter thresholds decide WHICH SYMBOLS THE APP WILL CONSIDER TRADING. Measured 2026-11-16,

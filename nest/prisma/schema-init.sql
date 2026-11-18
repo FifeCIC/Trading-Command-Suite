@@ -10,12 +10,12 @@
 -- directly shippable: `@default(now())` emits `DEFAULT CURRENT_TIMESTAMP(3)`, which MySQL evaluates
 -- in the SESSION timezone (SYSTEM = local). This app stores UTC, so a fresh install would write
 -- timestamps in the future with no error — the #844 fault. The generator applies that correction
--- (110 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
+-- (111 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
 --
 -- ⚠️ The prebuild gate caught this, and it is worth recording: validate-local-time-sources.cjs failed
 -- the build on the FIRST generated version and named every offending column.
 --
--- SCALE: 116 CREATE TABLE statements.
+-- SCALE: 117 CREATE TABLE statements.
 --
 -- WHAT IT DOES NOT COVER, and both are intentional:
 --   1. The 13 raw-managed tables (4 with checked-in DDL in prisma/raw-managed/, 9 created by
@@ -2268,6 +2268,30 @@ CREATE TABLE `supporter_interaction` (
 
     INDEX `supporter_interaction_kind_shownAt_idx`(`kind`, `shownAt`),
     INDEX `supporter_interaction_shownAt_idx`(`shownAt`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `protocol_change_suggestion` (
+    `id` VARCHAR(36) NOT NULL,
+    `scope` VARCHAR(20) NOT NULL DEFAULT 'protocol',
+    `protocolSlug` VARCHAR(100) NULL,
+    `botId` VARCHAR(36) NULL,
+    `kind` VARCHAR(30) NOT NULL,
+    `targetKey` VARCHAR(120) NULL,
+    `currentValue` TEXT NULL,
+    `suggestedValue` TEXT NULL,
+    `rationale` TEXT NOT NULL,
+    `status` VARCHAR(20) NOT NULL DEFAULT 'queued',
+    `priority` INTEGER NOT NULL DEFAULT 3,
+    `issueUrl` VARCHAR(255) NULL,
+    `createdBy` VARCHAR(60) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `protocol_change_suggestion_scope_status_idx`(`scope`, `status`),
+    INDEX `protocol_change_suggestion_protocolSlug_status_idx`(`protocolSlug`, `status`),
+    INDEX `protocol_change_suggestion_priority_idx`(`priority`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

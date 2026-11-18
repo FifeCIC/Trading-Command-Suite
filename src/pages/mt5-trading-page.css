@@ -190,11 +190,12 @@
 .mt5u-empty { color: var(--ink-soft, var(--color-muted)); font-size: 0.82rem; text-align: center; padding: 2rem 1rem; }
 
 /* ── History Table ── */
-.mt5u-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-.mt5u-table th { text-align: left; padding: 0.45rem 0.5rem; border-bottom: 2px solid var(--line, var(--panel)); color: var(--ink-soft, var(--ink-soft)); font-size: 0.68rem; text-transform: uppercase; white-space: nowrap; }
-.mt5u-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid rgba(51,65,85,0.4); white-space: nowrap; }
-.mt5u-row-positive { background: rgba(34,197,94,.02); }
-.mt5u-row-negative { background: rgba(239,68,68,.02); }
+/* ARRANGEMENT REMOVED 2026-11-18 - `.mt5u-table` is enrolled in `src/core/tables.css`, the ONE
+   arrangement shared by every table in the app. This block re-declared width, padding, border,
+   font-size and the uppercase header, and its rgba() row border was a hardcoded colour that ignored
+   every theme pack. What remains is only what is specific to this table, expressed as tokens. */
+.mt5u-row-positive { background: color-mix(in srgb, var(--risk-normal) 2%, transparent); }
+.mt5u-row-negative { background: color-mix(in srgb, var(--risk-critical) 2%, transparent); }
 .mt5u-buy { color: var(--color-profit); font-weight: 600; }
 .mt5u-sell { color: var(--color-loss); font-weight: 600; }
 .mt5u-profit { color: var(--color-profit); font-weight: 600; }

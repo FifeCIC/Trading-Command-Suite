@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import './positions-monitor.css';
 
 /**
@@ -673,7 +673,7 @@ export default function PositionsMonitorPage() {
       <header className="pm-header">
         <h1>
           Positions Monitor
-          <PageInfoPopover label="About Positions Monitor">
+          <PageInfoSlotContent>
             <p>Combined view of all open positions across brokers.</p>
             {/* ⚠️ NETTING vs HEDGING IS THE ANSWER TO A QUESTION THIS PAGE KEEPS PROVOKING.
                 On a netting account a second order on a symbol the bot already holds MERGES into the
@@ -693,7 +693,7 @@ export default function PositionsMonitorPage() {
                 }).join('  ·  ')}
               </p>
             )}
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </header>
 

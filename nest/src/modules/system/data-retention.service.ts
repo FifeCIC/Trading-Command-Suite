@@ -4,7 +4,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 import { BacktestArchiveService } from './backtest-archive.service';
 import { Prisma } from '@prisma/client';
-import { RETENTION_TABLES, resolveRetentionDays } from './retention.config';
+import { RETENTION_TABLES, resolveRetentionDays, resolveScoreKeepPerGroup } from './retention.config';
 /**
  * Data retention service — prunes old data to prevent unbounded growth.
  *
@@ -89,10 +89,18 @@ export class DataRetentionService implements OnApplicationBootstrap {
 
     // ── Per-symbol score throttling ──
     try {
-      const throttled = await this.throttleScores(100);
+      // ⚠️ THE CAP IS READ, NOT SPELLED (#1245). It was a bare `100` here — the only bound in the
+      // system with no declared reason and no override — while deleting ~25,924 of every 26,198 rows
+      // the pass removed. It now lives in `retention.config.ts` as `SCORE_KEEP_PER_GROUP`, where its
+      // measured cost (100 rows ≈ 4.2 HOURS on a hot pair) is recorded beside it.
+      const cap = resolveScoreKeepPerGroup();
+      const throttled = await this.throttleScores(cap);
       if (throttled > 0) {
-        this.logger.log(`  score: ${throttled} excess rows throttled (per-symbol cap)`);
-        summary.push({ table: 'score (throttle)', deleted: throttled, label: 'per-symbol cap 100' });
+        // ⚠️ A THROTTLE THAT DELETES 26,000 ROWS MUST NAME ITS OWN LIMIT. The old line said only
+        // "N excess rows throttled (per-symbol cap)" and the summary label carried `100` as a
+        // string; neither recorded which number was in force after an env override.
+        this.logger.log(`  score: ${throttled} excess rows throttled (per-pair cap ${cap})`);
+        summary.push({ table: 'score (throttle)', deleted: throttled, label: `per-pair cap ${cap}` });
         grandTotal += throttled;
       }
     } catch (err) {

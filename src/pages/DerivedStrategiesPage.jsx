@@ -185,9 +185,9 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
             <span className={styles.symbol} key={s}>{s}</span>
           ))}
         </span>
-        {/* ⚠️ STATE AND SIZE, ON THE COLLAPSED CARD (2026-11-07). Owner: *"The strategies page cards
+        {/* ⚠️ STATE AND SIZE, ON THE COLLAPSED CARD (2026-11-07). Owner directive: The strategies page cards
             for each strategy are a bit dull … theres surely more informaton about strategies that can
-            be added to the card"*. A collapsed card said nothing about whether the strategy could
+            be added to the card. A collapsed card said nothing about whether the strategy could
             trade or how many bots were behind it — both facts were already in `strategy`, on the
             object, unused by the header. They are the two things a reader most needs before
             deciding whether to expand. */}
@@ -211,8 +211,8 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
             ⚠️
           </span>
         )}
-        {/* ⚠️ THE AFFORDANCE WAS ONE GLYPH AT 60% OPACITY (2026-11-07). Owner: *"it's not even
-            obvious they can be clicked on unless we hover the cursor over one bar"*. A bare `▸` is
+        {/* ⚠️ THE AFFORDANCE WAS ONE GLYPH AT 60% OPACITY (2026-11-07). Owner directive: it's not even
+            obvious they can be clicked on unless we hover the cursor over one bar. A bare `▸` is
             a decoration until you already know the rule. This is a real labelled control: it says
             what it does, it is focusable, and the CSS gives it a hover band and a visible box so the
             clickable region is obvious without a cursor. The whole header remains the hit area via

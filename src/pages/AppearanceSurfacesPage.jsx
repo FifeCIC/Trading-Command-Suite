@@ -40,9 +40,9 @@ export default function AppearanceSurfacesPage() {
       <ThemeLabSections group="surfaces" />
 
       {/* ── High-impact notice banner ─────────────────────────────────────────────────────────────
-          From /status/meta-stack-explorer (rated 9/10), where the owner said: *"I like this large high
+          From /status/meta-stack-explorer (rated 9/10), where the owner said: I like this large high
           impact notice … create a list of samples like this with the purpose being to get the attention
-          of the user or summarise."* The class names are the source page's; the values are live.
+          of the user or summarise. The class names are the source page's; the values are live.
 
           ⚠️ TWO THINGS ARE DELIBERATELY ABSENT. The source wraps this in `RevealCard` + framer-motion
           (the Motion page covers animation), and it supports an `mse-signal-verified` modifier that

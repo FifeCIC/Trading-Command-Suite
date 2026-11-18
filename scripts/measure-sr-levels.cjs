@@ -9,7 +9,7 @@
  *
  * THE HINDSIGHT FLAW THIS AVOIDS (#989)
  * -------------------------------------
- * The owner: "'Ceiling' is only knowable in hindsight". Scoring a stored "predicted ceiling"
+ * A ceiling is only knowable in hindsight, so scoring a stored "predicted ceiling"
  * against the level that BECAME the high is accurate BY CONSTRUCTION — it is a tautology, not
  * a measurement.
  *

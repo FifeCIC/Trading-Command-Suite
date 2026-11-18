@@ -270,7 +270,10 @@ export function ReachableCapacity() {
         </p>
         {!open && (
           <button type="button" className="cta" onClick={() => setOpen(true)}>
-            Measure reachable capacity (~0.5s)
+            {/* ⚠️ WAS "~0.5s". Measured 2026-11-18: 2.6 s for `days=1`, 1.8 s for `days=7`, 3.3 s for
+                `days=90` — the walk is over ~9,500 breakdowns, and the day count changes it. A figure
+                beside a button is a promise about how long someone waits, so it names the range. */}
+            Measure reachable capacity (~2–3s)
           </button>
         )}
         {open && isFetching && (
@@ -284,6 +287,28 @@ export function ReachableCapacity() {
         )}
         {open && data && (
           <>
+            {/*
+              ⚠️ COVERAGE FIRST, AND BEFORE THE FIGURES (#1245). `score` is throttled to 100 rows per
+              (symbol, protocol) — measured at ~4.2 HOURS of history for an actively-scored pair — so
+              the `?days=7` this component requests has been returning a 4-hour read. Nothing said so,
+              which made a partial window look like a week. The server now reports what it actually
+              read; this puts it above the numbers rather than below them.
+            */}
+            {data.coverage?.truncated && (
+              <p className="settings-section-desc" role="status">
+                ⚠️ <strong>Partial window.</strong> Asked for {data.coverage.requestedDays} day(s); the
+                scores only reach back <strong>{data.coverage.hoursCovered}h</strong> (
+                {data.coverage.coveredPct}% of the window). The per-pair cap of 100 rows on{' '}
+                <code>score</code> is the cause — a busy protocol fills it in a few hours. The figures
+                below describe that shorter span, not a week.
+              </p>
+            )}
+            {data.coverage && !data.coverage.truncated && (
+              <p className="settings-section-desc">
+                Window covered: {data.coverage.hoursCovered}h of {data.coverage.requestedDays * 24}h
+                requested ({data.coverage.coveredPct}%).
+              </p>
+            )}
             <p className="settings-section-desc">
               {data.baseline.protocols} protocols · median{' '}
               <strong>{data.summary.medianNeverPct}%</strong> of configured capacity never earned

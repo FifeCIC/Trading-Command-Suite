@@ -20,6 +20,7 @@ import StatCard from '../components/backtest/StatCard.jsx';
 import { usePreferences } from '../core/hooks/usePreferences';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import { getAssetType } from '../core/asset-types.js';
 import { useBacktestBaseline } from '../core/use-backtest-baseline.js';
 import {
@@ -2030,7 +2031,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
       <header className="pb-header">
         <h1>
           {subject === 'protocol' ? 'Backtesting Protocols' : 'Backtest Strategies'}
-          <PageInfoPopover label="What the Backtest Lab does">
+          <PageInfoSlotContent>
             <strong>One subject, one window, one stored run — so two runs can be compared.</strong>
             <br />
             Pick a <strong>protocol</strong> (scores only) or a <strong>strategy</strong> (scores plus
@@ -2050,7 +2051,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
             ⚠️ It does <strong>not</strong> re-score anything. A bar-by-bar re-score of the same
             window is a separate replay diagnostic, and it is not wired up yet — so it is not
             described here as if it were.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </header>
 

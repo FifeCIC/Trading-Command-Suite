@@ -16,11 +16,9 @@ import { isDirectiveIncluded } from '../directives/directive-inclusion';
 import { resolveAdaptiveTarget, ADAPTIVE_TARGET_MIN_SAMPLES } from './adaptive-target';
 import { resolveRetentionDays } from '../system/retention.config';
 import { selectBaseTimeframe } from '../../common/utils/timeframe';
+import { finaliseCoverage, newCoverage, round1 } from './capacity-coverage';
 
-/** One decimal place, or the UI reads 46.50000000000001. */
-function round1(n: number): number {
-  return Math.round(n * 10) / 10;
-}
+/** `round1` now lives in `capacity-coverage.ts` — one implementation, imported here. */
 
 /**
  * Protocol Gating Controller — META.Stack Canonical Scoring
@@ -48,6 +46,13 @@ function round1(n: number): number {
  * ~7× cheaper than unfiltered rankAll due to protocol scoping.
  *
  * @see #497 — handoff 2026-07-29-scoring-paths-audit-497.md (central docs store)
+ */
+
+/**
+ * ── COVERAGE: the window that was READ, not the window that was ASKED FOR (#1245) ────────────────
+ * The implementation and the measurements behind it live in `capacity-coverage.ts`. Read that
+ * module's header before changing `truncated` — the boundary is slack-tolerant in both directions
+ * on purpose, and both are pinned by `capacity-coverage.spec.ts`.
  */
 
 @Controller('scoring/gated')
@@ -499,17 +504,46 @@ export class ProtocolGatingController {
     // Fallback for a row whose protocol is absent: any kind that is a gate anywhere.
     const gateKinds = new Set(gateRows.filter((g) => g.isRiskGate === true).map((g) => g.groupId));
 
-    const rows = await this.prisma.$queryRawUnsafe<Array<{ strategyId: string; breakdown: unknown }>>(
-      `SELECT strategyId, breakdown FROM score WHERE strategyId IS NOT NULL AND timestamp > ?`,
+    const rows = await this.prisma.$queryRawUnsafe<Array<{ strategyId: string; breakdown: unknown; timestamp: Date }>>(
+      `SELECT strategyId, breakdown, timestamp FROM score WHERE strategyId IS NOT NULL AND timestamp > ?`,
       since,
     );
 
+    /**
+     * ⚠️ THE WINDOW THAT WAS ASKED FOR IS NOT THE WINDOW THAT WAS READ (#1245, measured 2026-11-18).
+     *
+     * `DataRetentionService.throttleScores()` keeps only the most recent `keepPerGroup` (100) rows
+     * per `(symbolId, strategyId)` in `score`, and at ~2-minute scoring a hot pair reaches that in
+     * about **4 hours**. Measured on this database, the same 9,048 rows came back for `?days=1`,
+     * `?days=7` and anything in between:
+     *
+     *   window      rows read
+     *   3 hours         5,496
+     *   4.2 hours       9,048   ← the whole of what exists for the active protocols
+     *   12 hours        9,048
+     *   1 day           9,048
+     *   7 days          9,048   ← the default this endpoint is called with
+     *   90 days        17,100   ← and this only grows because 47 DORMANT protocols contribute
+     *                              stale 2026-11-01 rows; it is not more depth for the live ones
+     *
+     * So an answer derived from ~4 hours was presented as a 7-day measurement, with nothing saying
+     * so — the "plausible output, no error" shape this repo keeps re-finding. `coverage` below is
+     * what makes it sayable; it is REPORTING ONLY and changes no figure.
+     */
+    const coverage = newCoverage(DAYS, since, rows.length);
+
     const per = new Map<
       string,
-      { cap: Map<string, number>; dir: Set<string>; peak: number; ticks: number }
+      { cap: Map<string, number>; dir: Set<string>; peak: number; ticks: number; first: number; last: number }
     >();
 
     for (const r of rows) {
+      const at = new Date(r.timestamp as unknown as string).getTime();
+      if (Number.isFinite(at)) {
+        if (coverage.from === null || at < Date.parse(coverage.from)) coverage.from = new Date(at).toISOString();
+        if (coverage.to === null || at > Date.parse(coverage.to)) coverage.to = new Date(at).toISOString();
+      }
+
       const b = (typeof r.breakdown === 'string' ? JSON.parse(r.breakdown) : r.breakdown) as {
         breakouts?: Record<string, Array<{ directiveId?: string; maxScore?: number; signalClass?: string; groupId?: string }>>;
         rawComposite?: number;
@@ -517,8 +551,12 @@ export class ProtocolGatingController {
       if (!b?.breakouts) continue;
 
       const slug = r.strategyId;
-      if (!per.has(slug)) per.set(slug, { cap: new Map(), dir: new Set(), peak: 0, ticks: 0 });
+      if (!per.has(slug)) per.set(slug, { cap: new Map(), dir: new Set(), peak: 0, ticks: 0, first: at, last: at });
       const p = per.get(slug)!;
+      if (Number.isFinite(at)) {
+        if (at < p.first) p.first = at;
+        if (at > p.last) p.last = at;
+      }
       p.ticks++;
       const raw = Number(b.rawComposite ?? 0);
       if (raw > p.peak) p.peak = raw;
@@ -560,11 +598,21 @@ export class ProtocolGatingController {
            * there is no ratio rather than a ratio of zero.
            */
           peakPctOfReachable: reachableCapacity > 0 ? round1((100 * p.peak) / reachableCapacity) : null,
+          /**
+           * ⚠️ PER-PROTOCOL DEPTH (#1245). A protocol whose whole retained history is 4 hours is
+           * contributing 4 hours to a "7 day" measurement, and the ratio above cannot say so.
+           */
+          hoursCovered: p.first && p.last ? round1((p.last - p.first) / 3_600_000) : 0,
+          firstSeen: Number.isFinite(p.first) ? new Date(p.first).toISOString() : null,
+          lastSeen: Number.isFinite(p.last) ? new Date(p.last).toISOString() : null,
           /** Directives never once directional in the window, with the capacity each carries. */
           neverDirectionalDirectives: [...p.cap.keys()].filter((id) => !p.dir.has(id)).sort(),
         };
       })
       .sort((a, b) => b.neverPct - a.neverPct);
+
+    // ── finish the coverage block ───────────────────────────────────────────────────────────────
+    finaliseCoverage(coverage);
 
     const medians = protocols.map((p) => p.neverPct).sort((a, b) => a - b);
     const median = medians.length ? medians[Math.floor(medians.length / 2)] : 0;
@@ -572,6 +620,7 @@ export class ProtocolGatingController {
     return {
       generatedAt: new Date().toISOString(),
       windowDays: DAYS,
+      coverage,
       baseline: {
         rowsScanned: rows.length,
         protocols: protocols.length,
@@ -586,6 +635,11 @@ export class ProtocolGatingController {
         direction: 'outcome — did this directive in this protocol EVER record bullish/bearish?',
         gateHandling: 'gate groups excluded by (protocolId, groupId-kind); verified Σ non-gate maxScore == configuredSignalMax on 3,000 rows',
         caution: 'A directive never exercised looks identical to one that is incapable. Treat a high neverPct as "investigate", not as proof.',
+        coverage:
+          'read `coverage` BEFORE the figures. `score` is throttled to 100 rows per (symbol, protocol), ' +
+          'which is ~4 hours at a 2-minute tick (#1245) — so `windowDays: 7` has repeatedly described a ' +
+          '4-hour read. `coverage.truncated` is true whenever the data does not reach back to the ' +
+          'requested window.',
       },
       summary: {
         medianNeverPct: round1(median),
@@ -1185,12 +1239,18 @@ export class ProtocolGatingController {
 
   /**
    * POST /api/scoring/gated/protocols/seed
-   * Seed all hardcoded protocols into the DB. Idempotent.
+   * Seed hardcoded protocols into the DB. Idempotent.
    * Epic #510 Phase 3 — DB-Driven Architecture.
+   *
+   * `?slugs=a,b` seeds ONLY those slugs. Added 2026-11-19 for the movers pair: a full sweep is an
+   * upsert over EVERY protocol's group and entry rows, so any weight or directive tuned through the UI
+   * is converged back to the seed for protocols the caller did not mean to touch. The seed is the
+   * durable owner of configuration, but "I added one protocol" must not silently revert twenty.
    */
   @Post('protocols/seed')
-  async seedProtocols() {
-    return this.protocolDb.seedProtocolsToDatabase();
+  async seedProtocols(@Query('slugs') slugs?: string) {
+    const only = slugs ? slugs.split(',').map((s) => s.trim()).filter(Boolean) : undefined;
+    return this.protocolDb.seedProtocolsToDatabase(only);
   }
 
   /**

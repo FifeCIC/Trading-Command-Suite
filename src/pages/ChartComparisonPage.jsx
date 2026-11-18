@@ -13,7 +13,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './chart-comparison.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 const SYMBOLS = ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMD', 'SPY', 'QQQ', 'GOOGL', 'META', 'AMZN'];
 const TIMEFRAMES = [
@@ -119,9 +119,9 @@ export default function ChartComparisonPage() {
       <header className="cc-header">
         <div>
           <h1>Chart Comparison
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Real MT5 candlesticks + SEES protocol scores — A/B comparison
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         </div>
       </header>

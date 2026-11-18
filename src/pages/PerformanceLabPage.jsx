@@ -4,7 +4,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './performance-lab.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 function PnlBadge({ value }) {
   const cls = value >= 0 ? 'perflab-up' : 'perflab-down';
@@ -80,9 +80,9 @@ export default function PerformanceLabPage() {
       <header className="perflab-header">
         <div>
           <h1>Trading Performance
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Real trade outcomes — win rate, P&L, drawdown, and equity curve from closed trades. Open positions show mark-to-market via MT5.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         </div>
         <div className="perflab-days">

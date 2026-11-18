@@ -54,6 +54,27 @@ interface TriggerConfig {
  */
 const RISK_CAP_BREACH_WINDOW_MIN = 30;
 
+/**
+ * scoreWindowHoursBetween() — the span a `score` count actually covered, in hours.
+ *
+ * ⚠️ WHY THIS EXISTS (#1245 follow-up, measured 2026-11-18). `checkSymbolSilent` counts scores with
+ * `WHERE timestamp >= UTC_TIMESTAMP() - INTERVAL 24 HOUR`, but `score` is throttled to 100 rows per
+ * (symbol, protocol) — about **4.2–4.4 HOURS** for an actively-scored pair. The SQL says 24 hours;
+ * the answer is four. The message then told the operator "Scored 20+ times in 24h", which was a claim
+ * about a window nobody measured. **26 symbols were firing with that wording.**
+ *
+ * @returns the span in hours to one decimal, or **0 when it cannot be established** (no rows, a
+ *   single row, unparseable dates, or a reversed pair). 0 is a deliberate sentinel: the caller then
+ *   omits the window from the message rather than printing "within the last 0h".
+ */
+export function scoreWindowHoursBetween(from: Date | null, to: Date | null): number {
+  if (!from || !to) return 0;
+  const a = new Date(from).getTime();
+  const b = new Date(to).getTime();
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) return 0;
+  return Math.round(((b - a) / 3_600_000) * 10) / 10;
+}
+
 @Injectable()
 export class AlertTriggerService implements OnModuleInit {
   private readonly logger = new Logger(AlertTriggerService.name);
@@ -81,7 +102,7 @@ export class AlertTriggerService implements OnModuleInit {
     // executions is a signal about the PATH, not about the market being quiet.
     'symbol-silent':     { enabled: true, cooldownSeconds: 3600, severity: 'warning', threshold: 20 },
     // ── #972/#1010, added 2026-09-27 at the owner's request ──────────────────────────────────
-    // Owner: *"I need the app to draw my attention when algo trading is not active."*
+    // Owner directive: I need the app to draw my attention when algo trading is not active.
     //
     // ⚠️ THIS IS NOT `mt5-disconnected`. A bridge can be fully `connected: true` and still refuse
     // every single order, because AutoTrading (`trade_allowed`) or the API trade path
@@ -848,11 +869,33 @@ export class AlertTriggerService implements OnModuleInit {
       // stored in UTC while the MySQL session runs in local time (BST here), so a window
       // built from NOW() is an hour out and silently reports nothing. Cost an hour of
       // misreading on 2026-09-22 before it was spotted.
+      //
+      // 🛑 THE `24 HOUR` PREDICATE IS NOT THE WINDOW THIS COUNT ACTUALLY SEES (#1245 follow-up,
+      // measured 2026-11-18). `score` is throttled to 100 rows per (symbol, protocol), which an
+      // actively-scored pair reaches in about **4.2–4.4 HOURS**. So `COUNT(*) … INTERVAL 24 HOUR`
+      // returns a FOUR-HOUR count while looking like a day's, and the message then told the operator
+      // "Scored 20+ times in 24h" — a claim about a window that was never measured. Measured the same
+      // day: `score` held 4.4 h for the live pairs while `decision_log` held **41 days**, so the two
+      // halves of this comparison were never on the same basis either.
+      //
+      // ⚠️ THE THRESHOLD IS UNCHANGED. Only the BASIS is now measured and stated, via
+      // `coverage` below — 26 symbols were firing with the misleading wording.
       const scores = await this.prisma.$queryRawUnsafe<Array<{ sym: string; n: bigint }>>(
         `SELECT UPPER(s.ticker) sym, COUNT(*) n
            FROM score sc JOIN symbol s ON s.id = sc.symbolId
           WHERE sc.timestamp >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 24 HOUR)
           GROUP BY UPPER(s.ticker)`,
+      );
+      // What span did those counts really cover? This is the measurement the message needs.
+      const scoreWindow = await this.prisma.$queryRawUnsafe<Array<{ from: Date | null; to: Date | null }>>(
+        `SELECT MIN(timestamp) \`from\`, MAX(timestamp) \`to\` FROM score
+          WHERE timestamp >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 24 HOUR)`,
+      );
+      const winFrom = scoreWindow[0]?.from ? new Date(scoreWindow[0].from as unknown as string).getTime() : null;
+      const winTo = scoreWindow[0]?.to ? new Date(scoreWindow[0].to as unknown as string).getTime() : null;
+      const scoreWindowHours = scoreWindowHoursBetween(
+        winFrom === null ? null : new Date(winFrom),
+        winTo === null ? null : new Date(winTo),
       );
       const executed = await this.prisma.$queryRawUnsafe<Array<{ sym: string; n: bigint }>>(
         `SELECT UPPER(symbol) sym, COUNT(*) n FROM decision_log
@@ -870,6 +913,17 @@ export class AlertTriggerService implements OnModuleInit {
       const S = toMap(scores);
       const E = toMap(executed);
       const B = toMap(blocked);
+
+      // ⚠️ THE BLIND SPOT, MADE COUNTABLE (#1245 follow-up). This trigger can only judge a symbol it
+      // can SEE, and the score window is ~4.4 h (the per-pair throttle). A symbol that stopped being
+      // scored more than that ago has no row in `S`, so it is neither silent nor healthy — it is
+      // UNASSESSED, and silence about it is indistinguishable from "fine".
+      //
+      // ⚠️ NO EXTRA QUERY: `S` is already in memory, so this is a count over a map.
+      // ⚠️ REPORTED ONLY WHEN NON-ZERO. Measured 2026-11-18: 0 of 37 bot symbols were unassessed, so
+      // printing a permanent "0 could not be assessed" would be noise on an alert already re-seen 819
+      // times. It appears the moment it means something, which is the only time it is useful.
+      const unassessed = botSymbols.filter((sym) => !S[sym]).length;
 
       const silent = botSymbols
         .map((sym) => ({
@@ -897,9 +951,26 @@ export class AlertTriggerService implements OnModuleInit {
         // 10 silent symbols (all one condition). The count is in the message below.
         title: 'Symbols Scoring But Never Trading',
         message:
-          `Scored ${minScores}+ times in 24h and produced ZERO executions: ${detail}` +
+          // ⚠️ THE BASIS IS MEASURED, NOT ASSUMED. The counts come from `score`, which keeps ~4
+          // hours; the zero-execution half comes from `decision_log`, which keeps weeks. Saying
+          // "in 24h" for both was a claim about a window nobody measured.
+          (scoreWindowHours > 0
+            ? `Scored ${minScores}+ times within the last ${scoreWindowHours}h (all the score history there is) `
+            : `Scored ${minScores}+ times `) +
+          `and produced ZERO executions in 24h: ${detail}` +
           (silent.length > 6 ? `; +${silent.length - 6} more` : '') +
-          '. A symbol that is scored continuously and never trades is usually a broken PATH, not a quiet market.',
+          '. A symbol that is scored continuously and never trades is usually a broken PATH, not a quiet market.' +
+          (scoreWindowHours > 0 && scoreWindowHours < 20
+            ? ' ⚠️ The score window is shorter than the execution window because the score table is throttled' +
+              ' per pair — a symbol that stopped scoring more than that ago cannot appear here at all.'
+            : '') +
+          // ⚠️ ONLY WHEN NON-ZERO, AND NEVER A TRIGGER BY ITSELF. A closed market scores nothing, so
+          // "N symbols could not be assessed" would fire every weekend if it were a condition of its
+          // own — the false-positive machine #1247 was about. It rides along with a finding that
+          // already exists, and says what this alert could not look at.
+          (unassessed > 0
+            ? ` ⚠️ ${unassessed} bot symbol(s) produced no scores at all in that window and could not be assessed either way.`
+            : ''),
         severity: 'warning' as AlertSeverity,
       };
     } catch (err) {

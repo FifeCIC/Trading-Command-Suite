@@ -5,7 +5,7 @@ import { apiGet, apiPost, apiDelete } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './personal-finances.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 const CURRENCY_SYMBOL = '£';
 
@@ -51,9 +51,9 @@ export default function PersonalFinancesPage() {
     <div className="pf-page">
       <motion.header className="pf-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <h1>Personal Finances
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Plan fund allocation across trading accounts and strategies. Visual planning only — no automatic transfers.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </motion.header>
 

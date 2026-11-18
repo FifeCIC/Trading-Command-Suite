@@ -8,7 +8,7 @@ import { apiGet } from '../core/api/client';
 import { feedUnavailable } from '../core/api/feed-state.js';
 import { fetchScoringThresholds } from '../core/api/signals';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import { buildScoreDisplay, thresholdGeometry, standingClass } from '../core/score-display';
 import './protocols-ladder.css';
 
@@ -117,7 +117,7 @@ export default function ProtocolsPerformancePage() {
   return (
     <div className="pl-page">
       <motion.header className="pl-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1>Protocols Performance <PageInfoPopover>Every symbol per protocol with score + P&amp;L from live trading.</PageInfoPopover></h1>
+        <h1>Protocols Performance <PageInfoSlotContent>Every symbol per protocol with score + P&amp;L from live trading.</PageInfoSlotContent></h1>
       </motion.header>
       <div className="pl-toolbar">
         <label className="pl-filter">Sort:<select value={sortBy} onChange={e => setSortBy(e.target.value)}><option value="score">Score ▼</option><option value="pnl">P&amp;L ▼</option><option value="alpha">A→Z</option></select></label>

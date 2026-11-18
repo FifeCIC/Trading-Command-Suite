@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './sector-rotation.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 const SECTOR_META = [
   { id: 'xlk', name: 'Technology', etf: 'XLK' },
@@ -75,9 +75,9 @@ export default function SectorRotationPage() {
     <div className="sr2-page">
       <header className="sr2-header">
         <h1>Sector Rotation
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Track sector performance, momentum, and rotation patterns. Data from sector ETFs.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </header>
 

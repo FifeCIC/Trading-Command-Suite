@@ -746,7 +746,7 @@ function AppShell({ directContent = null, directArea = null, directView = null }
   const isMt5Online = mt5Query.data?.connected === true || mt5Query.data?.status === 'online';
 
   // ── Loop heartbeat — moved here from the Bot Monitor header (2026-11-07) ──────────────────────
-  // Owner: *"Remove sm-loop-badge … and add the stat to the top right status menu"*. The loop tick
+  // Owner directive: Remove sm-loop-badge … and add the stat to the top right status menu. The loop tick
   // is machine-wide state, not page state, so it belongs with API/DB/MT5 rather than inside one
   // page's heading. `staleTime` matches the other header pollers so a page transition does not
   // re-request it, and `.catch(() => null)` keeps a down API from blanking the badge — the popout

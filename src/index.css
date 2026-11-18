@@ -105,6 +105,30 @@ html[data-hide-page-subtitle='true'] .po-subtitle { display: none; }
   --color-grid: #1e2030;
   --color-input-bg: #111318;
 
+  /**
+   * Text placed ON a filled semantic colour (a profit-green pill, an accent button).
+   *
+   * ⚠️ This exists because the literal it replaces was `#052e16` / `#042f2e` — a near-black green
+   * written directly into page stylesheets. A literal cannot follow a theme pack, so switching theme
+   * left dark text on whatever the new fill happened to be. Dark ink is correct for every fill in the
+   * palette (all are mid-to-light), and naming the relationship means a theme that introduces a dark
+   * fill only has to override ONE token.
+   */
+  --on-accent: #042f2e;
+
+  /**
+   * Tinted chip backgrounds — a semantic colour at ~18% over the surface behind it.
+   *
+   * ⚠️ These are tokens rather than `color-mix(...)` written at each use site for two reasons.
+   * (1) The same mix was spelled out in four places (`.pf-sig-buy`, `.pf-sig-sell`, and both
+   * `saFlash` keyframes), so the percentage was one edit away from drifting in three of them.
+   * (2) A `color-mix` expression is ~45 characters; a `var()` is 20. The bundle budget gate measured
+   * the inline form as +2.1 KB of entry CSS, which is a real cost for no extra capability.
+   */
+  --chip-buy-bg: color-mix(in srgb, var(--color-buy) 18%, transparent);
+  --chip-sell-bg: color-mix(in srgb, var(--color-sell) 18%, transparent);
+  --chip-danger-bg: color-mix(in srgb, var(--danger) 13%, transparent);
+
   /* Notice banners */
   --notice-success-bg: rgba(34,197,94,0.06);
   --notice-success-border: rgba(34,197,94,0.15);
@@ -876,8 +900,8 @@ button.nav-active {
 .left-rail-collapsed .rail-collapse-toggle { font-size: 0.6rem; padding: 0.3rem; min-width: 32px; min-height: 32px; border-radius: 3px; }
 
 /* ── Withheld from other users — the owner's work queue (2026-11-06) ──────────────────────────────
- Owner: *"change the colour of the text in the menu for pages that will be hidden for other users so
- I know which ones still need work done to them the most."* A withheld view is KEPT in the rail and
+ Owner directive: change the colour of the text in the menu for pages that will be hidden for other users so
+ I know which ones still need work done to them the most. A withheld view is KEPT in the rail and
  tagged by `filterHiddenViews({ keepWithheld })`, so an amber label means "everyone else cannot see
  this yet". Colour only — no bar, no badge, nothing that competes with `nav-active`. */
 .rail-links button.rail-link--withheld .rail-link-label { color: var(--color-warning); }
@@ -1141,14 +1165,14 @@ input[type="radio"]:focus-visible {
 
 .cta {
   background: var(--accent);
-  color: #042f2e;
+  color: var(--on-accent);
   font-weight: 700;
 }
 
 .nav-active,
 button.nav-active {
   background: var(--accent);
-  color: #042f2e;
+  color: var(--on-accent);
   font-weight: 700;
 }
 
@@ -1332,17 +1356,17 @@ button.nav-active {
 
 .topbar-status-dot.online {
   background: var(--color-profit);
-  box-shadow: 0 0 6px #22c55e99;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--color-profit) 60%, transparent);
 }
 
 .topbar-status-dot.warn {
   background: var(--color-warning);
-  box-shadow: 0 0 6px #eab30899;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--color-warning) 60%, transparent);
 }
 
 .topbar-status-dot.offline {
   background: var(--danger);
-  box-shadow: 0 0 6px #ef444499;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--danger) 60%, transparent);
 }
 
 .topbar-theme-toggle {
@@ -1734,7 +1758,7 @@ button.nav-active {
 }
 
 .ok {
-  color: #065f46;
+  color: var(--color-profit);
 }
 
 .error {
@@ -1784,7 +1808,7 @@ button.nav-active {
 }
 
 .dev-tag-list li {
-  border: 1px solid #374151;
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 0.5rem;
   display: grid;
@@ -1792,7 +1816,7 @@ button.nav-active {
 }
 
 .dev-tag-list span {
-  color: #9ca3af;
+  color: var(--color-neutral);
   font-size: 0.85rem;
 }
 
@@ -1924,7 +1948,7 @@ button.nav-active {
   flex-shrink: 0;
 }
 .footer-dot.on  { background: var(--color-profit); box-shadow: 0 0 3px rgba(34,197,94,0.5); }
-.footer-dot.off { background: #475569; }
+.footer-dot.off { background: var(--color-muted); }
 
 .footer-bottom {
   display: flex;
@@ -2194,7 +2218,7 @@ button.nav-active {
 .sl-chip { display: inline-block; padding: 0.1rem 0.45rem; border-radius: 3px; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; }
 .sl-chip--neutral { background: color-mix(in srgb, var(--line) 75%, var(--panel)); color: var(--ink-soft); }
 .sl-chip--warn { background: color-mix(in srgb, var(--color-warning) 12.5%, transparent); color: var(--color-warning); }
-.sl-chip--error { background: #ff004020; color: var(--danger); }
+.sl-chip--error { background: var(--chip-danger-bg); color: var(--danger); }
 
 /* Backtest */
 .bt-page { max-width: 960px; margin: 0 auto; padding: 1.5rem; color: var(--ink); }
@@ -2269,7 +2293,7 @@ button.nav-active {
    BEFORE the run rather than inferring it from the result afterwards. */
 .bt-active-period { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; color: var(--ink); margin: 0.75rem 0; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 6px; }
 .bt-clear-period { min-height: 32px; padding: 4px 10px; font-size: 0.72rem; font-weight: 600; color: var(--ink); background: color-mix(in srgb, var(--ink) 12%, var(--panel)); border: 1px solid var(--color-border); border-radius: 6px; cursor: pointer; }
-.bt-clear-period:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }.bt-row-win { background: color-mix(in srgb, #00ff41 4%, transparent); }
+.bt-clear-period:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }.bt-row-win { background: color-mix(in srgb, var(--color-profit) 4%, transparent); }
 .bt-row-loss { background: color-mix(in srgb, var(--danger) 4%, transparent); }
 .bt-green { color: var(--color-profit); }
 .bt-red { color: var(--danger); }
@@ -2624,7 +2648,7 @@ button.nav-active {
 .msc-entry { background: color-mix(in srgb, var(--color-profit) 12.5%, transparent); color: var(--color-profit); }
 .msc-watch { background: color-mix(in srgb, var(--color-warning) 12.5%, transparent); color: var(--color-warning); }
 .msc-defensive { background: color-mix(in srgb, var(--line) 75%, var(--panel)); color: var(--ink-soft); }
-.msc-nodata { background: #ff004020; color: var(--danger); }
+.msc-nodata { background: var(--chip-danger-bg); color: var(--danger); }
 
 .msc-minimal { display: flex; gap: 6px; flex-wrap: wrap; }
 .msc-minimal-row { display: flex; align-items: center; gap: 6px; padding: 0.2rem 0.4rem; border: 1px solid var(--line); border-radius: 6px; font-size: 0.78rem; }
@@ -2695,8 +2719,8 @@ button.nav-active {
 .pf-refresh-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--ink); }
 .pf-refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .pf-sig { font-size: 0.62rem; font-weight: 700; padding: 0.1rem 0.35rem; border-radius: 3px; }
-.pf-sig-buy { background: #1b3a1b; color: var(--color-buy); }
-.pf-sig-sell { background: #3a1b1b; color: var(--color-sell); }
+.pf-sig-buy { background: var(--chip-buy-bg); color: var(--color-buy); }
+.pf-sig-sell { background: var(--chip-sell-bg); color: var(--color-sell); }
 .pf-sig-hold { background: var(--color-panel); color: var(--notice-info-text); }
 .pf-sig-no_data { background: transparent; color: var(--ink-soft); }
 .pf-data-status { font-size: 0.75rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 3px; white-space: nowrap; }
@@ -2710,7 +2734,7 @@ button.nav-active {
 .pf-table tbody tr:has(.pf-red) { background: linear-gradient(90deg, rgba(239,68,68,0.04), transparent); }
 .pf-sell-btn {
   background: color-mix(in srgb, var(--color-sell) 15%, transparent);
-  color: #ff6b7a;
+  color: var(--color-sell);
   border: 1px solid color-mix(in srgb, var(--color-sell) 30%, transparent);
   padding: 0.25rem 0.65rem;
   border-radius: 4px;
@@ -2721,9 +2745,8 @@ button.nav-active {
 }
 .pf-sell-btn:hover { background: color-mix(in srgb, var(--color-sell) 25%, transparent); }
 .pf-mode-badge { font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px; letter-spacing: 0.05em; }
-.pf-mode-live { background: color-mix(in srgb, #dc2626 15%, transparent); color: #dc2626; border: 1px solid color-mix(in srgb, #dc2626 30%, transparent); }
-.pf-mode-demo { background: color-mix(in srgb, var(--color-warning) 15%, transparent); color: var(--color-warning); border: 1px solid color-mix(in srgb, var(--color-warning) 30%, transparent); }
-.pf-mode-mock { background: color-mix(in srgb, #9ca3af 15%, transparent); color: #8b8f96; border: 1px solid color-mix(in srgb, #9ca3af 30%, transparent); }
+.pf-mode-live { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); }.pf-mode-demo { background: color-mix(in srgb, var(--color-warning) 15%, transparent); color: var(--color-warning); border: 1px solid color-mix(in srgb, var(--color-warning) 30%, transparent); }
+.pf-mode-mock { background: color-mix(in srgb, var(--color-neutral) 15%, transparent); color: var(--color-muted); border: 1px solid color-mix(in srgb, var(--color-neutral) 30%, transparent); }
 
 .pf-mode-mismatch {
   margin: 0.5rem 0 1rem;
@@ -2875,15 +2898,15 @@ button.nav-active {
 .sa-symbol-row { display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0; border-bottom: 1px solid var(--line); font-size: 0.78rem; }
 .sa-sym { font-weight: 600; min-width: 70px; }
 .sa-sig-dot { width: 8px; height: 8px; border-radius: 50%; }
-.sa-sig-buy { background: #00a63e; }
+.sa-sig-buy { background: var(--color-buy); }
 .sa-sig-sell { background: var(--color-sell); }
 .sa-sig-hold { background: var(--notice-info-text); }
 .sa-sig-no_data { background: var(--ink-soft); }
 .sa-score { font-weight: 700; margin-left: auto; font-variant-numeric: tabular-nums; }
 .sa-flash-up { animation: saFlashUp 0.5s; }
 .sa-flash-down { animation: saFlashDown 0.5s; }
-@keyframes saFlashUp { 0% { background: #1b3a1b; } 100% { background: transparent; } }
-@keyframes saFlashDown { 0% { background: #3a1b1b; } 100% { background: transparent; } }
+@keyframes saFlashUp { 0% { background: var(--chip-buy-bg); } 100% { background: transparent; } }
+@keyframes saFlashDown { 0% { background: var(--chip-sell-bg); } 100% { background: transparent; } }
 .sa-empty { color: var(--ink-soft); font-size: 0.8rem; padding: 1rem; }
 
 /* Unified Ranking */
@@ -3217,7 +3240,7 @@ button.nav-active {
 
 .api-latency-chart { display: grid; grid-template-columns: repeat(12, minmax(36px, 1fr)); gap: 0.5rem; min-height: 170px; align-items: end; }
 .api-latency-bar { min-height: 150px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 0.35rem; }
-.api-latency-fill { width: 100%; min-height: 1px; border-radius: 6px 6px 2px 2px; background: linear-gradient(180deg, #38bdf8, #14b8a6); border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent); }
+.api-latency-fill { width: 100%; min-height: 1px; border-radius: 6px 6px 2px 2px; background: linear-gradient(180deg, var(--color-accent-blue), var(--accent)); border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent); }
 .api-latency-label { color: var(--ink-soft); font-size: 0.7rem; }
 
 /* ── Rail Section Header (nav subgroups e.g. "Prototypes" in Lab) ── */

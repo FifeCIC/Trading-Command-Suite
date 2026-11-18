@@ -23,7 +23,7 @@ import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './decision-trail.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import { directionModeLabel } from '../core/signal-utils';
 import { buildScoreDisplay } from '../core/score-display';
 import SignalBadge from '../components/SignalBadge';
@@ -137,9 +137,9 @@ export default function ProtocolTrailPage() {
       <header className="dt-header">
         <div>
           <h1>Protocol Trail
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Directive-level breakdown of a symbol's protocol score. Every directive in the protocol, its score, and the market data that produced it. Deep-linked from Symbols Ladder.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
           </h1>
         </div>
         {/**

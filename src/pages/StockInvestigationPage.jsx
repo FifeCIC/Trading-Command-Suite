@@ -5,7 +5,7 @@ import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './stock-investigation.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 export default function StockInvestigationPage() {
   const [symbol, setSymbol] = useState('');
@@ -44,9 +44,9 @@ export default function StockInvestigationPage() {
     <div className="si-page">
       <motion.header className="si-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <h1>Stock Investigation
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Persistent research — investigations survive sessions and build knowledge over time
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </motion.header>
 

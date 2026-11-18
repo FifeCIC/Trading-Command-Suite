@@ -1,4 +1,4 @@
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import { DESIGN_OBSERVATIONS, OBSERVATION_STATUSES } from '../data/design-observations';
 import './design-observations.css';
 
@@ -7,8 +7,8 @@ import './design-observations.css';
  *
  * WHY THIS PAGE EXISTS (review row R21, answered 2026-09-24; issue #990)
  * ----------------------------------------------------------------------
- * Owner: *"Are we noting observations for review and consideration? This is important for
- * re-considering designs."* The answer was no — the finding that prompted it went into a code
+ * Owner directive: Are we noting observations for review and consideration? This is important for
+ * re-considering designs. The answer was no — the finding that prompted it went into a code
  * comment, which is durable but invisible to the person who reconsiders designs. The owner chose a
  * dedicated register over a second section in the review queue.
  *
@@ -130,11 +130,11 @@ export default function DesignObservationsPage() {
       <header className="do-header">
         <h1>
           Design Observations
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Things noticed about how this app is designed, held open on purpose. Each one names what
             was seen, how strong the evidence is, and the condition that should make us reconsider the
             design. An observation without that condition is an opinion, and the validator refuses one.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         <p className="do-lede">
           Not defects, and not decisions. A <strong>design tension held open on purpose</strong>, with

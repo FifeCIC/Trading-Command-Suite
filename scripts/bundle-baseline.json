@@ -1,8 +1,8 @@
 {
   "note": "Bundle ratchet for scripts/check-bundle-budget.mjs (#987). These are MEASURED values, not targets. Size may go DOWN freely; going UP requires a deliberate re-freeze, so the diff is reviewable. An honest absolute target needs #1280 (153 statically imported pages) to land first.",
   "generatedAt": "2026-11-18",
-  "entryJsBytes": 715751,
-  "entryCssBytes": 162212,
-  "totalDistBytes": 10448042,
-  "precacheBytes": 10397179
+  "entryJsBytes": 715840,
+  "entryCssBytes": 168559,
+  "totalDistBytes": 10464631,
+  "precacheBytes": 10413768
 }

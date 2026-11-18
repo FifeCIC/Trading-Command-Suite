@@ -896,7 +896,7 @@ export class ProtocolDbService implements OnModuleInit {
    *
    * Epic #510 Phase 4 — DB-Driven Architecture.
    */
-  async seedProtocolsToDatabase(): Promise<{ seeded: number; groups: number; entries: number }> {      // ── DECISION (2026-10-01, Copilot; owner unavailable, autonomous) ──
+  async seedProtocolsToDatabase(onlySlugs?: string[]): Promise<{ seeded: number; groups: number; entries: number }> {      // ── DECISION (2026-10-01, Copilot; owner unavailable, autonomous) ──
       // WHAT:      `active` is DELIBERATELY NOT SEEDED. This upsert writes name, description,
       //            directionMode, tradingStyle, recommendedTimeframe, avgHoldTime, winRateTarget,
       //            idealFor and derivedFrom — and nothing else.
@@ -919,6 +919,10 @@ export class ProtocolDbService implements OnModuleInit {
 
       let protocols = 0, groups = 0, entries = 0;
     for (const [slug, config] of Object.entries(PROTOCOL_SEED_DATA)) {
+      // ⚠️ `onlySlugs` narrows the sweep. Default (undefined) keeps the historical behaviour exactly:
+      // every declared protocol. A filtered run reports only what it touched, so a caller cannot
+      // mistake "I seeded 2" for "the seed is in sync".
+      if (onlySlugs && !onlySlugs.includes(slug)) continue;
       try {
         const proto = await (this.prisma as any).protocol.upsert({
           where: { slug },

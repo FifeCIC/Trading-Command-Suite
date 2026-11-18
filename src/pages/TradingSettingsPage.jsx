@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPut } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import MetaStackLayerSwitch from '../components/MetaStackLayerSwitch';
@@ -357,11 +357,11 @@ export default function TradingSettingsPage() {
     <div className="settings-page">
       <motion.header className="settings-header" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <h1>Trading
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Where each bot's behaviour is configured: its bar, its default size / stop-loss /
             take-profit, and the risk limits it runs under. The loop that runs the bots and
             the queue that paces them are on Automation.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         <p>Bots, thresholds, trade defaults and risk limits.</p>
       </motion.header>

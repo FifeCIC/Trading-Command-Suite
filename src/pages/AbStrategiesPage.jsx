@@ -64,6 +64,7 @@ import { noticeFromError } from '../core/notices/from-error.js';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import TypeTag from '../components/TypeTag';
 import { StrategyBots, StrategyWarnings, DriftNote } from '../components/StrategyBits';
 import { useStrategyRegistry } from '../hooks/useStrategyRegistry';
@@ -1098,7 +1099,7 @@ export default function AbStrategiesPage() {
       <header className={styles.header}>
         <h1 className={styles.title}>
           A/B Strategies
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Every A/B-eligible strategy pair — two strategies that trade the SAME symbol (the
             symbol is the constant; the playbook is what may differ) — grouped by symbol, closest
             matches first. A List | Table toggle switches the index to a table: two rows per pair
@@ -1111,7 +1112,7 @@ export default function AbStrategiesPage() {
             ?test=&lt;id&gt;: it shows when the test started, how long it has run, and what was
             changed in B — both as the change log recorded it (with the author&apos;s note) and as
             the two snapshot configs actually differ.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </header>
 

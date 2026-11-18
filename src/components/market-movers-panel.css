@@ -90,6 +90,15 @@
   margin-bottom: 1rem;
 }
 
+/* ⚠️ A SINGLE LIST MUST NOT STRETCH ACROSS THE PAGE (measured 2026-11-18). The two strategy views and
+   Most Active render exactly one list, and `auto-fit` gave that one table the full 1,452px for four
+   short numeric columns — the owner's description was "terrible", and it was a layout problem, not a
+   data one. Capping the track keeps the same table readable wherever it appears. `:has` is already
+   used by the shell (`.main-top-row:not(:has(…))`), so this is not a new dependency. */
+.mm-lists:has(> .mm-list:only-child) {
+  grid-template-columns: minmax(0, 720px);
+}
+
 .mm-list h3 {
   margin: 0 0 0.35rem;
   font-size: 0.85rem;
@@ -112,6 +121,16 @@
 .mm-num {
   font-family: var(--font-mono);
   color: var(--ink-soft);
+}
+
+/* ⚠️ A NUMERIC CELL ALIGNS ITSELF (2026-11-18). The header's alignment comes from `th.num` in
+   `tables.css`; the cell's had to be repeated as `td.num` and was forgotten, so every numeric column
+   had a right-aligned heading over left-aligned values — reported by the owner as "columns aren't
+   under their headers". Keying the alignment off `mm-num` means the class that SAYS "this is a number"
+   also positions it, so the two ends cannot disagree again. */
+.mm-table td.mm-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .mm-up { color: var(--risk-normal); }

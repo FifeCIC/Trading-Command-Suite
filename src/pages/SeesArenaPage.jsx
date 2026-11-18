@@ -5,7 +5,7 @@ import { fetchScoringThresholds } from '../core/api/signals';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { buildScoreDisplay, thresholdGeometry } from '../core/score-display';
 import './sees-arena.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 const STORAGE_KEY = 'tcs:arena-state';
 
@@ -280,9 +280,9 @@ export default function SeesArenaPage() {
       <header className="sa-header">
         <div>
           <h1>SEES Arena
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Multi-protocol scoring comparison — see how different strategies rate your symbols. Only selected protocols run — data-insufficient ones (⚠️) are automatically excluded.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         </div>
       </header>

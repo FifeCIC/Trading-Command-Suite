@@ -7,8 +7,8 @@ import type { NotificationMessage } from '../notifications.service';
  * WindowsChannel — a WINDOWS TOAST, branded and formatted for trading activity.
  *
  * ── WHY IT WAS PLAIN, AND WHAT CHANGED (2026-10-05) ──────────────────────────────
- * Owner: *"TCS is generating Windows notifications but they're plain - we need to add the TCS logo
- * for starters but I'm thinking some formats to display trading related activity would be great."*
+ * Owner directive: TCS is generating Windows notifications but they're plain - we need to add the TCS logo
+ * for starters but I'm thinking some formats to display trading related activity would be great.
  *
  * Three things kept it plain, and each had a cause worth naming:
  *

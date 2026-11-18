@@ -10,7 +10,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import './t212-isa.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 export default function T212ISAPage() {
   const isa = useQuery({
@@ -37,9 +37,9 @@ export default function T212ISAPage() {
       <div className="t212i-page">
         <header className="t212i-header">
           <h1>Stocks & Shares ISA
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Trading212 Stocks & Shares ISA — allowance tracking, positions, and tax-year summary.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         </header>
         <section className="t212i-section">

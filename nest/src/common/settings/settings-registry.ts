@@ -169,8 +169,8 @@ export const SETTINGS: SettingDefinition[] = [
     max: 100,
   },
   // ── Auto-accept gates (2026-10-30) ─────────────────────────────────────────
-  // Owner: *"if there is an improvement in the profit we auto apply Run B and that gets stored as Run
-  // A"* — and, in the same message, the worry that decides the design: *"a small improvement is luck
+  // Owner directive: if there is an improvement in the profit we auto apply Run B and that gets stored as Run
+  // A — and, in the same message, the worry that decides the design: *"a small improvement is luck
   // and we might need some caution."*
   //
   // So the mode may promote a run AUTOMATICALLY, but only across a threshold that is a declared,

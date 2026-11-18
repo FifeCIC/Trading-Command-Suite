@@ -117,8 +117,8 @@
   padding: 16px 18px;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-/* ⚠️ THE CARD SAYS IT IS INTERACTIVE (2026-11-07). Owner: *"it's not even obvious they can be clicked
-   on unless we hover the cursor over one bar"*. A shadow on hover plus a focus band on the header
+/* ⚠️ THE CARD SAYS IT IS INTERACTIVE (2026-11-07). Owner directive: it's not even obvious they can be clicked
+   on unless we hover the cursor over one bar. A shadow on hover plus a focus band on the header
    gives the card a hover state a reader can see before touching it. */
 .card:hover { box-shadow: var(--shadow-card); }
 

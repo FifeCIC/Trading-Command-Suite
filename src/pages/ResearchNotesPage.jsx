@@ -14,7 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Reorder, useDragControls } from 'motion/react';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import { apiGet, apiPost, apiPut, apiDelete } from '../core/api/client';
 import './research-notes.css';
 
@@ -243,12 +243,12 @@ export default function ResearchNotesPage() {
       <header className="rn-header">
         <h1>
           Notes
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Paste research clippings — news, emails, social posts, discord chats.
             Uppercase tickers are detected automatically: hover one to open its
             symbol, research it on Gemini/Google, or register + import it.
             Drag the ⠿ handle to reorder; click a note to expand it.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </header>
 

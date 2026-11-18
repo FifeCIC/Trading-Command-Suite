@@ -186,16 +186,9 @@
 .tr-panel--key { border-color: color-mix(in srgb, var(--risk-critical) 40%, var(--line)); }
 .tr-panel--about { margin-top: 0.75rem; }
 
-.tr-table { width: 100%; border-collapse: collapse; font-size: 0.74rem; }
-.tr-table th {
-  text-align: left;
-  font-weight: 500;
-  color: var(--text-dim);
-  padding: 0.14rem 0.4rem 0.14rem 0;
-  white-space: nowrap;
-  vertical-align: top;
-}
-.tr-table td { color: var(--ink); padding: 0.14rem 0; font-family: var(--font-mono); }
+/* ARRANGEMENT REMOVED 2026-11-18 - `.tr-table` is enrolled in `src/core/tables.css`. Only what is
+   specific stays: the mono figures and the invalidation colour. */
+.tr-table td { color: var(--ink); font-family: var(--font-mono); }
 .tr-invalidation-row td { color: var(--risk-critical); }
 .tr-hint { font-family: var(--font-body); font-size: 0.64rem; color: var(--text-faint); }
 

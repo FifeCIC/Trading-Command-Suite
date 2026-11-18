@@ -85,7 +85,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Link, useSearchParams } from 'react-router-dom';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import ScoreCard from '../components/ScoreCard';
 import { LadderToolbar, LadderEmptyState, LadderExcludedDivider } from '../components/LadderPanels';
 import { matchesSearch } from '../core/score-card-view';
@@ -419,7 +419,7 @@ export default function AbLadderPage() {
       <header className="lad-header">
         <div>
           <h1>A/B Ladder
-            <PageInfoPopover>
+            <PageInfoSlotContent>
               The Ladder, scoped to a protocol PAIR. Every card is ONE side&apos;s score,
               ranked by its own value exactly as on the Ladder — a symbol both sides score
               appears twice, once per side, so the better side always takes its own place at
@@ -432,7 +432,7 @@ export default function AbLadderPage() {
               A running A/B test that changes only CONFIG (not protocol) cannot be shown
               here yet: scoring is protocol-scoped, so those pairs render identical sides
               by design.
-            </PageInfoPopover>
+            </PageInfoSlotContent>
           </h1>
         </div>
       </header>

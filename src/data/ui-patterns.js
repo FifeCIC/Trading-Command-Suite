@@ -46,6 +46,24 @@ export const PATTERN_FAMILIES = [
 export const UI_PATTERNS = [
   // ── Page shape ────────────────────────────────────────────────────────────────────────────────────
   {
+    // ADDED 2026-11-18. The owner reported "blocks of text appearing on the pages" twice in one day,
+    // naming `<p.slv-lead>` and `<p.slv-theory-body>` on /strategies/day-top-winners. Both were prose
+    // the reader had to work through to REACH the table — which was the only reason the page existed.
+    // This entry is the replacement pattern, so the next page has something to copy instead of a
+    // paragraph to imitate.
+    id: 'fact-strip',
+    family: 'shape',
+    name: 'Fact strip instead of a paragraph',
+    what:
+      'Facts a reader needs before a table are rendered as a term/value grid (a <dl>), not as sentences: ' +
+      'fixed terms down the left, values in one short line each. Sentences longer than about two lines ' +
+      'do not belong on a working page — they belong in the ℹ popover, the theory entry, or an issue.',
+    bestFor: 'The top of any page whose purpose is a table, a chart or a decision',
+    sources: [{ view: '/strategies/day-top-winners', score: null }],
+    elements: ['slv-facts', 'term/value rows', 'one-line claim + falsification'],
+    state: 'strong',
+  },
+  {
     id: 'master-detail-rail',
     family: 'shape',
     name: 'Master–detail with a control rail',
@@ -53,7 +71,6 @@ export const UI_PATTERNS = [
     bestFor: 'Large collections where the user works one item at a time',
     sources: [{ view: '/protocols/directives-registry', score: 8 }, { view: '/research/symbols-browser', score: 8 }],
     elements: ['wide selectable rows', 'right rail (symbol-detail-rail)', 'title with slug beneath'],
-    owner: '"the selectable rows being wider and the additional information being in a sidebar on the right… This sidebar is a mix of controls and that is what makes this layout useful."',
     state: 'strong',
   },
   {
@@ -64,7 +81,6 @@ export const UI_PATTERNS = [
     bestFor: 'Items needing "a small amount of information on the top row but potentially a lot when opened"',
     sources: [{ view: '/research/research-notes', score: 8 }, { view: '/protocols/protocols-registry', score: 8 }, { view: '/development/feature-lab', score: 6 }],
     elements: ['accordion title bar (rn-list)', 'open/closed list (fl-list)'],
-    owner: '"The accordion is good layout. The title bar works really well for me" … "the spacing helps to avoid overwhelming"',
     state: 'strong',
   },
   {
@@ -75,7 +91,6 @@ export const UI_PATTERNS = [
     bestFor: 'Multi-stage pipelines and processes with a per-stage outcome',
     sources: [{ view: '/status/meta-stack-explorer', score: 9 }],
     elements: ['step list', 'per-step status', 'high-impact notice banner (mse-signal-banner)'],
-    owner: '"keep the step approach and individual status within each step"',
     state: 'strong',
   },
   {
@@ -86,7 +101,6 @@ export const UI_PATTERNS = [
     bestFor: 'Statistical reference pages that must be explained and read, not just scanned',
     sources: [{ view: '/status/broker-catalogue', score: null }],
     elements: ['broker stat cards (bc-broker)', 'inline explanatory text', 'closing table'],
-    owner: '"surprisingly effective despite being simple… the minimum flashy colouring but occasional use of it also seems to work"',
     state: 'strong',
   },
 
@@ -99,7 +113,6 @@ export const UI_PATTERNS = [
     bestFor: 'Live monitoring of paired/competing values (score vs score, protocol vs protocol)',
     sources: [{ view: '/scoring/live-ordering-stack', score: 9 }],
     elements: ['paired rows', 'rectangular status icons', 'partly-coloured values'],
-    owner: '"a unique design engineered for the purpose of stock scoring… an excellent approach to any records that have a compared stat that constantly changes"',
     state: 'strong',
   },
   {
@@ -110,7 +123,45 @@ export const UI_PATTERNS = [
     bestFor: 'The default list-of-things table across the app',
     sources: [{ view: '/protocols/protocols-ladder', score: 7 }, { view: '/scoring/symbols-ladder', score: 8 }],
     elements: ['rectangular status icons', 'slashed stats with a partly coloured value'],
-    owner: '"one of the strongest tables… the rectangular status icons work very well when all columns use the same style"',
+    state: 'strong',
+  },
+  {
+    // ADDED 2026-11-18. Two defects in one table, both measured on /strategies/day-top-winners:
+    //   1. Every numeric header was right-aligned while its cells were left-aligned, because `num` was
+    //      passed to the `th` and forgotten on the `td`. The owner: "columns aren't under their headers".
+    //   2. One list rendered alone stretched a four-column table to 1,452px of a 1,500px page.
+    // Both are RULES, not tastes: a column's alignment is one fact declared at both ends, and a table's
+    // width is set by its content, not by the page.
+    id: 'aligned-numeric-table',
+    sampleAt: '/strategies/day-top-winners',
+    family: 'table',
+    name: 'Numeric columns: one alignment, declared at both ends',
+    what:
+      'A numeric column is right-aligned in the HEADER and in every CELL, and uses tabular figures. ' +
+      'The class that marks a cell as a number (e.g. `mm-num`) also positions it, so the two ends ' +
+      'cannot drift. A table shown on its own caps its width — a short numeric table stretched across ' +
+      'the page is unreadable, not "spacious".',
+    bestFor: 'Every table with numbers in it — which is almost every table in this app',
+    sources: [
+      { view: '/strategies/day-top-winners', score: null },
+      { view: '/development/movers-treatment', score: null },
+    ],
+    elements: ['th.num', 'td.mm-num', 'tabular-nums', 'max-width on a single-list grid'],
+    state: 'strong',
+  },
+  {
+    id: 'sorted-by-default',
+    sampleAt: '/strategies/day-top-winners',
+    family: 'table',
+    name: 'Every data table sorts, and opens on the column that IS its subject',
+    what:
+      'Tables use the shared `useSort` ordering rule and give a MEANINGFUL default sort: a "top gainers" ' +
+      'list opens on change descending, a losers list on change ascending, a volume list on volume. ' +
+      'The provider feed order is not a ranking — measured 16.10, 10.31, 8.57, 12.38 — so leaving it ' +
+      'unsorted makes correct data look broken.',
+    bestFor: 'Any table whose rows have a subject (biggest, latest, worst) rather than a natural key order',
+    sources: [{ view: '/strategies/day-top-winners', score: null }],
+    elements: ['SortableTh', 'aria-sort', 'defaultSort per list'],
     state: 'strong',
   },
   {
@@ -124,7 +175,6 @@ export const UI_PATTERNS = [
     bestFor: 'Lists that are worked through rather than only read',
     sources: [{ view: '/research/screener', score: 4 }],
     elements: ['screener table', 'row highlight', 'per-row actions'],
-    owner: '"a good table for offering per row actions… unique. The styling is good and I want a sample of this table in my final theme."',
     state: 'requested',
   },
   {
@@ -135,7 +185,6 @@ export const UI_PATTERNS = [
     bestFor: 'A handful of systems, services or stages with a health state',
     sources: [{ view: '/status/meta-stack-status', score: 7 }],
     elements: ['mss-panel table'],
-    owner: '"a great table for a set number of items/rows and basic status"',
     state: 'strong',
   },
   {
@@ -149,7 +198,6 @@ export const UI_PATTERNS = [
     bestFor: 'Logs and information "best being able to see a lot on one screen"',
     sources: [{ view: '/protocols/directive-viewer', score: 4 }],
     elements: ['plain table'],
-    owner: '"I like the table as a simplistic solution so lets add a sample for that purpose"',
     state: 'requested',
   },
 
@@ -162,7 +210,6 @@ export const UI_PATTERNS = [
     bestFor: '"3–5 options in a taxonomy" — maturity, tier, confidence',
     sources: [{ view: '/protocols/directives-registry', score: 8 }],
     elements: ['READY / BETA / ALPHA toggles'],
-    owner: '"I like the ALL READY BETA ALPHA toggles too and how styles change. These are like traffic lights in a sense."',
     state: 'strong',
   },
   {
@@ -173,7 +220,6 @@ export const UI_PATTERNS = [
     bestFor: 'A summary strip above a filtered list',
     sources: [{ view: '/protocols/directives-registry', score: 8 }],
     elements: ['directives-toolbar-stats'],
-    owner: '"I like the coloured dots for presenting colour keyed statistics so lets include that"',
     state: 'strong',
   },
   {
@@ -184,7 +230,6 @@ export const UI_PATTERNS = [
     bestFor: 'Wherever a state or signal class is displayed — this decision propagates app-wide',
     sources: [{ view: '/protocols/directive-viewer', score: 4 }, { view: '/scoring/symbols-ladder', score: 8 }],
     elements: ['dv-signal (text pill)', 'rectangular status icons (badge)'],
-    owner: '"Something I\'m struggling to make a decision on is the approach to status pills… Please display these along side the rectangle shaped ones that are on other tables so [I] can make a decision on which"',
     state: 'undecided',
   },
   {
@@ -195,7 +240,6 @@ export const UI_PATTERNS = [
     bestFor: 'Summary rows where several counts sit on one line',
     sources: [{ view: '/research/news-intel', score: 7 }],
     elements: ['ni-summary-val (positive / negative / neutral)'],
-    owner: '"These small-sized stats with icons are good I want them in the theme"',
     state: 'strong',
   },
 
@@ -208,7 +252,6 @@ export const UI_PATTERNS = [
     bestFor: 'Adding from several small taxonomies without a modal',
     sources: [{ view: '/protocols/protocol-builder', score: 7 }],
     elements: ['cp-quick-add-groups'],
-    owner: '"what I do like is this row of buttons with counters included so lets have samples of those"',
     state: 'strong',
   },
   {
@@ -223,7 +266,6 @@ export const UI_PATTERNS = [
     bestFor: 'Building an ordered collection (groups, steps, rules)',
     sources: [{ view: '/protocols/protocol-builder', score: 7 }],
     elements: ['cp-section (Directive Groups)'],
-    owner: '"This page has strong forms… Right now my only issue with it is everythings black and white. So add 2-3 examples of a similar \'add items\' form arrangement and I will choose one."',
     state: 'requested',
   },
   {
@@ -234,7 +276,6 @@ export const UI_PATTERNS = [
     bestFor: 'Presenting a lot of options across a series of taxonomies',
     sources: [{ view: '/protocols/protocol-builder', score: 7 }],
     elements: ['cp-section (Directive Palette)'],
-    owner: '"It has accordion hidden tag clouds with nice interaction… this is a good approach to presenting a lot of options in a series of taxonomies."',
     state: 'strong',
   },
   {
@@ -248,7 +289,6 @@ export const UI_PATTERNS = [
     bestFor: 'Switching the view of a list between a few fixed alternatives',
     sources: [{ view: '/research/earnings-calendar', score: 4 }],
     elements: ['ff-seg'],
-    owner: '"The screen options are good… and they work especially good with icons so I want both samples in my theme library."',
     state: 'requested',
   },
   {
@@ -268,7 +308,6 @@ export const UI_PATTERNS = [
     bestFor: 'Explaining a view or a control in place, without a help page',
     sources: [{ view: '/watchlists/user-watchlists', score: 6 }],
     elements: ['pip-trigger'],
-    owner: '"This needs to be a part of all pages so lets add it to the theme libraries example pages"',
     state: 'requested',
   },
 
@@ -281,7 +320,6 @@ export const UI_PATTERNS = [
     bestFor: 'Any state a reader must notice before reading on — a failed read, a position needing attention, a degraded service',
     sources: [{ view: '/trading/exit-signals', score: null }],
     elements: ['.app-notice--critical', '.app-notice--warning', '.app-notice--success', '.app-notice--info'],
-    owner: '"The actual notice .app-notice.app-notice--critical is well styled and should be part of a range of notice styling so ensure it is in the Appearance section."',
     // ⚠️ `score: null` ON PURPOSE. The owner approved the CRITICAL notice by name; they did not give
     // the page a UI score, and inventing one would be an agent's judgement dressed as a measurement.
     state: 'strong',
@@ -294,7 +332,6 @@ export const UI_PATTERNS = [
     bestFor: 'Quick decisions where several facts and an action must be visible together',
     sources: [{ view: '/signals/signals-overview', score: 8 }],
     elements: ['sig-b-card'],
-    owner: '"Signals offers advanced cards. They\'re packed with information and status and some options. It\'s important for quick decision making."',
     state: 'strong',
   },
   {
@@ -305,7 +342,6 @@ export const UI_PATTERNS = [
     bestFor: 'A small number of services, each needing a health summary',
     sources: [{ view: '/status/meta-stack-status', score: 7 }],
     elements: ['mss-panel--priority'],
-    owner: '"This is brilliant as a status card for a single service or system"',
     state: 'strong',
   },
   {
@@ -316,7 +352,6 @@ export const UI_PATTERNS = [
     bestFor: 'Any page where the user should arrange their own information',
     sources: [{ view: '/dashboard/dashboard', score: 8 }, { view: '/status/broker-catalogue', score: null }],
     elements: ['widget board', 'bc-broker cards'],
-    owner: '"The entire dashboard and widget system is strong. I will want to copy this into my React Stack Core and use it in most projects."',
     state: 'strong',
   },
   {
@@ -327,7 +362,6 @@ export const UI_PATTERNS = [
     bestFor: 'Presenting a short sequence where attention should follow in order',
     sources: [{ view: '/development/theme-lab', score: 7 }],
     elements: ['tl-section (Fade-on-Scroll Card Stack)'],
-    owner: '"the fade on roll card stacks should be used within our app and future apps"',
     state: 'strong',
   },
   {
@@ -342,7 +376,6 @@ export const UI_PATTERNS = [
     bestFor: 'Getting attention, or summarising a page in one element',
     sources: [{ view: '/status/meta-stack-explorer', score: 9 }],
     elements: ['mse-signal-banner'],
-    owner: '"I like this large high impact notice… create a list of samples like this with the purpose being to get the attention of the user or summarise."',
     state: 'requested',
   },
 ];

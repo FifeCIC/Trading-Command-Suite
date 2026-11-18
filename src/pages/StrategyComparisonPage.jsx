@@ -40,7 +40,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import NoticeBlock from '../components/NoticeBlock';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import { notice } from '../core/notices/registry.js';
 import { noticeFromError } from '../core/notices/from-error.js';
 import './strategy-comparison.css';
@@ -133,12 +133,12 @@ export default function StrategyComparisonPage() {
         <div>
           <h1>
             Bot Comparison
-            <PageInfoPopover>
+            <PageInfoSlotContent>
               Every strategy as a column, every criterion as a row, sorted best-first — so the
               worst performer is the last one you scroll to. Compare outcomes, daily P&amp;L,
               protocol, directives, and the most recent trades and scores. Profit is the truth;
               nothing here is estimated.
-            </PageInfoPopover>
+            </PageInfoSlotContent>
           </h1>
           <p className="strategycmp-subtitle">
             {unavailable

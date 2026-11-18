@@ -32,7 +32,7 @@ import '../core/bot-rule-enforcement.css';
 import '../core/forms.css';
 import '../components/StrategyBuilder/strategy-wizard.css';
 import './strategy-create.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 const TABS = [
   { id: 'form', label: 'Form', icon: '📝' },
@@ -407,11 +407,11 @@ export default function StrategyCreatePage() {
       <motion.header className="stratcreate-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
           <h1>Create Bot
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Form or wizard — configure a new TRADING BOT. A bot is the execution policy (sizing, risk,
             entry/exit rules); the signal thesis comes from the protocol it subscribes to. See
             docs/trading-bot-model.md.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         </div>
       </motion.header>

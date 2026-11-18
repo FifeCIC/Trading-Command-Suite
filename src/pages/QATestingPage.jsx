@@ -20,7 +20,7 @@ import { motion } from 'motion/react';
 import QA_CHECKLIST from '../data/qa-checklist';
 import { useUiStore } from '../stores/useUiStore';
 import './qa-testing.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 const STORAGE_KEY = 'tcs-qa-testing-state';
 
@@ -108,10 +108,10 @@ export default function QATestingPage() {
       <header className="qa-header">
         <div>
           <h1>QA Testing
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Systematic verification of every system. Each entry is a guided test procedure — follow it,
             record the result, and leave feedback. This is how you learn your own app.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         </div>
         <div className="inline-actions">

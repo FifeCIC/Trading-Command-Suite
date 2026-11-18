@@ -53,7 +53,7 @@ const ROOT = path.join(__dirname, '..');
 // ── DECISION (2026-11-13, owner) — write to a GITIGNORED local path, never the tracked one ──
 // WHAT:      The generator writes strategy-seed-generated.local.ts; the repo tracks nothing.
 // WHY:       The repository is PUBLIC and the fleet's numbers ARE the strategies. 24e70aeb published
-//            72 of them. Owner: *"avoid giving away all strategies."*
+//            72 of them. Owner directive: avoid giving away all strategies.
 // INSTEAD OF: strategy-seed-generated.ts (tracked).
 // REVERSE BY: Pointing this back at the tracked name — but do not, without making the repo private.
 // REGISTER:  docs/SETTLED-DECISIONS.md row 177

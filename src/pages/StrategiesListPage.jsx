@@ -23,7 +23,7 @@ import SuggestionQueue from '../components/SuggestionQueue';
 import { filterStrategies, isActiveStrategy, isTradingStrategy, isScoringStrategy, isFaultyStrategy, matchesBotSearch } from '../core/strategy-filters';
 import { useSort } from '../core/use-sort';
 import StrategyFaultBadge from '../components/StrategyFaultBadge';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 // The scoring mechanics panel (owner request, 2026-10-08): the maths behind the Score column, shown
 // on live numbers rather than described.
 import ScoringMechanicsPanel from '../components/ScoringMechanicsPanel.jsx';
@@ -427,7 +427,7 @@ export default function StrategiesListPage() {
           whatever its scope, which is the point: a bot change and the protocol change it depends on
           must be read together, or the reader sees half the plan and treats it as the whole.
         */}
-        <SuggestionQueue title="Queued changes — protocols and bots" />
+        <SuggestionQueue mode="all" title="Queued changes — protocols and bots" />
 
         {/* ── Control bar ─────────────────────────────────────────────────────────────────────
             Modelled on `.lad-toolbar` (LadderPage, `/scoring/live-ordering-stack`): ONE panel row
@@ -478,11 +478,13 @@ export default function StrategiesListPage() {
             ))}
           </div>
 
-          {/* ⚠️ A `<div>`, not a `<span>`: `PageInfoPopover` renders a `<div>` popover, and flow
-              content inside phrasing content is invalid nesting (the same defect `appearance-area.css`
-              records against a `<p>`). */}
-          <div className={styles.toolbarInfo}>
-            <PageInfoPopover label="About this bot list">
+          {/* ⚠️ MOVED TO THE SHELL'S ℹ (2026-11-18). This block used to be a `PageInfoPopover` inside a
+              `styles.toolbarInfo` div, so the page's primary explanation sat in the filter toolbar
+              while every other page put it in a different place. Owner direction: one position, the
+              top row beside the breadcrumbs. `PageInfoSlotContent` renders NOTHING here — its children
+              are lifted into the shell's popover — so the wrapping div and its `margin-left: auto`
+              were removed with it. */}
+          <PageInfoSlotContent>
               {isError ? (
                 <p className={styles.popoverLine}>
                   <strong>The registry could not be read.</strong> GET /api/trading/strategies failed,
@@ -514,8 +516,7 @@ export default function StrategiesListPage() {
                   </p>
                 </>
               )}
-            </PageInfoPopover>
-          </div>
+            </PageInfoSlotContent>
         </div>
       </motion.header>
 

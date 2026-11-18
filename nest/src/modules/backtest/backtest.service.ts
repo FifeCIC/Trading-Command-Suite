@@ -1232,8 +1232,8 @@ export class BacktestService {
     protocolId?: string | null,
   ): Promise<{ id: string; iteration: number } | null> {
     // ⚠️ #1295 — AN UNNAMED RUN IS NOW FILED, NOT DISCARDED INTO ANONYMITY (2026-11-18).
-    // Owner: *"I'm concerned at the huge amount of tests being built and how we'll keep coming back
-    // to them… I can't afford to spend tokens for every step."* Measured: 1,722 runs existed and
+    // Owner directive: I'm concerned at the huge amount of tests being built and how we'll keep coming back
+    // to them… I can't afford to spend tokens for every step. Measured: 1,722 runs existed and
     // **13** were ever filed (0.75%), with 1,412 unfiled in one day. An unfiled run is not wrong, it
     // is simply unfindable later — which is the same as losing it.
     //

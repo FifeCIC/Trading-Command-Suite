@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import './responsive-layout-lab.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 // ── Sample data ──
 const ALL_COLUMNS = [
@@ -58,9 +58,9 @@ export default function ResponsiveLayoutLabPage() {
       <motion.header className="rll-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
           <h1>Responsive Layout Lab
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Reference patterns for tables, grids, and layouts that adapt to device sizes. Pick a device to preview.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         </div>
       </motion.header>

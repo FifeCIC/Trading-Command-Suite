@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 export default function CacheMonitorPage() {
   const qc = useQueryClient();
@@ -41,10 +41,10 @@ export default function CacheMonitorPage() {
   return (
     <div className="cm-page">
       <h1>Cache Monitor
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Intelligent in-memory cache for expensive provider and multi-table responses. Keep short-lived
         entries visible, prune stale data, and avoid caching simple database reads that are already cheap.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
 
       <div className="cm-summary">

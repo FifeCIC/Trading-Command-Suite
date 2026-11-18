@@ -16,7 +16,7 @@ import { motion } from 'motion/react';
 import { useProtocolData } from '../core/useProtocolData';
 import { useProtocolStatuses, buildProtocolStatus } from '../core/protocol-status';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import './protocols-ladder.css';
 
 import { signalClass, DIRECTION_MODE_LABELS } from '../core/signal-utils';
@@ -137,9 +137,9 @@ export default function ProtocolsLadderPage() {
     <div className="pl-page">
       <motion.header className="pl-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <h1>Protocols Ladder
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Active protocols ranked by scoring strength. "Aggregate" combines the top N symbols per protocol for a combined strength score.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </motion.header>
 

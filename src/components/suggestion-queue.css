@@ -1,0 +1,193 @@
+/* suggestion-queue.css — the queued-changes list, shared by the Protocols and Strategies pages.
+ *
+ * ⚠️ TOKENS ARE LONGHAND WITH `currentColor` FALLBACKS, deliberately. `--text-dim`, `--border` and
+ * `--bg-elev` are injected at RUNTIME by `src/theme/adapters/vanilla.js`, so first paint happens with
+ * them undefined. A shorthand like `border: 1px solid var(--border)` paints NOTHING when the token is
+ * missing — the failed var() invalidates the whole declaration. Measured on this codebase 2026-11-18.
+ */
+
+.sq {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--border, rgba(128, 128, 128, 0.28));
+  background-color: var(--bg-elev, rgba(128, 128, 128, 0.05));
+}
+
+/* A queue that cannot be scoped must LOOK like a refusal, not like an empty list. */
+.sq--blocked {
+  border-style: dashed;
+  border-color: var(--risk-high, rgba(217, 83, 79, 0.55));
+}
+
+.sq-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sq-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink, currentColor);
+}
+
+.sq-counts {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-dim, currentColor);
+  opacity: 0.9;
+}
+
+.sq-warn {
+  color: var(--risk-high, #d9534f);
+}
+
+.sq-empty {
+  margin: 6px 0;
+  font-size: 0.82rem;
+  color: var(--text-dim, currentColor);
+}
+
+.sq-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sq-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: start;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--line, rgba(128, 128, 128, 0.22));
+  background-color: var(--panel, transparent);
+}
+
+/* ⚠️ A PLACEHOLDER looks different from a real change on purpose: it names a directive that does not
+ * exist yet, so it must never read as something attachable today. */
+.sq-row--missing {
+  border-style: dashed;
+  border-color: var(--risk-high, rgba(217, 83, 79, 0.55));
+}
+
+.sq-chip {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sq-chip--queued { background-color: rgba(128, 128, 128, 0.18); color: var(--ink-soft, currentColor); }
+.sq-chip--accepted { background-color: rgba(64, 132, 216, 0.2); color: var(--ink-soft, currentColor); }
+.sq-chip--applied { background-color: rgba(60, 160, 100, 0.22); color: var(--ink-soft, currentColor); }
+.sq-chip--rejected { background-color: rgba(160, 60, 60, 0.18); color: var(--ink-soft, currentColor); }
+.sq-chip--blocked { background-color: rgba(200, 150, 40, 0.2); color: var(--ink-soft, currentColor); }
+
+.sq-body { min-width: 0; }
+
+.sq-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0 0 3px;
+  font-size: 0.84rem;
+}
+
+.sq-kind { color: var(--ink, currentColor); }
+
+.sq-target {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.78rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background-color: rgba(128, 128, 128, 0.16);
+}
+
+.sq-scope {
+  font-size: 0.72rem;
+  color: var(--text-faint, currentColor);
+  opacity: 0.85;
+}
+
+.sq-rationale {
+  margin: 0 0 4px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--ink-soft, currentColor);
+  opacity: 0.92;
+}
+
+.sq-values {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--text-dim, currentColor);
+}
+
+.sq-value-label { text-transform: uppercase; font-size: 0.66rem; opacity: 0.75; }
+.sq-value { font-family: var(--font-mono, ui-monospace, monospace); }
+.sq-arrow { opacity: 0.6; }
+
+.sq-links {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.sq-issue {
+  font-size: 0.74rem;
+  color: var(--accent, currentColor);
+  text-decoration: none;
+  border-bottom-style: solid;
+  border-bottom-width: 1px;
+  border-bottom-color: currentColor;
+}
+
+.sq-issue:hover { opacity: 0.8; }
+
+.sq-noissue {
+  font-size: 0.7rem;
+  color: var(--risk-high, #d9534f);
+  opacity: 0.85;
+}
+
+.sq-priority {
+  font-size: 0.68rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--text-faint, currentColor);
+  opacity: 0.8;
+}
+
+/*
+ * ⚠️ THE STACKING IS DONE WITH GRID COLUMNS, NOT ABSOLUTE POSITIONING, because the row height is not
+ * known in advance (a rationale may wrap to three lines). Absolute positioning here would overlap the
+ * chip with the body at narrow widths.
+ */
+@media (max-width: 640px) {
+  .sq-row { grid-template-columns: auto 1fr; }
+  .sq-links { grid-column: 1 / -1; flex-direction: row; justify-content: flex-end; }
+}

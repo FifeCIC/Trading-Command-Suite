@@ -470,10 +470,14 @@ export class Mt5Controller {
   }
 
   @Post('switch/:accountNum')
-  @ApiOperation({ summary: 'Switch MT5 to a different account' })
-  async switchAccount(@Param('accountNum') accountNum: string) {
+  @ApiOperation({ summary: 'Switch one bridge to a different account (brokerId selects the bridge)' })
+  async switchAccount(@Param('accountNum') accountNum: string, @Query('brokerId') brokerId?: string) {
     try {
-      const res = await fetch(`${this.BRIDGE_URL}/switch/${accountNum}`, {
+      // ⚠️ Route to the bridge the account belongs to. `number` is an index inside ONE bridge's
+      // config, so forwarding it to `this.BRIDGE_URL` (the default bridge) switched a DIFFERENT
+      // account on a DIFFERENT terminal whenever the caller meant a secondary bridge — silently.
+      const base = brokerId ? this.mt5Connection.getUrl(Number(brokerId)) : this.BRIDGE_URL;
+      const res = await fetch(`${base}/switch/${accountNum}`, {
         method: 'POST',
         signal: AbortSignal.timeout(15000),
       });

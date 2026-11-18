@@ -39,7 +39,8 @@ export default function Mt5TradingPage() {
 
   // ── Accounts ──
   const [accounts, setAccounts] = useState([]);
-  const [activeAccountNum, setActiveAccountNum] = useState(null);
+  /** Which bridge's figures this page is showing — `diag.brokerId`. Identity is brokerId+number. */
+  const [dataBrokerId, setDataBrokerId] = useState(null);
 
   // ── UI Tabs ──
   const [activeTab, setActiveTab] = useState('positions');
@@ -81,7 +82,7 @@ export default function Mt5TradingPage() {
         ? { ...diag.account, balance: diag.balance, equity: diag.equity, server: diag.server }
         : null);
       if (diag.lastQuote) setQuote(diag.lastQuote);
-      if (diag.activeAccount) setActiveAccountNum(diag.activeAccount);
+      if (diag.brokerId != null) setDataBrokerId(diag.brokerId);
 
       if (isConnected) {
         const [posRes, histRes] = await Promise.all([
@@ -114,8 +115,8 @@ export default function Mt5TradingPage() {
   //
   // ⚠️ THE FLICKER WAS THIS LINE (fixed 2026-11-07). `refreshAll` ran on a 10s interval and began
   // with `setLoading(true)` — and `loading` gates a FULL-PAGE spinner (`if (loading) return
-  // <spinner>`), so every poll tore the whole view down and rebuilt it. Owner: *"the entire view
-  // flashes, I assume it's the refresh of information but the flicker is highly annoying"*. It was
+  // <spinner>`), so every poll tore the whole view down and rebuilt it. Owner directive: the entire view
+  // flashes, I assume it's the refresh of information but the flicker is highly annoying. It was
   // the refresh, exactly.
   //
   // The spinner is only meaningful when there is nothing on screen yet, so `loading` is set for the
@@ -143,12 +144,26 @@ export default function Mt5TradingPage() {
   }, [refreshAll, connected]);
 
   // ── Account Switching ──
-  async function handleSwitchAccount(accountNum) {
+  /**
+   * Switch the ACTIVE account on ONE bridge.
+   *
+   * ⚠️ `brokerId` IS REQUIRED (fixed 2026-11-18). The account list is a fan-out across every active
+   * bridge, and `number` is the account's index INSIDE one bridge's config — so `#2` on bridge 2 and
+   * `#2` on bridge 3 are different logins. This called `/switch/:accountNum` with the number alone,
+   * which the route forwarded to the DEFAULT bridge: picking an account from the list could switch a
+   * different account on a different terminal, and nothing reported it. Same defect class as the
+   * removal route and #1033.
+   */
+  async function handleSwitchAccount(accountKey) {
+    const [brokerId, accountNum] = String(accountKey).split(':');
     try {
-      const res = await fetch(`/api/providers/mt5/switch/${accountNum}`, { method: 'POST' });
+      const res = await fetch(
+        `/api/providers/mt5/switch/${encodeURIComponent(accountNum)}?brokerId=${encodeURIComponent(brokerId)}`,
+        { method: 'POST' },
+      );
       const data = await res.json();
       if (data.success) {
-        setMsg(`Switched to account #${accountNum}`);
+        setMsg(`Switched bridge ${brokerId} to account #${accountNum}`);
         setTimeout(() => setMsg(''), 4000);
         setLoading(true);
         setTimeout(refreshAll, 2000); // Give bridge time to reconnect
@@ -161,13 +176,20 @@ export default function Mt5TradingPage() {
   }
 
   // ── Remove Account ──
-  async function handleRemoveAccount(accountNum) {
-    if (!window.confirm(`Remove account #${accountNum} from the bridge?`)) return;
+  /**
+   * ⚠️ TAKES THE WHOLE ACCOUNT RECORD, NOT A NUMBER (fixed 2026-11-18). The remove route has routed by
+   * `brokerId` since the account-management work; this caller was still posting `{ number }` alone, so
+   * it fell through to the default bridge. With two bridges holding a `number: 2` that removed an
+   * account the reader was not looking at — the #1033 class, on the write path.
+   */
+  async function handleRemoveAccount(acct) {
+    if (!acct) return;
+    if (!window.confirm(`Remove ${acct.login} (bridge ${acct.brokerId}) from this page?`)) return;
     try {
       const res = await fetch('/api/providers/mt5/accounts/remove', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ number: accountNum }),
+        body: JSON.stringify({ number: acct.number, brokerId: acct.brokerId }),
       });
       const data = await res.json();
       if (data.success) {
@@ -285,7 +307,27 @@ export default function Mt5TradingPage() {
 
   // ── Computed ──
   const totalPnl = positions.reduce((s, p) => s + (p.profit || 0), 0);
-  const activeAccountInfo = accounts.find(a => String(a.number) === String(activeAccountNum));
+
+  /**
+   * The account this page is SHOWING — the active one on the bridge that supplies its data.
+   *
+   * ⚠️ THIS USED TO BE `activeAccountNum`, SET FROM `diag.activeAccount` — A FIELD THE DIAGNOSTICS
+   * PAYLOAD DOES NOT CONTAIN (measured 2026-11-18: it returns `account` as a login string plus
+   * `brokerId`, and no `activeAccount`). So the state stayed `null` forever: the header badge never
+   * rendered and the Remove button was permanently disabled. It read as "there is no active account"
+   * rather than "we never set it" — the cannot-judge / absence defect.
+   *
+   * It is also not derivable from a bare number: `GET /api/providers/mt5/accounts` fans out across
+   * every active bridge, and live data on 2026-11-18 held TWO `number: 2` rows (bridges 2 and 3,
+   * both MetaQuotes-Demo) and TWO `active: true` rows — one per bridge. So identity is
+   * `brokerId` + `number`, and the bridge is the one whose figures this page is displaying.
+   */
+  const activeAccountInfo = accounts.find(
+    (a) => a.active === true && (dataBrokerId == null || a.brokerId === dataBrokerId),
+  ) || accounts.find((a) => a.active === true);
+  const activeAccountKey = activeAccountInfo
+    ? `${activeAccountInfo.brokerId}:${activeAccountInfo.number}`
+    : '';
 
   // ── Loading State ──
   if (loading) {
@@ -396,12 +438,16 @@ export default function Mt5TradingPage() {
           <div className="mt5u-account-selector">
             <label>Account:</label>
             <select
-              value={activeAccountNum || ''}
+              value={activeAccountKey}
               onChange={(e) => handleSwitchAccount(e.target.value)}
             >
               {accounts.map((a) => (
-                <option key={a.number} value={a.number}>
-                  {a.login} @ {a.server} {String(a.number) === String(activeAccountNum) ? '(active)' : ''}
+                // ⚠️ KEY AND VALUE BOTH INCLUDE THE BRIDGE (fixed 2026-11-18). `key={a.number}` gave
+                // React duplicate keys whenever two bridges shared an index — measured on this page:
+                // two `number: 2` rows. React may then duplicate or omit options, and the option that
+                // disappeared is the one the reader was trying to pick.
+                <option key={`${a.brokerId}-${a.number}-${a.login}`} value={`${a.brokerId}:${a.number}`}>
+                  {a.login} @ {a.server} · bridge {a.brokerId}{a.active ? ' (active)' : ''}
                 </option>
               ))}
             </select>
@@ -410,8 +456,8 @@ export default function Mt5TradingPage() {
 
               This used to call `accounts.map(...)` a SECOND time and render a `✕` button for every
               account — eight of them, in a row, with no label and no visible connection to the
-              dropdown above them. Owner: *"We have rows of X … there is about 8 and no clear
-              purpose."* The purpose existed; the affordance did not say which account it would
+              dropdown above them. Owner directive: We have rows of X … there is about 8 and no clear
+              purpose. The purpose existed; the affordance did not say which account it would
               remove, and a mis-click was silent.
 
               Now a single button acts on the SELECTED account, names it in its tooltip and its
@@ -421,12 +467,14 @@ export default function Mt5TradingPage() {
             <button
               type="button"
               className="mt5u-remove-btn"
-              onClick={() => handleRemoveAccount(activeAccountNum)}
-              disabled={!activeAccountNum}
-              title={activeAccountNum
-                ? `Remove account ${activeAccountNum} from this page (does not close it at the broker)`
+              onClick={() => handleRemoveAccount(activeAccountInfo)}
+              disabled={!activeAccountInfo}
+              title={activeAccountInfo
+                ? `Remove ${activeAccountInfo.login} from bridge ${activeAccountInfo.brokerId} (does not close it at the broker)`
                 : 'Select an account first'}
-              aria-label={activeAccountNum ? `Remove account ${activeAccountNum}` : 'Remove account — select one first'}
+              aria-label={activeAccountInfo
+                ? `Remove account ${activeAccountInfo.login}`
+                : 'Remove account — select one first'}
             >
               ✕ Remove
             </button>

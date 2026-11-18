@@ -6,7 +6,7 @@ import { feedUnavailable } from '../core/api/feed-state.js';
 import { NAV_TREE } from '../core/nav-tree';
 import { PAGE_DATA_STATUS } from '../core/page-data-status';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import './capability-map.css';
 
 import { KNOWN_FEATURES } from '../data/known-features';
@@ -469,7 +469,7 @@ export default function CapabilityMapPage() {
               and then explained the POST endpoint that adds to it — a method note above the thing it
               describes. The count stays on screen in the Summary strip immediately below, so nothing
               measurable was lost by hiding this. */}
-          <PageInfoPopover label="About the Capability Map">
+          <PageInfoSlotContent>
             <p>
               Unified inventory of {allRows.length} capabilities —{' '}
               {dbCapabilities.length > 0
@@ -480,7 +480,7 @@ export default function CapabilityMapPage() {
             {feedUnavailable(capabilitiesQuery) && (
               <p><strong>The DB register could not be read</strong> — rows are from the live scan.</p>
             )}
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </motion.header>
 

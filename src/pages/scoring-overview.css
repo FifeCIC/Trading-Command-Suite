@@ -211,10 +211,10 @@
   color: var(--ink-soft);
 }
 
-.so-freshness--fresh { border-color: #00a63e40; }
-.so-freshness--fresh .so-freshness-count { color: #00a63e; }
-.so-freshness--stale { border-color: #e6a70040; }
-.so-freshness--stale .so-freshness-count { color: #d4a200; }
+.so-freshness--fresh { border-color: color-mix(in srgb, var(--color-buy) 25%, transparent); }
+.so-freshness--fresh .so-freshness-count { color: var(--color-buy); }
+.so-freshness--stale { border-color: color-mix(in srgb, var(--color-warning) 25%, transparent); }
+.so-freshness--stale .so-freshness-count { color: var(--color-warning); }
 .so-freshness--missing { border-color: rgba(239,68,68,0.25); }
 .so-freshness--missing .so-freshness-count { color: var(--color-loss); }
 .so-freshness--deterministic { border-color: #8b5cf640; }
@@ -486,17 +486,17 @@
   font-weight: 600;
   letter-spacing: 0.03em;
 }
-.los-auto-btn.active { background: var(--color-profit); color: #fff; border-color: var(--color-profit); }
+.los-auto-btn.active { background: var(--color-profit); color: var(--on-accent); border-color: var(--color-profit); }
 .los-stack-section { margin-top: 0.25rem; }
 .los-stack-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
 .los-stack-header h2 { margin: 0; font-size: 0.9rem; color: var(--ink); }
 .los-live-badge {
-  font-size: 0.6rem; background: var(--color-profit); color: #fff;
+  font-size: 0.6rem; background: var(--color-profit); color: var(--on-accent);
   padding: 2px 8px; border-radius: 10px; font-weight: 700;
   letter-spacing: 0.08em; animation: los-pulse 1.5s ease-in-out infinite;
 }
 .los-paused-badge {
-  font-size: 0.6rem; background: var(--color-muted); color: #fff;
+  font-size: 0.6rem; background: var(--color-muted); color: var(--on-accent);
   padding: 2px 8px; border-radius: 10px; font-weight: 700;
   letter-spacing: 0.08em;
 }
@@ -518,7 +518,7 @@
 .so-degradation-body strong { display: block; margin-bottom: 0.15rem; color: var(--color-warning); }
 .so-degradation-body p { margin: 0.1rem 0; }
 .so-degradation-detail { font-size: 0.75rem; color: var(--color-warning)cc; }
-.so-degradation-coverage { font-size: 0.82rem; font-weight: 600; margin-top: 0.3rem; color: #d97706; }
+.so-degradation-coverage { font-size: 0.82rem; font-weight: 600; margin-top: 0.3rem; color: var(--color-warning); }
 
 /* ── Degradation Row Indicators ── */
 .so-row-degraded { background: rgba(245,158,11,0.04); }

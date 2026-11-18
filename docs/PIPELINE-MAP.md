@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **585** backend source files (specs excluded). Two access paths, because one
+Scanned **589** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**585** source files · **3285** declarations · **395** ratio sites · **1736** nodes · **181** unreferenced
+**589** source files · **3299** declarations · **397** ratio sites · **1736** nodes · **181** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -116,7 +116,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 27 sites — `(V1/V2)*100`
 
-- `nest/src/modules/alerts/alert-trigger.service.ts:598` — `checkMarginUtilization()` → `utilPct`
+- `nest/src/modules/alerts/alert-trigger.service.ts:619` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
 - `nest/src/modules/automation/automation-loop.service.ts:3093` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
@@ -351,13 +351,13 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 3 sites — `round1((100*V1)/V2)`
 
-- `nest/src/modules/scoring/protocol-gating.controller.ts:553` — `(anonymous)()`
+- `nest/src/modules/scoring/protocol-gating.controller.ts:591` — `(anonymous)()`
   - `configuredCapacity>0?round1((100*neverCapacity)/configuredCapacity):0`
   - guarded by: `configuredCapacity>0`
-- `nest/src/modules/scoring/protocol-gating.controller.ts:556` — `(anonymous)()`
+- `nest/src/modules/scoring/protocol-gating.controller.ts:594` — `(anonymous)()`
   - `configuredCapacity>0?round1((100*p.peak)/configuredCapacity):0`
   - guarded by: `configuredCapacity>0`
-- `nest/src/modules/scoring/protocol-gating.controller.ts:562` — `(anonymous)()`
+- `nest/src/modules/scoring/protocol-gating.controller.ts:600` — `(anonymous)()`
   - `reachableCapacity>0?round1((100*p.peak)/reachableCapacity):null`
   - guarded by: `reachableCapacity>0`
 
@@ -443,7 +443,7 @@ Identical after normalisation: variable names differ, the computation does not.
 
 ### 27 sites — `(V1/V2)*100`
 
-- `nest/src/modules/alerts/alert-trigger.service.ts:598` — `checkMarginUtilization()` → `utilPct`
+- `nest/src/modules/alerts/alert-trigger.service.ts:619` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
 - `nest/src/modules/automation/automation-loop.service.ts:3093` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
@@ -686,7 +686,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 ### 27 sites — `(VN/VN)*N`
 
-- `nest/src/modules/alerts/alert-trigger.service.ts:598` — `checkMarginUtilization()` → `utilPct`
+- `nest/src/modules/alerts/alert-trigger.service.ts:619` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
 - `nest/src/modules/automation/automation-loop.service.ts:3093` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
@@ -911,11 +911,11 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/common/cache/cache.service.ts:58 set`
 - `nest/src/common/cache/cache.service.ts:69 del`
 - `nest/src/common/trading/overfit-verdict.ts:65 pct`
-- `nest/src/modules/alerts/alert-trigger.service.ts:150 stop`
-- `nest/src/modules/alerts/alert-trigger.service.ts:226 label`
-- `nest/src/modules/alerts/alert-trigger.service.ts:361 canTrade`
-- `nest/src/modules/alerts/alert-trigger.service.ts:369 definitelyBlocked`
-- `nest/src/modules/alerts/alert-trigger.service.ts:868 toMap`
+- `nest/src/modules/alerts/alert-trigger.service.ts:171 stop`
+- `nest/src/modules/alerts/alert-trigger.service.ts:247 label`
+- `nest/src/modules/alerts/alert-trigger.service.ts:382 canTrade`
+- `nest/src/modules/alerts/alert-trigger.service.ts:390 definitelyBlocked`
+- `nest/src/modules/alerts/alert-trigger.service.ts:911 toMap`
 - `nest/src/modules/automation/ab-test.service.ts:316 getActiveTest`
 - `nest/src/modules/automation/ab-test.service.ts:375 isActive`
 - `nest/src/modules/automation/ab-test.service.ts:606 summarize`
@@ -1022,11 +1022,11 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/movers-treatment.service.ts:336 build`
 - `nest/src/modules/scoring/pnl-statistics.service.ts:165 empty`
 - `nest/src/modules/scoring/pnl-statistics.service.ts:237 inPopulation`
-- `nest/src/modules/scoring/protocol-db.service.ts:1099 protocolNeedsEurUsd`
-- `nest/src/modules/scoring/protocol-db.service.ts:1115 getName`
+- `nest/src/modules/scoring/protocol-db.service.ts:1103 protocolNeedsEurUsd`
+- `nest/src/modules/scoring/protocol-db.service.ts:1119 getName`
 - `nest/src/modules/scoring/protocol-db.service.ts:491 getAllSlugs`
-- `nest/src/modules/scoring/protocol-gating.controller.ts:714 isIncluded`
-- `nest/src/modules/scoring/protocol-gating.controller.ts:719 effectiveMax`
+- `nest/src/modules/scoring/protocol-gating.controller.ts:768 isIncluded`
+- `nest/src/modules/scoring/protocol-gating.controller.ts:773 effectiveMax`
 - `nest/src/modules/scoring/protocol-gating.service.ts:1691 worker`
 - `nest/src/modules/scoring/protocol-health.service.ts:652 getLast`
 - `nest/src/modules/scoring/protocols.controller.ts:70 recordActivity`

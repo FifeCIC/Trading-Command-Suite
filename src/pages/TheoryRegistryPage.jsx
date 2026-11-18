@@ -1,4 +1,4 @@
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import { THEORIES, THEORY_STATUSES } from '../data/theories';
 import './theory-registry.css';
 
@@ -105,11 +105,11 @@ export default function TheoryRegistryPage() {
       <header className="tr-header">
         <h1>
           Theory Registry
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Every belief this app holds about the market, written as a claim someone can refute, with
             the test that would kill it and the decision that came out of it. A theory without a
             falsification test is a preference — and preferences do not belong here.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         <p className="tr-lede">
           A belief is only useful once it can be wrong. Each entry names what would falsify it,

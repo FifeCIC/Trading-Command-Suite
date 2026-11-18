@@ -12,7 +12,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './gap-scanner.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 const DEFAULT_SYMBOLS = 'AAPL,NVDA,TSLA,MSFT,AMD,SPY,QQQ,META,GOOGL,AMZN';
 
@@ -106,9 +106,9 @@ export default function GapScannerPage() {
       <header className="gs-header">
         <div>
           <h1>Gap Scanner
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Pre-market gap analysis — powered by the gap-scanner directive in the SEES pipeline
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         </div>
         <button className="gs-refresh-btn" onClick={() => refetch()}>↻ Refresh</button>

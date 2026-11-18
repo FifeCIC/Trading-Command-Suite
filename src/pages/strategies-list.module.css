@@ -62,11 +62,6 @@
   border-radius: 10px;
 }
 
-/* ⚠️ `margin-left: auto`, not `justify-content: space-between` on `.toolbar`. `space-between` would
-   push the gap between SEARCH and the chips as well; the auto margin puts all the slack in one
-   place, so the controls stay grouped on the left and ℹ sits alone at the row's end. */
-.toolbarInfo { margin-left: auto; display: inline-flex; align-items: center; }
-
 /* ── Search ─────────────────────────────────────────────────────────────────────────────────────
    `position: relative` so the clear button can be absolutely placed inside the field — the native
    `::-webkit-search-cancel-button` is hidden below because it would sit under our own ×. */

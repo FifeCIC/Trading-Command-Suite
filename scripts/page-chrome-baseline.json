@@ -1,18 +1,16 @@
 {
   "AbLadderPage.jsx": {
-    "page-h1": 2,
-    "page-info-popover": 1
+    "page-h1": 2
   },
   "AbStrategiesPage.jsx": {
     "page-h1": 1,
-    "page-info-popover": 2
+    "page-info-popover": 1
   },
   "ActiveSymbolsPage.jsx": {
     "page-h1": 1
   },
   "AdvancedResearchPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "AnalyseSymbolPage.jsx": {
     "page-h1": 1
@@ -55,7 +53,7 @@
   },
   "BacktestPage.jsx": {
     "page-h1": 1,
-    "page-info-popover": 3
+    "page-info-popover": 2
   },
   "BlockedSignalsPage.jsx": {
     "page-h1": 1
@@ -67,8 +65,7 @@
     "page-h1": 2
   },
   "CacheMonitorPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "CalculatorsPage.jsx": {
     "page-h1": 1
@@ -77,27 +74,22 @@
     "page-h1": 1
   },
   "CapabilityMapPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "ChartComparisonPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "CommandsReferencePage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "CreateProtocolsPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "DailyBriefingPage.jsx": {
     "page-h1": 2
   },
   "DataAreaLandingPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "DataElementsPage.jsx": {
     "page-h1": 3
@@ -115,8 +107,7 @@
     "page-h1": 1
   },
   "DesignObservationsPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "DiagramsPage.jsx": {
     "page-h1": 1
@@ -125,8 +116,7 @@
     "page-h1": 1
   },
   "DirectiveViewerPage.jsx": {
-    "page-h1": 3,
-    "page-info-popover": 2
+    "page-h1": 3
   },
   "EarningsCalendarPage.jsx": {
     "page-h1": 3
@@ -147,19 +137,16 @@
     "page-h1": 1
   },
   "GapScannerPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "GlossaryPage.jsx": {
     "page-h1": 1
   },
   "HealthDashboardPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "HomeDashboard.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "IdentityMapLabPage.jsx": {
     "page-h1": 1
@@ -168,22 +155,19 @@
     "page-h1": 1
   },
   "LadderPage.jsx": {
-    "page-h1": 2,
-    "page-info-popover": 1
+    "page-h1": 2
   },
   "MacroMonitorPage.jsx": {
     "page-h1": 1
   },
   "MarketContextPage.jsx": {
-    "page-h1": 2,
-    "page-info-popover": 1
+    "page-h1": 2
   },
   "MarketCorrelationsPage.jsx": {
     "page-h1": 1
   },
   "MetaStackExplorerPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "MetaStackPipelinePage.jsx": {
     "page-info-popover": 1
@@ -210,16 +194,13 @@
     "page-h1": 1
   },
   "PerformanceLabPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "PersonalFinancesPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "PipelineGraphLabPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "PlatformComparisonsPage.jsx": {
     "page-h1": 2
@@ -231,61 +212,49 @@
     "page-h1": 4
   },
   "PositionsMonitorPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "PreferenceLab.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "PriceForecastPage.jsx": {
-    "page-h1": 3,
-    "page-info-popover": 1
+    "page-h1": 3
   },
   "ProtocolQueuePage.jsx": {
     "page-h1": 1
   },
   "ProtocolsLadderPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "ProtocolsPageB.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "ProtocolsPerformancePage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "ProtocolTrailPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "ProviderHealthPage.jsx": {
     "page-h1": 2
   },
   "QATestingPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "RecentlyAnalysedSymbolsPage.jsx": {
-    "page-h1": 2,
-    "page-info-popover": 1
+    "page-h1": 2
   },
   "ReportsPage.jsx": {
     "page-h1": 1
   },
   "ResearchNotesPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "ResponsiveLayoutLabPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "RiskControlsPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "RoadmapPage.jsx": {
     "page-h1": 1
@@ -306,23 +275,19 @@
     "page-h1": 1
   },
   "ScreenCockpitPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "ScreenerPage.jsx": {
     "page-h1": 1
   },
   "SeasonalityHeatmapPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "SectorRotationPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "SeesArenaPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "SettingsDatabasePage.jsx": {
     "page-h1": 1
@@ -337,20 +302,16 @@
     "page-h1": 1
   },
   "SignalsOverviewPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "SinglesMonitorPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "SnapshotLibraryPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "SnapshotReplayPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "SocialNetworksPage.jsx": {
     "page-h1": 1
@@ -362,42 +323,32 @@
     "page-h1": 1
   },
   "StockInvestigationPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
-  },
-  "StopGuardianStatsPage.jsx": {
-    "page-info-popover": 2
+    "page-h1": 1
   },
   "StrategiesListPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "StrategyComparisonPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "StrategyCreatePage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "StrategyLibraryPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "StrategyMonitorPage.jsx": {
     "page-h1": 1,
     "page-info-popover": 2
   },
   "SupportResistancePage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "SymbolsBrowserPage.jsx": {
     "page-h1": 1
   },
   "SymbolsLadderPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "SystemHealthPage.jsx": {
     "page-h1": 1
@@ -406,8 +357,7 @@
     "page-h1": 1
   },
   "T212ISAPage.jsx": {
-    "page-h1": 2,
-    "page-info-popover": 1
+    "page-h1": 2
   },
   "T212PortfolioPage.jsx": {
     "page-info-popover": 2
@@ -422,8 +372,7 @@
     "page-info-popover": 1
   },
   "TheoryRegistryPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "TopMoversPage.jsx": {
     "page-h1": 1
@@ -431,26 +380,19 @@
   "TradeHistoryPage.jsx": {
     "page-h1": 1
   },
-  "TradeJournalPage.jsx": {
-    "page-info-popover": 1
-  },
   "TradingSettingsPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "TradingStylesPage.jsx": {
     "page-h1": 1
   },
   "TrainingCandlePatternsPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "VendorsPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   },
   "VolatilityAnalysisPage.jsx": {
-    "page-h1": 1,
-    "page-info-popover": 1
+    "page-h1": 1
   }
 }

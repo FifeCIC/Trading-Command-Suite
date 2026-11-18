@@ -28,7 +28,7 @@
  * monitor; when it is not, the browser decides and we show what happened.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import { listBoards } from '../core/board-store';
 import { BUILT_IN_BOARDS, boardLabel, defaultWidgetsFor } from '../core/board-defaults';
 import {
@@ -176,7 +176,7 @@ export default function ScreenCockpitPage() {
       <header className="screencockpit-header">
         <h1>
           Screen Cockpit
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Assign a widget board to each monitor and open it there. Boards are arranged on the
             Dashboard or the Widget Library page; this page only decides which board lives on which
             screen, and remembers it.
@@ -189,7 +189,7 @@ export default function ScreenCockpitPage() {
             press Detect screens if a screen list does not appear. Each screen opens in its own named
             window, so reopening focuses the existing one instead of stacking duplicates. All screen
             windows share one board document: rearrange a board in any window and the others follow.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         <p className="screencockpit-subtitle">
           Multi-monitor layout for the widget cockpit. Each screen shows one board, full-bleed.

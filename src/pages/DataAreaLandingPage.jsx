@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { apiGet } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
 import './data-area-landing.css'
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 const REFETCH_MS = 60_000
 
@@ -154,10 +154,10 @@ export default function DataAreaLandingPage() {
       <header className="dal-header">
         <p className="eyebrow">Data Area</p>
         <h1>Data Overview
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Central hub for all data subsystems. View summaries, monitor health,
           and navigate to full management pages.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </header>
 

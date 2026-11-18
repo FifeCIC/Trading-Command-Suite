@@ -7,7 +7,7 @@ import PIPELINE_POSITIONS from '../data/pipeline-graph-positions.json';
 // 2026-10-08). The file still carries its original name; it is no longer a route. Its own CSS is
 // imported by that module, so nothing needs importing here.
 import MetaStackPipelineBoard from './MetaStackPipelinePage.jsx';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 // ⚠️ THE INPUTS/OUTPUTS ON THIS PAGE ARE DERIVED, NOT WRITTEN. See `src/core/pipeline-map.js`.
 // The node list below is hand-curated and will drift; the IO block must not join it.
 import { loadPipelineMap, ioForFiles, unreferencedIn, divergentMathsIn } from '../core/pipeline-map';
@@ -1013,9 +1013,9 @@ export default function PipelineGraphLabPage() {
       <header className="pg-header">
         <div>
           <h1>Pipeline Graph <span className="pg-badge-live">LIVE DATA</span>
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Click a node for documentation · Drag to pan · Hover for stats · Real-time health from APIs
-          </PageInfoPopover>
+          </PageInfoSlotContent>
           <span style={{ marginLeft: 12, fontSize: '0.72rem' }}>
             {/* Link to the META.Stack board REMOVED 2026-10-08 — the board is rendered further down
                 this same page, so the link was a self-reference. */}
@@ -1051,8 +1051,8 @@ export default function PipelineGraphLabPage() {
       </div>
 
       {/* ── META.Stack lane board — MERGED IN (owner direction, 2026-10-08) ──
-          Owner: *"I want the nodes on this view factored into /development/pipeline-graph-lab and then
-          this page deleted."* The board is the SAME component, rendered here rather than on its own
+          Owner directive: I want the nodes on this view factored into /development/pipeline-graph-lab and then
+          this page deleted. The board is the SAME component, rendered here rather than on its own
           route; that route, its nav entry and its view-meta row are removed, so the app has one
           pipeline surface instead of two that drift apart.
 

@@ -9,7 +9,7 @@ import { decisionScore } from '../core/decision-score';
 // #1093 — the optional in-app prompt + button for closed trades with no recorded exit. Renders
 // only while the gap exists; it is the app-side replacement for the MT5 terminal ritual (R48).
 import ExitDataRecoveryNotice from '../components/ExitDataRecoveryNotice';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import './trade-journal-page.css';
 // ⚠️ RENAMED from execution-queue.css (2026-10-02). The Execution Queue page was DELETED — its
 // Live Events feed moved here, its Protocol Queue tab to /protocols/protocol-queue and its Scheduled
@@ -184,8 +184,8 @@ function compactAlerts(list) {
 function AlertRow({ alert, onSeen, onOpen, acking }) {
   const sev = ALERT_LEVEL_SEVERITY[alert.level] || 'low';
   return (
-    /* ⚠️ LEFT-HAND COLOURED STRIPE REMOVED 2026-11-07. Owner: *"the entries … also use the left side
-       border styling I'm about to lose my mind over"*. ui-standards has disfavoured `border-left` as a
+    /* ⚠️ LEFT-HAND COLOURED STRIPE REMOVED 2026-11-07. Owner directive: the entries … also use the left side
+       border styling I'm about to lose my mind over. ui-standards has disfavoured `border-left` as a
        state carrier since 2026-09-18 and asks for a FULL coloured border. A row is not a card, so the
        severity now rides on the border of the whole row (1px, rounded by CSS) AND on the badge — two
        signals instead of one stripe, and neither of them assumes the row is a card. */
@@ -373,11 +373,11 @@ export default function TradeJournalPage() {
   return (
     <div className="tj-page">
       <header className="tj-header">
-        <PageInfoPopover label="About the Trade Journal">
+        <PageInfoSlotContent>
           <p>Reconciled trades from the app's own audit trail — includes externally-opened and manually-closed positions.</p>
           <p>Every closed trade now names <strong>who closed it</strong> — stop loss, take profit, time stop, the app, or the desktop terminal — taken from the broker's closing deal (#916).</p>
           <p className="tj-privacy">Source: <strong>database</strong> (live MT5 deals are shown on Trade History).</p>
-        </PageInfoPopover>
+        </PageInfoSlotContent>
       </header>
 
       <ExitDataRecoveryNotice />

@@ -3,7 +3,7 @@ import CandlePatternChart from '../components/CandlePatternChart';
 import PatternDetailPanel from '../components/PatternDetailPanel';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './training-candle-patterns-page.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import { noticeFromError } from '../core/notices/from-error.js';
 
 const TIMEFRAMES = ['M5', 'M15', 'M30', 'H1', 'H4', 'D1'];
@@ -65,9 +65,9 @@ export default function TrainingCandlePatternsPage() {
       <div className="page-header">
         <div className="header-left">
           <h1>Candle Pattern Training
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Learn to identify candlestick patterns. The same patterns that feed your trading signals.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         </div>
         <div className="header-right">

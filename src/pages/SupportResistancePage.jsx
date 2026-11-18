@@ -4,7 +4,7 @@ import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './support-resistance.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 const TIMEFRAMES = [
   { id: 'S5', label: 'S5 Intraday', desc: '15–20 min S&R' },
@@ -176,9 +176,9 @@ export default function SupportResistancePage() {
     <div className="sr-page">
       <header className="sr-header">
         <h1>Support & Resistance
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Pivot points, round number levels, and moving average support/resistance across timeframes.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </header>
 

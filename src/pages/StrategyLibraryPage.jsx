@@ -23,7 +23,7 @@ import { useThemedMermaid, readStatusColors, renderMermaidSvg } from '../core/me
 import { noticeFromError } from '../core/notices/from-error';
 import './strategy-library.css';
 import './strategy-decision-path.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 // ⚠️ Mermaid is configured by `core/mermaid-theme`, NOT here — `mermaid.initialize()` sets a
 // GLOBAL singleton, so a second call on another page silently overrides this one.
@@ -273,9 +273,9 @@ export default function StrategyLibraryPage() {
       <header className="sl-header">
         <div>
           <h1>Strategy Library
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Browse trading strategies, understand their mechanics, and activate a complete META.Stack pipeline.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         </div>
       </header>

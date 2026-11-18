@@ -8,7 +8,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import './snapshot-replay.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 const SPEEDS = { '1×': 500, '5×': 100, '20×': 25, 'Instant': 0 };
 const TIMEFRAMES = ['1m', '5m', '15m', '1h'];
@@ -254,9 +254,9 @@ export default function SnapshotReplayPage() {
     <div className="sr-page">
       <header className="sr-header">
         <h1>⏮ Market Replay
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Step through historical bars with full directive scoring
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </header>
 

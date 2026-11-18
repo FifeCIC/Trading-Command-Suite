@@ -5,8 +5,8 @@
  * and a test that can fail (#1286).
  *
  * ── WHY THIS EXISTS ──────────────────────────────────────────────────────────────────────────────
- * The machine sleeps. Owner: *"Sometimes the PC is shutdown while positions are open so some of our
- * data could be skewed by the app being asleep."* When the bar series has a hole, no bar exists to
+ * The machine sleeps. Owner directive: Sometimes the PC is shutdown while positions are open so some of our
+ * data could be skewed by the app being asleep. When the bar series has a hole, no bar exists to
  * test a stop or target against, so the exit reason recorded for a trade that crossed the hole is a
  * GUESS — the level that would have fired inside the hole was never seen.
  *

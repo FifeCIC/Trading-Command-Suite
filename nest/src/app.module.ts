@@ -68,6 +68,7 @@ import { CapabilityModule } from './modules/capability/capability.module';
 import { RoadmapModule } from './modules/roadmap/roadmap.module';
 import { ProgressionModule } from './modules/progression/progression.module';
 import { SupporterModule } from './modules/supporter/supporter.module';
+import { SuggestionsModule } from './modules/suggestions/suggestions.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
 import { MetricsMiddleware } from './common/middleware/metrics.middleware';
 
@@ -150,6 +151,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     ProgressionModule,
     // #1147 — the in-app support prompt ("Supporter Programme", named 2026-11-15).
     SupporterModule,
+    SuggestionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

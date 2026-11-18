@@ -68,7 +68,7 @@
 .mc-corr-desc { font-size: 0.7rem; color: var(--ink-soft, var(--ink-soft)); }
 
 /* ── Position Risk Flags as columns (2026-10-06) ──
-   Owner: *"Tidy up this list"*. Three fixed tracks so the correlation numbers align down the column
+   Owner directive: Tidy up this list. Three fixed tracks so the correlation numbers align down the column
    and the reason has a stable left edge. `auto` on the middle track, not a fixed width, so a
    three-digit correlation cannot push the reason out of line. */
 .mc-flag {

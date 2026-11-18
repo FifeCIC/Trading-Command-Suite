@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 199,
+  "count": 201,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1559,6 +1559,17 @@
       ]
     },
     {
+      "name": "validate-owner-quotes.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "keeps private conversation out of a PUBLIC repository.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
       "name": "validate-page-chrome.cjs",
       "where": "repo",
       "category": "validator",
@@ -1898,6 +1909,17 @@
       "purpose": "Referential-integrity guard for symbol refs.",
       "selfTest": false,
       "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-table-enrolment.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "every table in the app uses the ONE arrangement.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
         "npm"
       ]
     },

@@ -12,7 +12,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './recently-analysed.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 const SIGNAL_CONFIG = {
   entry:     { label: 'Entry',     color: '#22c55e', bg: '#22c55e18' },
@@ -44,14 +44,14 @@ export default function RecentlyAnalysedSymbolsPage() {
       <header className="ra-header">
         <div>
           <h1>Recently Analysed Symbols
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             {/* 'SEES' is the scoring engine's own name. The free edition (removed 2026-10-28)
                 avoided it to keep the method's vocabulary out of that build; one edition now, so the
                 real term is used. */}
             Symbols most recently scored by the{' '}
             {'SEES pipeline'}
             {' '}— ordered by analysis time
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         </div>
         <button className="ra-refresh-btn" onClick={() => refetch()}>↻ Refresh</button>

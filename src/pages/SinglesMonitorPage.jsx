@@ -26,7 +26,7 @@ import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { TopRowSlotContent } from '../core/top-row-slot';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import { signalTone, directionModeLabel, signalArrow } from '../core/signal-utils';
 import { formatTimestamp } from '../core/format-utils';
 import './decision-trail.css';
@@ -162,9 +162,9 @@ export default function SinglesMonitorPage() {
       <header className="dt-header">
         <div>
           <h1>Single Symbol
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Live directive-level breakdown of a single symbol scored by a single protocol. Refreshes in sync with the automation loop. Use Protocol Trail for fixed historical runs.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
           </h1>
         </div>
         {/**

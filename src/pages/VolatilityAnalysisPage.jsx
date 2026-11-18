@@ -4,7 +4,7 @@ import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './volatility-analysis.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 const TIMEFRAMES = [
   { id: 'S5', label: '5 min' },
@@ -126,9 +126,9 @@ export default function VolatilityAnalysisPage() {
     <div className="va-page">
       <header className="va-header">
         <h1>Volatility Analysis
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             ATR, Bollinger Bands, historical volatility, and multi-timeframe metrics.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </header>
 

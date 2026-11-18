@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchAnalystTargets } from '../core/api/research.js';
 import './price-forecast.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 
@@ -82,10 +82,10 @@ export default function PriceForecastPage() {
     <div className="pf-page">
       <header className="pf-header">
         <h1>Price Forecast
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Analyst price targets and consensus ratings.
            Data refreshes hourly.
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
       </header>
 

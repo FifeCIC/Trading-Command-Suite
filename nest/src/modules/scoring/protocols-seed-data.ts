@@ -271,6 +271,114 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
       }
     ]
   },
+
+  /**
+   * ── movers-v1-long — THE MOVERS STRATEGY, DELIBERATELY SMALL ────────────────────────────────────
+   *
+   * Owner directive, 2026-11-18: Create the two protocols with a small amount of the directives.
+   *
+   * ⚠️ **SMALL IS THE DESIGN, NOT AN UNFINISHED STATE.** The directive *inventory* proposed for this
+   * strategy is ~20 long-side directives plus 9 that do not exist yet. Attaching all of them at once
+   * would make the composite unreadable — a score built from 20 inputs cannot tell you which input
+   * moved it, so the first live session would produce a number nobody could interpret and no
+   * comparison the A/B could attribute. Eight directives, three groups, one gate is the unit that can
+   * be measured.
+   *
+   * ⚠️ **THE REST OF THE PLAN IS NOT LOST** — it lives in `protocol_change_suggestion` as queued rows
+   * (`kind = 'add-directive'`, and `kind = 'missing-directive'` for the ones that must be BUILT),
+   * displayed on this protocol's page and on the Strategies page. That keeps "what we intend" in a
+   * queue with a lifecycle instead of in a comment that nobody re-reads.
+   *
+   * ── WHY THESE EIGHT ────────────────────────────────────────────────────────────────────────────
+   * The strategy enters a mover EARLY and holds while the move is real. That decomposes into exactly
+   * three questions, which is why there are three groups:
+   *
+   * | Group | Question | Directives |
+   * |---|---|---|
+   * | Mover Detection | *is this thing actually moving, on real participation, from a gap?* | `surge-detection` (move as a multiple of ATR), `speed-momentum` (velocity), `gap-scanner` (overnight gap), `vwap` (is price above the intraday fair-value line) |
+   * | Continuation Quality | *is the move still intact, or is it a one-bar spike?* | `momentum-continuation-combo` (trend + MACD + volume), `volume-confirmation` (participation), `wick-filter` (fakeout wick vs genuine break) |
+   * | Execution Risk (GATE) | *can we get out?* | `liquidity-check` — a gate, not a score: illiquidity is an absolute refusal on a mover, because the exit is the risk |
+   *
+   * ⚠️`rsi-oversold` is deliberately NOT here, although the older `momentum-stock-v1-long` leads with
+   * it at maxScore 140. A parabolic mover is *overbought* for most of its run, so an oversold
+   * reversion read either never fires or fires as the move dies. It is the right directive for the
+   * mean-reversion strategy and the wrong one for this one.
+   *
+   * ⚠️ `the theory` is written as intent that can be FALSIFIED, per #689: the falsification test is
+   * that this leg's trades cluster in the first 90 minutes of the session and its median hold is
+   * minutes, not hours. If it trades all day at the same rate, it is not a movers protocol.
+   */
+  "movers-v1-long": {
+    "name": "Movers V1 (Long)",
+    "description":
+      "Rides the day's top gainers from the open. Buys early participation in a fast up-move — a surge "
+      + "measured against ATR, confirmed by velocity, an opening gap and price above VWAP — and holds "
+      + "while continuation quality survives. Small by design: eight directives, three groups, one "
+      + "liquidity gate, so a score can be attributed to an input and an A/B can name what moved it.",
+    "directionMode": "LONG_ONLY",
+    "tradingStyle": "Intraday Momentum",
+    "recommendedTimeframe": "5m",
+    "theory":
+      "The day's biggest gainers are not random: they move on a catalyst, and institutional size "
+      + "cannot enter at once, so the move stair-steps for 2-3 hours. This protocol tries to enter "
+      + "during the first impulse, not at the top. What a good day looks like: a handful of symbols "
+      + "clearing the surge + velocity + gap conditions in the first 90 minutes, each with a short "
+      + "hold and a large favourable excursion. Known weakness, stated up front: the surge and gap "
+      + "conditions select for a move that has ALREADY begun, so the entry is late by construction. "
+      + "The strategy compensates with continuation directives and a hard breakout filter, not with a "
+      + "tighter stop. Falsification: if this leg's trades are spread evenly across the session, or "
+      + "its median hold is longer than an hour, then it is not harvesting an opening impulse and the "
+      + "premise is wrong.",
+    "avgHoldTime": "Minutes to ~1 hour",
+    "winRateTarget": "40–55% (momentum: few winners, large)",
+    "idealFor":
+      "US regular session, first 90 minutes, after a gap. Avoid the first 2 minutes (spread and "
+      + "liquidity are worst there) and avoid names below the liquidity gate's floor however big "
+      + "the percentage move.",
+    "groups": [
+      {
+        "id": "mover-detection",
+        "name": "Mover Detection",
+        "description": "Is this symbol actually moving, on real participation, from a gap?",
+        "weight": 0.4,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "surge-detection",
+          "speed-momentum",
+          "gap-scanner",
+          "vwap"
+        ]
+      },
+      {
+        "id": "continuation",
+        "name": "Continuation Quality",
+        "description": "Is the move still intact, or was it a one-bar spike?",
+        "weight": 0.3,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "momentum-continuation-combo",
+          "volume-confirmation",
+          "wick-filter"
+        ]
+      },
+      {
+        "id": "execution-risk",
+        "name": "Execution Risk",
+        "description": "Can we get out? A gate, not a score.",
+        "weight": 0.3,
+        "isRiskGate": true,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "liquidity-check"
+        ]
+      }
+    ]
+  },
 };
 
 /**
@@ -305,11 +413,36 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
  * Measured 2026-11-02 from the compiled classes: 11 bullish, 2 bearish, 94 neutral, 37 undirected
  * (undirected is treated as direction-capable and is allowed in both).
  */
-const BULLISH_DIRECTIVES = new Set([
-  'earnings-momentum', 'earnings-proximity', 'ema-structure', 'falling-risk-pyramid',
-  'momentum-continuation-combo', 'momentum-exhaustion', 'panic-exhaustion-absorption',
-  'rsi-oversold', 'target-achieved', 'three-soldiers-pattern', 'volume-surge',
+export const BULLISH_DIRECTIVES = new Set([
+  'earnings-momentum', 'ema-structure', 'falling-risk-pyramid',
+  'momentum-continuation-combo',
+  'rsi-oversold', 'three-soldiers-pattern', 'volume-surge',
 ]);
+
+/**
+ * ── 🛑 FOUR ENTRIES WERE REMOVED ON 2026-11-19 BECAUSE THE LIST HAD GONE STALE ──────────────────
+ *
+ * The set above had ELEVEN ids, "measured 2026-11-02 from the compiled classes". Four of those
+ * classes have since been made direction-NEUTRAL, so the list was dropping directives the short leg
+ * is entitled to keep. Re-measured from each class's own `directionBias` on 2026-11-19:
+ *
+ * | Removed | `directionBias` now | What the drop cost every derived short leg |
+ * |---|---|---|
+ * | `earnings-proximity` | neutral | the short leg had **no earnings directive at all** — measured on `momentum-stock-v1-short`, which carries only `analyst-adjustments` in its sentiment group |
+ * | `panic-exhaustion-absorption` | neutral | the capitulation → exhaustion → stabilisation read — the **core short-entry signal** |
+ * | `momentum-exhaustion` | neutral | the "rocket out of fuel" exit urgency |
+ * | `target-achieved` | neutral | the profit-milestone exit |
+ *
+ * ⚠️ **This is a bug fix restoring an intended value, not a maths change.** The reason this set exists
+ * is stated two paragraphs up: `validate-protocol-directions.cjs` forbids a BULLISH directive inside a
+ * SHORT_ONLY protocol. A neutral directive is not covered by that rule, so dropping it was never the
+ * intent — it was a stale list over-applying a correct rule.
+ *
+ * ⚠️ **AND NOTHING COULD HAVE FAILED.** The guard checks the other direction only: a *bullish* id
+ * inside a SHORT_ONLY protocol is a red build, but a *stale* entry merely over-drops, silently. That
+ * asymmetry is why `bullish-directives-current.spec.ts` now asserts this set against the classes
+ * themselves rather than against a remembered measurement.
+ */
 
 /** Bullish id → its bearish mirror, or `null` when there is no honest mirror (so it is dropped). */
 const SHORT_LEG_SUBSTITUTION: Record<string, string | null> = {
@@ -319,12 +452,8 @@ const SHORT_LEG_SUBSTITUTION: Record<string, string | null> = {
   'rsi-oversold': 'rsi-overbought',
   'ema-structure': null,
   'earnings-momentum': null,
-  'earnings-proximity': null,
   'momentum-continuation-combo': null,
-  'momentum-exhaustion': null,
-  'panic-exhaustion-absorption': null,
   'falling-risk-pyramid': null,
-  'target-achieved': null,
   'three-soldiers-pattern': null,
   'volume-surge': null,
 };

@@ -38,7 +38,7 @@ import { apiGet, apiPost } from '../core/api/client';
 import { feedUnavailable } from '../core/api/feed-state.js';
 import FadeCardGroup from '../components/FadeCardGroup';
 import './meta-stack-explorer.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 
 /* ── Scroll-reveal card (IntersectionObserver pattern from ThemeLabScroll) ── */
 function RevealCard({ children, className = '', style = {} }) {
@@ -1244,9 +1244,9 @@ export default function MetaStackExplorerPage() {
       <header className="mse-header">
         <div>
           <h1>META.Stack Explorer
-          <PageInfoPopover>
+          <PageInfoSlotContent>
             Modular Expert Trading Architecture — end-to-end pipeline trace
-          </PageInfoPopover>
+          </PageInfoSlotContent>
         </h1>
         </div>
         <div className="mse-header-actions">

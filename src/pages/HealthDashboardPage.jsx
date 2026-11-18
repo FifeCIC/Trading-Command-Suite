@@ -5,7 +5,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './health-dashboard.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import { notice } from '../core/notices/registry';
 import { noticeFromError } from '../core/notices/from-error.js';
 
@@ -307,10 +307,10 @@ export default function HealthDashboardPage() {
             therefore `display: none` as well: a control nobody can see or click. It measured 0×0 on
             this page while the same component measures 24×24 on `/research/screener`. Not introduced
             by this batch — found while checking a header change and worth keeping fixed. */}
-        <h1>Health & Diagnostics</h1>
-        <PageInfoPopover>
+        <h1>Health &amp; Diagnostics</h1>
+        <PageInfoSlotContent>
           System vitals, DB health, slow queries, API trends, provider status, and trace correlation — refreshed every 15s.
-        </PageInfoPopover>
+        </PageInfoSlotContent>
         <button
           type="button"
           className="hd-report-btn"

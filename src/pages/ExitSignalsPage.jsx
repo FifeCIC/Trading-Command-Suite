@@ -160,9 +160,9 @@ export default function ExitSignalsPage() {
                       <div className="es-card-header">
                         <div className="es-card-title">
                           <span className="es-symbol">{sig.symbol || sig.ticker}</span>
-                          {/* ⚠️ ALWAYS RENDERED (2026-11-07). Owner: *"bits like es-pnl are in
+                          {/* ⚠️ ALWAYS RENDERED (2026-11-07). Owner directive: bits like es-pnl are in
                               different places on every card as some have a sentence too es-bot and
-                              others don't"*. An absent bot used to remove the element entirely, so
+                              others don't. An absent bot used to remove the element entirely, so
                               every field after it shifted left. A slot that is always present keeps
                               the header geometry identical across cards, and "no owner" is itself
                               information — a position nothing owns is one nothing is managing. */}

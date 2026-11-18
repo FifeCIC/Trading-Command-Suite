@@ -15,9 +15,9 @@
 /*
  * ⚠️ THE GROUP HEADER IS NOT A NOTICE (2026-11-07).
  *
- * Owner: *"This <div.es-group-header-high> might actually be a notice. If it is then the styling is
+ * Owner directive: This <div.es-group-header-high> might actually be a notice. If it is then the styling is
  * wrong when compared to the red one … the strength of the coloured background is too much and the
- * triangle icon tells me nothing."*
+ * triangle icon tells me nothing.
  *
  * He was right that it read as a notice, and the cause was the treatment: a filled tinted block with
  * a 0.6-alpha border, in the same visual family as `.app-notice`. A section divider should DIVIDE,
@@ -72,9 +72,9 @@
 .es-card--critical:hover, .es-card--high:hover { box-shadow: var(--shadow-card); }
 
 /* ── Card Header ────────────────────────────────────────────────────────────
-   ⚠️ RESTRUCTURED 2026-11-07. Owner: *"the symbol in bold a little larger text is not enough to
+   ⚠️ RESTRUCTURED 2026-11-07. Owner directive: the symbol in bold a little larger text is not enough to
    designate it as the title/header, bits like es-pnl are in different places on every card as some
-   have a sentence too es-bot and others don't"*.
+   have a sentence too es-bot and others don't.
 
    Before: symbol, bot and P&L were all inline in one wrapping flex row, so the P&L slid left on any
    card whose bot sentence was absent and the symbol competed with its own metadata.
