@@ -74,7 +74,12 @@ function trackedTextFiles() {
   return out
     .split('\n')
     .map((s) => s.trim())
-    .filter((f) => f && TEXT_FILE.test(f));
+    .filter((f) => f && TEXT_FILE.test(f))
+    // ⚠️ ONE EXEMPTION: this file. Its self-test requires a POSITIVE fixture — an example that must be
+    // counted — so it cannot avoid containing the pattern it looks for. Exempting it is a blind spot,
+    // and it is the narrowest possible one: the file contains fixtures, not a real message. Every other
+    // file, including this one's own documentation examples, is judged normally.
+    .filter((f) => f.replace(/\\/g, '/') !== 'scripts/validate-owner-quotes.cjs');
 }
 
 /** Scans tracked files and returns `{ file: count }` for counts above zero. */
