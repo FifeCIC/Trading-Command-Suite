@@ -53,6 +53,9 @@ const PortfolioEventsPage = lazy(() => import('../pages/PortfolioEventsPage.jsx'
 const TradeHistoryPage = lazy(() => import('../pages/TradeHistoryPage.jsx'));
 const PositionsMonitorPage = lazy(() => import('../pages/PositionsMonitorPage.jsx'));
 const StrategyLibraryPage = lazy(() => import('../pages/StrategyLibraryPage.jsx'));
+const DayTopWinnersPage = lazy(() => import('../pages/DayTopWinnersPage.jsx'));
+const DayTopLosersPage = lazy(() => import('../pages/DayTopLosersPage.jsx'));
+const MostActivePage = lazy(() => import('../pages/MostActivePage.jsx'));
 
 // ── Scoring ──
 const DirectivesManagerPage = lazy(() => import('../pages/DirectivesManagerPage.jsx'));
@@ -238,6 +241,7 @@ const CandlePatternsGuidePage = lazy(() => import('../pages/CandlePatternsGuideP
 
 // ── Watchlists ──
 const UserWatchlistsPage = lazy(() => import('../pages/UserWatchlistsPage.jsx'));
+const RegisteredMoversPage = lazy(() => import('../pages/RegisteredMoversPage.jsx'));
 
 // ── Other ──
 const DailyBriefingPage = lazy(() => import('../pages/DailyBriefingPage.jsx'));
@@ -287,6 +291,9 @@ export const VIEW_COMPONENTS = {
   'trade-history': TradeHistoryPage,
   'positions-monitor': PositionsMonitorPage,
   'strategy-library': StrategyLibraryPage,
+  'day-top-winners': DayTopWinnersPage,
+  'day-top-losers': DayTopLosersPage,
+  'most-active': MostActivePage,
   'mt5-trading': Mt5TradingPage,
   'mt5-status': Mt5StatusPage,
   'protocol-queue': ProtocolQueuePage,
@@ -447,6 +454,7 @@ export const VIEW_COMPONENTS = {
 
   // Watchlists
   'user-watchlists': UserWatchlistsPage,
+  'registered-movers': RegisteredMoversPage,
   'create-watchlist': UserWatchlistsPage,
 
   // Other

@@ -1,0 +1,245 @@
+/* registered-movers.css — the Watchlists page for OUR OWN movers and their treatment (#1281/#1297).
+ *
+ * ⚠️ EVERY token here is checked by `scripts/validate-css-tokens.cjs` against the declared custom
+ * properties. An undefined token is NOT an error at runtime — the declaration is silently dropped and
+ * the element inherits — so the page looks "nearly right" while the colour is wrong.
+ * Run `node scripts/validate-css-tokens.cjs` after editing.
+ *
+ * ⚠️ PREFIXED `.rm-`, NOT REUSED FROM THE OLD PAGE. Page stylesheets in this app are global, so a
+ * class defined on another page's sheet would render unstyled until that page's chunk loads — the
+ * defect `validate-css-imports.cjs` exists to catch.
+ */
+
+.rm-page {
+  padding: 1.25rem 1.5rem 3rem;
+  color: var(--ink);
+  max-width: 1500px;
+}
+
+/* ── Page head: no visible title, so the ℹ is the whole header ────────────────────────────────
+ * ⚠️ THE h2 AND ITS SUBTITLE WERE REMOVED 2026-11-18 (owner: *"Remove Element: <h2> Movers &
+ * Treatment"*, *"move … to an information popout"*). The nav and the breadcrumb already name the page,
+ * so a third copy is chrome. `h1.sr-only` keeps the "exactly one h1" accessibility rule satisfied;
+ * the description lives behind `PageInfoPopover`. */
+.rm-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+/* ── Status rows — the status-card pattern (`src/components/StatusCard.jsx`) ───────────────────
+ * ⚠️ `align-items: flex-start` IS LOAD-BEARING. The cards reveal an overlay below themselves; with
+ * `stretch` (the default) the row would size to the tallest card and the overlays would be clipped by
+ * their own neighbours' box. */
+.rm-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* ── Controls ──────────────────────────────────────────────────────────────────────────────── */
+.rm-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.9rem;
+}
+
+.rm-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rm-controls select {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.82rem;
+}
+
+.rm-controls button {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.36rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.rm-controls button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.rm-controls button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rm-stamp {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  margin-left: auto;
+}
+
+/* ── Tallies — now `StatusCard` (see ./components/status-card.css) ───────────────────────────
+ * ⚠️ `.rm-tally*` WAS DELETED 2026-11-18, not merely unused. It was the local, non-reusable version of
+ * a card whose detail could not be revealed, and leaving it here would be a second implementation to
+ * keep in step with `StatusCard` — the exact drift `shared-core` warns about. */
+
+/* ── Tables ────────────────────────────────────────────────────────────────────────────────── */
+.rm-side {
+  margin-bottom: 1.25rem;
+}
+
+.rm-side h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.rm-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.rm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.rm-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-elev);
+  color: var(--text-dim);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.rm-table tbody td {
+  padding: 0.32rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.rm-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.rm-sym strong {
+  font-family: var(--font-mono);
+}
+
+.rm-type {
+  margin-left: 0.35rem;
+  font-size: 0.64rem;
+  color: var(--text-faint);
+}
+
+.rm-move {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.rm-up { color: var(--risk-normal); }
+.rm-down { color: var(--risk-high); }
+
+.rm-num {
+  font-family: var(--font-mono);
+  color: var(--ink-soft);
+}
+
+.rm-dim { color: var(--text-faint); }
+.rm-warn { color: var(--risk-high); font-weight: 600; }
+
+.rm-badge {
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.rm-hot {
+  font-size: 0.8rem;
+  cursor: help;
+}
+
+/* ⚠️ Six states are distinguished by the BADGE TEXT and a subtle background tint, never by colour
+ * alone (accessibility: state must survive a monochrome render). Thick coloured left bars are
+ * banned repo-wide by `scripts/validate-no-notice-bar.cjs` — the owner asked for that chrome
+ * removed everywhere, so this uses uniform 1px rules and a tint instead. */
+.rm-t-traded   { background: color-mix(in srgb, var(--risk-normal) 7%, transparent); }
+.rm-t-queued   { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.rm-t-refused  { background: color-mix(in srgb, var(--risk-high) 7%, transparent); }
+.rm-t-scored   { background: transparent; }
+.rm-t-unscored { background: color-mix(in srgb, var(--line) 22%, transparent); }
+.rm-t-nodata   { background: color-mix(in srgb, var(--risk-high) 12%, transparent); }
+
+/* ── Verdict sentences — collapsed by default (owner: no large blocks of text on screen) ────── */
+.rm-verdicts {
+  border-top: 1px solid var(--line);
+  padding-top: 0.75rem;
+}
+
+.rm-verdicts summary {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.rm-verdicts summary:hover {
+  color: var(--accent);
+}
+
+.rm-verdicts[open] summary {
+  margin-bottom: 0.4rem;
+}
+
+.rm-verdicts ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.rm-verdicts li {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.rm-note {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  max-width: 95ch;
+}
+
+.rm-note--warn {
+  color: var(--risk-high);
+  border: 1px solid var(--risk-high);
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+}

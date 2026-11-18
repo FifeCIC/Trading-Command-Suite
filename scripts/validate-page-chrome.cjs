@@ -44,8 +44,22 @@ const REPO = path.resolve(__dirname, '..');
 const PAGES_DIR = path.join(REPO, 'src', 'pages');
 const BASELINE_PATH = path.join(__dirname, 'page-chrome-baseline.json');
 
-/** R1 — `<h1` unless the tag opts out as data with `is-subject`. */
+/** R1 — `<h1` unless the tag opts out as data (`is-subject`) or as a screen-reader landmark (`sr-only`). */
 const H1_RE = /<h1\b[^>]*>/g;
+
+/**
+ * Strips comments before counting, because a docblock that QUOTES the pattern is not the pattern.
+ *
+ * ⚠️ Measured 2026-11-18 on `RegisteredMoversPage.jsx`: the gate reported **3** `h1` where the markup
+ * had **1**. The other two were the file's own comment — *"`<h1 className="sr-only">` keeps the
+ * accessibility requirement (`Every page MUST have exactly one <h1>`)"*. A rule that punishes
+ * documenting itself teaches the next agent to delete the explanation, which is the opposite of what
+ * this repo wants. `/^\s*\/\// `-style line comments are stripped too, but a `//` inside a string
+ * merely shortens that line for the purposes of counting a tag, which is harmless here.
+ */
+function stripComments(src) {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+}
 /** R2 — the page-owned info trigger. */
 const POPOVER_RE = /<PageInfoPopover\b/g;
 
@@ -59,12 +73,15 @@ function countMatches(src, re) {
 }
 
 function countH1(src) {
-  const tags = src.match(H1_RE) || [];
-  return tags.filter((tag) => !/\bis-subject\b/.test(tag)).length;
+  // `sr-only` is a SCREEN-READER LANDMARK, not visible chrome — the accessibility requirement that a
+  // page has exactly one `h1` is satisfied by it, and hiding it visually is the design decision. The
+  // rule forbids a VISIBLE page title, so a landmark passes.
+  const tags = stripComments(src).match(H1_RE) || [];
+  return tags.filter((tag) => !/\bis-subject\b/.test(tag) && !/\bsr-only\b/.test(tag)).length;
 }
 
 function countPopover(src) {
-  return countMatches(src, POPOVER_RE);
+  return countMatches(stripComments(src), POPOVER_RE);
 }
 
 /** Counts every rule for one file's source. */
@@ -236,10 +253,17 @@ function selfTest() {
     'export default function Classed() { return (<div><h1 className="header-title">Brokers</h1></div>); }\n',
   );
 
+  // Fixture D — a docblock that QUOTES the pattern must not be counted.
+  fs.writeFileSync(
+    path.join(dir, 'DocumentedPage.jsx'),
+    '/** The rule says: never write `<h1>Title</h1>` in a page. */\nexport default function D() { return (<div><h1 className="sr-only">Hidden landmark</h1></div>); }\n',
+  );
+
   const scan = scanDir(dir);
   check('R1 counts a page title', scan['BadPage.jsx'], { 'page-h1': 1, 'page-info-popover': 1 });
   check('R1 skips is-subject data heading', scan['GoodPage.jsx'], undefined);
   check('R1 counts a classed page title', scan['ClassedPage.jsx'], { 'page-h1': 1 });
+  check('R1 skips sr-only landmark and ignores comment mentions', scan['DocumentedPage.jsx'], undefined);
 
   // Baseline behaviour: an allowed count passes, one above it fails.
   const baseline = {

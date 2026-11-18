@@ -1212,6 +1212,189 @@ is a 3-standard-deviation setup that fires only 4-8 times per year.
       sessionEntryEndGMT: 17,
     },
   },
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════════
+  // THE MARKET-MOVERS PAIR (owner direction, 2026-11-18)
+  //
+  //   *"I want you to split that strategy into Days Top Winners and Days Top Losers: we will have
+  //    them entered onto [the Strategy Library] as two new strategies: one for shorting and one for
+  //    going long!"*
+  //
+  // ⚠️ TWO ENTRIES, NOT ONE WITH A DIRECTION FIELD. These are separate THESES with opposite
+  // asymmetry, not the same logic with `side` flipped:
+  //   • Long:  gain unbounded, loss bounded at the stop. Mean reversion after a big up-day is the
+  //            main failure mode.
+  //   • Short: gain capped at 100%, loss unbounded, borrow cost accrues, and a squeeze arrives faster
+  //            and larger than a long-side reversal. A collapsing stock may not be shortable at all.
+  //
+  // ⚠️ `liveView` IS THE OPTIONAL HALF the owner described: the entry below is the THEORY, and the
+  // route is the live page showing the feed this strategy would consume. It is a plain object rather
+  // than a magic convention so the library page renders the link only when the page genuinely exists.
+  //
+  // ⚠️ BOTH ARE `concept` STATUS, AND THAT IS NOT PESSIMISM. `directiveMappings` names the directives
+  // that would express the thesis; none is calibrated for a two-sided intraday momentum entry on an
+  // arbitrary market-wide universe, and no protocol scores one. Claiming `partial` would tell the
+  // reader something is wired when nothing is.
+  // ══════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    id: 'day-top-winners',
+    name: "Day's Top Winners — Long",
+    tagline: 'Momentum continuation on the largest single-session gainers anywhere in the market',
+    category: 'Intraday / Momentum',
+    assetClasses: ['US Equities', 'High-Beta Growth'],
+    difficulty: 'Advanced',
+    timeframe: 'Intraday / Next-session open',
+    status: 'concept',
+
+    overview: `
+The largest gainers of the session, taken as LONG candidates. The universe is deliberately unbounded —
+including symbols this app has never scored — because a symbol cannot be a mover if we only ever look
+at our own list. The thesis is that a large single-session gain marks a catalyst rather than noise,
+and that the buying persists into the following session.
+    `.trim(),
+
+    theory: `
+**The claim being tested.** A big up-day is evidence of a CATALYST — an earnings surprise, an upgrade, a
+contract win, a short squeeze — and catalysts take more than one session to be fully absorbed. If that
+is true, the strongest gainers of a session should outperform the market over the next one to three
+sessions, and the effect should be strongest where the move came with volume.
+
+**Why it is not simply "buy what went up".** The same data supports the opposite trade. Large gainers
+mean-revert violently, because the marginal buyer has already bought and the order book thins above the
+day's high. So the theory needs the conditions that separate the two: relative volume, whether the move
+closed near its high or gave most of it back, and whether the catalyst is still in force.
+
+**What would falsify it.** Gainers, held for the defined window with the defined filters, producing a
+distribution of returns indistinguishable from randomly selected liquid symbols over the same window.
+If that happens, the effect was the market's beta, not the catalyst — and the strategy should be
+retired rather than tuned.
+
+**What this page adds.** The theory is understood from this entry; the live view shows the candidates as
+they are right now, with the feed's age attached, so the reader can see the raw material the theory
+would be tested against rather than a curated example.
+    `.trim(),
+
+    mechanics: [
+      'Rank the whole market by session percentage gain — never by our own watchlists',
+      'Filter on relative volume; a gain on average volume is a different event from one on 5×',
+      'Require the close to sit in the upper part of the day\'s range — a gain given back is not momentum',
+      'Exclude instruments that are not ordinary shares (warrants, rights, units) — the movers feed reports them and they are not tradeable theses',
+      'Enter on continuation, not on the same session: the close is the signal, the next open is the decision',
+      'Stop below the breakout structure, tighter than a trend trade, because the failure mode is a fast reversal',
+      'Time-stop the position — the thesis is a one-to-three session effect, so a position that has not moved has already disproved it',
+    ],
+
+    directiveMappings: [
+      { directive: 'momentum', purpose: 'Confirms the move is a trend rather than a single spike' },
+      { directive: 'volume-spike', purpose: 'Separates a catalyst on participation from drift' },
+      { directive: 'adx', purpose: 'Rejects chop that happens to have closed higher' },
+      { directive: 'rsi', purpose: 'Exhaustion guard — entries are refused at extremes the theory cannot support' },
+    ],
+
+    strengths: [
+      'The universe is the market, not our watchlist — it cannot miss a mover we never registered',
+      'The failure mode is explicit and cheap: a tight stop plus a time-stop',
+      'Every candidate is listed with its provenance, so a stale feed is refused rather than traded',
+    ],
+
+    risks: [
+      'Mean reversion: the biggest gainers of a session frequently give most of it back the next day',
+      'Survivorship in the feed itself — the list is a snapshot, not a history',
+      'Gap risk at the next open makes the entry price unknowable in advance',
+      'No protocol scores this yet, so no directive calibration exists to justify the thresholds',
+    ],
+
+    configSchema: {
+      minSessionGainPct: 10,
+      minRelativeVolume: 3,
+      minCloseInRangePct: 70,
+      maxCandidatesPerDay: 20,
+      stopBufferAtr: 1.2,
+      timeStopSessions: 3,
+    },
+
+    liveView: { route: '/strategies/day-top-winners', label: "Open the live view — Day's Top Winners" },
+  },
+  {
+    id: 'day-top-losers',
+    name: "Day's Top Losers — Short",
+    tagline: 'Downside continuation on the largest fallers — a separate thesis, not the mirror image',
+    category: 'Intraday / Momentum',
+    assetClasses: ['US Equities', 'Distressed / High-Beta Growth'],
+    difficulty: 'Advanced',
+    timeframe: 'Intraday / Next-session open',
+    status: 'concept',
+
+    overview: `
+The largest fallers of the session, taken as SHORT candidates. Kept separate from the winners side
+because shorting is not the inverse of going long: the gain is capped, the loss is not, borrow has a
+cost and may not exist, and the exit that kills the position — a squeeze — is faster than any long-side
+reversal.
+    `.trim(),
+
+    theory: `
+**The claim being tested.** A large fall is more often a CONTINUING event than a large rise is. Downgrades,
+guidance cuts, dilution, an accounting problem and index deletion all have follow-through, because the
+holders who have not yet sold are still deciding to. The downside effect is therefore expected to persist
+longer than the equivalent upside move — which is stated as a hypothesis, not an assumption.
+
+**Why the mirror image is wrong.** Three asymmetries break the symmetry with the winners side:
+1. **Bounded gain, unbounded loss.** The best case is −100%; a squeeze can exceed the position's value.
+2. **Borrow.** The names most worth shorting are often the hardest to borrow, and the cost accrues daily,
+   so the same entry can be profitable on price and negative on the trade.
+3. **Event density.** A stock down 70% is down for a reason that may still be resolving. That makes
+   continuation more likely than for an up-move, and the reversal correspondingly more violent.
+
+**What would falsify it.** Shorts selected this way producing a return distribution no different from a
+random liquid short, net of borrow — or the borrow filter leaving so few candidates that the sample
+cannot answer the question. Both outcomes are a finding.
+
+**What this page adds.** The live view shows the current losers list, which is the candidate universe
+this thesis would be tested against. It is not a recommendation, and nothing here is being traded.
+    `.trim(),
+
+    mechanics: [
+      'Rank the whole market by session percentage decline — never by our own watchlists',
+      'Check borrow availability BEFORE the thesis matters; an unborrowable candidate is not a candidate',
+      'Rank the fall against the stock\'s own volatility — a −8% day is a rout in a utility and noise in a small cap',
+      'Exclude instruments that are not ordinary shares — warrants and rights dominate raw loser lists',
+      'Require a close near the day\'s low; a fall bought back is the opposite event',
+      'Tighter stop than the long side, because the adverse move (a squeeze) is a gap, not a drift',
+      'Cover on a defined time-stop; a short that has not worked has already disproved the continuation thesis',
+    ],
+
+    directiveMappings: [
+      { directive: 'momentum', purpose: 'Confirms downside trend rather than a single bad print' },
+      { directive: 'volume-spike', purpose: 'Participation behind the fall — selling, not a thin quote' },
+      { directive: 'adx', purpose: 'Rejects a low-conviction drift lower that mean-reverts' },
+      { directive: 'rsi', purpose: 'Squeeze guard — refuses new shorts at the exhaustion extreme' },
+    ],
+
+    strengths: [
+      'Downside continuation is better documented than upside continuation — events follow through',
+      'The asymmetry is stated up front, so position sizing can be wrong-and-cheap rather than wrong-and-fatal',
+      'Borrow treated as a first-class filter rather than a footnote',
+    ],
+
+    risks: [
+      'A short squeeze is a gap risk that no stop can bound',
+      'Borrow cost and availability can invalidate a thesis that is correct on price',
+      'Regulatory and broker restrictions on shorting can change without notice',
+      'No protocol scores this yet, so no calibration exists for the thresholds',
+    ],
+
+    configSchema: {
+      minSessionFallPct: 10,
+      minRelativeVolume: 3,
+      maxCloseInRangePct: 30,
+      maxCandidatesPerDay: 20,
+      stopBufferAtr: 0.8,
+      timeStopSessions: 3,
+      requireBorrow: true,
+    },
+
+    liveView: { route: '/strategies/day-top-losers', label: "Open the live view — Day's Top Losers" },
+  },
 ];
 
 /**

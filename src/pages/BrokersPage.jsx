@@ -305,6 +305,11 @@ export default function BrokersPage() {
 
   return (
     <div className={styles.page}>
+      {/* One h1 for assistive tech; the nav and breadcrumb carry it visually. `sr-only` keeps the
+          "exactly one h1" landmark without drawing a header — `validate-page-chrome.cjs` counts a
+          VISIBLE page title as a violation, and this is not one. */}
+      <h1 className="sr-only">Brokers — venues and accounts</h1>
+
       {/* ⚠️ NO <h1> AND NO PAGE-LEVEL ℹ (owner direction, 2026-11-18).
           *"I don't like headers at the top of pages… We know we're on the Brokers page based on the
           menu highlight."* The title is the breadcrumb in `.main-top-row`, and the ONE ℹ is

@@ -87,7 +87,10 @@ model Strategy {
   updatedAt   DateTime @updatedAt
 
   directives Directive[]
-  scores     Score[]
+  // ⚠️ `scores Score[]` REMOVED (#1288, 2026-11-18). `Score.strategyId` holds a PROTOCOL SLUG, not a
+  // `Strategy` id — measured: 2,740 of 2,740 recent rows match `protocol.slug`, 0 match
+  // `scoring_strategy.id`. The relation could never resolve, and the live table has no FK constraint,
+  // so nothing enforced or reported it. See the note on `Score.strategyId`.
   signals    Signal[]
   versions   ProtocolVersion[]
 }
@@ -118,13 +121,26 @@ model Directive {
 model Score {
   id         String   @id @default(uuid()) @db.VarChar(36)
   symbolId   String   @db.VarChar(36)
+  /// ⚠️ THIS COLUMN DOES NOT HOLD A `scoring_strategy` ID, DESPITE ITS NAME (#1288, measured 2026-11-18).
+  /// It holds a **protocol SLUG**: of 2,740 rows written in one hour, **2,740 matched `protocol.slug`**
+  /// and **0 matched `scoring_strategy.id`** (which are UUIDs). The column name is a claim, and it is
+  /// wrong — the same trap as `score_snapshot.protocolId` (a slug in a column named for an id).
+  ///
+  /// ⚠️ THE RELATION BELOW WAS REMOVED, NOT FIXED. It declared
+  /// `strategy Strategy @relation(fields: [strategyId], references: [id])`, which is false for every
+  /// row — and the live table has **no FK constraint at all** (verified: `information_schema`
+  /// `KEY_COLUMN_USAGE` returns nothing for `score`), so nothing enforced it and nothing complained.
+  /// A relation that can never resolve is worse than no relation: an `include: { strategy: true }`
+  /// would return `null` for every row with no error, which reads as "this score has no strategy".
+  ///
+  /// REVERSE BY renaming the column to `protocolId` and pointing it at `protocol.slug` — which is what
+  /// it actually contains. That touches 8 reading modules, so it is a separate change.
   strategyId String   @db.VarChar(36)
   value      Float
   breakdown  Json
   timestamp  DateTime @default(now())
 
   symbol   Symbol   @relation(fields: [symbolId], references: [id], onDelete: Cascade)
-  strategy Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
 
   @@index([symbolId, timestamp])
   @@index([strategyId, timestamp])

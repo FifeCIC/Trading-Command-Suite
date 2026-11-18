@@ -6,6 +6,7 @@ import App from './App';
 import { getPreferences } from './core/hooks/usePreferences';
 import { applyNoticeLocale } from './core/notices/apply-locale';
 import { installSupportBuffers } from './core/support/report-buffers';
+import { evictDevServiceWorker } from './core/sw/dev-unregister';
 import './index.css';
 // ⚠️ THE CANONICAL TABLE ARRANGEMENT, LOADED AFTER index.css. It is one arrangement for 57 table
 // classes, replacing 57 hand-written ones (measured: 69 families, 69 distinct arrangements before this).
@@ -63,6 +64,17 @@ const queryClient = new QueryClient({
 });
 
 registerSW({ immediate: true });
+
+/**
+ * ⚠️ DEV ONLY — evict a service worker left behind by a `vite preview` run on this origin (2026-11-18).
+ * Without it, a built edition's worker answers every navigation from its precache and the dev server
+ * becomes invisible: every route sits on its Suspense fallback forever. See the module's own docblock
+ * for the measurement; the guard against a reload loop is inside, not here.
+ *
+ * `registerSW` above cannot do this: `virtual:pwa-register` is a no-op in dev, so it cleans up nothing.
+ * The import is static rather than lazy because a dynamic import is exactly what a stale worker breaks.
+ */
+if (import.meta.env.DEV) evictDevServiceWorker();
 
 /**
  * ⚠️ DEV-ONLY DEBUG HANDLE (added 2026-11-07). The breadcrumb refresh bar derives its cadence from

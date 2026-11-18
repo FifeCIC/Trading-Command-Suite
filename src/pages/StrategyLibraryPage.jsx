@@ -7,7 +7,7 @@
  * Route: /trading/strategy-library
  */
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { STRATEGY_LIBRARY } from '../data/strategy-library';
@@ -17,6 +17,7 @@ import {
   evaluateStrategyClaims,
   unverifiableSchemaKeys,
 } from '../core/strategy-diagram';
+import { useSort, SortableTh } from '../core/use-sort';
 import { annotateSource, summarise } from '../core/diagram-claims';
 import { useThemedMermaid, readStatusColors, renderMermaidSvg } from '../core/mermaid-theme';
 import { noticeFromError } from '../core/notices/from-error';
@@ -245,6 +246,28 @@ export default function StrategyLibraryPage() {
     return map;
   }, [directivesQuery.data]);
 
+  /**
+   * Running bots with NO written theory — the other half of the owner's instruction:
+   * *"all strategies will be listed there even if some of our running ones do not have much theory to
+   * attach but maybe you can establish theory as you go based on the directives in the strategies
+   * protocol and the symbols."*
+   *
+   * ⚠️ THEY ARE LISTED, NOT INVENTED. A bot's protocol and symbols do NOT contain a thesis: two bots
+   * can share a protocol and differ entirely in what they believe, and "generating" prose from
+   * directive ids would produce a plausible paragraph that no one wrote and no test backs. So these
+   * appear as a NAMED GAP — the bot, its protocol and its symbol, stating the theory is unwritten —
+   * which is actionable. A fabricated theory would not be.
+   *
+   * ⚠️ ACTIVE ONLY, and the heading says so: a stopped bot with no theory is not a gap worth the space.
+   * ⚠️ Matched on the SAME key the row badge uses (`tcsProtocol` ↔ `protocolId`), so the two cannot
+   * disagree about whether a bot is already covered.
+   */
+  const unwrittenBots = useMemo(() => {
+    const written = new Set(STRATEGY_LIBRARY.map((s) => s.tcsProtocol).filter(Boolean));
+    return (bots || []).filter((b) => b.active === true && !written.has(b.protocolId));
+  }, [bots]);
+  const unwrittenSort = useSort(unwrittenBots, null, 'asc');
+
   return (
     <div className="sl-page">
       <header className="sl-header">
@@ -333,6 +356,15 @@ export default function StrategyLibraryPage() {
                   <section className="sl-section">
                     <h3>Overview</h3>
                     <div className="sl-prose">{strategy.overview}</div>
+                    {/* The OPTIONAL live half (owner, 2026-11-18). Rendered only when the strategy
+                        declares one, so a theory page never links to a route that does not exist —
+                        and the link is a real <a>, outside the card's toggle <button>, because a
+                        link nested inside a button is neither valid nor keyboard-operable. */}
+                    {strategy.liveView && (
+                      <p className="sl-live-link">
+                        <Link to={strategy.liveView.route}>{strategy.liveView.label} →</Link>
+                      </p>
+                    )}
                     <div className="sl-meta-row">
                       <span><strong>Asset Classes:</strong> {strategy.assetClasses.join(', ')}</span>
                       <span><strong>Timeframe:</strong> {strategy.timeframe}</span>
@@ -510,6 +542,45 @@ export default function StrategyLibraryPage() {
           );
         })}
       </div>
+
+      {/* ── RUNNING BOTS WITH NO WRITTEN THEORY ────────────────────────────────────────────────
+          The owner asked for ALL strategies to be listed here, including running ones with little
+          theory. They are listed as a GAP rather than given invented prose: a protocol's directive
+          ids do not contain a thesis, so "deriving" one would be a plausible paragraph nobody wrote.
+          ⚠️ Rendered only when non-empty — an empty "0 bots" panel is chrome. */}
+      {unwrittenBots.length > 0 && (
+        <section className="sl-unwritten" aria-label="Running bots with no written theory">
+          <h2 className="sl-unwritten-head">
+            {unwrittenBots.length} running bot{unwrittenBots.length === 1 ? '' : 's'} with no written theory
+          </h2>
+          <p className="sl-unwritten-note">
+            These are trading now, but no entry above describes them. Their protocol and symbols are
+            listed so the theory can be written deliberately — a thesis is not derivable from a list of
+            directives, and inventing one here would be a claim nothing backs. Write the entry, then it
+            appears above with its live view.
+          </p>
+          <table className="sl-table">
+            <thead>
+              <tr>
+                <SortableTh col="name" label="Bot" api={unwrittenSort} buttonClassName="th-sort" firstDir="asc" />
+                <SortableTh col="protocolId" label="Protocol" api={unwrittenSort} buttonClassName="th-sort" firstDir="asc" />
+                <SortableTh col="symbol" label="Symbol" api={unwrittenSort} buttonClassName="th-sort" firstDir="asc" />
+                <SortableTh col="mode" label="Mode" api={unwrittenSort} buttonClassName="th-sort" firstDir="asc" />
+              </tr>
+            </thead>
+            <tbody>
+              {unwrittenSort.sorted.map((b) => (
+                <tr key={b.id ?? `${b.name}-${b.symbol}`}>
+                  <td>{b.name ?? '—'}</td>
+                  <td><code>{b.protocolId ?? '—'}</code></td>
+                  <td>{b.symbol ?? '—'}</td>
+                  <td>{b.mode ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
     </div>
   );
 }

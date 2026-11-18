@@ -73,6 +73,8 @@
 .tp-table,
 .uir-table,
 .brk-table,
+.mm-table,
+.sl-table,
 .vd-table,
 .va-table {
   width: 100%;
@@ -141,6 +143,8 @@
 .tp-table th,
 .uir-table th,
 .brk-table th,
+.mm-table th,
+.sl-table th,
 .vd-table th,
 .va-table th {
   text-align: left;
@@ -215,6 +219,8 @@
 .tp-table td,
 .uir-table td,
 .brk-table td,
+.mm-table td,
+.sl-table td,
 .vd-table td,
 .va-table td {
   padding: 0.45rem 0.65rem;
@@ -282,6 +288,8 @@
 .tp-table tbody tr:last-child td,
 .uir-table tbody tr:last-child td,
 .brk-table tbody tr:last-child td,
+.mm-table tbody tr:last-child td,
+.sl-table tbody tr:last-child td,
 .vd-table tbody tr:last-child td,
 .va-table tbody tr:last-child td {
   border-bottom: none;
@@ -362,7 +370,11 @@
    page stylesheet because the alignment has to out-rank .x-table td (0,1,1) — a bare .num
    (0,1,0) loses and the column silently stops lining up. Add your table's prefix to both lists. */
 .brk-table th.num,
+.mm-table th.num,
+.sl-table th.num,
 .brk-table td.num,
+.mm-table td.num,
+.sl-table td.num,
 .vd-table th.num,
 .vd-table td.num {
   text-align: right;
@@ -370,6 +382,8 @@
 }
 
 .brk-table tbody tr:hover,
+.mm-table tbody tr:hover,
+.sl-table tbody tr:hover,
 .vd-table tbody tr:hover,
 .va-table tbody tr:hover {
   background: color-mix(in srgb, var(--accent) 5%, transparent);

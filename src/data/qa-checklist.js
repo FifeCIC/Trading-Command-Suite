@@ -467,6 +467,17 @@ const QA_CHECKLIST = [
     priority: 'high',
     versionNote: '2026-11-18 — owner review of /development/movers-treatment: *"I do not like screen clutter - large blocks of information need to be displayed through the users desire to see it"* … *"Maybe a small icon in the top right corner of cards that have additional information"*. Four things were trimmed there: the visible h2 (now `h1.sr-only` + ℹ), the 3-paragraph strategy panel (now one status card), the seven-tally row (now status cards), and the hot-stock paragraph (now two derived cards). Guarded by `src/core/hot-stock-readiness.test.js` — the "2/4 vs CANNOT JUDGE" split is the case that matters.',
   },
+  {
+    id: 'qa-page-visibility-001',
+    area: 'Build / Infrastructure',
+    system: 'scripts/validate-page-visibility.cjs + scripts/page-visibility-baseline.json + src/core/hidden-views.js',
+    name: 'A new page cannot become visible to other users by accident',
+    procedure: 'Pick a nav-visible route that is NOT in `scripts/page-visibility-baseline.json`, remove it from `DEFAULT_HIDDEN_ROUTES`, and run `npm run prebuild`. Then put it back and run again. Then run `node scripts/validate-page-visibility.cjs --write` with that route still missing from the withheld set.',
+    expected: 'With the route withheld: prebuild passes and prints "every route added since the rule is withheld". With it removed: **exit 1**, naming the exact route and telling you to add it to `DEFAULT_HIDDEN_ROUTES`. `--write` **refuses with exit 2** rather than adding the route to the baseline — the baseline may only shrink. `--report` prints every nav route marked WITHHELD or public, and pre-rule or NEW.',
+    category: 'Guard',
+    priority: 'high',
+    versionNote: '2026-11-18 — #1298. Owner: *"Can we set a rule for any new pages to default to that state."* `hidden-views.js` had claimed since 2026-11-01 that moving an id out of the withheld list IS the release, and nothing noticed a page added and never put in — a half-built page went public the moment its nav entry landed. 9 self-test cases; the ratchet direction is enforced in code, not in prose.',
+  },
 
   // ═══════════════════════════════════════════════════
   // DUPLICATE PREVENTION

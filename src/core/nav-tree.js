@@ -74,6 +74,12 @@ export const NAV_TREE = {
     views: [
       { id: 'active-symbols', label: 'Active Symbols', icon: '★' },
       { id: 'user-watchlists', label: 'Watchlists', icon: '⊞' },
+      // #1297 — the movers question BOUNDED BY OUR OWN UNIVERSE. Owner, 2026-11-18: *"[Our registered
+      // symbols] can be moved to a new page in the Watchlists area … as they're two totally different
+      // concepts."* It belongs here because a symbol is "ours" by virtue of
+      // `symbol_protocol_assignment`, which is a Watchlists concern; the unbounded, market-wide
+      // question stayed in Development.
+      { id: 'registered-movers', label: 'Registered Movers', icon: '🏆' },
     ],
   },
   // ── Research area (/research/ prefix) ──
@@ -97,6 +103,12 @@ export const NAV_TREE = {
       // market/portfolio briefing is research output, not engineering tooling.
       // ⚠️ The other half of that instruction — "improve styling on <div.db-event>" — is NOT done.
       { id: 'daily-briefing', label: 'Daily Briefing', icon: '📋' },
+      // New 2026-11-18 (owner): the "Most active" list gets its own Research page. *"I'm tempted to
+      // turn that into a strategy but I'm not sure what the strategy would be: it seems like a
+      // potential list of volatile stocks and not really always trending strongly."* So it is
+      // RESEARCH, not a strategy — high volume without direction is a candidate list, not a thesis,
+      // and putting it in the Strategies area would imply a directional edge this data does not have.
+      { id: 'most-active', label: 'Most Active', icon: '🔊' },
       // ⚠️ HIDDEN 2026-10-02 (owner: hide now). One of THREE pages to be merged into a single
       // notes-first page (with Stock Investigation and Notes); the merge needs a prototype first, so
       // this is hidden rather than deleted meanwhile. Unhiding is one line.
@@ -142,6 +154,33 @@ export const NAV_TREE = {
     label: 'Signals',
     views: [
       { id: 'signals-overview', label: 'Signals', icon: '🚩' },
+    ],
+  },
+  // ── STRATEGIES (owner direction, 2026-11-18) ────────────────────────────────────────────────
+  // *"I would like a Strategies area (again)! The area will list all strategies in a separate
+  // category in its left hand menu for quick access… The goal here is that the new Strategy area
+  // allows us to see the finished product of the META.Stack pipeline doing its thing. It is in the
+  // theory we understand the strategy and see live samples but it is in the additional (optional)
+  // view we will have a true live overview of everything the strategy has done recently and is
+  // doing right now."*
+  //
+  // ⚠️ WHY ITS OWN AREA AND NOT A SECTION OF TRADING. A strategy is the SUBJECT (a methodology);
+  // a bot is the execution policy that runs it, and `Trading` is where bots are operated. Putting
+  // the library back under Trading is what buried it behind the machinery it describes. The order
+  // also reads as the pipeline: protocols → scoring → signals → STRATEGIES → trading.
+  //
+  // ⚠️ The two new entries are ONE market-movers signal split by SIDE, not two ideas. A "top
+  // winners" list and a "top losers" list need opposite exposures, opposite stop logic and opposite
+  // exhaustion behaviour, so they are two strategies — a single "movers" strategy could not state
+  // which side it takes.
+  strategies: {
+    label: 'Strategies',
+    views: [
+      { id: 'strategy-library', label: 'Strategy Library', icon: '📚' },
+      // Custom (live) views — the optional half the owner described. Withheld from other users by
+      // default (`DEFAULT_HIDDEN_ROUTES`) until released; the library card links to them.
+      { id: 'day-top-winners', label: "Day's Top Winners", icon: '🏆' },
+      { id: 'day-top-losers', label: "Day's Top Losers", icon: '🕳️' },
     ],
   },
   trading: {
@@ -203,7 +242,10 @@ export const NAV_TREE = {
       // label dated from when they were superseded in name only — it told a reader to expect dead
       // pages and then showed them working ones.
       { id: 'market-context', label: 'Market Context', icon: '🌐' },
-      { id: 'strategy-library', label: 'Strategy Library', icon: '📚' },
+      // Strategy Library MOVED to the Strategies area 2026-11-18 (owner: *"I would like a Strategies
+      // area (again)! … This page will be moved to the new area and all strategies will be listed
+      // there"*). Its route is now `/strategies/strategy-library`; `/trading/strategy-library`
+      // redirects, and the page-visibility baseline records the route RENAME rather than a new page.
       { id: 'performance-lab', label: 'Trading Performance', icon: '📊' },
       { id: 'calculators', label: 'Calculators', icon: '⊞' },
       { id: 'trading-settings', label: 'Settings', icon: '⚙' },
@@ -514,11 +556,13 @@ export const NAV_TREE = {
       // Development because it is an experiment first: does seeing the fitted line and the invalidation
       // level help you judge a score, or is it noise? Observation only — nothing in scoring reads it.
       { id: 'trend-reading', label: 'Trend Reading', icon: '📐' },
-  // #1281 — movers and treatment. Owner, 2026-11-15: *"I would like to see a list of all the
-  // winners and losers and how TCS is treating them in terms of scoring, trading, monitoring and
-  // decisions made."* Development because it began as an experiment; the observation is general
-  // and the strategy panel inside it is INACTIVE with its reason until a protocol exists.
-  { id: 'movers-treatment', label: 'Movers & Treatment', icon: '🏆' },
+      // #1281 — the market-wide movers feed. Owner, 2026-11-15: *"I would like to see a list of all
+      // the winners and losers and how TCS is treating them…"*, narrowed 2026-11-18: *"can then focus
+      // on being fed by a live market feed of the top winners and losers"*. The treatment half moved
+      // to `/watchlists/registered-movers`; what is left here is the unbounded discovery question,
+      // which stays in Development because it began as an experiment and the strategy on top of it is
+      // INACTIVE with its reason until a protocol exists.
+      { id: 'movers-treatment', label: 'Market Movers', icon: '🌍' },
       // 2026-09-28 — the CHANGE view. Every trading page rendered a snapshot; only PerformanceLab
       // had a time axis. This is Development because it is an EXPERIMENT first: does seeing the
       // period-over-period delta help you judge a system, or is it noise? Read-only by design —

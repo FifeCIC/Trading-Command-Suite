@@ -1,3 +1,37 @@
+/* ── Running bots with no written theory (2026-11-18) ──────────────────────────────────────────
+   ⚠️ NO TABLE ARRANGEMENT HERE. .sl-table is enrolled in src/core/tables.css, the one canonical
+   arrangement. This block is only the section frame and its note. */
+.sl-unwritten {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.sl-unwritten-head {
+  margin: 0 0 0.35rem;
+  font-size: var(--text-md);
+  color: var(--ink);
+}
+.sl-unwritten-note {
+  margin: 0 0 0.75rem;
+  max-width: 78ch;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+/* The strategy's OPTIONAL live view link (owner, 2026-11-18). Sits in the Overview section rather
+   than the card header: the header is the accordion toggle, and a link inside a button is neither
+   valid nor keyboard-operable. */
+.sl-live-link {
+  margin: 0.5rem 0 0.75rem;
+  font-size: var(--text-sm);
+}
+.sl-live-link a {
+  color: var(--accent);
+  font-weight: var(--weight-semibold, 600);
+  text-decoration: none;
+}
+.sl-live-link a:hover { text-decoration: underline; }
+.sl-live-link a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 /* Strategy Library Page */
 .sl-page { max-width: 880px; margin: 0 auto; padding: 1.25rem 1.5rem 4rem; color: var(--ink); }
 

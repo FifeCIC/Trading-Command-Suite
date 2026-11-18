@@ -209,12 +209,24 @@ function scan() {
   }
 
   const refText = referenceFiles().map((p) => fs.readFileSync(p, 'utf8')).join('\n');
+  /**
+   * ⚠️ BOTH `prebuild` SCRIPTS, NOT JUST THE BACKEND ONE (fixed 2026-11-18).
+   * This read only `nest/package.json`, so a gate that runs in the ROOT `prebuild` — which is where the
+   * frontend gates live — was labelled `docs`: "named in a document" rather than "runs automatically".
+   * Measured while adding `validate-page-visibility.cjs` to the root prebuild: the index reported it as
+   * `[validator · docs]`, which reads as *nobody runs this* about a script that gates every build.
+   * A reachability index that mislabels the automated path is worse than one that omits it.
+   */
   const prebuild = (() => {
-    try {
-      return String(require(path.join(NEST, 'package.json')).scripts?.prebuild ?? '');
-    } catch {
-      return '';
+    const parts = [];
+    for (const p of [path.join(REPO_ROOT, 'package.json'), path.join(NEST, 'package.json')]) {
+      try {
+        parts.push(String(require(p).scripts?.prebuild ?? ''));
+      } catch {
+        /* ignore */
+      }
     }
+    return parts.join('\n');
   })();
   const npmScripts = (() => {
     const all = {};

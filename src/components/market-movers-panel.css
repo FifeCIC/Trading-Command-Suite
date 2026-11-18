@@ -1,0 +1,122 @@
+/* market-movers-panel.css — styles for src/components/MarketMoversPanel.jsx
+ *
+ * ⚠️ EXTRACTED FROM MoversTreatmentPage.css (2026-11-18) WHEN THE PANEL GAINED FOUR CALLERS.
+ * The panel was used by one page, so its `.mm-*` rules lived in that page's stylesheet — and a
+ * second caller (the two side-split strategy views and the Most Active research page) would have
+ * had to import a page stylesheet to get them, or copy them. The panel now carries its own sheet,
+ * so every surface that renders it looks the same by construction.
+ *
+ * ⚠️ These are GLOBAL classes, not CSS-module names, because the panel's markup uses `mm-*` strings.
+ */
+
+/* ── Market-wide panel (#1283) ─────────────────────────────────────────────────────────────── */
+.mm-panel {
+  margin-bottom: 1.5rem;
+}
+
+.mm-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.75rem;
+}
+
+.mm-ok { color: var(--risk-normal); }
+.mm-bad { color: var(--risk-high); font-weight: 600; }
+
+.mm-banner {
+  border: 1px solid var(--risk-high);
+  border-radius: 6px;
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 0.9rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--risk-high) 8%, transparent);
+}
+
+.mm-counts {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-bottom: 0.5rem;
+}
+
+.mm-filters {
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  margin-bottom: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.mm-chip {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+  font-family: var(--font-mono);
+}
+
+.mm-lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.mm-list h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.mm-list h3.mm-up { color: var(--risk-normal); }
+.mm-list h3.mm-down { color: var(--risk-high); }
+
+/* ⚠️ NO TABLE ARRANGEMENT HERE (2026-11-18). `.mm-table` is enrolled in `src/core/tables.css`, which
+   is the ONE arrangement shared by 52 table families. This file used to carry its own base/`th`/`td`
+   rules, which is how the app reached 69 different table arrangements. Keep only what is specific to
+   these lists: monospace emphasis and gain/loss colour. */
+
+.mm-sym {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.mm-num {
+  font-family: var(--font-mono);
+  color: var(--ink-soft);
+}
+
+.mm-up { color: var(--risk-normal); }
+.mm-down { color: var(--risk-high); }
+.mm-dim { color: var(--text-faint); }
+
+.mm-table--excl {
+  margin-top: 0.6rem;
+}
+
+.mm-excluded button {
+  background: var(--panel);
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.mm-excluded button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

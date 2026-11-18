@@ -63,9 +63,6 @@
   "BrokerCataloguePage.jsx": {
     "page-h1": 1
   },
-  "BrokersPage.jsx": {
-    "page-h1": 1
-  },
   "BtcSpeedTradingPage.jsx": {
     "page-h1": 2
   },
@@ -193,10 +190,6 @@
   },
   "MetaStackStatusPage.jsx": {
     "page-h1": 1
-  },
-  "MoversTreatmentPage.jsx": {
-    "page-h1": 3,
-    "page-info-popover": 1
   },
   "Mt5StatusPage.jsx": {
     "page-h1": 1
@@ -423,18 +416,10 @@
     "page-h1": 1
   },
   "ThemeLabMotion.jsx": {
-    "page-h1": 1,
     "page-info-popover": 1
   },
   "ThemeLabPopover.jsx": {
-    "page-h1": 1,
     "page-info-popover": 1
-  },
-  "ThemeLabScroll.jsx": {
-    "page-h1": 1
-  },
-  "ThemeLabSections.jsx": {
-    "page-h1": 2
   },
   "TheoryRegistryPage.jsx": {
     "page-h1": 1,
@@ -459,9 +444,6 @@
   "TrainingCandlePatternsPage.jsx": {
     "page-h1": 1,
     "page-info-popover": 1
-  },
-  "UserWatchlistsPage.jsx": {
-    "page-h1": 2
   },
   "VendorsPage.jsx": {
     "page-h1": 1,

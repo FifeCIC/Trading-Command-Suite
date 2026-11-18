@@ -135,6 +135,40 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   '/trading/speed-scanner',
   '/trading/strategy-comparison',
   '/trading/trading-plans',
+
+  // ── Pack 8: the movers pair (2026-11-18) ──────────────────────────────────────────────────────
+  // Owner: *"this new page should be set as hidden from other users among the other pages that are
+  // only seen on my system. Can we set a rule for any new pages to default to that state."*
+  //
+  // ⚠️ THE RULE IS NOW ENFORCED, NOT REMEMBERED. `scripts/validate-page-visibility.cjs` runs in
+  // `prebuild` and FAILS when a nav-visible route is in neither this set nor the frozen baseline of
+  // pages that predate the rule. So a new page is withheld by default **because the build says so**,
+  // and releasing one is a deliberate line removed from this list — *moving an id OUT of this list IS
+  // the release*, which is what this file already promised and nothing checked.
+  //
+  // `/watchlists/registered-movers` is withheld for the same reason as its Development sibling: it
+  // exists to observe a strategy that has no protocol yet, and a page whose numbers describe an
+  // unbuilt feature should not be the first thing a new user opens.
+  '/watchlists/registered-movers',
+  '/development/movers-treatment',
+
+  // ── Pack 9: the Strategies area (2026-11-18) ───────────────────────────────────────────────────
+  // Owner: *"I would like a Strategies area (again)! … The area will list all strategies in a separate
+  // category in its left hand menu for quick access."* The area itself is wanted; what is WITHHELD is
+  // the two custom live views and the Research page, because their numbers describe strategies that
+  // have no protocol yet — the same reason as the movers pair above.
+  //
+  // ⚠️ `/strategies/strategy-library` IS DELIBERATELY **NOT** LISTED — and I got this wrong first.
+  // Withholding it as well emptied the whole new area for every non-owner, which `hidden-views.test.js`
+  // catches by name (*"withholding does not empty any area — a vanished area is a deleted section"*).
+  // The reasoning that produced the mistake was tidy and wrong: "an area whose only visible view is a
+  // theory library would look finished". The library was ALREADY visible at /trading/strategy-library
+  // before the move, so hiding it here would not have withheld a new page — it would have withdrawn an
+  // existing one and deleted the section it lives in. A MOVE does not change a page's visibility, and
+  // `page-visibility-baseline.json` records the route rename so its review status travels with it.
+  '/strategies/day-top-winners',
+  '/strategies/day-top-losers',
+  '/research/most-active',
 ]);
 
 /**

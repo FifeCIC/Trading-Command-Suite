@@ -2,6 +2,23 @@
  * MarketMoversPanel — the MARKET-WIDE winners/losers discovery feed (#1283).
  * ==========================================================================
  *
+ * `lists` selects which of the feed's lists to render, so ONE panel serves four surfaces instead of
+ * four near-copies (owner direction, 2026-11-18: the two side-split strategies and the Most Active
+ * research page each show exactly one of these lists):
+ *
+ *   <MarketMoversPanel />                                  → all three + the exclusion audit (this page)
+ *   <MarketMoversPanel lists={['winners']} />               → Day's Top Winners (long strategy)
+ *   <MarketMoversPanel lists={['losers']} />                → Day's Top Losers (short strategy)
+ *   <MarketMoversPanel lists={['mostActive']} />            → Most Active (research)
+ *
+ * ⚠️ THE PROVENANCE STRIP AND THE STALE BANNER ARE NOT OPTIONAL PER LIST, and they are NOT part of
+ * `lists`. A "top winners" table with no provider stamp and no staleness warning is exactly the
+ * defect this feed was built to avoid: a three-day-old list read as today's opportunity. Whatever
+ * subset a caller renders, it renders with its age attached.
+ *
+ * ⚠️ `showExcluded` defaults to whether the exclusion audit is relevant to the chosen lists — the
+ * audit explains rows MISSING from the feed, which only matters when the reader can see the feed.
+ *
  * Owner, 2026-11-16: *"we would ideally use a ready made source of top movers: top winners and top
  * losers. It doesn't make sense to only process our registered symbols for the strategy I want the
  * app to support. That doesn't mean it's not a good idea to have a page that shows us the top movers
@@ -33,7 +50,9 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { noticeFromError } from '../core/notices/from-error';
+import { useSort, SortableTh } from '../core/use-sort';
 import NoticeBlock from './NoticeBlock';
+import './market-movers-panel.css';
 
 const fmtPct = (v) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}%`);
 const fmtPrice = (v) => (v == null ? '—' : Number(v).toFixed(v < 1 ? 4 : 2));
@@ -45,7 +64,23 @@ const fmtAge = (m) => {
   return `${(m / 1440).toFixed(1)} days`;
 };
 
+/** The three feed lists, in render order. `key` is the field on the API response. */
+const LIST_DEFS = [
+  { key: 'winners', title: '🏆 Top gainers', accent: 'mm-up' },
+  { key: 'losers', title: '🕳️ Top losers', accent: 'mm-down' },
+  { key: 'mostActive', title: '🔊 Most active', accent: '' },
+];
+
 function List({ title, rows, accent }) {
+  /**
+   * Sorting uses the SHARED rule (`core/use-sort`) — the same one every other table in the app uses.
+   *
+   * ⚠️ `initialKey` is deliberately `null`: the feed arrives RANKED, and a movers list re-sorted on
+   * load would throw that ranking away without saying so. No column is active until the reader clicks
+   * one, and clicking the active column reverses it.
+   */
+  const sort = useSort(rows, null, 'desc');
+
   return (
     <section className="mm-list">
       <h3 className={accent}>{title}</h3>
@@ -58,14 +93,14 @@ function List({ title, rows, accent }) {
         <table className="mm-table">
           <thead>
             <tr>
-              <th>Symbol</th>
-              <th>Price</th>
-              <th>Change</th>
-              <th>Volume</th>
+              <SortableTh col="ticker" label="Symbol" api={sort} buttonClassName="th-sort" firstDir="asc" />
+              <SortableTh col="price" label="Price" api={sort} buttonClassName="th-sort" className="num" />
+              <SortableTh col="changePct" label="Change" api={sort} buttonClassName="th-sort" className="num" />
+              <SortableTh col="volume" label="Volume" api={sort} buttonClassName="th-sort" className="num" />
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {sort.sorted.map((r) => (
               <tr key={`${title}-${r.ticker}`}>
                 <td className="mm-sym">{r.ticker}</td>
                 <td className="mm-num">{fmtPrice(r.price)}</td>
@@ -80,7 +115,7 @@ function List({ title, rows, accent }) {
   );
 }
 
-export default function MarketMoversPanel() {
+export default function MarketMoversPanel({ lists = null }) {
   const [showExcluded, setShowExcluded] = useState(false);
 
   const q = useQuery({
@@ -91,6 +126,11 @@ export default function MarketMoversPanel() {
   });
 
   const d = q.data;
+
+  // ⚠️ DECLARED BEFORE THE EARLY RETURNS — a hook after `if (q.isLoading) return …` would be a
+  // conditional hook. Sorting the exclusion list is worth having (sorting by REASON groups 37 dropped
+  // rows into their causes), and the list arrives in feed order, so no column is active initially.
+  const excludedSort = useSort(d?.excluded ?? [], null, 'asc');
 
   // ⚠️ Three outcomes, never two: loading / FAILED / data. A failed fetch must not render as
   // "no movers today", which is the false-empty this whole feature exists to avoid.
@@ -155,9 +195,9 @@ export default function MarketMoversPanel() {
       </div>
 
       <div className="mm-lists">
-        <List title="🏆 Top gainers" rows={d.winners} accent="mm-up" />
-        <List title="🕳️ Top losers" rows={d.losers} accent="mm-down" />
-        <List title="🔊 Most active" rows={d.mostActive} accent="" />
+        {LIST_DEFS.filter((l) => !lists || lists.includes(l.key)).map((l) => (
+          <List key={l.key} title={l.title} rows={d[l.key] ?? []} accent={l.accent} />
+        ))}
       </div>
 
       <div className="mm-excluded">
@@ -167,10 +207,14 @@ export default function MarketMoversPanel() {
         {showExcluded && (
           <table className="mm-table mm-table--excl">
             <thead>
-              <tr><th>Symbol</th><th>Why it was excluded</th><th>Detail</th></tr>
+              <tr>
+                <SortableTh col="ticker" label="Symbol" api={excludedSort} buttonClassName="th-sort" firstDir="asc" />
+                <SortableTh col="reason" label="Why it was excluded" api={excludedSort} buttonClassName="th-sort" firstDir="asc" />
+                <SortableTh col="detail" label="Detail" api={excludedSort} buttonClassName="th-sort" firstDir="asc" />
+              </tr>
             </thead>
             <tbody>
-              {d.excluded.map((e, i) => (
+              {excludedSort.sorted.map((e, i) => (
                 <tr key={`${e.ticker}-${i}`}>
                   <td className="mm-sym">{e.ticker}</td>
                   <td>{e.reason}</td>

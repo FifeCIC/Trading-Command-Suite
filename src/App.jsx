@@ -1283,6 +1283,11 @@ export default function App() {
               deletion. A retired route with no redirect is a 404 for every bookmark, every doc link
               and every QA procedure that names it. */}
           <Route path="/trading/trading-strategies" element={<Navigate to="/trading/trading-bots" replace />} />
+          {/* ⚠️ STRATEGY LIBRARY MOVED 2026-11-18 (owner: "I would like a Strategies area (again)").
+              The page itself is unchanged and keeps its approved review status — only its AREA
+              changed — so this redirect exists for every bookmark, doc link and QA procedure that
+              names the old path. A moved route with no redirect is a 404 with extra steps. */}
+          <Route path="/trading/strategy-library" element={<Navigate to="/strategies/strategy-library" replace />} />
           {/* The `/lab/metastack-*` pair — old names for views that now live under `/lab`. Kept so a
               bookmark written against the old paths still resolves. */}
           <Route path="/lab/metastack-display" element={<Navigate to="/lab/triple-screen" replace />} />

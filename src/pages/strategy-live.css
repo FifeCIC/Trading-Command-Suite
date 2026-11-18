@@ -1,0 +1,61 @@
+/* strategy-live.css — the OPTIONAL live half of a strategy page (StrategyLiveView.jsx).
+ *
+ * ⚠️ NOTHING HERE DESCRIBES A TABLE. The movers tables are styled by `src/core/tables.css` via the
+ * enrolled `.mm-table` family, and the panel that renders them carries its own sheet
+ * (`src/components/market-movers-panel.css`). This file holds only the page frame and the short
+ * theory block, so a change to how tables look happens in one place for every surface.
+ */
+
+.slv-page {
+  padding: 1.25rem 1.5rem 3rem;
+  color: var(--ink);
+  max-width: 1500px;
+}
+
+/* Same load-bearing `flex-start` as the treatment page: the status cards reveal an overlay below
+   themselves and `stretch` would clip it. */
+.slv-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.slv-lead {
+  margin: 0 0 1rem;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  max-width: 78ch;
+}
+
+.slv-theory {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.25rem;
+  max-width: 78ch;
+}
+
+.slv-theory-head {
+  margin: 0 0 0.4rem;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold, 600);
+  color: var(--ink);
+}
+
+.slv-theory-body {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.slv-footnote {
+  margin: 1rem 0 0;
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  color: var(--text-dim);
+  max-width: 78ch;
+}

@@ -81,6 +81,47 @@ export const VIEW_EXPLANATIONS = {
     '(provider, quantity, prices), freshness timings, tags, aliases and record ' +
     'timestamps can all be shown. Click a row to inspect the symbol in the detail rail.',
 
+  'strategies':
+    'Every strategy we have written down, whether or not it is running. Each entry is a THEORY: what ' +
+    'it believes about the market, which directives express that belief, and what would prove it ' +
+    'wrong. A strategy with a live view also has its own page — the finished product, where the feed ' +
+    'the strategy would consume is shown as it is right now, with its age attached. Opening a live ' +
+    'view is not the same as the strategy trading: the status card on each one says which.',
+
+  'day-top-winners':
+    'The long half of the day’s movers idea. Candidates are the biggest gainers in the whole market — ' +
+    'including symbols we do not hold — because the theory is momentum continuation, and a symbol ' +
+    'cannot be a mover if we only ever look at our own universe. The list is live but the strategy is ' +
+    'NOT trading: no protocol is wired to it yet, so nothing is scored, sized or entered.',
+
+  'day-top-losers':
+    'The short half of the day’s movers idea, and deliberately not the winners page with the sign ' +
+    'flipped: a short’s gain is capped while its loss is not, borrow cost accrues, a collapsing stock ' +
+    'may not be shortable at all, and a squeeze arrives faster than a long-side reversal. The list is ' +
+    'live; the strategy is not trading, because no protocol is wired to it yet.',
+
+  'most-active':
+    'Ranked by VOLUME, which has no direction — a name can top this list while closing flat. What it ' +
+    'gives you is where liquidity and attention are concentrated, which is a candidate universe for a ' +
+    'directional strategy rather than a thesis of its own. That is why it lives in Research and not ' +
+    'in the Strategies area.',
+
+  'registered-movers':
+    'Bounded by what we hold: for each symbol in our universe that moved most in the chosen window, ' +
+    'every question at once — what it scored, whether anything is subscribed to act on it, what is ' +
+    'open or queued, and what the loop last decided. Every tally is a STATUS: the number is the ' +
+    'answer and the detail sits on demand (hover, focus, or click to pin). The market-wide question — ' +
+    'what is moving anywhere that we are not looking at? — is /development/movers-treatment.',
+
+  'movers-treatment':
+    'Bounded by nothing: the biggest winners and losers in the whole market, including symbols we do ' +
+    'not hold and have never scored — which is the point, because a symbol can be the largest mover ' +
+    'of the day and appear nowhere in our universe. The feed is live, but its AGE is shown and a ' +
+    'stale feed is refused rather than presented as today’s opportunity. Exclusions are listed with ' +
+    'their reason, so a filter that drops most of its input stays visible instead of looking like a ' +
+    'short list. The question about OUR symbols — what is TCS doing with the movers we hold? — is ' +
+    '/watchlists/registered-movers.',
+
   'screener':
     'The Screener ranks catalyst events — upcoming earnings and recent news ' +
     'mentions — by attention weight (strength × source reliability × how close ' +
