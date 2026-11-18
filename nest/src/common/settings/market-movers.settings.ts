@@ -108,4 +108,55 @@ export const MARKET_MOVERS_SETTINGS: SettingDefinition[] = [
   min: 1,
   max: 100,
 },
+// ── Provider and discovery (2026-11-18) ───────────────────────────────────────────────────────
+{
+  key: 'movers.provider',
+  type: 'string',
+  defaultValue: 'auto',
+  class: 'runtime',
+  owner: 'market-movers',
+  label: 'Movers — provider',
+  description:
+    'auto (default) asks Yahoo first and falls back to FMP if Yahoo refuses. Pin "yahoo" or "fmp" ' +
+    'to compare the two deliberately rather than by accident. Any other value is treated as ' +
+    '"auto" — a typo must not leave the feed with no provider. ⚠️ The two are NOT equivalent: ' +
+    'Yahoo supplies volume, opening price, average volume and the earnings timestamp in the same ' +
+    'call, so the volume filter can run; FMP supplies none of them, so its rows are reported as ' +
+    'unparseable and the response says filtersApplied.volumeFilterApplied=false. Measured ' +
+    '2026-11-18: Alpha Vantage was removed as a source because its list was a full trading session ' +
+    'behind and its top rows were warrants.',
+  userChangeable: true,
+},
+{
+  key: 'movers.maxDelayMinutes',
+  type: 'number',
+  defaultValue: 15,
+  class: 'runtime',
+  owner: 'market-movers',
+  label: 'Movers — maximum exchange delay (minutes)',
+  description:
+    'Yahoo declares exchangeDataDelayedBy per quote — measured 2026-11-18 it reported 15 for ' +
+    'NasdaqGS. That delay is separate from staleness: stale asks "is this feed alive?", delayed ' +
+    'asks "how old is each quote even when it is alive?". Inconsequential for a daily view, ' +
+    'decisive for an intraday momentum entry, so it is its own gate and the response carries ' +
+    'delayedByMinutes beside delayed:true.',
+  userChangeable: true,
+  min: 0,
+  max: 1440,
+},
+{
+  key: 'movers.persistDiscovered',
+  type: 'boolean',
+  defaultValue: true,
+  class: 'runtime',
+  owner: 'market-movers',
+  label: 'Movers — record discovered symbols (never activate them)',
+  description:
+    'When on, every ticker that SURVIVES the filters is inserted into `symbol` with active=0. ' +
+    'Discovery never activates anything: the feed offers 95 gainers and 174 losers per fetch, so ' +
+    'activating on sight would mean hundreds of monitored symbols a month. A symbol becomes active ' +
+    'only when a person or a bot chooses it. Existing rows are left untouched, including ones ' +
+    'already active. Turn this off to keep the movers feed read-only.',
+  userChangeable: true,
+},
 ];

@@ -40,6 +40,22 @@
   background: color-mix(in srgb, var(--risk-high) 8%, transparent);
 }
 
+/* ⚠️ A WARNING BORDER, NOT THE RISK COLOUR. A 20-minute exchange delay is a FACT about the feed, not a
+   fault — painting it like the stale banner would teach the reader to ignore both. */
+.mm-banner--delay {
+  border-color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 8%, transparent);
+}
+
+/* What discovery did — and the verb it deliberately did NOT use. */
+.mm-persisted {
+  color: var(--text-dim);
+}
+
+.mm-persisted strong {
+  color: var(--ink);
+}
+
 .mm-counts {
   display: flex;
   align-items: center;

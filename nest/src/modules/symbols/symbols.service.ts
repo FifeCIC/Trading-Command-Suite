@@ -548,7 +548,16 @@ export class SymbolsService {
      * (finnhub, fmp, polygon, yahoo, alpha-vantage) and three of them have their API key set in
      * `nest/.env`. Before this change only `finnhub` was ever asked.
      */
-    const isEquity = symbol.type === 'stock' || symbol.type === 'etf';
+    /**
+     * ⚠️ LOWERCASED, because this column has carried a second spelling. Measured 2026-11-19: symbol
+     * discovery wrote `STOCK` ×120 / `ETF` ×11 while every other writer writes lowercase, and the
+     * column collates `utf8mb4_unicode_ci` — so SQL matched both and this line, case-sensitive,
+     * answered `false`. The consequence was not cosmetic: an equity was reported as having NO
+     * company profile and the whole provider chain below was skipped. `suitability.service.ts`
+     * already lowercases both sides for the same reason; this matches it.
+     */
+    const symbolTypeOf = String(symbol.type ?? '').toLowerCase();
+    const isEquity = symbolTypeOf === 'stock' || symbolTypeOf === 'etf';
 
     let industry: string | null = null;
     let marketCap: number | null = null;

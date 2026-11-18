@@ -478,6 +478,17 @@ const QA_CHECKLIST = [
     priority: 'high',
     versionNote: '2026-11-18 — #1298. Owner: *"Can we set a rule for any new pages to default to that state."* `hidden-views.js` had claimed since 2026-11-01 that moving an id out of the withheld list IS the release, and nothing noticed a page added and never put in — a half-built page went public the moment its nav entry landed. 9 self-test cases; the ratchet direction is enforced in code, not in prose.',
   },
+  {
+    id: 'qa-movers-provider-001',
+    area: 'Data and providers',
+    system: 'nest/src/modules/market-data/movers-providers.ts + market-movers.service.ts + symbol-discovery.service.ts',
+    name: 'A discovered mover is recorded as a dormant symbol, and a case difference cannot silently misclassify it',
+    procedure: 'Call `GET /api/market-data/market-movers?force=true` twice and compare `persisted.created` on each call. Then run `SELECT COUNT(*) FROM symbol` and `SELECT COUNT(*) FROM symbol WHERE active = 1` around the pair. Finally run `SELECT COUNT(*) FROM symbol WHERE BINARY type <> BINARY LOWER(type)` and `GET /api/symbols/BP/snapshot` for a ticker the feed created.',
+    expected: 'First call reports `created` > 0 with `provider=yahoo`; the second reports `created=0` with a matching `existing` count — the write is insert-only and idempotent. **`active` is identical before and after both calls** (measured: 78 → 78). The type query returns **0**, and a snapshot for a discovered ticker returns `profileStatus="ok"` with a named `profileAnsweredBy` and its `industry` — not `not-applicable`, which is what the uppercase spelling caused.',
+    category: 'Data integrity',
+    priority: 'high',
+    versionNote: '2026-11-19 — #1299. Owner: *"We cannot activate every symbol that appears in top losers or top winners."* Two guarantees, both proven live: insert-only discovery (`created=120` then `created=0 existing=147`, `active` unchanged at 78), and a lowercase/mapped `type` vocabulary. ⚠️ The second guard exists because the first version wrote `STOCK` ×120 and nothing reported it — the column collates `utf8mb4_unicode_ci`, so SQL matched both spellings while `symbols.service.ts`\'s case-sensitive `isEquity` answered `false` and skipped the entire 5-adapter profile chain. Canaried by mutating the mapping (`3 failed → 26 passed`, restore byte-identical) and live by setting `BP.type = \'STOCK\'`, which still returned `profileStatus="ok"`.',
+  },
 
   // ═══════════════════════════════════════════════════
   // DUPLICATE PREVENTION

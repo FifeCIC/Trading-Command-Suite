@@ -170,6 +170,19 @@ export default function MarketMoversPanel({ lists = null }) {
             ({fmtAge(d.ageMinutes)} old{d.stale ? ' — STALE' : ''})
           </span>
         </div>
+        {/* ⚠️ THE EXCHANGE DELAY IS A SEPARATE FACT FROM STALENESS and must be read separately:
+            `stale` asks "is this feed alive?", `delayed` asks "how old is each quote even when it is?".
+            A feed can be seconds old and still carry 15-20 minute-old prices. */}
+        <div>
+          <strong>Exchange delay:</strong>{' '}
+          {d.delayedByMinutes == null
+            ? <span className="mm-dim">not declared</span>
+            : (
+              <span className={d.delayed ? 'mm-bad' : 'mm-ok'}>
+                {d.delayedByMinutes} min{d.delayed ? ' — DELAYED' : ''}
+              </span>
+            )}
+        </div>
       </div>
 
       {d.stale && (
@@ -180,12 +193,29 @@ export default function MarketMoversPanel({ lists = null }) {
         </div>
       )}
 
+      {!d.stale && d.delayed && (
+        <div className="mm-banner mm-banner--delay">
+          ⏱ <strong>Live, but {d.delayedByMinutes} minutes behind the exchange.</strong>{' '}
+          Fine for finding candidates and for a daily view; <em>not</em> fine for an entry that depends
+          on where the price is in the next minute. The strategy&apos;s velocity factors must be measured
+          from this app&apos;s own bars, not from these rows.
+        </div>
+      )}
+
       <div className="mm-counts">
         <span><strong>{d.counts.raw}</strong> raw rows</span>
         <span>→</span>
         <span><strong>{d.counts.kept}</strong> kept</span>
         <span>→</span>
         <span className="mm-bad"><strong>{d.counts.excluded}</strong> excluded</span>
+        {/* ⚠️ WHAT DISCOVERY DID, AND WHAT IT DELIBERATELY DID NOT DO. "recorded" and "activated" are
+            different verbs and the second one never happens here. */}
+        {d.persisted && (
+          <span className="mm-persisted">
+            · {d.persisted.created} new symbol{d.persisted.created === 1 ? '' : 's'} recorded
+            {' '}<strong>(none activated)</strong>
+          </span>
+        )}
       </div>
 
       <div className="mm-filters">

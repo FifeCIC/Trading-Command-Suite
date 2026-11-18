@@ -10,13 +10,12 @@
  *      is also sub-$1 must be reported as "instrument", not "price".
  *   3. `staleness` — the live feed returned a THREE-DAY-OLD timestamp. An unreadable timestamp must
  *      read as stale, never as fresh.
- *   4. `parsePct`/`parseNum` — the feed sends `"212.5%"` as a string; `Number("212.5%")` is NaN.
+ *   4. Provider parsing now lives in `movers-providers.ts` with its own spec. The rule it carries is
+ *      the same one: a missing field stays `null` and must never become 0.
  */
 import {
   applyFilters,
   classifyInstrument,
-  parseNum,
-  parsePct,
   staleness,
   type RawMover,
 } from './market-movers.service';
@@ -136,28 +135,5 @@ describe('staleness', () => {
   it('⚠️ treats an UNPARSEABLE timestamp as stale, never as fresh', () => {
     // Absence of evidence is not freshness: a corrupt timestamp must not un-block trading.
     expect(staleness('last friday-ish', now, 60).stale).toBe(true);
-  });
-});
-
-describe('parse helpers', () => {
-  it('parses the percentage strings the feed actually sends', () => {
-    expect(parsePct('212.5%')).toBe(212.5);
-    expect(parsePct('-40.7615%')).toBe(-40.7615);
-    expect(parsePct('1,234.5%')).toBe(1234.5);
-    expect(parsePct(58.2)).toBe(58.2);
-  });
-
-  it('returns null rather than 0 for an unusable value', () => {
-    // ⚠️ Returning 0 here would make a missing price look like a free share and a missing
-    // percentage look like "flat" — both of which are claims the feed did not make.
-    expect(parsePct('n/a')).toBeNull();
-    expect(parsePct(null)).toBeNull();
-    expect(parseNum(undefined)).toBeNull();
-    expect(parseNum('')).toBeNull();
-  });
-
-  it('parses volume with thousands separators', () => {
-    expect(parseNum('889,589,875')).toBe(889_589_875);
-    expect(parseNum('77115')).toBe(77115);
   });
 });

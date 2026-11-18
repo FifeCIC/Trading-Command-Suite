@@ -78,11 +78,17 @@ export class ImportJobsService {
         // Foreign-listed tickers: Yahoo wants an exchange suffix (VWS → VWS.CO).
         // When the bare ticker returns nothing and has no suffix, retry common
         // exchanges in order until one resolves. Only for equity-like symbols.
+        /**
+         * ⚠️ LOWERCASED for the same reason as `symbols.service.ts`'s `isEquity` — measured 2026-11-19,
+         * symbol discovery wrote `STOCK`/`ETF` while every other writer writes lowercase, and this
+         * case-sensitive test skipped the foreign-listing retry for those rows, so a ticker that
+         * needed a `.L`/`.CO` suffix returned no bars at all.
+         */
         if (
           providerId === 'yahoo'
           && (!bars || bars.length === 0)
           && !tickerToUse.includes('.')
-          && (symbol.type === 'stock' || symbol.type === 'etf' || !symbol.type)
+          && (['stock', 'etf'].includes(String(symbol.type ?? '').toLowerCase()) || !symbol.type)
         ) {
           for (const suffix of YAHOO_EXCHANGE_SUFFIXES) {
             const candidate = `${tickerToUse}${suffix}`;

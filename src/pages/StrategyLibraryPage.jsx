@@ -286,6 +286,20 @@ export default function StrategyLibraryPage() {
         </div>
       )}
 
+      {/* ⚠️ THE GAP BAR EXISTS BECAUSE THE SECTION BELOW IS 2.3 SCREENS DOWN (measured 2026-11-18:
+          2,028px past 19 collapsed cards, viewport 889px). The owner reported the section as "not
+          appearing" — it was rendering correctly and simply out of sight. A 49-row table above the
+          library would bury the library instead, so the answer is a one-line pointer at the top and
+          an anchor to the detail. */}
+      {unwrittenBots.length > 0 && (
+        <p className="sl-gap-bar">
+          <a href="#unwritten-theory">
+            ⚠️ {unwrittenBots.length} running bot{unwrittenBots.length === 1 ? ' has' : 's have'} no
+            written theory — see the list ↓
+          </a>
+        </p>
+      )}
+
       <div className="sl-list">
         {STRATEGY_LIBRARY.map((strategy) => {
           const isOpen = expandedId === strategy.id;
@@ -549,7 +563,7 @@ export default function StrategyLibraryPage() {
           ids do not contain a thesis, so "deriving" one would be a plausible paragraph nobody wrote.
           ⚠️ Rendered only when non-empty — an empty "0 bots" panel is chrome. */}
       {unwrittenBots.length > 0 && (
-        <section className="sl-unwritten" aria-label="Running bots with no written theory">
+        <section className="sl-unwritten" id="unwritten-theory" aria-label="Running bots with no written theory">
           <h2 className="sl-unwritten-head">
             {unwrittenBots.length} running bot{unwrittenBots.length === 1 ? '' : 's'} with no written theory
           </h2>

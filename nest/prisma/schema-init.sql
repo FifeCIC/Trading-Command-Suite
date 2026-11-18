@@ -2278,9 +2278,6 @@ ALTER TABLE `Directive` ADD CONSTRAINT `Directive_strategyId_fkey` FOREIGN KEY (
 ALTER TABLE `Score` ADD CONSTRAINT `Score_symbolId_fkey` FOREIGN KEY (`symbolId`) REFERENCES `Symbol`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Score` ADD CONSTRAINT `Score_strategyId_fkey` FOREIGN KEY (`strategyId`) REFERENCES `Strategy`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE `Signal` ADD CONSTRAINT `Signal_symbolId_fkey` FOREIGN KEY (`symbolId`) REFERENCES `Symbol`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey

@@ -1,7 +1,23 @@
+/* The jump bar for the "no written theory" section. Measured 2026-11-18: that section sat 2,028px
+   down (2.3 viewports past 19 collapsed cards) and was reported as "not appearing" while rendering
+   correctly. A pointer at the top is cheaper than moving a 49-row table above the library. */
+.sl-gap-bar {
+  margin: 0 0 0.75rem;
+  font-size: var(--text-sm);
+}
+.sl-gap-bar a {
+  color: var(--risk-elevated);
+  font-weight: var(--weight-semibold, 600);
+  text-decoration: none;
+}
+.sl-gap-bar a:hover { text-decoration: underline; }
+.sl-gap-bar a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 /* ── Running bots with no written theory (2026-11-18) ──────────────────────────────────────────
    ⚠️ NO TABLE ARRANGEMENT HERE. .sl-table is enrolled in src/core/tables.css, the one canonical
    arrangement. This block is only the section frame and its note. */
 .sl-unwritten {
+  /* The jump bar links here; without this the sticky chrome covers the heading on arrival. */
+  scroll-margin-top: 4rem;
   margin-top: 1.5rem;
   padding-top: 1rem;
   border-top: 1px solid var(--line);
