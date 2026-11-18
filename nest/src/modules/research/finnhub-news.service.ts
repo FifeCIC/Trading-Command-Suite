@@ -10,8 +10,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { classifyNewsCategory, DEFAULT_NEWS_CATEGORY_ALLOWLIST } from '../news/news-taxonomy';
-import { isAlreadyInCanonicalNews } from './news-dedupe';
-import * as crypto from 'crypto';
+import { writeCanonicalArticle } from './news-writer';
 
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 
@@ -76,38 +75,28 @@ export class FinnhubNewsService implements OnModuleInit {
     const category = classifyNewsCategory(article.headline || '', article.summary || '');
     if (!DEFAULT_NEWS_CATEGORY_ALLOWLIST.includes(category)) return false;
 
-    const hash = crypto.createHash('sha256')
-      .update(`fh:${article.url || article.headline}`)
-      .digest('hex').slice(0, 16);
-
     try {
-      const exists = await (this.prisma as any).newsItem?.findFirst({
-        where: { sourceHash: hash },
+      // ⚠️ #1290 — WRITES THE CANONICAL TABLE NOW, and `url` (UNIQUE) is the whole dedupe. The
+      // `sourceHash` check against `news_item` is gone with the table: comparing a story only against
+      // the duplicate store was how 17,245 stories ended up in both. See `news-writer.ts`.
+      const outcome = await writeCanonicalArticle(this.prisma as any, {
+        headline: article.headline || '',
+        url: article.url || '',
+        source: 'fh:finnhub',
+        symbols: [symbol],
+        summary: (article.summary || '').slice(0, 500),
+        publishedAt: new Date(article.datetime * 1000),
+        sentiment: null,
+        severity: 1,
+        category,
       });
-      if (exists) return false;
-
-      // ⚠️ ALSO skip anything the MAIN pipeline already holds (2026-11-17) — `sourceHash` only
-      // dedupes against this table. See `news-dedupe.ts` for why the WRITER must be guarded.
-      if (await isAlreadyInCanonicalNews(article.url, (u) =>
-        this.prisma.newsArticle.findUnique({ where: { url: u }, select: { id: true } }).then(Boolean),
-      )) return false;
-
-      await (this.prisma as any).newsItem?.create({
-        data: {
-          title: (article.headline || '').slice(0, 300),
-          url: article.url || '',
-          source: 'fh:finnhub',
-          sourceHash: hash,
-          publishedAt: new Date(article.datetime * 1000),
-          summary: (article.summary || '').slice(0, 500),
-          symbols: symbol,
-          sentiment: null,
-          severity: 1,
-          status: 'new',
-        },
-      });
-      return true;
-    } catch {
+      if (outcome.status === 'written') return true;
+      if (outcome.status === 'skipped') {
+        this.logger.debug(`Finnhub skip (${article.url}): ${outcome.reason}`);
+      }
+      return false;
+    } catch (err) {
+      this.logger.warn(`Finnhub store failed: ${(err as Error).message}`);
       return false;
     }
   }

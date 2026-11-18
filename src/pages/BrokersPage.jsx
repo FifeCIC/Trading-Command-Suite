@@ -33,6 +33,9 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiDelete } from '../core/api/client';
+import { noticeFromError } from '../core/notices/from-error.js';
+import { notice } from '../core/notices/registry.js';
+import NoticeBlock from '../components/NoticeBlock';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -126,30 +129,50 @@ export default function BrokersPage() {
    * `{ success: false, error }` when the bridge refuses, so a status-code-only check would report a
    * failed deletion as done — and the row would reappear on the next poll with no explanation.
    */
+  /**
+   * Action failures are NOT rendered as `err?.message`.
+   *
+   * A raw message's only identity is its wording, so the reader cannot quote it, search for it, or
+   * tell "the bridge refused" from "the API is restarting" — `validate-notices.cjs` ratchets exactly
+   * that (§#826). Each failure becomes a stable code (`TCS-SYS-007`) carrying the operation that
+   * failed, and the cause travels as `detail`.
+   */
+  const [actionNotice, setActionNotice] = useState(null);
+  const failAction = (err, operation) =>
+    setActionNotice(noticeFromError(err, 'TCS-SYS-007', { operation }));
+
   const removeMt5 = useMutation({
     mutationFn: ({ number, brokerId }) =>
       apiPost('/api/providers/mt5/accounts/remove', { number, brokerId }),
+    onMutate: () => setActionNotice(null),
     onSuccess: (res) => {
       if (res?.ok === false || res?.success === false) {
-        window.alert(`The bridge refused to remove the account:\n\n${res?.error ?? 'no reason given'}`);
+        setActionNotice(
+          notice('TCS-SYS-007', {
+            operation: 'remove the account from the bridge',
+            detail: res?.error || 'the bridge refused without giving a reason',
+          }),
+        );
         return;
       }
       invalidateAccounts();
     },
-    onError: (err) => window.alert(`Remove failed: ${err?.message ?? 'unknown error'}`),
+    onError: (err) => failAction(err, 'remove the account from the bridge'),
   });
 
   /** Archive an API-connected account (Trading212 / Capital.com). Not a deletion at the broker. */
   const removeAccount = useMutation({
     mutationFn: (id) => apiDelete(`/api/portfolio/accounts/${encodeURIComponent(id)}`),
+    onMutate: () => setActionNotice(null),
     onSuccess: invalidateAccounts,
-    onError: (err) => window.alert(`Remove failed: ${err?.message ?? 'unknown error'}`),
+    onError: (err) => failAction(err, 'remove the account from this app'),
   });
 
   const restoreAccount = useMutation({
     mutationFn: (id) => apiPost(`/api/portfolio/accounts/${encodeURIComponent(id)}/restore`),
+    onMutate: () => setActionNotice(null),
     onSuccess: invalidateAccounts,
-    onError: (err) => window.alert(`Restore failed: ${err?.message ?? 'unknown error'}`),
+    onError: (err) => failAction(err, 'restore the account'),
   });
 
   /** catalogue (static reference) ⟕ live status, joined on adapter id. */
@@ -203,6 +226,22 @@ export default function BrokersPage() {
     () => (Array.isArray(portfolioAccountsQuery.data?.removed) ? portfolioAccountsQuery.data.removed : []),
     [portfolioAccountsQuery.data],
   );
+
+  /**
+   * Account state by id, so a row can say whether the account is counted in the portfolio totals.
+   *
+   * ⚠️ The MT5 table is fed by `/api/providers/mt5/accounts` (a BRIDGE reading) while "is this account
+   * counted" is an app setting held by `/api/portfolio/accounts` (the ACCOUNT STORE). Joining them on
+   * the account id is the only way a reader can tell "connected, but excluded from my totals" from
+   * "connected and counted" — two states that otherwise look identical on this page.
+   */
+  const accountStateById = useMemo(() => {
+    const map = new Map();
+    for (const cat of portfolioAccountsQuery.data?.categories ?? []) {
+      for (const a of cat.accounts ?? []) map.set(a.id, a);
+    }
+    return map;
+  }, [portfolioAccountsQuery.data]);
 
   // Expanded row ids. A Set, because the reader may have several open at once and the order they
   // opened them in is not information.
@@ -259,6 +298,11 @@ export default function BrokersPage() {
           </PageInfoPopover>
         </h1>
       </header>
+
+      {/* An action failure is shown HERE, above the directory, so it is not buried in the row that
+          caused it — the row may be several accordions down, and a failed removal leaves the account
+          in place, which looks identical to "nothing happened". */}
+      {actionNotice && <NoticeBlock notice={actionNotice} />}
 
       {/* ── BROKER DIRECTORY ─────────────────────────────────────────────────────────────
           ONE table, ONE presentation. Every venue is a row and expanding a row is the ONLY way
@@ -420,14 +464,34 @@ export default function BrokersPage() {
                             <dt className={styles.panelTerm}>Fees</dt>
                             <dd className={styles.panelDef}>
                               {entry.feeModel}
-                              {!entry.feesVerified && (
-                                <span className={styles.panelNote}>
-                                  check the broker — rate not verified here
-                                </span>
-                              )}
+                              {/* ⚠️ THE VERIFICATION STATE IS A CHIP, NOT AN ITALIC NOTE GLUED TO THE
+                                  SENTENCE. Measured 2026-11-18: Capital.com read
+                                  "…no commission on share CFDscheck the broker — rate not verified
+                                  here", which reads as one run-on claim rather than a statement plus a
+                                  caveat. A chip is the same fact as a state the reader can scan. */}
+                              <span
+                                className={`${styles.chip} ${
+                                  entry.feesVerified ? styles.chipOk : styles.chipWarn
+                                }`}
+                                title={
+                                  entry.feesVerified
+                                    ? 'Checked against the broker’s own published rates'
+                                    : 'Rate not verified here — always confirm on the broker’s site'
+                                }
+                              >
+                                {entry.feesVerified ? 'verified' : 'unverified'}
+                              </span>
                             </dd>
                             <dt className={styles.panelTerm}>Trades</dt>
-                            <dd className={styles.panelDef}>{entry.tradingTypes.join(', ')}</dd>
+                            <dd className={styles.panelDef}>
+                              {/* Chips, not a comma list: these are discrete categories and a list of
+                                  them reads as prose the eye slides over. */}
+                              {entry.tradingTypes.map((t) => (
+                                <span key={t} className={`${styles.chip} ${styles.chipNeutral}`}>
+                                  {t}
+                                </span>
+                              ))}
+                            </dd>
                             <dt className={styles.panelTerm}>API</dt>
                             <dd className={styles.panelDef}>
                               {entry.api}
@@ -467,7 +531,8 @@ export default function BrokersPage() {
                               </h3>
                               <p className={styles.panelNote}>
                                 Balances are read from the broker, not calculated here. Refreshes every{' '}
-                                {REFRESH_MS / 1000}s.
+                                {REFRESH_MS / 1000}s. The bridge does not report each account&apos;s
+                                currency, so amounts are shown unlabelled rather than assumed.
                               </p>
 
                               {bridgeCoverage.length > 0 && (
@@ -505,10 +570,9 @@ export default function BrokersPage() {
                                     <th scope="col">Type</th>
                                     <th scope="col">Connection</th>
                                     <th scope="col">Role</th>
-                                    <th scope="col">Currency</th>
+                                    <th scope="col">In totals</th>
                                     <th scope="col" className="num">Balance</th>
                                     <th scope="col" className="num">Equity</th>
-                                    <th scope="col">Last seen</th>
                                     <th scope="col">Actions</th>
                                   </tr>
                                 </thead>
@@ -534,14 +598,41 @@ export default function BrokersPage() {
                                         {a.connected ? 'connected' : 'not connected'}
                                       </td>
                                       <td>{a.active ? <strong>active</strong> : <span className={styles.muted}>standby</span>}</td>
-                                      <td>{a.currency || <span className={styles.muted}>—</span>}</td>
-                                      <td className="num">
-                                        {typeof a.balance === 'number' ? a.balance.toFixed(2) : <span className={styles.muted}>—</span>}
+                                      <td>
+                                        {(() => {
+                                          // The account id is `mt5:<login>`; the same login on two
+                                          // bridges is ONE account, so both rows honestly agree here.
+                                          const st = accountStateById.get(`mt5:${a.login || a.number}`);
+                                          if (!st) return <span className={styles.muted} title="Not present in the account store — the bridge reports it but the app holds no setting for it">—</span>;
+                                          if (!st.enabled) return <span className={styles.muted}>excluded</span>;
+                                          // ⚠️ "counted" must mean CONTRIBUTES. The overview total needs
+                                          // enabled AND connected AND a readable balance, so an enabled
+                                          // but disconnected account adds nothing — labelling it "counted"
+                                          // is the plausible-looking-wrong-value defect in one word.
+                                          const contributes = a.connected
+                                            && (typeof a.equity === 'number' || typeof a.balance === 'number');
+                                          return contributes
+                                            ? <strong>counted</strong>
+                                            : (
+                                              <span
+                                                className={styles.muted}
+                                                title="Enabled, but disconnected or reporting no balance — it adds nothing to the totals"
+                                              >
+                                                counted · no value
+                                              </span>
+                                            );
+                                        })()}
                                       </td>
                                       <td className="num">
-                                        {typeof a.equity === 'number' ? a.equity.toFixed(2) : <span className={styles.muted}>—</span>}
+                                        {typeof a.balance === 'number'
+                                          ? `${a.balance.toFixed(2)}${a.currency ? ` ${a.currency}` : ''}`
+                                          : <span className={styles.muted}>—</span>}
                                       </td>
-                                      <td>{a.lastSeen ? fmtWhen(a.lastSeen) : <span className={styles.muted}>—</span>}</td>
+                                      <td className="num">
+                                        {typeof a.equity === 'number'
+                                          ? `${a.equity.toFixed(2)}${a.currency ? ` ${a.currency}` : ''}`
+                                          : <span className={styles.muted}>—</span>}
+                                      </td>
                                       <td>
                                         {/* A REAL removal: this rewrites the bridge's own config, so the
                                             account stops being connected — it is not hidden here. */}
@@ -619,7 +710,25 @@ export default function BrokersPage() {
                                         {a.connected ? 'connected' : 'not connected'}
                                         {!a.connected && a.note && <span className={styles.panelNote}>{a.note}</span>}
                                       </td>
-                                      <td>{a.enabled ? <strong>counted</strong> : <span className={styles.muted}>excluded</span>}</td>
+                                      <td>
+                                        {(() => {
+                                          // Same rule as the MT5 table above: "counted" means it ADDS TO
+                                          // THE TOTAL, which needs enabled AND connected AND a readable
+                                          // value. Two tables on one page must not define the word twice.
+                                          if (!a.enabled) return <span className={styles.muted}>excluded</span>;
+                                          const contributes = a.connected && typeof a.value === 'number';
+                                          return contributes
+                                            ? <strong>counted</strong>
+                                            : (
+                                              <span
+                                                className={styles.muted}
+                                                title="Enabled, but not connected or reporting no value — it adds nothing to the totals"
+                                              >
+                                                counted · no value
+                                              </span>
+                                            );
+                                        })()}
+                                      </td>
                                       <td className="num">{a.positions ?? <span className={styles.muted}>—</span>}</td>
                                       <td className="num">
                                         {typeof a.value === 'number'

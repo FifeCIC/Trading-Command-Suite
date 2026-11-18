@@ -147,6 +147,8 @@ const DataAreaLandingPage = lazy(() => import('../pages/DataAreaLandingPage.jsx'
 const DatabaseTablesPage = lazy(() => import('../pages/DatabaseTablesPage.jsx'));
 const BacktestDataPage = lazy(() => import('../pages/BacktestDataPage.jsx'));
 const BacktestRunsPage = lazy(() => import('../pages/BacktestRunsPage.jsx'));
+// #1295 — the experiment registry page. Same lazy pattern as every other route.
+const BacktestExperimentsPage = lazy(() => import('../pages/BacktestExperimentsPage.jsx'));
 const WalkForwardSurvivorsPage = lazy(() => import('../pages/WalkForwardSurvivorsPage.jsx'));
 const CurrentStrategyPage = lazy(() => import('../pages/CurrentStrategyPage.jsx'));
 const DataStatusPage = lazy(() => import('../pages/DataStatusPage.jsx'));
@@ -346,6 +348,7 @@ export const VIEW_COMPONENTS = {
   'database-tables': DatabaseTablesPage,
   'backtest-data': BacktestDataPage,
   'backtest-runs': BacktestRunsPage,
+  'backtest-experiments': BacktestExperimentsPage,
   'walk-forward-survivors': WalkForwardSurvivorsPage,
   'data-status': DataStatusPage,
   'data-elements': DataElementsPage,

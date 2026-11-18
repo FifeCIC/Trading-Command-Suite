@@ -16,8 +16,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { classifyNewsCategory, DEFAULT_NEWS_CATEGORY_ALLOWLIST } from '../news/news-taxonomy';
-import { isAlreadyInCanonicalNews } from './news-dedupe';
-import * as crypto from 'crypto';
+import { writeCanonicalArticle } from './news-writer';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const RssParser = require('rss-parser');
@@ -104,26 +103,7 @@ export class RssScraperService implements OnModuleInit {
   private async storeIfNew(article: RssArticle): Promise<boolean> {
     if (!this.prisma.isAvailable) return false;
 
-    const hash = crypto.createHash('sha256')
-      .update(`${article.source}:${article.title}`)
-      .digest('hex')
-      .slice(0, 16);
-
     try {
-      // Deduplicate by hash
-      const existing = await (this.prisma as any).newsItem?.findFirst({
-        where: { sourceHash: hash },
-      });
-      if (existing) return false;
-
-      // ⚠️ ALSO skip anything the MAIN pipeline already holds (2026-11-17). `sourceHash` only
-      // dedupes against this table, so without this check the same story was written twice —
-      // measured 17,245 of 28,350 rows duplicating a `newsarticle` URL. Guarding the WRITER is what
-      // makes the cleanup permanent: deleting the duplicates alone would be undone by the next poll.
-      if (await isAlreadyInCanonicalNews(article.link, (u) =>
-        this.prisma.newsArticle.findUnique({ where: { url: u }, select: { id: true } }).then(Boolean),
-      )) return false;
-
       // Match tickers in title + snippet
       const text = `${article.title} ${article.contentSnippet || ''}`.toUpperCase();
       const matchedSymbols = WATCH_TICKERS.filter(t => text.includes(t));
@@ -136,23 +116,28 @@ export class RssScraperService implements OnModuleInit {
       const category = classifyNewsCategory(article.title, article.contentSnippet || '');
       if (!DEFAULT_NEWS_CATEGORY_ALLOWLIST.includes(category)) return false;
 
-      await (this.prisma as any).newsItem?.create({
-        data: {
-          title: article.title.slice(0, 300),
-          url: article.link,
-          source: `rss:${article.source.toLowerCase().replace(/\s+/g, '-')}`,
-          sourceHash: hash,
-          publishedAt: new Date(article.pubDate),
-          summary: article.contentSnippet || null,
-          symbols: matchedSymbols.length > 0 ? matchedSymbols.join(',') : null,
-          sentiment: null, // DeepSeek enrichment happens later
-          severity: 0,
-          status: 'new',
-        },
+      // ⚠️ #1290 — WRITES THE CANONICAL TABLE NOW. `news_item` was a second news store read by ONE
+      // consumer; `newsarticle` is read by nine and owns the taxonomy. Dedupe is `url`, which is
+      // UNIQUE there, so no hash column is needed. `news-writer.ts` holds the rules in one place.
+      const outcome = await writeCanonicalArticle(this.prisma as any, {
+        headline: article.title,
+        url: article.link,
+        source: `rss:${article.source.toLowerCase().replace(/\s+/g, '-')}`,
+        symbols: matchedSymbols,
+        summary: article.contentSnippet || null,
+        publishedAt: new Date(article.pubDate),
+        sentiment: null, // DeepSeek enrichment happens later
+        severity: 0,
+        category,
       });
-      return true;
+      if (outcome.status === 'written') return true;
+      if (outcome.status === 'skipped') {
+        // A refusal is reported, not swallowed — an empty log must not read as "nothing to import".
+        this.logger.debug(`RSS skip (${article.link}): ${outcome.reason}`);
+      }
+      return false;
     } catch (err) {
-      // Table may not exist yet — skip silently
+      this.logger.warn(`RSS store failed: ${(err as Error).message}`);
       return false;
     }
   }

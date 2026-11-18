@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, Logger, HttpCode } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdapterFactory } from './adapter-factory';
 import { Mt5Adapter } from './adapters/mt5.adapter';
@@ -452,6 +452,7 @@ export class Mt5Controller {
   }
 
   @Post('accounts/remove')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Remove an MT5 account from ONE bridge config (removes it at the terminal level)' })
   async removeAccount(@Body() body: { number: number; brokerId?: number }) {
     if (body?.number == null) {

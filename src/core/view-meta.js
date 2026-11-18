@@ -649,6 +649,17 @@ const VIEW_META = {
     css: 'src/pages/walk-forward-survivors.css',
     api: ['GET /api/backtest/walk-forward-survivors'],
   },
+  // #1295 — the backtest experiment registry. Before this route existed, a comparison was filed
+  // into `backtest_experiment` but visible only via `npm run report:backtest-experiments`, so it
+  // existed only if someone remembered to ask. Measured at the time: 1,722 runs, 13 filed.
+  '/lab/backtest-experiments': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Experiments',
+    file: 'src/pages/BacktestExperimentsPage.jsx',
+    css: 'src/pages/BacktestExperimentsPage.css',
+    api: ['GET /api/backtest/experiments'],
+  },
   '/lab/backtest-runs': {
     tier: 'premium',
     review: 'pending',

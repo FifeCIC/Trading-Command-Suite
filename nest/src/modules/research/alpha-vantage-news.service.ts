@@ -10,8 +10,12 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
-import { isAlreadyInCanonicalNews } from './news-dedupe';
-import * as crypto from 'crypto';
+import { writeCanonicalArticle } from './news-writer';
+// ⚠️ #1290 — classified for the same reason the RSS and Finnhub ingesters are: `newsarticle.category`
+// is part of what the nine readers filter on, and `news-taxonomy.ts` is the single classifier for ALL
+// news pipelines. Leaving it at the column default here would make Alpha Vantage stories the only
+// unclassified ones.
+import { classifyNewsCategory } from '../news/news-taxonomy';
 
 const AV_BASE = 'https://www.alphavantage.co/query';
 
@@ -114,24 +118,9 @@ export class AlphaVantageNewsService implements OnModuleInit {
   private async storeIfNew(article: AvArticle, queryTicker: string): Promise<boolean> {
     if (!this.prisma.isAvailable) return false;
 
-    const hash = crypto.createHash('sha256')
-      .update(`av:${article.url}`)
-      .digest('hex')
-      .slice(0, 16);
-
     try {
-      const existing = await (this.prisma as any).newsItem?.findFirst({
-        where: { sourceHash: hash },
-      });
-      if (existing) return false;
-
-      // ⚠️ ALSO skip anything the MAIN pipeline already holds (2026-11-17) — `sourceHash` only
-      // dedupes against this table. See `news-dedupe.ts` for why the WRITER must be guarded.
-      if (await isAlreadyInCanonicalNews(article.url, (u) =>
-        this.prisma.newsArticle.findUnique({ where: { url: u }, select: { id: true } }).then(Boolean),
-      )) return false;
-
-      // Collect all mentioned tickers
+      // Collect all mentioned tickers. ⚠️ ONLY THE FIRST IS STORED — `newsarticle.url` is UNIQUE, so
+      // one story holds one symbol. `writeCanonicalArticle` reports how many were dropped.
       const tickers = new Set<string>([queryTicker]);
       if (article.ticker_sentiment) {
         for (const ts of article.ticker_sentiment) {
@@ -139,22 +128,27 @@ export class AlphaVantageNewsService implements OnModuleInit {
         }
       }
 
-      await (this.prisma as any).newsItem?.create({
-        data: {
-          title: article.title.slice(0, 300),
-          url: article.url,
-          source: `av:alphavantage`,
-          sourceHash: hash,
-          publishedAt: new Date(article.time_published),
-          summary: article.summary,
-          symbols: [...tickers].join(','),
-          sentiment: article.overall_sentiment_score,
-          severity: Math.abs(article.overall_sentiment_score) > 0.3 ? 3 : 1,
-          status: 'new',
-        },
+      // ⚠️ #1290 — WRITES THE CANONICAL TABLE NOW. Alpha Vantage supplies a real −1..1 sentiment
+      // score, which `newsarticle.sentiment` stores directly; `news_item.sentiment` was a varchar and
+      // could not hold it. See `news-writer.ts`.
+      const outcome = await writeCanonicalArticle(this.prisma as any, {
+        headline: article.title,
+        url: article.url,
+        source: 'av:alphavantage',
+        symbols: [...tickers],
+        summary: article.summary,
+        publishedAt: new Date(article.time_published),
+        sentiment: article.overall_sentiment_score,
+        severity: Math.abs(article.overall_sentiment_score) > 0.3 ? 3 : 1,
+        category: classifyNewsCategory(article.title || '', article.summary || ''),
       });
-      return true;
-    } catch {
+      if (outcome.status === 'written') return true;
+      if (outcome.status === 'skipped') {
+        this.logger.debug(`Alpha Vantage skip (${article.url}): ${outcome.reason}`);
+      }
+      return false;
+    } catch (err) {
+      this.logger.warn(`Alpha Vantage store failed: ${(err as Error).message}`);
       return false;
     }
   }

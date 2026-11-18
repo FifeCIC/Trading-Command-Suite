@@ -346,25 +346,12 @@ export class ScreenerService implements OnModuleInit {
         });
       }
     } catch { /* newsarticle may not exist yet */ }
-    try {
-      const items = await (this.prisma as any).newsItem.findMany({
-        where: { url: { in: urls } },
-        select: { title: true, url: true, sentiment: true, severity: true, publishedAt: true, source: true },
-      });
-      for (const it of items) {
-        if (map.has(it.url)) continue;
-        const sentStr = typeof it.sentiment === 'string' ? it.sentiment.toLowerCase() : '';
-        const sentNum = sentStr === 'bullish' ? 1 : sentStr === 'bearish' ? -1 : null;
-        map.set(it.url, {
-          headline: it.title,
-          sentiment: sentNum,
-          impact: null,
-          publishedAt: it.publishedAt,
-          source: it.source || 'rss',
-          lean: this.leanForStory(it.title, sentNum, null),
-        });
-      }
-    } catch { /* news_item may not exist yet */ }
+    // ⚠️ #1290 — THE `news_item` FALLBACK IS GONE (2026-11-18), and the ORDER of that work is why it
+    // could be removed safely. The three research ingesters now write `newsarticle` directly
+    // (`news-writer.ts`), so there is no longer a second store holding stories this one lacks — which
+    // is exactly what the fallback existed to paper over. Removing it BEFORE the writers moved would
+    // have hidden every freshly-ingested story, because the ingesters are guarded to write only what
+    // `newsarticle` does not already hold.
     return map;
   }
 

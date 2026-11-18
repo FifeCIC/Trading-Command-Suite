@@ -33,6 +33,9 @@
  */
 'use strict';
 
+const path = require('path');
+const { pathToFileURL } = require('url');
+
 const BASE = process.env.TCS_API || 'http://localhost:3201';
 
 const arg = (n, d) => { const i = process.argv.indexOf(`--${n}`); return i === -1 ? d : process.argv[i + 1]; };

@@ -345,6 +345,11 @@ export const NAV_TREE = {
   // Stored runs are their own job — review what the engine kept, select 2–4, find what changed — so
   // they get their own page rather than a fifth tab on a measurement form.
   { id: 'backtest-runs', label: 'Completed Runs', icon: '⧉' },
+  // #1295 — the experiment registry. Placed beside Completed Runs because it is the other half of
+  // the same question: Completed Runs reviews what the engine kept, this shows which runs belong to
+  // a deliberate comparison. Measured before it existed: 1,722 runs, 13 filed (0.75%), 6 of 11
+  // experiments empty shells — a comparison existed only if somebody remembered it.
+  { id: 'backtest-experiments', label: 'Experiments', icon: '🧪' },
   // #1201 — the survival list. Placed beside Completed Runs because it IS a review of what the
   // engine kept: a walk-forward run records two windows (train iteration 1, test iteration 2),
   // and this view ranks them by OUT-of-sample with the in-sample figure beside it.

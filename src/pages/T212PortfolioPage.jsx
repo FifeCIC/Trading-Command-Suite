@@ -397,7 +397,33 @@ export default function T212PortfolioPage() {
   }, [qc]);
 
   const summary = account.data?.account;
-  const positions = account.data?.positions || [];
+
+  /*
+   * ── REMOVED ACCOUNTS ARE HIDDEN HERE TOO (2026-11-18) ───────────────────────────────────────
+   *
+   * ⚠️ `/api/portfolio/trading212/validate` returns every `provider='trading212'` row and knows
+   * nothing about the account store, so archiving an account on Brokers hid it from the account list
+   * while its POSITIONS kept rendering here. "Removed" would then be a promise this page breaks —
+   * the same silent-inconsistency shape as the mislabelled-account defect below.
+   *
+   * The `removed` list is the source: it carries account ids (`t212:demo`), the rows carry
+   * `accountId` tags (`trading212-demo`), so the two vocabularies are mapped explicitly rather than
+   * inferred by substring — `t212:live` and `t212:demo` must not be able to match each other.
+   */
+  const REMOVED_ID_TO_ACCOUNT_ID = {
+    't212:live': 'trading212-live',
+    't212:demo': 'trading212-demo',
+    't212:isa': 'trading212-isa',
+    't212:cfd': 'trading212-cfd',
+  };
+  const hiddenAccountIds = new Set(
+    (overview.data?.removed ?? [])
+      .map((a) => REMOVED_ID_TO_ACCOUNT_ID[a.id])
+      .filter(Boolean),
+  );
+  const positions = (account.data?.positions || []).filter(
+    (p) => !hiddenAccountIds.has(p.accountId),
+  );
 
   /*
    * ── WHICH ACCOUNT ARE THESE ROWS FROM? (2026-11-18) ─────────────────────────────────────────

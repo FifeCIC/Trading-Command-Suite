@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 196,
+  "count": 197,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -850,6 +850,16 @@
       "category": "tool",
       "purpose": "#613 — convert MyISAM tables to InnoDB, one at a time, verifying every step.",
       "selfTest": false,
+      "reaches": [
+        "docs"
+      ]
+    },
+    {
+      "name": "migrate-news-to-newsarticle.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "move the research ingesters' stories into the canonical table (#1290).",
+      "selfTest": true,
       "reaches": [
         "docs"
       ]

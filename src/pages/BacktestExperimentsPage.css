@@ -1,0 +1,143 @@
+/**
+ * /lab/backtest-experiments — the backtest experiment registry (#1295).
+ *
+ * ⚠️ TOKENS ONLY. An undefined custom property is NOT an error at runtime — the declaration is
+ * silently dropped and the element falls back to inherited styling, so a wrong token name renders
+ * wrong with no message. `validate-css-tokens.cjs` is the gate.
+ */
+
+.bxp-page {
+  padding: 0;
+}
+
+.bx-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bx-lede {
+  margin: 0;
+  max-width: 78ch;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* ── counts ─────────────────────────────────────────────────────────────────────────────────── */
+.bx-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bx-count {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elev);
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+/* The one number that means "go and look", so it is the only one allowed to shout. */
+.bx-count--attention {
+  border-color: var(--color-warning);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ── rows ──────────────────────────────────────────────────────────────────────────────────── */
+.bx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bx-row {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.bx-row-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bx-state {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.bx-runs,
+.bx-age {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+
+.bx-label {
+  margin: 4px 0 2px;
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.bx-meta {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+
+.bx-next {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+/* ── state accents — a BADGE tint, never a coloured bar down the side ──────────────────────────
+ * ⚠️ The owner has asked for thick coloured left bars to be removed everywhere, and
+ * `validate-no-notice-bar.cjs` fails the build on one. So the state is carried by the small label
+ * badge above the title, plus a whole-card background tint — both of which survive being read on a
+ * narrow screen, unlike a 3px edge.
+ */
+.bx-state {
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-elev);
+}
+
+.bx-state--shell .bx-state {
+  border-color: var(--color-warning);
+  color: var(--ink);
+}
+
+.bx-state--auto {
+  background: var(--bg-elev);
+}
+
+.bx-state--comparison .bx-state {
+  border-color: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ── notes ─────────────────────────────────────────────────────────────────────────────────── */
+.bx-note {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}

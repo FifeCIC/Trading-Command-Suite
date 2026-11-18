@@ -52,50 +52,58 @@ async function main() {
   try {
     result = rows(await query(
       `SELECT
-         COUNT(*)                                                                AS news_item_rows,
-         SUM(EXISTS(SELECT 1 FROM newsarticle a WHERE a.url = i.url))            AS duplicates,
-         SUM(NOT EXISTS(SELECT 1 FROM newsarticle a WHERE a.url = i.url))        AS unique_to_news_item,
-         COUNT(DISTINCT CASE WHEN EXISTS(SELECT 1 FROM newsarticle a WHERE a.url = i.url)
-                             THEN i.source END)                                AS duplicate_sources_count
+         COUNT(*)                                                         AS news_item_rows,
+         SUM(EXISTS(SELECT 1 FROM newsarticle a WHERE a.url = i.url))     AS also_in_newsarticle,
+         SUM(i.symbols IS NOT NULL AND i.symbols <> ''
+             AND NOT EXISTS(SELECT 1 FROM newsarticle a WHERE a.url = i.url))  AS still_unmigrated,
+         SUM((i.symbols IS NULL OR i.symbols = '')
+             AND NOT EXISTS(SELECT 1 FROM newsarticle a WHERE a.url = i.url))  AS unattributable
        FROM news_item i`, conn));
   } catch (err) {
     // A missing table is a different fact from "no duplicates", and must not read the same.
     console.error(`[news-dedupe] ERROR — the measurement failed: ${err.message}`);
-    console.error('[news-dedupe] This is NOT a pass: duplication was NOT checked.');
+    console.error('[news-dedupe] This is NOT a pass: the subset was NOT checked.');
     process.exit(2);
   }
 
   const r = result[0] || {};
   const total = Number(r.news_item_rows ?? 0);
-  const dupes = Number(r.duplicates ?? 0);
-  const unique = Number(r.unique_to_news_item ?? 0);
+  const migrated = Number(r.also_in_newsarticle ?? 0);
+  const unmigrated = Number(r.still_unmigrated ?? 0);
+  // ⚠️ A PERMANENT REMAINDER, NOT A FAILURE. `newsarticle.symbol` is NOT NULL and the only consumer
+  // queries by ticker, so a story carrying no symbol cannot be stored there and could never match a
+  // ticker query anyway. Counting them as "unmigrated" would keep this gate red forever — which is how
+  // a real gate gets allowlisted and stops being read.
+  const unattributable = Number(r.unattributable ?? 0);
 
-  console.log(`  [news-dedupe] news_item ${total} rows · ${unique} unique to news_item · ${dupes} duplicate(s) of newsarticle`);
+  console.log(`  [news-dedupe] news_item ${total} rows · ${migrated} also in newsarticle · `
+    + `${unmigrated} attributable-but-unmigrated · ${unattributable} unattributable (no symbol)`);
 
-  if (dupes > 0) {
+  if (unmigrated > 0) {
     let offenders = [];
     try {
       offenders = rows(await query(
         `SELECT i.source, COUNT(*) AS n
            FROM news_item i
-          WHERE EXISTS(SELECT 1 FROM newsarticle a WHERE a.url = i.url)
+          WHERE NOT EXISTS(SELECT 1 FROM newsarticle a WHERE a.url = i.url)
           GROUP BY i.source ORDER BY n DESC LIMIT 10`, conn));
     } catch { /* the count above is the finding; the breakdown is a convenience */ }
 
     console.error('');
-    console.error(`  [news-dedupe] ✖ ${dupes} of ${total} news_item row(s) duplicate a newsarticle URL.`);
+    console.error(`  [news-dedupe] ✖ ${unmigrated} of ${total} news_item row(s) are NOT in newsarticle.`);
     for (const o of offenders) console.error(`        ${o.source}: ${o.n}`);
     console.error('');
-    console.error('     The writers are meant to skip a story the main pipeline already holds —');
-    console.error('     see nest/src/modules/research/news-dedupe.ts. Either the guard was removed,');
-    console.error('     or an ingester bypasses it.');
-    console.error('     To clean up the existing rows once the guard is confirmed:');
-    console.error('       DELETE i FROM news_item i');
-    console.error('        WHERE EXISTS (SELECT 1 FROM newsarticle a WHERE a.url = i.url);');
+    console.error('     Until this is 0, `news_item` cannot be retired — it still holds stories nothing');
+    console.error('     else has. Migrate them:');
+    console.error('       node scripts/migrate-news-to-newsarticle.cjs --apply');
     process.exit(1);
   }
 
-  console.log('  [news-dedupe] ✅ OK — no news_item row duplicates a newsarticle row.');
+  console.log(`  [news-dedupe] ✅ OK — every attributable news_item story is in newsarticle.`);
+  if (unattributable > 0) {
+    console.log(`                ${unattributable} row(s) carry no symbol and can never be migrated`);
+    console.log('                (newsarticle.symbol is NOT NULL; a ticker query could not match them).');
+  }
   process.exit(0);
 }
 
