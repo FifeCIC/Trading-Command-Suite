@@ -18,8 +18,8 @@
  * this bug; use this module instead of re-deriving it.
  *
  * A UTCTimestamp (seconds) is valid for BOTH intraday and daily series, so one code path serves
- * every timeframe. `SymbolDetailPage.jsx` still builds `time` by hand and has the same latent bug —
- * it is currently unexercised because the page never receives a symbol (#1266).
+ * every timeframe. The one remaining page that built `time` by hand (`SymbolDetailPage.jsx`) was
+ * deleted 2026-11-18 (#1266) — it had the same latent bug and no route that could reach it.
  */
 
 /**

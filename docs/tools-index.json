@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 201,
+  "count": 203,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -287,6 +287,16 @@
       "category": "check",
       "purpose": "Assert the generated Prisma client matches `prisma/schema.prisma` (#765).",
       "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "check-protocol-status-rows.cjs",
+      "where": "nest",
+      "category": "check",
+      "purpose": "a protocol that SAYS it is scoring must have persisted something.",
+      "selfTest": true,
       "reaches": [
         "npm"
       ]
@@ -1769,6 +1779,17 @@
       "purpose": "every ACTIVE bot must have a symbol that at least one active",
       "selfTest": true,
       "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-route-params.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a page may not read a `useParams()` key that no route declares.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
         "npm"
       ]
     },

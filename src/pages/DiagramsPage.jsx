@@ -319,7 +319,7 @@ const DIAGRAMS = [
     end
     subgraph Routes["Route Structure"]
         Q[/:area/:view]
-        R[/research/symbol/:symbolId]
+        R[/research/symbol/:ticker]
         S[/ → HomeDashboard]
     end
     D --> T[NAV_TREE Config<br/>15 areas]

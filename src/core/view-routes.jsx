@@ -165,7 +165,12 @@ const SymbolsBrowserPage = lazy(() => import('../pages/SymbolsBrowserPage.jsx'))
 // two is the entire finding, so they must not be merged into one list.
 const BrokerCataloguePage = lazy(() => import('../pages/BrokerCataloguePage.jsx'));
 const ScreenerPage = lazy(() => import('../pages/ScreenerPage.jsx'));
-const SymbolDetailPage = lazy(() => import('../pages/SymbolDetailPage.jsx'));
+// ⚠️ `SymbolDetailPage` was DELETED 2026-11-18 (#1266). It read `useParams().symbolId`, and NO route
+// declared `:symbolId` — so every query stayed `enabled: false` and every panel rendered blank. It had
+// no nav entry, no `view-meta` row and no hidden-route row: a 450-line page reachable only by typing a
+// URL that rendered nothing. `SymbolPage` (`'symbol'`, 1,055 lines) already serves the real surface at
+// `/trading/symbol/:ticker` and `/research/symbol/:ticker`, so wiring this one would have created a
+// SECOND symbol page for the same job.
 const ImportJobsPage = lazy(() => import('../pages/ImportJobsPage.jsx'));
 const ApiActivityPage = lazy(() => import('../pages/ApiActivityPage.jsx'));
 const ApiEndpointsPage = lazy(() => import('../pages/ApiEndpointsPage.jsx'));
@@ -365,7 +370,6 @@ export const VIEW_COMPONENTS = {
   'symbols-browser': SymbolsBrowserPage,
   'broker-catalogue': BrokerCataloguePage,
   'screener': ScreenerPage,
-  'symbol-detail': SymbolDetailPage,
   'symbol': SymbolPage,
   'import-jobs': ImportJobsPage,
   'api-activity': ApiActivityPage,

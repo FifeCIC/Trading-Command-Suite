@@ -130,6 +130,7 @@ CREATE TABLE `MarketBar` (
     INDEX `MarketBar_provider_importedAt_idx`(`provider`, `importedAt`),
     INDEX `MarketBar_recordingSessionId_idx`(`recordingSessionId`),
     INDEX `MarketBar_timestamp_idx`(`timestamp`),
+    INDEX `marketbar_symbol_provider_ts_idx`(`symbolId`, `provider`, `timestamp`),
     UNIQUE INDEX `MarketBar_symbolId_timeframe_timestamp_key`(`symbolId`, `timeframe`, `timestamp`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -205,7 +205,11 @@ function AppShell({ directContent = null, directArea = null, directView = null }
     () => filterByExperience(filterHiddenViews(BASE_NAV_TREE, hiddenRoutes, { keepWithheld: OWNER_SEES_WITHHELD }), experienceLevel),
     [hiddenRoutes, experienceLevel],
   );
-  const { area, view, symbolId, ticker, strategyId } = useParams();
+  // ⚠️ `symbolId` IS GONE FROM THIS DESTRUCTURE (#1266, 2026-11-18). No route declares `:symbolId`,
+  // so it was always `undefined` and the two branches that tested it below were DEAD CODE — they could
+  // never be taken. `symbol-detail` no longer exists; `SymbolPage` ('symbol') is the surface that
+  // `/research/symbol/:ticker` and `/trading/symbol/:ticker` mount, via `isSymbolRoute`.
+  const { area, view, ticker, strategyId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -221,7 +225,7 @@ function AppShell({ directContent = null, directArea = null, directView = null }
   const symbolArea = location.pathname.startsWith('/research/symbol/') ? 'research'
     : location.pathname.startsWith('/trading/symbol/') ? 'trading'
     : 'trading';
-  const primaryArea = directArea ?? (isStrategyRoute ? 'trading' : (isSymbolRoute ? symbolArea : (symbolId ? 'research' : (isHomePage ? null : (area || 'trading')))));
+  const primaryArea = directArea ?? (isStrategyRoute ? 'trading' : (isSymbolRoute ? symbolArea : (isHomePage ? null : (area || 'trading'))));
   // defaultView: the first REAL view for the current area.
   //
   // ⚠️ NOT `areaViews[0]`. A `kind: 'section-header'` entry is a LABEL with an `id` (used as a
@@ -232,7 +236,7 @@ function AppShell({ directContent = null, directArea = null, directView = null }
   const areaViews = NAV_STRUCTURE[primaryArea];
   const defaultView = areaViews?.find((item) => item.kind !== 'section-header' && item.id)?.id
     || 'directives-registry';
-  const secondaryView = isStrategyRoute ? 'strategy-detail' : (isSymbolRoute ? 'symbol' : (symbolId ? 'symbol-detail' : (view || defaultView)));
+  const secondaryView = isStrategyRoute ? 'strategy-detail' : (isSymbolRoute ? 'symbol' : (view || defaultView));
   // Dashboard renders full-bleed — no breadcrumb, no left section nav — as a
   // step toward the future widget-based, multi-screen dashboard.
   const isDashboard = primaryArea === 'dashboard';

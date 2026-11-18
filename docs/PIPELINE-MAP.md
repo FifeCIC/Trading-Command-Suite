@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**589** source files · **3299** declarations · **397** ratio sites · **1736** nodes · **181** unreferenced
+**589** source files · **3302** declarations · **397** ratio sites · **1738** nodes · **181** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -1055,9 +1055,9 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:283 observedOnly`
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:328 note`
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:342 runSource`
-- `nest/src/modules/symbols/symbols.service.ts:1085 readWatchlist`
-- `nest/src/modules/symbols/symbols.service.ts:929 parseLatest`
-- `nest/src/modules/symbols/symbols.service.ts:936 num`
+- `nest/src/modules/symbols/symbols.service.ts:1017 parseLatest`
+- `nest/src/modules/symbols/symbols.service.ts:1024 num`
+- `nest/src/modules/symbols/symbols.service.ts:1173 readWatchlist`
 - `nest/src/modules/trading/bot-performance.service.ts:362 empty`
 - `nest/src/modules/trading/bot-performance.service.ts:438 readAll`
 - `nest/src/modules/trading/duplicate-guard.service.ts:200 isBlocked`

@@ -44,6 +44,46 @@ export interface AdapterConfig {
 }
 
 /**
+ * hasNumberedVariant() — does the environment hold `<KEY>_1`, `<KEY>_2`, … with a real value?
+ *
+ * ⚠️ WHY (#1259). Multi-account brokers name their variables with a numeric suffix — this machine
+ * has `MT5_ACCOUNT_1..4` and no bare `MT5_ACCOUNT` — so an exact-name check answers `false` for a
+ * broker that is actively trading. Extracted so the rule is testable without touching `process.env`
+ * globally and so it has ONE definition.
+ *
+ * ⚠️ `_\d+$` IS DELIBERATE. `MT5_ACCOUNT_EXTRA` or `MT5_ACCOUNT_OLD` must NOT count: they are a
+ * different variable that happens to share a prefix, and treating them as credentials would make the
+ * report true for the wrong reason.
+ *
+ * ⚠️ An EMPTY value does not count either. `MT5_ACCOUNT_1=` in an env file is a placeholder, not a
+ * configured account, and `Boolean('')` is false — the same rule the bare-name check already used.
+ *
+ * ── DECISION (2026-11-18, primary) ──
+ * WHAT:      `hasCredentials()` recognises a `<KEY>_<digits>` sibling instead of matching one exact
+ *            name, so `credentialsConfigured` is honest for a multi-account broker.
+ * WHY:       #1259 measured `GET /api/brokers/status` reporting MT5 as `credentialsConfigured: false`
+ *            while it was placing orders. The number was never read as an error because it is shaped
+ *            like a fact.
+ * INSTEAD OF: Adding `MT5_ACCOUNT` to `nest/.env` (option B in the issue). That satisfies the check
+ *            by inventing a variable nothing reads, which hides a registration error behind a config
+ *            value and leaves the next multi-account broker with the identical trap.
+ *            Also rejected: dropping `apiKeyEnv` from the MT5 registration (option A) — honest today,
+ *            but it deletes the field rather than making it correct, and the accounts table
+ *            (external-systems-are-data) will need this convention.
+ * REVERSE BY: Deleting the `hasNumberedVariant(...)` clause from `hasCredentials()` and reverting
+ *            `provider-credentials.spec.ts`'s numbered cases. One call site, no stored data.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 221
+ * GUARD:     nest/src/modules/providers/provider-credentials.spec.ts (8 cases, canaried both ways)
+ */
+export function hasNumberedVariant(
+  env: Record<string, string | undefined>,
+  key: string,
+): boolean {
+  const pattern = new RegExp(`^${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}_\\d+$`);
+  return Object.keys(env).some((name) => pattern.test(name) && Boolean(env[name]));
+}
+
+/**
  * Constructor signature for adapter classes.
  */
 export interface AdapterConstructor {
@@ -466,11 +506,27 @@ export class AdapterFactory {
 
   /**
    * Check if a provider has credentials configured.
+   *
+   * ⚠️ A NUMBERED VARIANT COUNTS (#1259, measured 2026-11-18). `providers.module.ts` registers MT5
+   * with `apiKeyEnv: 'MT5_ACCOUNT'`, but `nest/.env` defines **`MT5_ACCOUNT_1` … `MT5_ACCOUNT_4`**
+   * and never the bare name — so this returned `false` permanently, no matter how many accounts were
+   * configured, and `GET /api/providers/health` / `/api/brokers/status` reported
+   * `credentialsConfigured: false` **while MT5 was placing orders**. An Accounts page that renders
+   * that faithfully tells the operator the primary broker is not configured.
+   *
+   * ⚠️ IT IS DISPLAY AND RECORDING ONLY. `providers.service.ts` documents that this value changes the
+   * LABEL a human reads, never a fetch — so recognising the numbered form cannot alter what trades.
+   *
+   * ⚠️ `_1`..`_n` IS THE CONVENTION THAT ALREADY EXISTS for multi-account brokers; this reads it
+   * rather than inventing a second one. Per `external-systems-are-data`, the durable home for
+   * accounts is a record with a lifecycle (#1297) — this makes the report TRUE in the meantime
+   * instead of quietly wrong.
    */
   hasCredentials(id: string): boolean {
     const config = this.getConfig(id);
     if (!config) return false;
-    return Boolean(process.env[config.apiKeyEnv]);
+    if (process.env[config.apiKeyEnv]) return true;
+    return hasNumberedVariant(process.env, config.apiKeyEnv);
   }
 
   /**

@@ -1,6 +1,6 @@
 {
   "name": "nest",
-  "version": "0.165.0",
+  "version": "0.166.0",
   "releaseStage": "alpha",
   "description": "",
   "author": "Ryan Bayne (https://ryanbayne.uk)",
@@ -63,6 +63,8 @@
     "audit:gate-membership:test": "node scripts/test-gate-membership-guard.cjs",
     "audit:circular-work": "node ../scripts/detect-circular-work.cjs",
     "audit:bot-activation": "node scripts/audit-bot-activation.cjs",
+    "audit:protocol-status-rows": "node scripts/check-protocol-status-rows.cjs",
+    "audit:protocol-status-rows:self-test": "node scripts/check-protocol-status-rows.cjs --self-test",
     "audit:pnl-attribution": "node scripts/audit-trade-pnl-attribution.cjs",
     "audit:pnl-attribution:self-test": "node scripts/audit-trade-pnl-attribution.cjs --self-test",
     "canary:pnl-attribution": "node scripts/canary-trade-pnl-attribution.cjs",
