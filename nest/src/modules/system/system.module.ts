@@ -5,7 +5,11 @@ import { ProcessManagerService } from './process-manager.service';
 import { ProcessManagerController } from './process-manager.controller';
 import { DataFreshnessController } from './data-freshness.controller';
 import { ArchitectureManifestController } from './architecture-manifest.controller';
-import { DatabaseStatsController } from './database-stats.controller';
+// ⚠️ `database-stats.controller.ts` was DELETED 2026-11-18 (#1292). It declared the same
+// `@Controller('database') @Get('table-stats')` as `database/database.controller.ts` with a different
+// response shape, and lost the race permanently — `DatabaseModule` is imported before `SystemModule`
+// in `AppModule`, so its handler was never reachable. Keeping it meant a 26-model hardcoded list sat
+// in the repo looking like the source of the endpoint's data.
 import { SettingsService } from './settings.service';
 import { SettingsController } from './settings.controller';  import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
   import { SettingsRegistryController } from './settings-registry.controller';import { ScoringLogService } from './scoring-log.service';
@@ -33,7 +37,7 @@ import { DevController } from './dev.controller';
 @Module({
   imports: [ProvidersModule, DirectivesModule, ScoringModule],
     providers: [SystemLogService, ProcessManagerService, SettingsService, SettingsResolverService, ScoringLogService, MetricsMiddleware, DataRetentionService, SystemHealthService, BacktestArchiveService, ConfigExportService, FileInventoryService],
-    controllers: [SystemLogController, ProcessManagerController, DataFreshnessController, ArchitectureManifestController, DatabaseStatsController, SettingsController, SettingsRegistryController, ScoringLogController, DataRetentionController, SystemHealthController, BacktestArchiveController, PreferencesController, AutomationRulesController, ConfigExportController, FileInventoryController, ConfigReloadController, DevController],
+    controllers: [SystemLogController, ProcessManagerController, DataFreshnessController, ArchitectureManifestController, SettingsController, SettingsRegistryController, ScoringLogController, DataRetentionController, SystemHealthController, BacktestArchiveController, PreferencesController, AutomationRulesController, ConfigExportController, FileInventoryController, ConfigReloadController, DevController],
     exports: [SystemLogService, ProcessManagerService, SettingsService, SettingsResolverService, ScoringLogService, MetricsMiddleware, DataRetentionService],
 })
 export class SystemModule {}

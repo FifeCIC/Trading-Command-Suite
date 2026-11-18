@@ -23,7 +23,10 @@ import { BacktestService } from './backtest.service';
 
 const svc = (prisma: any) => new BacktestService(prisma, {} as any, {} as any, {} as any);
 const priv = (s: BacktestService) => s as unknown as {
-  resolveExperiment(id?: string | null): Promise<{ id: string; iteration: number } | null>;
+  resolveExperiment(
+    id?: string | null,
+    protocolId?: string | null,
+  ): Promise<{ id: string; iteration: number } | null>;
   currentConfigVersion(protocolId: string): Promise<number | null>;
 };
 
@@ -31,6 +34,7 @@ function prismaStub(over: Record<string, any> = {}) {
   return {
     backtestExperiment: {
       findUnique: jest.fn(async () => ({ id: 'exp-1', status: 'running' })),
+      findFirst: jest.fn(async () => null),
       create: jest.fn(async ({ data }: any) => ({ id: 'exp-new', ...data, createdAt: new Date() })),
       findMany: jest.fn(async () => []),
       update: jest.fn(async ({ data }: any) => ({ id: 'exp-1', protocolId: 'btc', label: 'l', goal: null, windowLabel: null, status: data.status, createdBy: 'owner', createdAt: new Date() })),
@@ -42,6 +46,11 @@ function prismaStub(over: Record<string, any> = {}) {
     protocolDirectiveChange: {
       aggregate: jest.fn(async () => ({ _max: { configVersion: null } })),
     },
+    // ⚠️ Default is "this protocol does not exist". Every auto-filing case has to opt IN to a real
+    // protocol, so a test that forgets is caught rather than silently filing under nothing.
+    protocol: {
+      findFirst: jest.fn(async () => null),
+    },
     ...over,
   };
 }
@@ -50,6 +59,63 @@ describe('resolveExperiment — the iteration is derived, not trusted', () => {
   it('returns null when no experiment was asked for (a one-off run)', async () => {
     expect(await priv(svc(prismaStub())).resolveExperiment(undefined)).toBeNull();
     expect(await priv(svc(prismaStub())).resolveExperiment(null)).toBeNull();
+  });
+
+  /*
+   * ── #1295 + the #1292 follow-up: auto-filing must never NAME A PROTOCOL THAT DOES NOT EXIST ────
+   *
+   * ⚠️ WHY THE 'default' CASE IS THE IMPORTANT ONE. `protocolId` arrives from the caller verbatim.
+   * A caller in June 2026 sent the literal 'default' (before protocols were minted per strategy),
+   * and filing it created a `backtest_experiment` row whose `protocolId` resolved to nothing. That
+   * passed unnoticed until `validate-protocol-refs.cjs` failed on it — because nothing on the filing
+   * path checked that the protocol existed. The run itself is fine and keeps its own protocolId; it
+   * is the BUCKET that asserted a false fact.
+   *
+   * A bucket keyed on a non-existent protocol is unreachable by every protocol-filtered report, and
+   * its label reads as though a protocol called "default" is real. Not filing is the honest answer.
+   */
+  it('⚠️ REFUSES to file under a protocol that does not exist — and SAYS SO', async () => {
+    const prisma = prismaStub(); // protocol.findFirst -> null by default
+    const service = svc(prisma);
+    const warn = jest.spyOn((service as any).logger, 'warn').mockImplementation(() => undefined);
+
+    expect(await priv(service).resolveExperiment(undefined, 'default')).toBeNull();
+    expect(prisma.backtestExperiment.create).not.toHaveBeenCalled();
+
+    // ⚠️ THE WARNING IS THE ASSERTION THAT MATTERS. Removing the existence check also yields `null`
+    // — `protocol.slug` throws on null and the catch returns null — so *outcome alone cannot tell
+    // the two apart*. Measured: a canary that deleted the check left this suite GREEN. The warning
+    // is what distinguishes "refused deliberately" from "crashed and got swallowed".
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain('default');
+  });
+
+  it('files under a real protocol, keyed on its SLUG', async () => {
+    const prisma = prismaStub();
+    prisma.protocol.findFirst = jest.fn(async () => ({ slug: 'btc-speed-v1-long' }));
+    prisma.backtestExperiment.findFirst = jest.fn(async () => ({ id: 'bucket-1' }));
+    expect(await priv(svc(prisma)).resolveExperiment(undefined, 'btc-speed-v1-long')).toEqual({
+      id: 'bucket-1',
+      iteration: 1,
+    });
+  });
+
+  it('accepts a protocol UUID and stores the SLUG — one bucket per protocol, not two', async () => {
+    const prisma = prismaStub();
+    prisma.protocol.findFirst = jest.fn(async () => ({ slug: 'btc-speed-v1-long' }));
+    prisma.backtestExperiment.findFirst = jest.fn(async () => null);
+    await priv(svc(prisma)).resolveExperiment(undefined, '0d5f6a10-0000-4000-8000-000000000001');
+    const created = prisma.backtestExperiment.create.mock.calls[0][0].data;
+    expect(created.protocolId).toBe('btc-speed-v1-long');
+    expect(created.label).toContain('btc-speed-v1-long');
+  });
+
+  it('a lookup that throws leaves the run UNFILED rather than failing it', async () => {
+    const prisma = prismaStub();
+    prisma.protocol.findFirst = jest.fn(async () => {
+      throw new Error('connection lost');
+    });
+    expect(await priv(svc(prisma)).resolveExperiment(undefined, 'btc-speed-v1-long')).toBeNull();
   });
 
   it('appoints MAX(iteration) + 1, so two runs cannot claim the same number', async () => {

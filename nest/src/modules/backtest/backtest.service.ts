@@ -1278,16 +1278,53 @@ export class BacktestService {
   private async fileIntoUnfiledBucket(
     protocolId: string,
   ): Promise<{ id: string; iteration: number } | null> {
-    const label = `Auto-filed runs (no experiment named) — ${protocolId}`.slice(0, 200);
+    // ⚠️ A BUCKET MUST NAME A PROTOCOL THAT EXISTS (#1292 follow-up, 2026-11-18).
+    //
+    // `protocolId` arrives from the caller verbatim, and one caller — in June 2026, before protocols
+    // were minted per strategy — sent the literal `'default'`. Filing that created a
+    // `backtest_experiment` row whose `protocolId` resolved to nothing, and
+    // `validate-protocol-refs.cjs` failed on it, correctly: any report that filters by protocol can
+    // never find that bucket, and its label reads as though a protocol called "default" exists.
+    //
+    // ⚠️ THE PRE-EXISTING `backtestrun.protocolId = 'default'` ROWS ARE NOT THE DEFECT AND ARE NOT
+    // TOUCHED — 11 real runs from 2026-06/08. The defect was PROMOTING an unchecked condition into a
+    // CHECKED table. Not filing is the honest outcome: the run is stored exactly as it was before
+    // this feature existed, still carrying the protocolId it was given.
+    //
+    // ⚠️ AND THE BUCKET IS KEYED ON THE CANONICAL FORM. #800 settled SLUG, so a caller passing a
+    // protocol UUID files into the same bucket as one passing its slug, instead of minting a second
+    // bucket for the same protocol.
+    //
+    // ⚠️ THE LOOKUP IS INSIDE THE `try` ON PURPOSE — see the catch below. Filing is bookkeeping and
+    // must never be the reason a completed backtest is lost.
     try {
+      const protocol = await this.prisma.protocol.findFirst({
+        where: { OR: [{ slug: protocolId }, { id: protocolId }] },
+        select: { slug: true },
+      });
+      if (!protocol) {
+        // ⚠️ LOUD ON PURPOSE. Without this line the same input produces an identical OUTCOME through
+        // a different route — `protocol.slug` throws on null, the `catch` below swallows it, and the
+        // run is stored unfiled with nothing recorded anywhere. That is indistinguishable from the
+        // deliberate refusal, so a caller sending a bad protocolId would send it forever unnoticed.
+        // A warning naming the value is the only part of this guard a test can observe.
+        this.logger.warn(
+          `Not filing this run: "${protocolId}" is not a protocol slug or id, so no auto-filed ` +
+            'bucket can name it. The run is stored unfiled and keeps the protocolId it was given.',
+        );
+        return null;
+      }
+
+      const bucketKey = protocol.slug;
+      const label = `Auto-filed runs (no experiment named) — ${bucketKey}`.slice(0, 200);
       let bucket = await this.prisma.backtestExperiment.findFirst({
-        where: { protocolId, label, createdBy: 'system', status: 'running' },
+        where: { protocolId: bucketKey, label, createdBy: 'system', status: 'running' },
         select: { id: true },
       });
       if (!bucket) {
         bucket = await this.prisma.backtestExperiment.create({
           data: {
-            protocolId,
+            protocolId: bucketKey,
             label,
             goal: 'Runs that named no experiment, grouped so they can be found and either adopted or deleted. Not a deliberate comparison.',
             createdBy: 'system',
