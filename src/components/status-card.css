@@ -1,0 +1,190 @@
+/* StatusCard.css — a headline number whose justification is on demand.
+ *
+ * ⚠️ EVERY token here is checked by `scripts/validate-css-tokens.cjs`. An undefined token is NOT an
+ * error at runtime — the declaration is silently dropped and the element inherits — so the card looks
+ * "nearly right" while the colour is wrong. Run that script after editing.
+ *
+ * ⚠️ The 44px height is the WCAG 2.2 AA tap-target floor from `accessibility-policy` ("Tap targets
+ * MUST be at least 44×44px"). `--` minimums are easy to lose when a card is tightened to remove
+ * clutter, so it is stated here rather than left implicit in padding.
+ */
+
+.sc {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 5.5rem;
+  min-height: 44px;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+}
+
+/* Tone lives on the BORDER and the LABEL only — never the body. See the component docblock. */
+.sc--ok   { border-color: var(--risk-normal); }
+.sc--warn { border-color: var(--color-warning); }
+.sc--bad  { border-color: var(--risk-high); }
+
+.sc--ok   .sc-label { color: var(--risk-normal); }
+.sc--warn .sc-label { color: var(--color-warning); }
+.sc--bad  .sc-label { color: var(--risk-high); }
+
+.sc-value {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.sc-label {
+  font-size: 0.66rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* ── The interaction surface ────────────────────────────────────────────────────────────────
+   The BUTTON covers the card so hover, focus and click all land on one element. It is transparent
+   and inherits the card's own typography, because the card must look identical whether or not it
+   has anything more to say — a "more to read" card that looks different from a plain one makes the
+   plain ones read as broken. */
+.sc-hit {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-height: 44px;
+  padding: 0 0.6rem;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.sc-hit:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── The disclosure cue: a CHEVRON, and why it is not an ⓘ ──────────────────────────────────
+ * Owner, 2026-11-18, after seeing the first build: *"I don't like the little 'i' in the corner of the
+ * cards. Look for something that has been a standard approach in other designs online."* The ⓘ was
+ * wrong on the convention, not just on taste: ⓘ means "information ABOUT this thing" (which is what
+ * `PageInfoPopover` does, on a heading), whereas these cards *expand*. Every mainstream system uses a
+ * chevron for exactly that — Material 3 expansion panels, Apple's disclosure groups, the Bootstrap and
+ * WAI-ARIA accordion patterns. NN/g draws the same line: a CHEVRON means "expands in place", an ARROW
+ * (→) means "goes somewhere else". This expands in place, downward, so it is a chevron pointing down.
+ *
+ * The glyph is drawn with two borders rather than typed (▾ / ⌄) so it cannot render differently per
+ * platform font, and it ROTATES 180° when open — the second half of the convention, and a cue that the
+ * panel came from this card rather than from the one beside it. */
+/* ⚠️ MEASURED, NOT GUESSED: the first version was 5×5 with 1.5px borders in `--text-faint`, and at
+   real size it was INVISIBLE — a screenshot of the built stylesheet rendered at 1× showed no chevron
+   on any card, and at 3× it was a barely-there smudge. A disclosure cue nobody can see is the same
+   thing as no cue, so the size and weight now match a standard accordion chevron (~10px visual) and
+   the colour is `--text-dim` rather than `--text-faint`. */
+/* ⚠️ LONGHANDS, ON PURPOSE — AND THE REASON IS MEASURED. `border-right: 2px solid var(--text-dim)`
+   as a SHORTHAND paints NOTHING when the token is missing: a failed `var()` in a shorthand invalidates
+   the whole declaration and the border resets to `style: none`. That was observed while checking this
+   chevron against the built stylesheet without the theme adapter running — the cue silently vanished.
+   Written this way the width and style always survive and only the colour degrades to `currentColor`.
+   `--text-dim` is injected at runtime by `src/theme/adapters/vanilla.js`, not declared in CSS, so
+   "the token is missing" is a real first-paint state and not a hypothetical. */
+.sc-caret {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin-top: -4px;
+  border-right: 2px solid;
+  border-bottom: 2px solid;
+  border-right-color: var(--text-dim, currentColor);
+  border-bottom-color: var(--text-dim, currentColor);
+  transform: rotate(45deg);
+  transition: transform 0.16s ease, border-color 0.16s ease;
+  pointer-events: none;
+}
+
+/* ⚠️ A LANE, NOT A CORNER. The chevron is vertically centred on the right edge — the accordion
+   convention — and the card reserves that lane so a wrapped label can never run under the glyph.
+   `margin-top` rather than `translateY(-50%)` so the 45° rotation composes predictably. */
+.sc--openable .sc-hit {
+  padding-right: 1.05rem;
+}
+
+.sc.is-open .sc-caret {
+  transform: rotate(225deg);
+  border-right-color: var(--accent, currentColor);
+  border-bottom-color: var(--accent, currentColor);
+}
+
+.sc-hit:hover .sc-caret,
+.sc-hit:focus-visible .sc-caret {
+  border-right-color: var(--accent, currentColor);
+  border-bottom-color: var(--accent, currentColor);
+}
+
+/* ── Hover / focus affordance on the card itself ─────────────────────────────────────────────
+ * ⚠️ The chevron is a hint, not the whole affordance. Research on expandable cards (and Material's
+ * own guidance) is consistent: the card must respond to the pointer BEFORE the reader has to notice a
+ * 5px glyph. Border + a small lift is the cheapest way to say "this surface is live" without spending
+ * a colour — colour is reserved for tone. */
+.sc--openable {
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.sc--openable:hover,
+.sc--openable:focus-within {
+  border-color: var(--accent);
+  background: var(--bg-elev);
+}
+
+/* Tone must survive the hover: an `ok` card does not become `accent` just because it is hovered. */
+.sc--ok.sc--openable:hover,
+.sc--ok.sc--openable:focus-within { border-color: var(--risk-normal); }
+.sc--warn.sc--openable:hover,
+.sc--warn.sc--openable:focus-within { border-color: var(--color-warning); }
+.sc--bad.sc--openable:hover,
+.sc--bad.sc--openable:focus-within { border-color: var(--risk-high); }
+
+/* ── The detail: an overlay below the card, so revealing it never reflows the row ────────── */
+.sc-detail {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 40;
+  width: max-content;
+  max-width: min(34rem, 80vw);
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--bg-elev);
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.38);
+  pointer-events: none;
+}
+
+.sc-detail strong { color: var(--ink); }
+.sc-detail code {
+  font-family: var(--font-mono);
+  font-size: 0.94em;
+}
+
+/* ⚠️ `hidden` must keep winning. Setting `display` on `.sc-detail` above would silently defeat the
+   `hidden` attribute the component relies on, and the detail would show permanently — a card that
+   looks collapsed while reading its own aria-expanded as false. */
+.sc-detail[hidden] { display: none; }
+
+@media (max-width: 600px) {
+  /* A 34rem overlay does not fit a phone. Let it take the width it has and wrap. */
+  .sc-detail {
+    max-width: 88vw;
+  }
+}

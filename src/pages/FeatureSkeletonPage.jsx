@@ -28,7 +28,7 @@ export default function FeatureSkeletonPage({
     <div className="feature-skeleton-page">
       <header className="feature-skeleton-header">
         <p className="feature-domain">{domain}</p>
-        <h1>{title}</h1>
+        <h1 className="is-subject">{title}</h1>
         <p>{subtitle}</p>
         {rollout && (
           <div className="feature-rollout-meta">

@@ -25,17 +25,60 @@ import { createContext, useContext, useEffect, useState } from 'react';
 
 const SlotSetterContext = createContext(null);
 const SlotContentContext = createContext(null);
+const PageInfoSetterContext = createContext(null);
+const PageInfoContentContext = createContext(null);
 
 export function TopRowSlotProvider({ children }) {
   const [content, setContent] = useState(null);
+  const [pageInfo, setPageInfo] = useState(null);
   return (
     <SlotSetterContext.Provider value={setContent}>
       <SlotContentContext.Provider value={content}>
-        {children}
+        <PageInfoSetterContext.Provider value={setPageInfo}>
+          <PageInfoContentContext.Provider value={pageInfo}>
+            {children}
+          </PageInfoContentContext.Provider>
+        </PageInfoSetterContext.Provider>
       </SlotContentContext.Provider>
     </SlotSetterContext.Provider>
   );
 }
+
+/**
+ * PageInfoSlot — lets a page put LIVE content inside the shell's ℹ popover.
+ * =========================================================================
+ * The shell renders one ℹ in `.main-top-row`, next to the breadcrumbs, for any view with a
+ * `VIEW_EXPLANATIONS` entry. That text is static (it lives in a data file), so a page could not
+ * contribute a figure that changes every refresh — and the alternative, which the app had drifted
+ * into, was a per-page ℹ somewhere on the page and a second "12 venues · 2 tradeable" line under a
+ * section heading. That is two explanations of one view, in two places, with no rule about which is
+ * authoritative.
+ *
+ *   // inside any page (must be within <TopRowSlotProvider>)
+ *   <PageInfoSlotContent>
+ *     <p>12 venues · 2 tradeable in TCS</p>
+ *   </PageInfoSlotContent>
+ *
+ * Same single-slot rule and same unmount-clearing as the top-row slot beside it.
+ */
+
+/** Registers children inside the shell's ℹ popover on mount; clears on unmount. */
+export function PageInfoSlotContent({ children }) {
+  const setPageInfo = useContext(PageInfoSetterContext);
+  useEffect(() => {
+    if (!setPageInfo) return;
+    setPageInfo(children);
+    return () => setPageInfo(null);
+  }, [setPageInfo, children]);
+  return null;
+}
+
+/** Reads the current page-info content — used by the shell to decide whether the ℹ renders at all. */
+export function usePageInfoContent() {
+  return useContext(PageInfoContentContext);
+}
+
+export { PageInfoSlotContent as default };
 
 /**
  * Renders whatever the current page registered into the top-row slot.

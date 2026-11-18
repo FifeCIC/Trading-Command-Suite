@@ -456,6 +456,17 @@ const QA_CHECKLIST = [
     priority: 'high',
     versionNote: '2026-11-17 — #1291. `backtest_period` is ONE SYMBOL PER ROW, so rendering rows hid the set. Also fixed a blank page: `summary.totalBars.toLocaleString()` on a `?? {}` default threw behind the error boundary. Sets are DB-only and deliberately not seeded — after a reinstall the library is empty and that is correct.',
   },
+  {
+    id: 'qa-status-card-001',
+    area: 'UI / Appearance',
+    system: 'src/components/StatusCard.jsx + status-card.css · /development/movers-treatment · /appearance/surfaces',
+    name: 'A status card reveals its detail on hover, on focus and on click, and reports that truthfully',
+    procedure: 'Open /development/movers-treatment. Hover a tally card (e.g. "5 Traded"). Then Tab to it with the keyboard. Then click it once and move the pointer away. Then open /appearance/surfaces and confirm the three sample cards render, including the one whose value is an em dash.',
+    expected: 'Hovering shows a panel below the card carrying that state\'s definition, and the row does NOT resize. Tabbing to the card shows the same panel, and `aria-expanded` is `true` for as long as it is visible — the attribute reports what is rendered, not only what was clicked. After a click the panel stays open when the pointer leaves. The disclosure cue is a **chevron on the right edge** that points down when closed and rotates up when open; a card with no detail has no chevron and is NOT a button. The "hotStock* settings with a reader" card reads **2/4**, derived from `GET /api/trading/strategies/bot-rules`; if that endpoint fails it reads **— / UNKNOWN**, never 0/0. Canary: stop the API and reload — the em dash and the CANNOT JUDGE wording must appear, never a zero.',
+    category: 'UI',
+    priority: 'high',
+    versionNote: '2026-11-18 — owner review of /development/movers-treatment: *"I do not like screen clutter - large blocks of information need to be displayed through the users desire to see it"* … *"Maybe a small icon in the top right corner of cards that have additional information"*. Four things were trimmed there: the visible h2 (now `h1.sr-only` + ℹ), the 3-paragraph strategy panel (now one status card), the seven-tally row (now status cards), and the hot-stock paragraph (now two derived cards). Guarded by `src/core/hot-stock-readiness.test.js` — the "2/4 vs CANNOT JUDGE" split is the case that matters.',
+  },
 
   // ═══════════════════════════════════════════════════
   // DUPLICATE PREVENTION

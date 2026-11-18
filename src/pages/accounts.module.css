@@ -24,15 +24,18 @@
   margin: 0 auto;
 }
 
-/* The page title is hidden app-wide (`index.css` → `.main-stage h1`) and kept only for the single-h1
-   landmark; the ℹ sits beside it and carries the description. */
-.header { margin-bottom: var(--space-md); }
-.header h1 {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-xl);
+/* ⚠️ THE PAGE TITLE IS NOT RENDERED HERE (owner direction, 2026-11-18). The title is the breadcrumb
+   in `.main-top-row`, and the one ℹ is rendered by the shell at the top right of that row.
+   This file used to carry `.header h1 { display: flex; … }` under a comment claiming the title was
+   "hidden app-wide" — the declaration did the opposite of the comment, and because it had the same
+   specificity as `index.css`'s `.main-stage h1 { display: none }` it won on source order and put a
+   stray ℹ at the top of the page. Do not reintroduce a page-level `h1` or a `display` on one. */
+
+/* Live figures contributed to the shell's ℹ popover (`PageInfoSlotContent`). */
+.infoStat {
+  margin: 0 0 0.4rem;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
 }
 
 /* ── Summary strip (both pages) ──────────────────────────────────────────────────────────────── */

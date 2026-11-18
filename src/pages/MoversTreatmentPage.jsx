@@ -13,34 +13,82 @@
  * moved 40% and the app did nothing — was that a decision, a gap, or a bug?
  *
  * ── ⚠️ SIX STATES, NEVER COLLAPSED INTO TWO ──
- * traded · queued · refused · scored · unscored · no-data
+ * traded · queued · refused · scored · unscored · no-data — the definitions live in ONE place,
+ * `classifyTreatment()` in `movers-treatment.service.ts`, and the detail text on each tally card is
+ * quoted from there rather than rewritten. Two copies of a definition drift and only one gets the
+ * next fix.
  *
  * "Unscored" and "no-data" in particular must never render the same. A symbol with no bars is
  * CANNOT JUDGE; a symbol with bars and no score is a COVERAGE GAP. Rendering them as one empty cell
  * is the "plausible output, no error" failure this repo keeps re-paying for.
  *
- * ── ⚠️ THE STRATEGY PANEL IS INACTIVE ON PURPOSE, AND SAYS WHY ──
- * The parabolic-momentum strategy that motivated this page has no protocol yet. Its tab is shown
- * greyed with the reason rather than hidden, because a capability that silently vanishes is worse
- * than one that is visibly not ready — see `docs/SETTLED-DECISIONS.md` row 181 and #1277.
+ * ── ⚠️ THE STRATEGY IS A STATUS, NOT A PANEL ──
+ * Owner, 2026-11-18: *"which basically constitutes a status (do not need all the text displayed until
+ * the user hovers over the status)."* It was three paragraphs of explanation above the data. It is now
+ * one `StatusCard` whose justification is on demand. The reason it is INACTIVE is still stated — a
+ * capability that silently vanishes is worse than one that is visibly not ready (#1277) — it is just
+ * no longer the loudest thing on the page.
+ *
+ * ── ⚠️ NO VISIBLE PAGE TITLE ──
+ * Owner, 2026-11-18: *"Remove Element: <h2> Movers & Treatment"* — the nav and the breadcrumb already
+ * say where you are, so a third copy is chrome. `<h1 className="sr-only">` keeps the accessibility
+ * requirement (*"Every page MUST have exactly one <h1>"*) satisfied without drawing it; the
+ * explanation that used to sit under the title moved behind the ℹ.
  */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { hotStockReadiness } from '../core/hot-stock-readiness';
 import MarketMoversPanel from '../components/MarketMoversPanel';
+import PageInfoPopover from '../components/PageInfoPopover';
+import StatusCard from '../components/StatusCard';
 import './MoversTreatmentPage.css';
 
 const fmtPct = (v) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}%`);
 const fmtNum = (v, d = 1) => (v == null ? '—' : Number(v).toFixed(d));
 const fmtTime = (iso) => (iso ? new Date(iso).toLocaleTimeString() : '—');
 
+/**
+ * ⚠️ `detail` IS THE SENTENCE THAT DOES NOT NEED TO BE ON SCREEN — the definition of each state,
+ * quoted from `movers-treatment.service.ts` so this table cannot drift from the classifier.
+ */
 const TREATMENT_META = {
-  traded: { icon: '✅', label: 'Traded', cls: 'mt-t-traded' },
-  queued: { icon: '📤', label: 'Queued', cls: 'mt-t-queued' },
-  refused: { icon: '🛑', label: 'Refused', cls: 'mt-t-refused' },
-  scored: { icon: '📊', label: 'Scored, no subscriber', cls: 'mt-t-scored' },
-  unscored: { icon: '🚧', label: 'Not scored', cls: 'mt-t-unscored' },
-  'no-data': { icon: '⚠️', label: 'No bars — cannot judge', cls: 'mt-t-nodata' },
+  traded: {
+    icon: '✅',
+    label: 'Traded',
+    cls: 'mt-t-traded',
+    detail: 'An order exists — an open position, or a trade closed today. This is not a claim it was profitable.',
+  },
+  queued: {
+    icon: '📤',
+    label: 'Queued',
+    cls: 'mt-t-queued',
+    detail: 'In strategy_signal_queue and not yet executed. It passed scoring and gating; no bot has dispatched it.',
+  },
+  refused: {
+    icon: '🛑',
+    label: 'Refused',
+    cls: 'mt-t-refused',
+    detail: 'The loop decided against it and said why — the reason is in the Last decision column, not inferred here.',
+  },
+  scored: {
+    icon: '📊',
+    label: 'Scored, no subscriber',
+    cls: 'mt-t-scored',
+    detail: 'Scored, but nothing is subscribed to the protocol that scored it. A signal nobody can act on is a configuration gap, not a market fact.',
+  },
+  unscored: {
+    icon: '🚧',
+    label: 'Not scored',
+    cls: 'mt-t-unscored',
+    detail: 'Monitored — it has bars — but no score landed in this window. That is a COVERAGE GAP upstream of gating: not "no move", and not a refusal.',
+  },
+  'no-data': {
+    icon: '⚠️',
+    label: 'No bars — cannot judge',
+    cls: 'mt-t-nodata',
+    detail: 'No bars, so nothing can be judged about this symbol. CANNOT JUDGE is a different answer from "nothing happened", and the two must never share a cell.',
+  },
 };
 
 function Row({ r }) {
@@ -132,6 +180,13 @@ function Side({ title, rows, empty }) {
   );
 }
 
+/**
+ * ⚠️ `hotStockReadiness()` MOVED TO `src/core/hot-stock-readiness.js` (2026-11-18) — it is a pure
+ * function with a decision worth testing, and this repo has no React test harness, so a helper living
+ * in a page file can only be checked by eye. `<StatusCard>` consumes its result; the tests are
+ * `src/core/hot-stock-readiness.test.js`.
+ */
+
 export default function MoversTreatmentPage() {
   const [timeframe, setTimeframe] = useState('5m');
   const [bars, setBars] = useState(6);
@@ -153,16 +208,25 @@ export default function MoversTreatmentPage() {
 
   const d = q.data;
 
+  /**
+   * ⚠️ A SECOND QUERY, for a fact about the SETTINGS rather than about the movers. It is fetched here
+   * because the readiness cards below are the only consumer; if a second surface needs it, that is the
+   * moment to promote it to a shared module, not now.
+   */
+  const rulesQ = useQuery({
+    queryKey: ['bot-rules'],
+    queryFn: () => apiGet('/api/trading/strategies/bot-rules').catch(() => null),
+    staleTime: 5 * 60_000,
+  });
+  const hot = hotStockReadiness(rulesQ.data);
+
   return (
     <div className="mt-page">
-      <header className="mt-header">
-        <h2>Movers &amp; Treatment</h2>
-        <p className="mt-sub">
-          Two different questions about movers. One is bounded by what we hold; the other is not.
-        </p>
-      </header>
+      {/* One h1 for assistive tech; the nav and breadcrumb carry it visually. See the docblock. */}
+      <h1 className="sr-only">Movers &amp; Treatment</h1>
 
-      <div className="mt-tabs" role="tablist" aria-label="Movers views">
+      <div className="mt-head">
+        <div className="mt-tabs" role="tablist" aria-label="Movers views">
         <button
           type="button"
           role="tab"
@@ -183,6 +247,18 @@ export default function MoversTreatmentPage() {
           Market-wide
           <span className="mt-tab-hint">winners and losers anywhere — the discovery side</span>
         </button>
+        </div>
+        {/* The explanation that used to be a paragraph under the title. On demand, beside the tabs. */}
+        <PageInfoPopover label="About this page">
+          Two different questions about movers. <strong>Our registered symbols</strong> is bounded by
+          what we hold — what TCS is doing with it. <strong>Market-wide</strong> is not bounded at all —
+          it is the discovery side, and a symbol can be the biggest mover in the market and appear
+          nowhere in our universe.
+          <br />
+          <br />
+          Every tally below is a STATUS: the number is the answer and the detail behind it is on demand.
+          Hover a card, focus it, or click to pin it open.
+        </PageInfoPopover>
       </div>
 
       {tab === 'market' && <MarketMoversPanel />}
@@ -190,23 +266,28 @@ export default function MoversTreatmentPage() {
       {tab === 'registered' && (
         <>
 
-      {/* ── The strategy this page was built for, shown INACTIVE WITH ITS REASON ── */}
-      <section className="mt-strategy mt-strategy--inactive">
-        <div className="mt-strategy-head">
-          <span className="mt-strategy-tag">INACTIVE</span>
-          <h3>Parabolic momentum — winners &amp; losers</h3>
-        </div>
-        <p>
-          Not available yet: the strategy has <strong>no protocol</strong> to score with, so there is
-          nothing to switch on. The observation below is live regardless — it is the general question
-          of what the app is doing with a big mover, not a feature of the strategy.
-        </p>
-        <p className="mt-strategy-why">
-          When the strategy exists it will appear as a tab here, gated on its protocol being active.
-          The data this page reads is already its input: a mover list, the score each symbol reached,
-          whether anything is subscribed, and the last recorded decision.
-        </p>
-      </section>
+      {/* ── The strategy this page was built for, as a STATUS with its reason on demand ── */}
+      <div className="mt-status-row">
+        <StatusCard
+          icon="🚧"
+          value="INACTIVE"
+          label="Parabolic momentum — winners & losers"
+          tone="warn"
+          detail={
+            <>
+              <strong>Not available yet:</strong> the strategy has no protocol to score with, so there
+              is nothing to switch on. When it exists it will appear as a tab here, gated on its
+              protocol being active.
+              <br />
+              <br />
+              The observation on this page is live regardless — it is the general question of what the
+              app is doing with a big mover, not a feature of the strategy. The data it reads is already
+              the strategy&apos;s input: a mover list, the score each symbol reached, whether anything is
+              subscribed, and the last recorded decision.
+            </>
+          }
+        />
+      </div>
 
       <div className="mt-controls">
         <label>
@@ -248,28 +329,71 @@ export default function MoversTreatmentPage() {
 
       {d && (
         <>
-          <div className="mt-tallies">
+          <div className="mt-status-row">
             {Object.entries(d.counts).map(([k, n]) => {
               const meta = TREATMENT_META[k === 'noData' ? 'no-data' : k];
+              // ⚠️ `bad` TONE ONLY WHEN THERE IS SOMETHING TO BE BAD ABOUT. A red border on
+              // "0 No bars — cannot judge" reads as a fault, when zero is the good outcome.
+              const tone = k === 'noData' && n > 0 ? 'bad' : 'neutral';
               return (
-                <div key={k} className={`mt-tally ${meta?.cls ?? ''}`}>
-                  <span className="mt-tally-n">{n}</span>
-                  <span className="mt-tally-l">{meta?.icon} {meta?.label ?? k}</span>
-                </div>
+                <StatusCard
+                  key={k}
+                  value={n}
+                  icon={meta?.icon}
+                  label={meta?.label ?? k}
+                  tone={tone}
+                  detail={meta?.detail}
+                />
               );
             })}
-          </div>
 
-          {d.hotStockBots === 0 && (
-            <p className="mt-note">
-              🔌 <strong>0 active bots have hot-stock detection enabled.</strong> Two of the four{' '}
-              <code>hotStock*</code> settings now have a reader — <code>hotStockEnabled</code> and{' '}
-              <code>hotStockDetectionMode</code> (this page is that reader) — so the 🔥 column will stay
-              empty until a bot switches detection on. <code>hotStockAllocation</code> and{' '}
-              <code>hotStockMaxHoldHours</code> are still <strong>unread</strong>: nothing sizes or
-              time-stops a discovered symbol yet, and this page does not pretend otherwise.
-            </p>
-          )}
+            {/* ── Hot-stock readiness: DERIVED, and honest when it cannot be derived ── */}
+            <StatusCard
+              value={d.hotStockBots}
+              label="bots detecting"
+              icon="🔥"
+              detail={
+                <>
+                  Active bots with <code>hotStockEnabled</code> switched on. This page is the reader for
+                  that flag and for <code>hotStockDetectionMode</code> — so the 🔥 column in the tables
+                  below stays empty until a bot turns detection on. That is an unused capability, not a
+                  fault.
+                </>
+              }
+            />
+            {hot ? (
+              <StatusCard
+                value={`${hot.read.length}/${hot.all.length}`}
+                label="hotStock* settings with a reader"
+                tone={hot.read.length === hot.all.length ? 'ok' : 'warn'}
+                detail={
+                  <>
+                    Read from <code>GET /api/trading/strategies/bot-rules</code>, where{' '}
+                    <code>enforcement: &apos;none&apos;</code> is the canonical statement that a column
+                    has no reader. <strong>Read:</strong>{' '}
+                    {hot.read.map((r) => r.field).join(', ') || 'none'}. <strong>No reader:</strong>{' '}
+                    {hot.all.filter((r) => r.enforcement === 'none').map((r) => r.field).join(', ') ||
+                      'none'}
+                    . A setting with no reader sizes nothing and time-stops nothing, so this page does
+                    not pretend a discovered symbol is being managed.
+                  </>
+                }
+              />
+            ) : (
+              <StatusCard
+                value="—"
+                label="hotStock* settings with a reader"
+                tone="warn"
+                detail={
+                  <>
+                    The bot-rules endpoint could not be read, so how many of these settings have a
+                    reader is <strong>UNKNOWN</strong> — which is not the same as &quot;none of them
+                    do&quot;. Nothing here claims either.
+                  </>
+                }
+              />
+            )}
+          </div>
 
           <Side
             title={`🏆 Top winners — ${d.window.timeframe}, ${d.window.bars} bars`}
@@ -282,14 +406,17 @@ export default function MoversTreatmentPage() {
             empty="No symbol fell in this window, or none had two comparable bars."
           />
 
-          <section className="mt-verdicts">
-            <h3>Read as sentences</h3>
+          {/* ⚠️ The same sentences are ALREADY in the Treatment column. Kept because reading the whole
+              picture at once is useful — collapsed by default because a ten-line block of prose above
+              the fold is exactly the clutter this page was trimmed for. */}
+          <details className="mt-verdicts">
+            <summary>Read as sentences ({d.winners.length + d.losers.length})</summary>
             <ul>
               {[...d.winners, ...d.losers].map((r) => (
                 <li key={`v-${r.direction}-${r.ticker}`}>{r.verdict}</li>
               ))}
             </ul>
-          </section>
+          </details>
         </>
       )}
         </>

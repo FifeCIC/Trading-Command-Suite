@@ -59,6 +59,15 @@ export const VIEW_EXPLANATIONS = {
     'Click a strategy to see its full trade history and protocol breakdown.',
 
   // ── Trading / Data ──
+  'brokers':
+    'Every trading venue this app knows about, and the accounts held on each. Expanding a row shows ' +
+    'the venue’s fees, the trade types it offers, how its API works, and every account on it. ' +
+    'Balances are read from the broker, never calculated here. “In totals” says whether an account ' +
+    'is counted in the portfolio: an account that is enabled but disconnected contributes nothing, ' +
+    'and says so. Removing an MT5 account edits that bridge’s own account list, so the terminal ' +
+    'disconnects it; removing a Trading 212 or Capital.com account only takes it out of this app, ' +
+    'because its credential lives in the API environment file.',
+
   'active-symbols':
     'Browse all symbols that are currently active in the system. ' +
     'Active = has positions, is in a watchlist, or is assigned to a protocol. ' +

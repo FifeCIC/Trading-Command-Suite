@@ -26,7 +26,7 @@ import {
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 import SupporterPrompt from './components/SupporterPrompt';
 import ScreenOptions from './components/ScreenOptions';
-import PageInfoPopover from './components/PageInfoPopover';
+import MainTopInfo from './components/MainTopInfo';
 import { VIEW_EXPLANATIONS } from './core/view-explanations';
 import { TopRowSlotProvider, TopRowSlotHost } from './core/top-row-slot';
 
@@ -1162,15 +1162,10 @@ function AppShell({ directContent = null, directArea = null, directView = null }
           <div className="main-top-row">
             {!isDashboard && <Breadcrumbs />}
             <div className="main-top-right">
-              {(() => {
-                const explanation = VIEW_EXPLANATIONS[secondaryView];
-                if (!explanation) return null;
-                return (
-                  <div className="main-top-info">
-                    <PageInfoPopover>{explanation}</PageInfoPopover>
-                  </div>
-                );
-              })()}
+              {/* The ONE ℹ for the page. A page supplies text (VIEW_EXPLANATIONS) and live figures
+                  (PageInfoSlotContent); the shell owns the position — top right, in line with the
+                  breadcrumbs. Never add a second trigger inside a page. */}
+              <MainTopInfo explanation={VIEW_EXPLANATIONS[secondaryView]} />
               <TopRowSlotHost />
             </div>
           </div>

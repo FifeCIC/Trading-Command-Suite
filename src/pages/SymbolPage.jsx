@@ -579,7 +579,7 @@ export default function SymbolPage() {
         <div className="sym-title-row">
           <StarToggle itemType="symbol" itemId={symId || symbol} size={22} />
           <div>
-            <h1>{symbol}</h1>
+            <h1 className="is-subject">{symbol}</h1>
             {companyName && companyName !== symbol && <p className="sym-company">{companyName}</p>}
           </div>
         </div>

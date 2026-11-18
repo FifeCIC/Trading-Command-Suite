@@ -54,15 +54,24 @@ export function useSort(rows, initialKey = null, initialDir = 'desc') {
   return { sorted, sortKey: key, dir, toggle, ariaSort };
 }
 
-/** A sortable header cell. Keeps the button inside the <th> so the column keeps its semantics. */
-export function SortableTh({ col, label, title, api, className }) {
+/**
+ * A sortable header cell. Keeps the button inside the <th> so the column keeps its semantics.
+ *
+ * ⚠️ `buttonClassName` (2026-11-18) — the button style used to be hardcoded to the Backtest Lab's
+ * `bt-sort`, which lives in `components/backtest/backtest-panel-base.css`. That meant any other page
+ * either dragged the Backtest stylesheet in or re-implemented this markup by hand (StrategiesListPage
+ * does exactly that, and says so in a comment). Passing the GLOBAL `.th-sort` class from `index.css`
+ * makes this component reusable app-wide, which is the point: ordering rules live here, the header
+ * markup is written once, and only the class differs per surface.
+ */
+export function SortableTh({ col, label, title, api, className, buttonClassName = 'bt-sort', firstDir = 'desc' }) {
   const active = api.sortKey === col;
   return (
     <th scope="col" aria-sort={api.ariaSort(col)} title={title} className={className}>
       <button
         type="button"
-        className={`bt-sort${active ? ' bt-sort--on' : ''}`}
-        onClick={() => api.toggle(col)}
+        className={`${buttonClassName}${active ? ` ${buttonClassName}--on` : ''}`}
+        onClick={() => api.toggle(col, firstDir)}
       >
         {label}
         <span aria-hidden="true">{active ? (api.dir === 'asc' ? '▲' : '▼') : '↕'}</span>

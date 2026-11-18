@@ -155,7 +155,7 @@ export default function SymbolDetailPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <StarToggle itemType="symbol" itemId={sym.id || symbolId} size={22} />
           <div>
-            <h1>{sym.ticker || symbolId}</h1>
+            <h1 className="is-subject">{sym.ticker || symbolId}</h1>
             <p>{sym.name || '—'}</p>
           </div>
         </div>

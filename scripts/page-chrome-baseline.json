@@ -1,0 +1,474 @@
+{
+  "AbLadderPage.jsx": {
+    "page-h1": 2,
+    "page-info-popover": 1
+  },
+  "AbStrategiesPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 2
+  },
+  "ActiveSymbolsPage.jsx": {
+    "page-h1": 1
+  },
+  "AdvancedResearchPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "AnalyseSymbolPage.jsx": {
+    "page-h1": 1
+  },
+  "ApiActivityPage.jsx": {
+    "page-h1": 1
+  },
+  "ApiEndpointsPage.jsx": {
+    "page-h1": 1
+  },
+  "AppearanceAreaPage.jsx": {
+    "page-info-popover": 1
+  },
+  "AppearanceColourPage.jsx": {
+    "page-info-popover": 1
+  },
+  "AppearanceDataDisplayPage.jsx": {
+    "page-info-popover": 1
+  },
+  "AppearanceFormsPage.jsx": {
+    "page-info-popover": 2
+  },
+  "AppearanceInteractivePage.jsx": {
+    "page-info-popover": 1
+  },
+  "AppearanceMotionPage.jsx": {
+    "page-info-popover": 1
+  },
+  "AppearancePatternsPage.jsx": {
+    "page-info-popover": 1
+  },
+  "AppearanceSettingsPage.jsx": {
+    "page-h1": 1
+  },
+  "AppearanceSurfacesPage.jsx": {
+    "page-info-popover": 1
+  },
+  "AutomationSettingsPage.jsx": {
+    "page-h1": 1
+  },
+  "BacktestPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 3
+  },
+  "BlockedSignalsPage.jsx": {
+    "page-h1": 1
+  },
+  "BrokerCataloguePage.jsx": {
+    "page-h1": 1
+  },
+  "BrokersPage.jsx": {
+    "page-h1": 1
+  },
+  "BtcSpeedTradingPage.jsx": {
+    "page-h1": 2
+  },
+  "CacheMonitorPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "CalculatorsPage.jsx": {
+    "page-h1": 1
+  },
+  "CandlePatternsGuidePage.jsx": {
+    "page-h1": 1
+  },
+  "CapabilityMapPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "ChartComparisonPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "CommandsReferencePage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "CreateProtocolsPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "DailyBriefingPage.jsx": {
+    "page-h1": 2
+  },
+  "DataAreaLandingPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "DataElementsPage.jsx": {
+    "page-h1": 3
+  },
+  "DataManagementPage.jsx": {
+    "page-h1": 1
+  },
+  "DataStatusPage.jsx": {
+    "page-h1": 1
+  },
+  "DecoderPage.jsx": {
+    "page-h1": 1
+  },
+  "DerivedStrategiesPage.jsx": {
+    "page-h1": 1
+  },
+  "DesignObservationsPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "DiagramsPage.jsx": {
+    "page-h1": 1
+  },
+  "DirectiveImpactAuditPage.jsx": {
+    "page-h1": 1
+  },
+  "DirectiveViewerPage.jsx": {
+    "page-h1": 3,
+    "page-info-popover": 2
+  },
+  "EarningsCalendarPage.jsx": {
+    "page-h1": 3
+  },
+  "EarningsWhispersPage.jsx": {
+    "page-h1": 1
+  },
+  "EventsCalendarPage.jsx": {
+    "page-h1": 1
+  },
+  "ExitSignalsPage.jsx": {
+    "page-h1": 1
+  },
+  "FaqPage.jsx": {
+    "page-h1": 1
+  },
+  "FeatureLabPage.jsx": {
+    "page-h1": 1
+  },
+  "GapScannerPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "GlossaryPage.jsx": {
+    "page-h1": 1
+  },
+  "HealthDashboardPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "HomeDashboard.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "IdentityMapLabPage.jsx": {
+    "page-h1": 1
+  },
+  "ImportJobsPage.jsx": {
+    "page-h1": 1
+  },
+  "LadderPage.jsx": {
+    "page-h1": 2,
+    "page-info-popover": 1
+  },
+  "MacroMonitorPage.jsx": {
+    "page-h1": 1
+  },
+  "MarketContextPage.jsx": {
+    "page-h1": 2,
+    "page-info-popover": 1
+  },
+  "MarketCorrelationsPage.jsx": {
+    "page-h1": 1
+  },
+  "MetaStackExplorerPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "MetaStackPipelinePage.jsx": {
+    "page-info-popover": 1
+  },
+  "MetaStackStatusPage.jsx": {
+    "page-h1": 1
+  },
+  "MoversTreatmentPage.jsx": {
+    "page-h1": 3,
+    "page-info-popover": 1
+  },
+  "Mt5StatusPage.jsx": {
+    "page-h1": 1
+  },
+  "Mt5TradingPage.jsx": {
+    "page-h1": 1
+  },
+  "NewsIntelPage.jsx": {
+    "page-h1": 1
+  },
+  "ObjectivesPage.jsx": {
+    "page-h1": 1
+  },
+  "OrderTestingPage.jsx": {
+    "page-h1": 1
+  },
+  "PatternScannerPage.jsx": {
+    "page-h1": 1
+  },
+  "PerformanceLabPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "PersonalFinancesPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "PipelineGraphLabPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "PlatformComparisonsPage.jsx": {
+    "page-h1": 2
+  },
+  "PortfolioEventsPage.jsx": {
+    "page-h1": 1
+  },
+  "PortfolioPage.jsx": {
+    "page-h1": 4
+  },
+  "PositionsMonitorPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "PreferenceLab.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "PriceForecastPage.jsx": {
+    "page-h1": 3,
+    "page-info-popover": 1
+  },
+  "ProtocolQueuePage.jsx": {
+    "page-h1": 1
+  },
+  "ProtocolsLadderPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "ProtocolsPageB.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "ProtocolsPerformancePage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "ProtocolTrailPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "ProviderHealthPage.jsx": {
+    "page-h1": 2
+  },
+  "QATestingPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "RecentlyAnalysedSymbolsPage.jsx": {
+    "page-h1": 2,
+    "page-info-popover": 1
+  },
+  "ReportsPage.jsx": {
+    "page-h1": 1
+  },
+  "ResearchNotesPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "ResponsiveLayoutLabPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "RiskControlsPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "RoadmapPage.jsx": {
+    "page-h1": 1
+  },
+  "ScenarioAnalysisPage.jsx": {
+    "page-h1": 1
+  },
+  "ScheduledJobsPage.jsx": {
+    "page-h1": 1
+  },
+  "ScoringActivityLogsPage.jsx": {
+    "page-h1": 1
+  },
+  "ScoringOverviewPage.jsx": {
+    "page-h1": 1
+  },
+  "ScoringSettingsPage.jsx": {
+    "page-h1": 1
+  },
+  "ScreenCockpitPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "ScreenerPage.jsx": {
+    "page-h1": 1
+  },
+  "SeasonalityHeatmapPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "SectorRotationPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "SeesArenaPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "SettingsDatabasePage.jsx": {
+    "page-h1": 1
+  },
+  "SettingsEducationPage.jsx": {
+    "page-h1": 1
+  },
+  "SettingsPage.jsx": {
+    "page-h1": 1
+  },
+  "SetupWizardPage.jsx": {
+    "page-h1": 1
+  },
+  "SignalsOverviewPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "SinglesMonitorPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "SnapshotLibraryPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "SnapshotReplayPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "SocialNetworksPage.jsx": {
+    "page-h1": 1
+  },
+  "SourcesPage.jsx": {
+    "page-h1": 1
+  },
+  "SpeedScannerPage.jsx": {
+    "page-h1": 1
+  },
+  "StockInvestigationPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "StopGuardianStatsPage.jsx": {
+    "page-info-popover": 2
+  },
+  "StrategiesListPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "StrategyComparisonPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "StrategyCreatePage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "StrategyLibraryPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "StrategyMonitorPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 2
+  },
+  "SupportResistancePage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "SymbolsBrowserPage.jsx": {
+    "page-h1": 1
+  },
+  "SymbolsLadderPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "SystemHealthPage.jsx": {
+    "page-h1": 1
+  },
+  "SystemLogPage.jsx": {
+    "page-h1": 1
+  },
+  "T212ISAPage.jsx": {
+    "page-h1": 2,
+    "page-info-popover": 1
+  },
+  "T212PortfolioPage.jsx": {
+    "page-info-popover": 2
+  },
+  "TechnicalIndicatorsPage.jsx": {
+    "page-h1": 1
+  },
+  "ThemeLabMotion.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "ThemeLabPopover.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "ThemeLabScroll.jsx": {
+    "page-h1": 1
+  },
+  "ThemeLabSections.jsx": {
+    "page-h1": 2
+  },
+  "TheoryRegistryPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "TopMoversPage.jsx": {
+    "page-h1": 1
+  },
+  "TradeHistoryPage.jsx": {
+    "page-h1": 1
+  },
+  "TradeJournalPage.jsx": {
+    "page-info-popover": 1
+  },
+  "TradingSettingsPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "TradingStylesPage.jsx": {
+    "page-h1": 1
+  },
+  "TrainingCandlePatternsPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "UserWatchlistsPage.jsx": {
+    "page-h1": 2
+  },
+  "VendorsPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  },
+  "VolatilityAnalysisPage.jsx": {
+    "page-h1": 1,
+    "page-info-popover": 1
+  }
+}

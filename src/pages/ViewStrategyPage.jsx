@@ -1039,7 +1039,7 @@ export default function ViewStrategyPage() {
         </button>
 
         <div className={styles.titleRow}>
-          <h1 className={styles.title}>{bot.name}</h1>
+          <h1 className={`${styles.title} is-subject`}>{bot.name}</h1>
           <div className={styles.chips}>
             <span className={`${styles.chip} ${bot.active ? styles.chipLive : styles.chipNone}`}>
               {bot.active ? 'ACTIVE' : 'INACTIVE'}

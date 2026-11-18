@@ -12,63 +12,39 @@
   max-width: 1500px;
 }
 
-.mt-header h2 {
-  margin: 0 0 0.25rem;
-  font-size: 1.25rem;
-}
-
-.mt-sub {
-  margin: 0 0 1rem;
-  color: var(--text-dim);
-  font-size: 0.85rem;
-  max-width: 78ch;
-}
-
-/* ── Strategy panel: visibly inactive, with its reason ─────────────────────────────────────── */
-.mt-strategy {
-  border: 1px dashed var(--line);
-  border-radius: 8px;
-  background: var(--bg-elev);
-  padding: 0.85rem 1rem;
+/* ── Page head: no visible title, the ℹ sits at the end of the tab row ─────────────────────────
+ * ⚠️ THE h2 AND ITS SUBTITLE WERE REMOVED 2026-11-18 (owner: *"Remove Element: <h2> Movers &
+ * Treatment"*, *"move … Two different questions about movers … to an information popout"*). The nav and
+ * the breadcrumb already name the page, so a third copy is chrome. `h1.sr-only` keeps the "exactly one
+ * h1" accessibility rule satisfied; the description lives behind `PageInfoPopover`.
+ *
+ * ⚠️ `.mt-head` WRAPS THE TABLIST RATHER THAN BEING IT. The ℹ must not be a child of
+ * `role="tablist"` — a tablist may contain only tabs, and a button inside it is announced as a
+ * malformed tab by screen readers. */
+.mt-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
   margin-bottom: 1rem;
 }
 
-.mt-strategy--inactive {
-  opacity: 0.85;
+.mt-head .mt-tabs {
+  flex: 1 1 auto;
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
-.mt-strategy-head {
+/* ── Status rows — the status-card pattern (`src/components/StatusCard.jsx`) ───────────────────
+ * ⚠️ `align-items: flex-start` IS LOAD-BEARING. The cards reveal an overlay below themselves; with
+ * `stretch` (the default) the row would size to the tallest card and the overlays would be clipped by
+ * their own neighbours' box. */
+.mt-status-row {
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 0.4rem;
-}
-
-.mt-strategy-head h3 {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.mt-strategy-tag {
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.08em;
-  padding: 0.12rem 0.4rem;
-  border-radius: 3px;
-  border: 1px solid var(--line);
-  color: var(--text-dim);
-}
-
-.mt-strategy p {
-  margin: 0 0 0.4rem;
-  font-size: 0.82rem;
-  line-height: 1.5;
-  max-width: 95ch;
-}
-
-.mt-strategy-why {
-  color: var(--text-faint);
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 /* ── Controls ──────────────────────────────────────────────────────────────────────────────── */
@@ -129,36 +105,10 @@
   margin-left: auto;
 }
 
-/* ── Tallies ───────────────────────────────────────────────────────────────────────────────── */
-.mt-tallies {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.mt-tally {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 5.5rem;
-  padding: 0.4rem 0.6rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel);
-}
-
-.mt-tally-n {
-  font-family: var(--font-mono);
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.mt-tally-l {
-  font-size: 0.66rem;
-  color: var(--text-dim);
-  text-align: center;
-}
+/* ── Tallies — now `StatusCard` (see ./components/status-card.css) ───────────────────────────
+ * ⚠️ `.mt-tally*` WAS DELETED 2026-11-18, not merely unused. It was the local, non-reusable version of
+ * a card whose detail could not be revealed, and leaving it here would be a second implementation to
+ * keep in step with `StatusCard` — the exact drift `shared-core` warns about. */
 
 /* ── Tables ────────────────────────────────────────────────────────────────────────────────── */
 .mt-side {
@@ -255,15 +205,24 @@
 .mt-t-unscored { background: color-mix(in srgb, var(--line) 22%, transparent); }
 .mt-t-nodata   { background: color-mix(in srgb, var(--risk-high) 12%, transparent); }
 
-/* ── Verdict sentences ─────────────────────────────────────────────────────────────────────── */
+/* ── Verdict sentences — collapsed by default (owner: no large blocks of text on screen) ────── */
 .mt-verdicts {
   border-top: 1px solid var(--line);
   padding-top: 0.75rem;
 }
 
-.mt-verdicts h3 {
-  margin: 0 0 0.4rem;
-  font-size: 0.88rem;
+.mt-verdicts summary {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.mt-verdicts summary:hover {
+  color: var(--accent);
+}
+
+.mt-verdicts[open] summary {
+  margin-bottom: 0.4rem;
 }
 
 .mt-verdicts ul {

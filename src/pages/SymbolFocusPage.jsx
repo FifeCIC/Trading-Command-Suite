@@ -127,7 +127,7 @@ export default function SymbolFocusPage() {
           {focusQuery.isFetching && <span className="sf-live-dot" title="Live updates">⟳</span>}
         </div>
         <div className="sf-header-main">
-          <h1 className="sf-ticker">{data.ticker}</h1>
+          <h1 className="sf-ticker is-subject">{data.ticker}</h1>
           <span className="sf-name">{data.name}</span>
           <span className="sf-exchange">{data.exchange}</span>
           <span className={`sf-type-badge sf-type-${data.type?.toLowerCase() || 'other'}`}>

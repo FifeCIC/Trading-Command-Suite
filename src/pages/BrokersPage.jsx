@@ -38,7 +38,8 @@ import { notice } from '../core/notices/registry.js';
 import NoticeBlock from '../components/NoticeBlock';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
+import { useSort, SortableTh } from '../core/use-sort';
 import {
   BROKER_CATALOGUE,
   BROKER_CATALOGUE_BY_ID,
@@ -272,32 +273,54 @@ export default function BrokersPage() {
     return { connected, balance, equity };
   }, [accounts]);
 
+  /**
+   * Column sorting — ordered by the SHARED rule (`src/core/use-sort.jsx`), not a copy.
+   *
+   * Owner direction, 2026-11-18: *"we need column sorting… and column sorting should be added by
+   * default"*. The comparison rule (nulls last, numeric vs text, `aria-sort` vocabulary) is not
+   * re-implemented here; this only declares WHICH value each column sorts on. `_name` is the
+   * default order because a directory of venues is read alphabetically.
+   */
+  const sortRows = useMemo(
+    () =>
+      directory.map(({ entry, live }) => ({
+        entry,
+        live,
+        _name: entry.name,
+        _regions: (entry.regions ?? []).map((r) => REGION_LABEL[r] ?? r).join(', '),
+        // Accounts = bridge accounts + API-connected accounts. Both counts are real; a venue with
+        // neither sorts as 0 rather than dropping out of the order.
+        _accounts:
+          (accountsByDirectoryId[entry.id]?.length ?? 0) + (apiAccountsByDirectoryId[entry.id]?.length ?? 0),
+        _tcs: entry.tcsSupport,
+        _live: live?.connection?.status ?? null,
+      })),
+    [directory, accountsByDirectoryId, apiAccountsByDirectoryId],
+  );
+  const sort = useSort(sortRows, '_name', 'asc');
+
   if (accountsQuery.isLoading) {
     return <div className={styles.page}><LoadingSkeleton variant="card" count={2} /></div>;
   }
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <h1>Brokers
-          <PageInfoPopover label="About this page">
-            The trading venues this app is connected to, and the accounts on them. One group per
-            <strong> broker</strong> — the server the account reports (e.g. a Pepperstone demo) —
-            because that is the venue your money sits on. A broker can be reachable over more than one
-            bridge, so the bridge number is shown per account and summarised above the table.
-            Balances are read from the broker, not calculated here.
-            <br /><br />
-            The <strong>Broker Directory</strong> above lists venues this app does not hold an
-            account on yet, with what each one charges and how far TCS supports it. Regions were
-            checked against each broker&apos;s own UK site; a fee shown as &quot;check the
-            broker&quot; means the rate was not verified and is deliberately not guessed at.
-            <br /><br />
-            Looking for what a broker can TRADE (symbol coverage and classes)? That is the
-            <strong> Broker Catalogue</strong> in the Status area. Registration details for each
-            vendor, including MT5, are on <strong>Vendors</strong>.
-          </PageInfoPopover>
-        </h1>
-      </header>
+      {/* ⚠️ NO <h1> AND NO PAGE-LEVEL ℹ (owner direction, 2026-11-18).
+          *"I don't like headers at the top of pages… We know we're on the Brokers page based on the
+          menu highlight."* The title is the breadcrumb in `.main-top-row`, and the ONE ℹ is
+          rendered by the shell (`MainTopInfo`) at its top-right, in line with those breadcrumbs.
+          This page contributes the explanation (VIEW_EXPLANATIONS['brokers']) and the live figures
+          below (PageInfoSlotContent) — it does not decide where either appears. */}
+      <PageInfoSlotContent>
+        <p className={styles.infoStat}>
+          {directory.length} venue{directory.length === 1 ? '' : 's'} ·{' '}
+          {tradeableCount} tradeable in TCS
+        </p>
+        <p className={styles.infoStat}>
+          Expand a row for accounts, fees and API. {accounts.length} account
+          {accounts.length === 1 ? '' : 's'} currently registered.
+        </p>
+      </PageInfoSlotContent>
 
       {/* An action failure is shown HERE, above the directory, so it is not buried in the row that
           caused it — the row may be several accordions down, and a failed removal leaves the account
@@ -318,40 +341,45 @@ export default function BrokersPage() {
           Enter/Space operates it, and the state is announced. A clickable <tr> would need the same
           three attributes and still would not be focusable. */}
       <section className={styles.broker} aria-label="Broker directory">
-        <div className={styles.brokerHead}>
-          <h2 className={styles.brokerName}>Broker directory</h2>
-          <span className={styles.brokerId}>
-            {directory.length} venues · {tradeableCount} tradeable in TCS
-          </span>
-          <span className={styles.brokerId}>expand a row for accounts, fees and API</span>
-          {statusQuery.isError && (
-            <span className={`${styles.chip} ${styles.chipBad}`} title="GET /api/brokers/status failed">
-              live status unavailable
-            </span>
-          )}
-          {accountsQuery.isError && (
-            // Surface the failure in the HEADER, not only inside the panel — otherwise a reader
-            // who never expands MT5 sees a page that looks complete. Measured cause of this note:
-            // the old page's error state was only reachable by scrolling.
-            <span className={`${styles.chip} ${styles.chipBad}`} title="GET /api/providers/mt5/accounts failed">
-              accounts unavailable
-            </span>
-          )}
-        </div>
+        {/* ⚠️ NO `<h2>Broker directory</h2>` AND NO STATS LINE HERE (owner direction, 2026-11-18).
+            *"This table has two headers in a way, it's silly… the additional line 'Broker directory'
+            is like another header that isn't needed."* A section heading that restates the page's
+            own name adds a second title to a page whose identity is already the nav highlight and
+            the breadcrumb. The counts now live in the ℹ (PageInfoSlotContent above).
+            Only ALARMS remain here: a failed read must be visible without opening anything. The
+            wrapper is conditional because an empty flex row renders as a thin bar — the same defect
+            `TopRowSlotHost` was fixed for. */}
+        {(statusQuery.isError || accountsQuery.isError) && (
+          <div className={styles.brokerHead}>
+            {statusQuery.isError && (
+              <span className={`${styles.chip} ${styles.chipBad}`} title="GET /api/brokers/status failed">
+                live status unavailable
+              </span>
+            )}
+            {accountsQuery.isError && (
+              // Surface the failure in the HEADER, not only inside the panel — otherwise a reader
+              // who never expands MT5 sees a page that looks complete. Measured cause of this note:
+              // the old page's error state was only reachable by scrolling.
+              <span className={`${styles.chip} ${styles.chipBad}`} title="GET /api/providers/mt5/accounts failed">
+                accounts unavailable
+              </span>
+            )}
+          </div>
+        )}
 
         <div className={styles.tableWrap}>
           <table className="brk-table">
             <thead>
               <tr>
-                <th scope="col">Broker</th>
-                <th scope="col">Regions</th>
-                <th scope="col">Accounts</th>
-                <th scope="col">TCS support</th>
-                <th scope="col">Live status</th>
+                <SortableTh col="_name" label="Broker" api={sort} buttonClassName="th-sort" firstDir="asc" />
+                <SortableTh col="_regions" label="Regions" api={sort} buttonClassName="th-sort" firstDir="asc" />
+                <SortableTh col="_accounts" label="Accounts" api={sort} buttonClassName="th-sort" />
+                <SortableTh col="_tcs" label="TCS support" api={sort} buttonClassName="th-sort" firstDir="asc" />
+                <SortableTh col="_live" label="Live status" api={sort} buttonClassName="th-sort" firstDir="asc" />
               </tr>
             </thead>
             <tbody>
-              {directory.map(({ entry, live }) => {
+              {sort.sorted.map(({ entry, live }) => {
                 const held = accountsByDirectoryId[entry.id] ?? [];
                 const apiHeld = apiAccountsByDirectoryId[entry.id] ?? [];
                 const open = expanded.has(entry.id);

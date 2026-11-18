@@ -2010,10 +2010,48 @@ button.nav-active {
   white-space: nowrap;
 }
 
-/* Hide page-level h1 — title is now in main-top-row */
-.main-stage h1 {
+/* Hide page-level h1 — the title belongs to the breadcrumb in `.main-top-row`.
+   ⚠️ DOUBLED CLASS ON PURPOSE (2026-11-18). Written as `.main-stage h1` it had the same specificity
+   as a page's own `.header h1` (0,1,1), so SOURCE ORDER decided — and 34 page stylesheets re-declared
+   `display` on `h1`, which un-hid the title. Measured on /trading212/brokers: the `<h1>` computed
+   `display: flex`, and `accounts.module.css` carried the comment "the page title is hidden
+   app-wide (index.css)" immediately above the rule that showed it. A rule any page can silently
+   reverse is not a rule.
+
+   ⚠️ `:not(.is-subject)` IS NOT DECORATION — it protects pages whose heading is DATA, not a title:
+   the symbol ticker, a bot's name. `.main-stage.main-stage h1:not(.is-subject)` leaves those entirely
+   alone, so their own stylesheet still styles them and the rule cannot silently delete the subject of
+   a page. Measured 2026-11-18: SymbolPage (`{symbol}`), SymbolDetailPage (`{sym.ticker}`),
+   SymbolFocusPage (`{data.ticker}`), ViewStrategyPage (`{bot.name}`), FeatureSkeletonPage (`{title}`).
+   A NEW page heading that carries data takes the class; a NEW page title takes none and is hidden —
+   and `scripts/validate-page-chrome.cjs` fails the build on any new `<h1>` either way. */
+.main-stage.main-stage h1:not(.is-subject) {
   display: none;
 }
+
+/* ── Sortable table header — the ONE button style for click-to-sort ─────────────────────────────
+   Used by `SortableTh` from `src/core/use-sort.jsx` (pass `buttonClassName="th-sort"`). The ordering
+   rule — nulls last, numeric vs text, `aria-sort` vocabulary — lives in that hook, so a table only
+   decides which columns sort; it never re-implements the comparison. */
+.th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.th-sort:hover { color: var(--accent); }
+.th-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.th-sort span { font-size: 0.6rem; opacity: 0.55; }
+.th-sort--on { color: var(--ink); }
+.th-sort--on span { opacity: 1; color: var(--accent); }
 
 /* ── Scroll-Driven Animation Utility ── */
 @supports (animation-timeline: view()) {
