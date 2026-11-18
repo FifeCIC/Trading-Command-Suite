@@ -416,6 +416,32 @@ export class Mt5ConnectionManager {
     return { ok, ...data };
   }
 
+  /**
+   * removeAccount() — remove a configured account from ONE bridge's `accounts.json`.
+   *
+   * ⚠️ `brokerId` is REQUIRED for an unambiguous delete. `number` is the 1-based index of the
+   * account within a single bridge's config, so the same `number` exists on every bridge and means
+   * a different login on each. The old controller call posted `number` to `this.BRIDGE_URL` (a
+   * module-level constant = the default bridge), so removing account 1 always edited broker 2's
+   * config no matter which bridge the row came from — the same defect #1033 found in the position
+   * read, except this one WRITES.
+   *
+   * The bridge does the actual file edit and reconnects; this only routes and invalidates the
+   * account cache so the next `getAccounts()` reflects the removal instead of a stale 30s snapshot.
+   */
+  async removeAccount(number: number, brokerId?: number) {
+    const url = this.getUrl(brokerId);
+    const res = await fetch(`${url}/accounts/remove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number }),
+      signal: AbortSignal.timeout(5000),
+    });
+    const data = await res.json().catch(() => ({}));
+    this.cacheAccounts = [];
+    return { ok: res.ok, ...data };
+  }
+
   async testAccount(login: string, password: string, server: string, brokerId?: number) {
     const { ok, data } = await this.fetch('/accounts/test', {
       method: 'POST', body: JSON.stringify({ login, password, server }),

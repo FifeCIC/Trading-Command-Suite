@@ -34,6 +34,9 @@ import { maxHoldExpired } from './max-hold';
 // ⚠️ The unmonitored-hole threshold, extracted so it has ONE definition and a test that can fail
 // (#1286). Its guard used to skip the entry bar, so the hole right after entry went unmeasured.
 import { isBarHole } from './bar-gap';
+// ⚠️ The bot's simulated trailing stop, translated into the engine's `StopPlan` (#1294). Set on 3 of
+// 64 active bots and referenced zero times by this file before 2026-11-17.
+import { simTslPlan } from './sim-tsl';
 import { resolveFixedUnits } from './fixed-units';
 import { signalProfitFactor as signalProfitFactorOf, tradeProfitFactor as tradeProfitFactorOf } from './profit-factor';
 import {
@@ -529,6 +532,21 @@ export interface BotForBacktest {
    * `entry + maxHoldHours` with reason `SYSTEM_TIME_STOP`.
    */
   maxHoldHours?: number | null;
+  /**
+   * The bot's SIMULATED TRAILING STOP (#1294).
+   *
+   * ⚠️ Set on **3 of 64 active bots** (measured 2026-11-17) and referenced **zero** times by the
+   * backtester, so a bot the UI presents as trail-protected produced backtests with no trail at all —
+   * every `TRAIL` exit in the stored population came from a hand-passed `stopPlan` override.
+   *
+   * The mechanism already existed (`StopPlan`); only the wiring was missing, which is why this is a
+   * bug fix restoring intended behaviour and not a maths change.
+   */
+  simTslEnabled?: boolean | number | null;
+  /** Favourable excursion (%) at which the trail takes over — maps to `StopPlan.lockAtPct`. */
+  simTslActivationPct?: number | null;
+  /** How far (%) the stop trails behind the best price — maps to `StopPlan.trailPct`. */
+  simTslDistancePct?: number | null;
   baseSize?: number | null;
   mode: string;
   active: boolean;
@@ -638,6 +656,24 @@ export function mergeBotConfig(
     // this change measured a trade population with no time stop. They are not comparable with new
     // runs, and `caveats` says so on every bot-driven result.
     maxHoldHours: pick(request.maxHoldHours, bot.maxHoldHours, 'maxHoldHours'),
+    // ⚠️ CARRIED NOW, AND IT CHANGES RESULTS (#1294, 2026-11-17). `simTslEnabled` was set on **3 of
+    // 64** active bots, displayed in the UI, and read by NOTHING in the engine — `settings-inventory`
+    // recorded it as `applied: 'ignored'`. A bot the operator had turned trail-protection ON for was
+    // backtested with no trail at all, and the run's own result read as "trailing was tested".
+    //
+    // ⚠️ PRECEDENCE IS THE USUAL ONE: an explicit `stopPlan` on the request ALWAYS wins, so
+    // "this bot, but with a different trail" stays one call. `simTslPlan()` returns null rather than a
+    // half-built plan when the bot's numbers are unusable, so an enabled switch with no distance
+    // cannot silently tighten stops.
+    //
+    // ⚠️ CONSEQUENCE, stated because it is not reversible by re-running: bot-driven runs stored
+    // before this change measured a trade population with no trailing stop. They are not comparable
+    // with new runs of the same bot.
+    stopPlan: pick(request.stopPlan, simTslPlan(
+      bot.simTslEnabled,
+      bot.simTslActivationPct,
+      bot.simTslDistancePct,
+    ) ?? undefined, 'stopPlan'),
   };
 
   const baseSize = bot.baseSize ?? null;
@@ -1192,8 +1228,20 @@ export class BacktestService {
    */
   private async resolveExperiment(
     experimentId?: string | null,
+    protocolId?: string | null,
   ): Promise<{ id: string; iteration: number } | null> {
-    if (!experimentId) return null;
+    // ⚠️ #1295 — AN UNNAMED RUN IS NOW FILED, NOT DISCARDED INTO ANONYMITY (2026-11-18).
+    // Owner: *"I'm concerned at the huge amount of tests being built and how we'll keep coming back
+    // to them… I can't afford to spend tokens for every step."* Measured: 1,722 runs existed and
+    // **13** were ever filed (0.75%), with 1,412 unfiled in one day. An unfiled run is not wrong, it
+    // is simply unfindable later — which is the same as losing it.
+    //
+    // ⚠️ THE BUCKET IS LABELLED, so it never pretends to be a deliberate comparison. Filing is by
+    // EXISTING rather than by discipline: there is no step left for anyone to forget. A caller that
+    // names an experiment still gets exactly that experiment, and its own iteration numbering.
+    if (!experimentId) {
+      return protocolId ? this.fileIntoUnfiledBucket(protocolId) : null;
+    }
     const experiment = await this.prisma.backtestExperiment.findUnique({
       where: { id: experimentId },
       select: { id: true, status: true },
@@ -1214,6 +1262,50 @@ export class BacktestService {
       _max: { iteration: true },
     });
     return { id: experimentId, iteration: (last._max.iteration ?? 0) + 1 };
+  }
+
+  /**
+   * ── #1295 — the per-protocol bucket for runs nobody named ─────────────────────────────────────
+   *
+   * ONE bucket per protocol, created on first use and appended to thereafter, so 1,700 orphan rows
+   * become a handful of findable groups rather than 1,700 findable ones.
+   *
+   * ⚠️ `createdBy: 'system'` and the label prefix are what keep this honest: a reader can tell a
+   * bucket of unnamed runs from a deliberate, hand-built comparison, and the report shows them as
+   * AUTO rather than COMPARISON. A bucket that looked like an experiment would be worse than the
+   * orphans it replaced.
+   */
+  private async fileIntoUnfiledBucket(
+    protocolId: string,
+  ): Promise<{ id: string; iteration: number } | null> {
+    const label = `Auto-filed runs (no experiment named) — ${protocolId}`.slice(0, 200);
+    try {
+      let bucket = await this.prisma.backtestExperiment.findFirst({
+        where: { protocolId, label, createdBy: 'system', status: 'running' },
+        select: { id: true },
+      });
+      if (!bucket) {
+        bucket = await this.prisma.backtestExperiment.create({
+          data: {
+            protocolId,
+            label,
+            goal: 'Runs that named no experiment, grouped so they can be found and either adopted or deleted. Not a deliberate comparison.',
+            createdBy: 'system',
+          },
+          select: { id: true },
+        });
+      }
+      const last = await this.prisma.backtestRun.aggregate({
+        where: { experimentId: bucket.id },
+        _max: { iteration: true },
+      });
+      return { id: bucket.id, iteration: (last._max.iteration ?? 0) + 1 };
+    } catch {
+      // ⚠️ FILING MUST NEVER FAIL A RUN. The measurement is the point; the folder it lands in is
+      // bookkeeping. A failure here returns null — the run is stored unfiled, exactly as before this
+      // change — rather than discarding a completed backtest because a bucket could not be created.
+      return null;
+    }
   }
 
   /**
@@ -1291,7 +1383,12 @@ export class BacktestService {
      * below catches and logs, so a bad id would otherwise discard the run silently), and the ITERATION is
      * assigned up front so the response that comes back from this call already carries it.
      */
-    const experiment = await this.resolveExperiment(request.experimentId);
+    const experiment = await this.resolveExperiment(
+      request.experimentId,
+      // #1295 — the RESOLVED protocol, so a bot-driven run is filed under the protocol it actually
+      // scored rather than left unnamed because the caller passed a botId instead.
+      (resolved.request.protocolId as string | undefined) ?? null,
+    );
 
     const {
       symbol: requestSymbol,

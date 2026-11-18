@@ -145,6 +145,49 @@
 
 .accountNo { margin-left: 0.4rem; font-size: var(--text-xs); color: var(--text-dim); }
 
+/* ── Account management actions ──────────────────────────────────────────────────────────────
+   One quiet button per row. `Remove` is not styled as a filled destructive button on purpose:
+   for an API-connected account it is an ARCHIVE, not a deletion, and a red "DELETE" would promise
+   something the control cannot do. The confirm dialog carries the consequence. */
+.removeBtn,
+.restoreBtn {
+  /* 44×44 is the accessibility floor (WCAG 2.5.5), and it is a literal because no height token
+     exists — `--tap-target` is not defined, and a `var()` with a fallback is still an undefined
+     reference the CSS validator fails on. */
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.15rem 0.6rem;
+  font: inherit;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.removeBtn:hover:not(:disabled) {
+  color: var(--risk-critical);
+  border-color: var(--risk-critical);
+}
+
+.restoreBtn:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+.removeBtn:disabled,
+.restoreBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.removeBtn:focus-visible,
+.restoreBtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ── Vendors page ────────────────────────────────────────────────────────────────────────────── */
 .tableWrap {
   overflow-x: auto;

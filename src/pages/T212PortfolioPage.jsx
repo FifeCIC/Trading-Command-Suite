@@ -399,6 +399,38 @@ export default function T212PortfolioPage() {
   const summary = account.data?.account;
   const positions = account.data?.positions || [];
 
+  /*
+   * ── WHICH ACCOUNT ARE THESE ROWS FROM? (2026-11-18) ─────────────────────────────────────────
+   *
+   * ⚠️ THE TITLE USED TO BE A GUESS FROM THE MODE, AND IT WAS WRONG. `investTitle` was derived from
+   * `investActive` ('demo' when the demo key is connected) while the ROWS come from `/validate`, which
+   * returns every `provider='trading212'` row regardless of account. Measured: the table showed 17
+   * Invest (LIVE) holdings — verified directly against the broker — under the heading "Practice
+   * (Demo)". The owner reported it as *"symbols that I do not have in any of my accounts"*, which is
+   * exactly what a mislabelled account looks like.
+   *
+   * So the label now comes from the rows' own `accountId` tag. `null` means the source did not say,
+   * and is stated as "Trading212 (account not recorded)" rather than defaulting to either account —
+   * a guess here is what produced the defect.
+   */
+  const rowAccountIds = [...new Set(
+    positions.map((p) => p.accountId).filter((v) => v != null && v !== ''),
+  )];
+  const accountLabelFor = (accountId) => {
+    if (!accountId) return 'Trading212 (account not recorded)';
+    if (/demo|practice|paper/i.test(accountId)) return 'Practice (Demo)';
+    if (/isa/i.test(accountId)) return 'Stocks ISA';
+    if (/live/i.test(accountId)) return 'Invest (Live)';
+    return accountId;
+  };
+  const mixedAccounts = rowAccountIds.length > 1;
+  // The heading states the single account when there is one, and is neutral when the rows disagree.
+  const importedTitle = rowAccountIds.length === 0
+    ? 'Trading212'
+    : mixedAccounts
+      ? `Trading212 (${rowAccountIds.length} accounts)`
+      : accountLabelFor(rowAccountIds[0]);
+
   /**
    * valueCost — the ONE money figure this page derives, so the tiles reconcile.
    *
@@ -414,6 +446,33 @@ export default function T212PortfolioPage() {
     : null;
   const trades = Array.isArray(history.data) ? history.data : (history.data?.trades || []);
   const lastUpdated = account.dataUpdatedAt || history.dataUpdatedAt || Date.now();
+
+  /*
+   * ── How old is the Trading212 SNAPSHOT? (2026-11-18) ─────────────────────────────────────────
+   *
+   * ⚠️ `lastUpdated` above is `dataUpdatedAt` — WHEN THIS PAGE LAST FETCHED, not when the data was
+   * captured. It therefore always reads "Updated now", which is exactly the reassurance that hid a
+   * months-old snapshot. These two derived values describe the DATA, and are used beside the row
+   * count so a stale capture cannot pass for a live account read.
+   *
+   * `dataAgeSec` is computed server-side from `Position.updatedAt`; `refreshedSec` was deliberately
+   * not used (in-memory, resets on restart — see trading212-import.service.ts).
+   */
+  const dataAgeSec = account.data?.account?.dataAgeSec;
+  const importedCachedFrom = account.data?.account?.cachedFrom ?? null;
+  const importedAgeLabel = typeof dataAgeSec === 'number' && Number.isFinite(dataAgeSec)
+    ? (dataAgeSec < 90
+      ? 'just now'
+      : dataAgeSec < 3600
+        ? `${Math.round(dataAgeSec / 60)} min ago`
+        : dataAgeSec < 86400
+          ? `${Math.round(dataAgeSec / 3600)} h ago`
+          : `${Math.round(dataAgeSec / 86400)} d ago`)
+    : (positions.length > 0 ? 'age unknown' : null);
+  // 6 hours is the point at which "you are looking at a snapshot" stops being a technicality on an
+  // open position. Not a trading threshold — a display honesty boundary.
+  const importedAgeStale = typeof dataAgeSec === 'number' && Number.isFinite(dataAgeSec) && dataAgeSec > 6 * 3600;
+
   const isaData = isa.data || {};
   const isaPositions = Array.isArray(isaData.positions) ? isaData.positions : [];
 
@@ -479,7 +538,7 @@ export default function T212PortfolioPage() {
           key: 'inv-' + (p.id || p.ticker || list.length),
           source: 't212',
           ticker: p.ticker || p.symbol,
-          account: investTitle,
+          account: accountLabelFor(p.accountId) || investTitle,
           isDemo: demoFlag(p.accountId, p.provider),
           side: p.side || null,
           quantity: qty,
@@ -620,7 +679,7 @@ export default function T212PortfolioPage() {
       <section className="t212p-section">
         <div className="t212p-section-head">
           <h2>
-            {investActive ? `${investTitle} — Account Summary` : 'Account Summary'}
+            {positions.length > 0 ? `${importedTitle} — Account Summary` : 'Account Summary'}
             <PageInfoPopover>
               Unified account overview — enable or disable each account (and each Live / Demo
               category) in ⚙ Screen Options → Accounts &amp; Totals to control exactly what is
@@ -733,6 +792,29 @@ export default function T212PortfolioPage() {
             <span className="t212p-hint">
               {mt5Rows.length} on MT5 · {combinedPositions.length - mt5Rows.length} imported
             </span>
+            {/*
+              ⚠️ A STALE SNAPSHOT MUST NOT READ AS CURRENT HOLDINGS (2026-11-18).
+
+              Owner: *"The table has numerous symbols that I do not have in any of my accounts."*
+              They were right that the rows did not match the account, and the reason was not demo
+              data: the Trading212 rows are a DB SNAPSHOT written by an import, and nothing on this
+              page said WHEN it was taken or that it is not a live read. A 3-month-old snapshot and a
+              request made 2 seconds ago rendered identically.
+
+              `dataAgeSec` is computed server-side from `Position.updatedAt` — the true age of the
+              rows — because `refreshedSec` comes from an in-memory Map that resets whenever the API
+              restarts. `null` means the age could not be determined, which is stated as
+              "age unknown" rather than shown as fresh.
+            */}
+            {importedAgeLabel && (
+              <span
+                className={`t212p-hint${importedAgeStale ? ' t212p-hint--stale' : ''}`}
+                title={`Trading212 holdings are a stored snapshot of the account, not a live read. Captured ${importedAgeLabel}${importedCachedFrom ? ` from account ${importedCachedFrom}` : ''}. Re-import to refresh; until then these rows may list positions the account no longer holds.`}
+              >
+                T212 snapshot: {importedAgeLabel}
+                {importedAgeStale ? ' — may be out of date, re-import' : ''}
+              </span>
+            )}
             {mt5Rows.some((p) => p.pnl > 0) && (
               <button
                 type="button"

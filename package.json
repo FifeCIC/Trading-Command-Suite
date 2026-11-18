@@ -141,6 +141,8 @@
     "report:profit-taking-detail": "node ./nest/scripts/profit-taking-detail.cjs",
     "report:strategy-ranking": "node ./scripts/rank-strategies-scale-free.cjs",
     "report:symbol-movement": "node ./scripts/report-symbol-movement.cjs",
+    "report:experiments": "node scripts/report-experiments.cjs",
+    "report:backtest-experiments": "node scripts/report-experiments.cjs --backtest",
     "validate:symbol-refs": "node ./scripts/validate-symbol-references.cjs",
     "validate:symbol-refs:strict": "node ./scripts/validate-symbol-references.cjs --strict",
     "measure:score-thresholds": "node ./nest/scripts/align-scoring-strategy-thresholds.cjs",

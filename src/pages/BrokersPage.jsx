@@ -31,8 +31,8 @@
  *   empty list   → "no accounts", which is information
  */
 import { Fragment, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiGet, apiPost, apiDelete } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -89,6 +89,69 @@ export default function BrokersPage() {
     retry: 1,
   });
 
+  /**
+   * API-connected accounts — Trading212 and Capital.com.
+   *
+   * ⚠️ A DIFFERENT SOURCE FROM THE MT5 TABLE, deliberately. These accounts are not bridges; they are
+   * credentials in `nest/.env` read by an adapter. `GET /api/portfolio/accounts` is the only endpoint
+   * that knows about them, and it is also the one that knows which have been archived (`removed`).
+   *
+   * NOT `.catch(() => null)`: an empty account list and a failed read must not render the same, or a
+   * broker that answered nothing would be indistinguishable from one that is not configured.
+   */
+  const portfolioAccountsQuery = useQuery({
+    queryKey: ['brokers-portfolio-accounts'],
+    queryFn: () => apiGet('/api/portfolio/accounts'),
+    refetchInterval: REFRESH_MS,
+    retry: 1,
+  });
+
+  const queryClient = useQueryClient();
+  const invalidateAccounts = () => {
+    queryClient.invalidateQueries({ queryKey: ['brokers-accounts'] });
+    queryClient.invalidateQueries({ queryKey: ['brokers-portfolio-accounts'] });
+    // The portfolio page reads the same store — a removal made here must not linger there.
+    queryClient.invalidateQueries({ queryKey: ['portfolio-accounts'] });
+  };
+
+  /**
+   * Remove an MT5 account FOR REAL — at one bridge.
+   *
+   * ⚠️ `brokerId` is required, not optional sugar. `number` is the account's index inside a single
+   * bridge's `accounts.json`, so it names a DIFFERENT login on each bridge. The controller used to
+   * post it to the default bridge only, which meant removing row "account 1" edited broker 2's config
+   * no matter which bridge the row came from.
+   *
+   * ⚠️ The success test is the RESPONSE BODY, not `res.ok`. The route returns 200 with
+   * `{ success: false, error }` when the bridge refuses, so a status-code-only check would report a
+   * failed deletion as done — and the row would reappear on the next poll with no explanation.
+   */
+  const removeMt5 = useMutation({
+    mutationFn: ({ number, brokerId }) =>
+      apiPost('/api/providers/mt5/accounts/remove', { number, brokerId }),
+    onSuccess: (res) => {
+      if (res?.ok === false || res?.success === false) {
+        window.alert(`The bridge refused to remove the account:\n\n${res?.error ?? 'no reason given'}`);
+        return;
+      }
+      invalidateAccounts();
+    },
+    onError: (err) => window.alert(`Remove failed: ${err?.message ?? 'unknown error'}`),
+  });
+
+  /** Archive an API-connected account (Trading212 / Capital.com). Not a deletion at the broker. */
+  const removeAccount = useMutation({
+    mutationFn: (id) => apiDelete(`/api/portfolio/accounts/${encodeURIComponent(id)}`),
+    onSuccess: invalidateAccounts,
+    onError: (err) => window.alert(`Remove failed: ${err?.message ?? 'unknown error'}`),
+  });
+
+  const restoreAccount = useMutation({
+    mutationFn: (id) => apiPost(`/api/portfolio/accounts/${encodeURIComponent(id)}/restore`),
+    onSuccess: invalidateAccounts,
+    onError: (err) => window.alert(`Restore failed: ${err?.message ?? 'unknown error'}`),
+  });
+
   /** catalogue (static reference) ⟕ live status, joined on adapter id. */
   const directory = useMemo(() => {
     const live = new Map((statusQuery.data?.brokers ?? []).map((b) => [b.id, b]));
@@ -108,13 +171,38 @@ export default function BrokersPage() {
   /**
    * Which directory row holds which accounts.
    *
-   * ⚠️ EVERY account currently comes from `GET /api/providers/mt5/accounts`, so all of them belong
-   * to the `mt5` row. This is stated as an explicit map rather than "attach accounts to whichever
-   * row looks like a broker": when a second broker gains an account endpoint (Capital.com, T212),
-   * it MUST be added here deliberately. Guessing the owner would silently put one broker's money
-   * under another broker's row — the exact class of error this page exists to prevent.
+   * ⚠️ MT5 accounts come from `GET /api/providers/mt5/accounts`; Trading212 and Capital.com come
+   * from `GET /api/portfolio/accounts`. The join is an EXPLICIT map, not a guess: "attach accounts to
+   * whichever row looks like a broker" would silently put one broker's money under another broker's
+   * row — the exact class of error this page exists to prevent. A new broker must be added here.
    */
   const accountsByDirectoryId = useMemo(() => ({ mt5: accounts }), [accounts]);
+
+  /**
+   * Non-MT5 accounts, keyed by directory id, with the archived ones held back.
+   *
+   * ⚠️ `removed` accounts are dropped from the panel and listed in their own section instead. Leaving
+   * them in the venue panel would make "removed" look like "switched off" — two states, one
+   * appearance — and the only way to tell them apart would be a flag the reader has to notice.
+   */
+  const apiAccountsByDirectoryId = useMemo(() => {
+    const API_BROKER_TO_DIRECTORY = { Trading212: 'trading212', 'Capital.com': 'capital.com' };
+    const out = {};
+    for (const cat of portfolioAccountsQuery.data?.categories ?? []) {
+      for (const a of cat.accounts ?? []) {
+        if (a.removed) continue;
+        const dirId = API_BROKER_TO_DIRECTORY[a.broker];
+        if (!dirId) continue;
+        (out[dirId] ??= []).push(a);
+      }
+    }
+    return out;
+  }, [portfolioAccountsQuery.data]);
+
+  const removedAccounts = useMemo(
+    () => (Array.isArray(portfolioAccountsQuery.data?.removed) ? portfolioAccountsQuery.data.removed : []),
+    [portfolioAccountsQuery.data],
+  );
 
   // Expanded row ids. A Set, because the reader may have several open at once and the order they
   // opened them in is not information.
@@ -221,6 +309,7 @@ export default function BrokersPage() {
             <tbody>
               {directory.map(({ entry, live }) => {
                 const held = accountsByDirectoryId[entry.id] ?? [];
+                const apiHeld = apiAccountsByDirectoryId[entry.id] ?? [];
                 const open = expanded.has(entry.id);
                 const panelId = `broker-panel-${entry.id}`;
                 return (
@@ -416,8 +505,11 @@ export default function BrokersPage() {
                                     <th scope="col">Type</th>
                                     <th scope="col">Connection</th>
                                     <th scope="col">Role</th>
+                                    <th scope="col">Currency</th>
                                     <th scope="col" className="num">Balance</th>
                                     <th scope="col" className="num">Equity</th>
+                                    <th scope="col">Last seen</th>
+                                    <th scope="col">Actions</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -442,17 +534,131 @@ export default function BrokersPage() {
                                         {a.connected ? 'connected' : 'not connected'}
                                       </td>
                                       <td>{a.active ? <strong>active</strong> : <span className={styles.muted}>standby</span>}</td>
+                                      <td>{a.currency || <span className={styles.muted}>—</span>}</td>
                                       <td className="num">
                                         {typeof a.balance === 'number' ? a.balance.toFixed(2) : <span className={styles.muted}>—</span>}
                                       </td>
                                       <td className="num">
                                         {typeof a.equity === 'number' ? a.equity.toFixed(2) : <span className={styles.muted}>—</span>}
                                       </td>
+                                      <td>{a.lastSeen ? fmtWhen(a.lastSeen) : <span className={styles.muted}>—</span>}</td>
+                                      <td>
+                                        {/* A REAL removal: this rewrites the bridge's own config, so the
+                                            account stops being connected — it is not hidden here. */}
+                                        <button
+                                          type="button"
+                                          className={styles.removeBtn}
+                                          disabled={removeMt5.isPending}
+                                          onClick={() => {
+                                            const who = `${a.login || `#${a.number}`} (${a.server ?? 'unknown server'})`;
+                                            const sure = window.confirm(
+                                              `Remove ${who} from bridge ${a.brokerId}?\n\n` +
+                                                'This edits the bridge\'s account list, so the terminal will disconnect ' +
+                                                'this account. Restart it from the bridge if that was a mistake.',
+                                            );
+                                            if (!sure) return;
+                                            removeMt5.mutate({ number: a.number, brokerId: a.brokerId });
+                                          }}
+                                          aria-label={`Remove account ${a.login || a.number} from bridge ${a.brokerId}`}
+                                        >
+                                          Remove
+                                        </button>
+                                      </td>
                                     </tr>
                                   ))}
                                 </tbody>
                               </table>
                             </>
+                          )}
+
+                          {apiHeld.length > 0 && (
+                            <>
+                              <h3 className={styles.panelSubHead}>
+                                {apiHeld.length} account{apiHeld.length === 1 ? '' : 's'} ·{' '}
+                                {apiHeld.filter((a) => a.connected).length} connected
+                              </h3>
+                              {/* ⚠️ THE SCOPE STATEMENT IS PART OF THE CONTROL, not a footnote. There is no
+                                  broker API to delete a Trading212/Capital account, so this button cannot
+                                  do what "delete" means elsewhere. Saying so beside it is the difference
+                                  between a removal and a hidden live account. */}
+                              <p className={styles.panelNote}>
+                                These are read with an API key in <code>nest/.env</code>, not through a
+                                bridge. <strong>Remove</strong> takes the account out of this app&apos;s
+                                lists and totals — it does <strong>not</strong> close it at the broker,
+                                and the key stays in the environment until it is deleted there. To remove
+                                it completely, delete its key from <code>nest/.env</code>.
+                              </p>
+                              <table className="brk-table">
+                                <thead>
+                                  <tr>
+                                    <th scope="col">Account</th>
+                                    <th scope="col">Kind</th>
+                                    <th scope="col">Category</th>
+                                    <th scope="col">Connection</th>
+                                    <th scope="col">In totals</th>
+                                    <th scope="col" className="num">Positions</th>
+                                    <th scope="col" className="num">Value</th>
+                                    <th scope="col">Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {apiHeld.map((a) => (
+                                    <tr key={a.id}>
+                                      <td>
+                                        <strong>{a.label}</strong>
+                                        <span className={styles.accountNo}>{a.id}</span>
+                                      </td>
+                                      <td>{a.kind}</td>
+                                      <td>
+                                        <span className={`${styles.chip} ${a.category === 'live' ? styles.chipLive : styles.chipDemo}`}>
+                                          {a.category}
+                                        </span>
+                                      </td>
+                                      <td>
+                                        <span className={a.connected ? styles.dotOn : styles.dotOff} aria-hidden="true" />
+                                        {a.connected ? 'connected' : 'not connected'}
+                                        {!a.connected && a.note && <span className={styles.panelNote}>{a.note}</span>}
+                                      </td>
+                                      <td>{a.enabled ? <strong>counted</strong> : <span className={styles.muted}>excluded</span>}</td>
+                                      <td className="num">{a.positions ?? <span className={styles.muted}>—</span>}</td>
+                                      <td className="num">
+                                        {typeof a.value === 'number'
+                                          ? `${a.value.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${a.currency ?? ''}`
+                                          : <span className={styles.muted}>—</span>}
+                                      </td>
+                                      <td>
+                                        <button
+                                          type="button"
+                                          className={styles.removeBtn}
+                                          disabled={removeAccount.isPending}
+                                          onClick={() => {
+                                            const sure = window.confirm(
+                                              `Remove ${a.label} from this app?\n\n` +
+                                                'It will stop appearing in the portfolio and in totals. The account ' +
+                                                'still exists at Trading212 and its API key is unchanged — this is ' +
+                                                'not a deletion. You can restore it from the Removed section.',
+                                            );
+                                            if (!sure) return;
+                                            removeAccount.mutate(a.id);
+                                          }}
+                                          aria-label={`Remove ${a.label} from this app`}
+                                        >
+                                          Remove
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </>
+                          )}
+
+                          {(entry.id === 'trading212' || entry.id === 'capital.com') && portfolioAccountsQuery.isError && (
+                            <EmptyState
+                              icon="⚠️"
+                              title="Unable to load API-connected accounts"
+                              description="The request to GET /api/portfolio/accounts failed. This is a failed read, NOT an empty account list — no account has been disconnected by this. Check the API is running."
+                            />
                           )}
 
                           {entry.id === 'mt5' && accountsQuery.isError && (
@@ -479,6 +685,68 @@ export default function BrokersPage() {
           </table>
         </div>
       </section>
+
+      {/* ── REMOVED ACCOUNTS ────────────────────────────────────────────────────────────────
+          Its own section, not a filtered view of the directory. A removed account has no venue to
+          sit under in the reader's mind — the whole point is that it is out of the way — and it
+          needs exactly one action, which is to come back.
+
+          Rendered only when there is something in it, so an empty archive does not add a permanent
+          "0 removed" heading to a page that is mostly a directory. */}
+      {removedAccounts.length > 0 && (
+        <section className={styles.broker} aria-label="Removed accounts">
+          <div className={styles.brokerHead}>
+            <h2 className={styles.brokerName}>Removed accounts</h2>
+            <span className={styles.brokerId}>
+              {removedAccounts.length} hidden from the portfolio · still held at the broker
+            </span>
+          </div>
+          <div className={styles.tableWrap}>
+            <table className="brk-table">
+              <thead>
+                <tr>
+                  <th scope="col">Account</th>
+                  <th scope="col">Broker</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Connection</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {removedAccounts.map((a) => (
+                  <tr key={a.id}>
+                    <td>
+                      <strong>{a.label}</strong>
+                      <span className={styles.accountNo}>{a.id}</span>
+                    </td>
+                    <td>{a.broker}</td>
+                    <td>{a.category}</td>
+                    <td>
+                      <span className={a.connected ? styles.dotOn : styles.dotOff} aria-hidden="true" />
+                      {a.connected ? 'still reachable' : 'not reachable'}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className={styles.restoreBtn}
+                        disabled={restoreAccount.isPending}
+                        onClick={() => restoreAccount.mutate(a.id)}
+                        aria-label={`Restore ${a.label}`}
+                      >
+                        Restore
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className={styles.panelNote}>
+            Restoring puts the account back in the portfolio lists and totals. Removal never touched
+            the broker, so nothing has to be reconnected.
+          </p>
+        </section>
+      )}
     </div>
   );
 }

@@ -19,7 +19,17 @@
  *   node scripts/report-experiments.cjs --action DECIDE # only the rows needing this action
  *   node scripts/report-experiments.cjs --todo          # everything NOT running/archived
  *   node scripts/report-experiments.cjs --json          # machine-readable, for an agent
+ *   node scripts/report-experiments.cjs --backtest      # the BACKTEST experiment registry
  *   node scripts/report-experiments.cjs --self-test
+ *
+ * ⚠️ TWO REGISTRIES, ONE COMMAND (2026-11-18). `ab_test` holds LIVE A/B experiments and is served at
+ * `/api/automation/experiments` (page: `/trading/ab-strategies`). `backtest_experiment` holds
+ * HISTORICAL tuning loops and is served at `/api/backtest/experiments` — which has **no page**.
+ * Measured: 1,722 backtest runs exist and only **13** were ever filed into an experiment, so a
+ * comparison that is not registered is indistinguishable from the other 1,709 rows.
+ * `--backtest` exists so an agent or the owner can see that registry with one command instead of
+ * remembering it. It is deliberately a MODE of this tool, not a second tool: two scripts drift and
+ * only one gets the next fix.
  */
 'use strict';
 
@@ -188,8 +198,98 @@ function selfTest() {
   process.exit(fail === 0 ? 0 : 1);
 }
 
+/**
+ * The BACKTEST experiment registry (#1295).
+ *
+ * ⚠️ What this is FOR: the owner, 2026-11-18 — *"I'm concerned at the huge amount of tests being
+ * built and how we'll keep coming back to them… I can't afford to spend tokens for every step."*
+ * Measured the same day: 1,722 backtest runs, **13** filed into an experiment. An unfiled run is not
+ * wrong, it is simply unfindable later — which is the same as losing it.
+ *
+ * ⚠️ NO DECISION RULE HERE, deliberately — unlike the automation path. The automation registry serves
+ * its verdict from `experiment-decision.ts` so this script cannot disagree with the page. The backtest
+ * registry has no such rule yet, so this prints FACTS (status, runs, age) and refuses to invent a
+ * verdict. When a rule is written it belongs on the server, not here.
+ */
+// ⚠️ THE CLASSIFIER IS IMPORTED, NOT RE-IMPLEMENTED (#1295). `src/core/backtest/experiment-states.js`
+// is the ONE definition of SHELL / SINGLE / AUTO / COMPARISON, shared with the page at
+// /lab/backtest-experiments. It is ES module source loaded from this CJS script via `import()`.
+let shared = null;
+async function loadShared() {
+  if (!shared) shared = await import(pathToFileURL(path.join(__dirname, '..', 'src', 'core', 'backtest', 'experiment-states.js')).href);
+  return shared;
+}
+
+/** Thin wrapper so `--backtest-self-test` exercises the SHARED rule rather than a copy. */
+function summariseBacktest(payload) {
+  return shared.summariseExperiments(payload);
+}
+
+async function backtestSelfTest() {
+  await loadShared();
+  let pass = 0, fail = 0;
+  const t = (name, ok) => { ok ? (pass++, console.log(`  ✓ ${name}`)) : (fail++, console.log(`  ✗ ${name}`)); };
+  const mk = (runs, over = {}) => ({ id: 'x', label: 'L', protocolId: 'p', status: 'running', runs, createdAt: '2026-11-01T00:00:00Z', ...over });
+  const s = summariseBacktest({ experiments: [mk(0), mk(1), mk(5)] });
+  t('0 runs is a SHELL', s.rows[0]?.state === 'SHELL');
+  t('1 run is SINGLE', s.rows.find((r) => r.runs === 1).state === 'SINGLE');
+  t('5 runs is COMPARISON', s.rows.find((r) => r.runs === 5).state === 'COMPARISON');
+  t('a system bucket is AUTO, never COMPARISON', summariseBacktest({ experiments: [mk(900, { createdBy: 'system' })] }).rows[0].state === 'AUTO');
+  t('an AUTO bucket is not counted as a comparison', summariseBacktest({ experiments: [mk(900, { createdBy: 'system' })] }).comparisons === 0);
+  t('a null run count renders as a shell, never NaN', summariseBacktest({ experiments: [mk(null)] }).rows[0].runs === 0);
+  let threw = false;
+  try { summariseBacktest({}); } catch { threw = true; }
+  t('a payload with no array THROWS rather than rendering empty', threw);
+  console.log(`\n[backtest self-test] ${pass} passed, ${fail} failed`);
+  process.exit(fail === 0 ? 0 : 1);
+}
+
 (async () => {
   if (has('self-test')) return selfTest();
+  if (has('backtest-self-test')) return backtestSelfTest();
+
+  if (has('backtest')) {
+    const btUrl = `${BASE}/api/backtest/experiments`;
+    let btPayload;
+    try {
+      const res = await fetch(btUrl, { signal: AbortSignal.timeout(20000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      btPayload = await res.json();
+    } catch (e) {
+      console.error(`🛑 Could not read ${btUrl}: ${e.message}`);
+      console.error('   This is "cannot judge", not "no experiments". Start the API and re-run.');
+      process.exit(2);
+    }
+    if (has('json')) { console.log(JSON.stringify(btPayload, null, 2)); return; }
+
+    let out;
+    try {
+      await loadShared();
+      out = summariseBacktest(btPayload);
+    } catch (e) {
+      console.error(`🛑 ${e.message}`);
+      process.exit(2);
+    }
+
+    console.log(`\nBACKTEST EXPERIMENTS — ${out.total} total across ${out.protocols} protocol(s)`);
+    console.log(`  ${out.shells} SHELL (0 runs) · ${out.singles} SINGLE (1 run) · ${out.autos} AUTO (unfiled bucket) · ${out.comparisons} COMPARISON\n`);
+    if (!out.rows.length) {
+      console.log('  (no backtest experiment exists)\n');
+      return;
+    }
+    for (const r of out.rows) {
+      console.log(`${r.state.padEnd(11)} runs ${String(r.runs).padEnd(4)} age ${r.ageDays === null ? '?' : r.ageDays + 'd'}`.padEnd(40)
+        + ` ${r.status.padEnd(10)} ${r.protocolId}`);
+      console.log(`   ${r.label}`);
+      if (r.state === 'SHELL') console.log('   → opened and never used: fill it with a run, or close it — an empty running loop reads as work in progress');
+      if (r.state === 'SINGLE') console.log('   → one run is not a comparison: add the arm(s) it should be compared against');
+      if (r.state === 'AUTO') console.log('   → runs nobody named, grouped so they are findable (#1295): adopt a run into a real experiment, or delete the bucket when it is settled');
+      console.log('');
+    }
+    console.log('  ⚠️ Since #1295 (2026-11-18) a run that names NO experiment is auto-filed into an AUTO bucket for its protocol,');
+    console.log('     so it stays findable. AUTO is not a comparison — adopt a run into a real experiment, or delete the bucket.\n');
+    return;
+  }
 
   const url = `${BASE}/api/automation/experiments`;
   let payload;

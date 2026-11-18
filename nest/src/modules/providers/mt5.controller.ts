@@ -452,16 +452,17 @@ export class Mt5Controller {
   }
 
   @Post('accounts/remove')
-  @ApiOperation({ summary: 'Remove an MT5 account from the bridge config' })
-  async removeAccount(@Body() body: { number: number }) {
+  @ApiOperation({ summary: 'Remove an MT5 account from ONE bridge config (removes it at the terminal level)' })
+  async removeAccount(@Body() body: { number: number; brokerId?: number }) {
+    if (body?.number == null) {
+      return { success: false, error: 'number is required' };
+    }
     try {
-      const res = await fetch(`${this.BRIDGE_URL}/accounts/remove`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ number: body.number }),
-        signal: AbortSignal.timeout(5000),
-      });
-      return await res.json();
+      // ⚠️ `number` is an index INSIDE one bridge's accounts.json, so it is only meaningful with a
+      // bridge. Without `brokerId` this silently edited the default bridge's config regardless of
+      // which bridge the row came from (#1033's class of defect, but on a write path).
+      const res = await this.mt5Connection.removeAccount(body.number, body.brokerId);
+      return res;
     } catch (err: any) {
       return { success: false, error: err.message || 'Bridge unreachable' };
     }

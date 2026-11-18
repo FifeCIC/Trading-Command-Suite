@@ -70,6 +70,17 @@ const honouredBotFields = DECLARED.botFields.filter((f) => f.applied === 'honour
 const ignoredBotFields = DECLARED.botFields.filter((f) => f.applied === 'ignored');
 const reportedBotFields = DECLARED.botFields.filter((f) => f.applied === 'reported-only');
 
+/**
+ * The three trailing-stop fields are HONOURED but **not** copied under their own names: `mergeBotConfig`
+ * translates them into one `StopPlan` (lockAtPct ← simTslActivationPct, trailPct ← simTslDistancePct).
+ *
+ * So they are excluded from the two generic `it.each` loops below, whose contract is "the request
+ * field of the same name reaches the merged request". They get their own block, because a mapping is
+ * not a copy and pretending otherwise would make the generic loop assert something untrue.
+ */
+const SIM_TSL_KEYS = ['simTslEnabled', 'simTslActivationPct', 'simTslDistancePct'];
+const copiedHonouredFields = honouredBotFields.filter((f) => !SIM_TSL_KEYS.includes(f.key));
+
 describe('passesBotEntryBar — the bot’s own entry gate (#1136)', () => {
   const { passesBotEntryBar } = require('./backtest.service');
 
@@ -99,7 +110,7 @@ describe('passesBotEntryBar — the bot’s own entry gate (#1136)', () => {
 });
 
 describe('settings inventory — the bot fields a backtest HONOURS, proven behaviourally', () => {
-  it.each(honouredBotFields.map((f) => f.key))(
+  it.each(copiedHonouredFields.map((f) => f.key))(
     'an explicit request value for %s reaches the merged request',
     (field) => {
       // The request supplies a value different from the bot's, so `pick()` must take the request's.
@@ -114,7 +125,7 @@ describe('settings inventory — the bot fields a backtest HONOURS, proven behav
     },
   );
 
-  it.each(honouredBotFields.map((f) => f.key))(
+  it.each(copiedHonouredFields.map((f) => f.key))(
     'with no request override, %s is taken from the bot',
     (field) => {
       const merged = mergeBotConfig({ botId: 'bot-1' } as any, bot());
@@ -124,15 +135,46 @@ describe('settings inventory — the bot fields a backtest HONOURS, proven behav
     },
   );
 
-  it('the honoured set is exactly symbol, timeframe, protocolId, slPct, tpPct, minComposite and maxHoldHours', () => {
+  describe('the simulated trailing stop is MAPPED, not copied (#1294)', () => {
+    it('translates the bot fields into one StopPlan', () => {
+      const merged = mergeBotConfig({ botId: 'bot-1' } as any, bot());
+      // bot(): simTslEnabled true, activation 1, distance 0.5
+      expect(merged.request.stopPlan).toEqual({ lockAtPct: 1, trailPct: 0.5 });
+    });
+
+    it('produces NO plan when the bot has the switch off', () => {
+      const merged = mergeBotConfig({ botId: 'bot-1' } as any, bot({ simTslEnabled: false }));
+      expect(merged.request.stopPlan).toBeUndefined();
+    });
+
+    it('an explicit request stopPlan WINS over the bot’s fields', () => {
+      const explicit = { lockAtPct: 3, trailPct: 2 };
+      const merged = mergeBotConfig({ botId: 'bot-1', stopPlan: explicit } as any, bot());
+      expect(merged.request.stopPlan).toEqual(explicit);
+      expect(merged.drivenBy.overridden).toContain('stopPlan');
+    });
+
+    it('refuses a half-built plan rather than defaulting a missing number', () => {
+      // Enabled, but no distance: a default here would tighten stops the owner never asked for.
+      const merged = mergeBotConfig({ botId: 'bot-1' } as any, bot({ simTslDistancePct: null }));
+      expect(merged.request.stopPlan).toBeUndefined();
+    });
+  });
+
+  it('the honoured set is exactly symbol, timeframe, protocolId, slPct, tpPct, minComposite, maxHoldHours and the three simTsl fields', () => {
     // ⚠️ THE CANARY FOR A SILENT WIDENING **AND** FOR A SILENT REMOVAL. `minComposite` joined this set
     // on 2026-10-22 (#1136): the bot's own entry bar now gates entries, so a run cannot take a trade
     // the bot would skip. `maxHoldHours` joined it on 2026-11-16 (#1136): the bot's own time stop now
-    // closes a trade at `entry + limit`, so a run cannot hold a trade the bot would have closed. Both
-    // were set on most active bots and read by nothing. If either wire is ever removed, this fails
-    // rather than the inventory quietly reverting to "ignored".
+    // closes a trade at `entry + limit`, so a run cannot hold a trade the bot would have closed. The
+    // three `simTsl*` fields joined it on 2026-11-17 (#1294): a bot shown as trail-protected in the UI
+    // was backtested with no trail at all, because `StopPlan` existed but nothing supplied it.
+    // All three groups were set on real bots and read by nothing. If any wire is ever removed, this
+    // fails rather than the inventory quietly reverting to "ignored".
     expect(honouredBotFields.map((f) => f.key).sort()).toEqual(
-      ['maxHoldHours', 'minComposite', 'protocolId', 'slPct', 'symbol', 'timeframe', 'tpPct'].sort(),
+      [
+        'maxHoldHours', 'minComposite', 'protocolId', 'simTslActivationPct', 'simTslDistancePct',
+        'simTslEnabled', 'slPct', 'symbol', 'timeframe', 'tpPct',
+      ].sort(),
     );
   });
 });

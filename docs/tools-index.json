@@ -327,7 +327,9 @@
       "category": "database",
       "purpose": "print the REAL columns and types for one or more tables, from the live database.",
       "selfTest": true,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "seed-arch.cjs",
@@ -581,7 +583,9 @@
       "category": "tool",
       "purpose": "© 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite",
       "selfTest": true,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "delete-directive.cjs",
@@ -846,7 +850,9 @@
       "category": "tool",
       "purpose": "#613 — convert MyISAM tables to InnoDB, one at a time, verifying every step.",
       "selfTest": false,
-      "reaches": null
+      "reaches": [
+        "docs"
+      ]
     },
     {
       "name": "migrate-strategy-keys.cjs",
@@ -965,7 +971,7 @@
       "purpose": "\"which experiments are finished, and what do I DO about it?\"",
       "selfTest": false,
       "reaches": [
-        "docs"
+        "npm"
       ]
     },
     {

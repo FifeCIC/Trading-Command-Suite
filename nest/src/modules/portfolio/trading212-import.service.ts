@@ -102,9 +102,46 @@ export class Trading212ImportService {
     this.cache.setCooldown('trading212', 60_000);
   }
 
+  /**
+   * The endpoint and credentials this service talks to, resolved from `TRADING212_MODE`.
+   *
+   * ⚠️ THIS SERVICE USED TO HARDCODE `https://live.trading212.com` (fixed 2026-11-18).
+   * `Trading212Adapter` resolves its host from `TRADING212_MODE` (default `demo`), but the import
+   * path did not — so with the app in demo mode the ADAPTER was reading the practice account while
+   * the IMPORT was writing the LIVE account's rows into the same `position` table under
+   * `provider='trading212'`. The page then labelled those rows with whichever account the mode said,
+   * which is how live holdings end up displayed as "Practice (Demo)" — and how a reader sees symbols
+   * that are not in the account the label names.
+   *
+   * ⚠️ Mirrors `Trading212Adapter.resolveAccount()`. Two resolutions of one fact is the duplication
+   * this repo keeps paying for; the pairing is asserted by a test rather than trusted.
+   */
+  private resolveEndpoint(): { baseUrl: string; key: string; secret: string; label: string } | null {
+    const mode = (process.env.TRADING212_MODE || '').toLowerCase();
+    if (mode === 'demo') {
+      const key = process.env.TRADING212_DEMO_API_KEY || '';
+      if (!key) return null;
+      return {
+        key,
+        secret: process.env.TRADING212_DEMO_API_SECRET || '',
+        baseUrl: process.env.TRADING212_DEMO_BASE_URL || 'https://demo.trading212.com/api/v0',
+        label: 'Practice (Demo)',
+      };
+    }
+    const key = process.env.TRADING212_LIVE_API_KEY || process.env.TRADING212_API_KEY || '';
+    if (!key) return null;
+    return {
+      key,
+      secret: process.env.TRADING212_LIVE_API_SECRET || process.env.TRADING212_API_SECRET || '',
+      baseUrl: process.env.TRADING212_LIVE_BASE_URL || 'https://live.trading212.com/api/v0',
+      label: 'Live',
+    };
+  }
+
   private getAuthHeader(): string {
-    const key = process.env.TRADING212_API_KEY || '';
-    const secret = process.env.TRADING212_API_SECRET || '';
+    const resolved = this.resolveEndpoint();
+    const key = resolved?.key || '';
+    const secret = resolved?.secret || '';
     if (key && secret) {
       return 'Basic ' + Buffer.from(`${key}:${secret}`).toString('base64');
     }
@@ -116,10 +153,11 @@ export class Trading212ImportService {
    * The import endpoint handles live sync. This keeps page loads instant and
    * prevents blank data when T212 API is slow or rate-limited.
    */
-  async validateConnection(): Promise<{ valid: boolean; account?: T212Account & { refreshedSec: number }; positions?: any[]; error?: string }> {
-    const apiKey = process.env.TRADING212_API_KEY;
-    if (!apiKey) {
-      return { valid: false, error: 'TRADING212_API_KEY not set in .env' };
+  async validateConnection(): Promise<{ valid: boolean; account?: T212Account & { refreshedSec: number; dataAgeSec: number | null; cachedFrom: string | null }; positions?: any[]; error?: string }> {
+    // ⚠️ The guard follows the CONFIGURED mode, not a fixed key name — otherwise a demo-only install
+    // reports "no API key" while the demo key it needs is sitting right there.
+    if (!this.resolveEndpoint()) {
+      return { valid: false, error: `No API key for mode '${process.env.TRADING212_MODE || 'unset'}'` };
     }
 
     if (!this.prisma.isAvailable) {
@@ -140,6 +178,29 @@ export class Trading212ImportService {
 
       const refreshedSec = this.cache.lastRefreshAgoSec('trading212');
 
+      /*
+       * ⚠️ THE REAL AGE OF THE DATA, WHICH `refreshedSec` IS NOT (added 2026-11-18).
+       *
+       * `lastRefreshAgoSec()` reads an **in-memory** Map (`ProviderCacheService`), so it resets on
+       * every API restart and measures "seconds since THIS PROCESS last imported" — not how old the
+       * rows are. After a restart it returns `Infinity` for data written a month ago, and it returns
+       * a small number for data a restart happened to precede. Reporting it as staleness would be a
+       * plausible number that is not the one asked for.
+       *
+       * The only true signal is the rows themselves: `Position.updatedAt` is `@updatedAt`, so the
+       * newest row is when this snapshot was last written. `cachedFrom` names WHICH account the rows
+       * were captured from, because a snapshot taken from one account and labelled as another is the
+       * defect this whole fix is about.
+       */
+      const newest = positions.reduce((max, p) => {
+        const t = p.updatedAt ? new Date(p.updatedAt).getTime() : 0;
+        return t > max ? t : max;
+      }, 0);
+      const dataAgeSec = newest > 0 ? Math.floor((Date.now() - newest) / 1000) : null;
+      const cachedFrom = positions.length > 0
+        ? (positions[0] as { accountId?: string | null }).accountId ?? null
+        : null;
+
       return {
         valid: true,
         account: {
@@ -150,6 +211,8 @@ export class Trading212ImportService {
           result: totalPpl,
           blocked: 0,
           refreshedSec,
+          dataAgeSec,
+          cachedFrom,
         } as any,
         positions,
       };
@@ -172,19 +235,25 @@ export class Trading212ImportService {
       return { success: false, positionsImported: 0, symbolsCreated: 0, error: `Cooldown: ${remaining}s remaining`, cooldown: true };
     }
 
-    const apiKey = process.env.TRADING212_API_KEY;
-    if (!apiKey) return { success: false, positionsImported: 0, symbolsCreated: 0, error: 'No API key' };
+    const endpoint = this.resolveEndpoint();
+    if (!endpoint) {
+      return {
+        success: false, positionsImported: 0, symbolsCreated: 0,
+        error: `No API key for mode '${process.env.TRADING212_MODE || 'unset'}' — set TRADING212_DEMO_API_KEY or TRADING212_API_KEY`,
+      };
+    }
 
     try {
       const auth = this.getAuthHeader();
-      // Fetch account
-      const accountRes = await fetch('https://live.trading212.com/api/v0/equity/account/cash', {
+      // ⚠️ `endpoint.baseUrl`, NOT a literal. See resolveEndpoint() — the hardcoded live host here
+      // is what let an import write one account's rows while the page labelled them as another.
+      const accountRes = await fetch(`${endpoint.baseUrl}/equity/account/cash`, {
         headers: { Authorization: auth },
       });
       const account: T212Account = accountRes.ok ? await accountRes.json() : null;
 
       // Fetch positions
-      const posRes = await fetch('https://live.trading212.com/api/v0/equity/portfolio', {
+      const posRes = await fetch(`${endpoint.baseUrl}/equity/portfolio`, {
         headers: { Authorization: auth },
       });
 
@@ -193,7 +262,7 @@ export class Trading212ImportService {
       }
 
       const positions: T212Position[] = await posRes.json();
-      this.logger.log(`Trading212: fetched ${positions.length} positions, account balance: ${account?.total}`);
+      this.logger.log(`Trading212 [${endpoint.label}]: fetched ${positions.length} positions, account balance: ${account?.total}`);
 
       let symbolsCreated = 0;
       // ⚠️ `side` IS IN THE RESULT SO THE WRITE IS VISIBLE. A sync that assigns a direction and
@@ -302,13 +371,13 @@ export class Trading212ImportService {
     error?: string;
     unavailable?: boolean;
   }> {
-    const apiKey = process.env.TRADING212_API_KEY;
+    const apiKey = this.resolveEndpoint()?.key;
     if (!apiKey) {
       return {
         success: false,
         trades: [],
         summary: { totalTrades: 0, winRate: 0, totalPnl: 0, bestTrade: 0, worstTrade: 0, winningTrades: 0, losingTrades: 0 },
-        error: 'TRADING212_API_KEY not configured in .env',
+        error: `No API key for mode '${process.env.TRADING212_MODE || 'unset'}'`,
         unavailable: true,
       };
     }
@@ -317,7 +386,19 @@ export class Trading212ImportService {
       const auth = this.getAuthHeader();
 
       // Trading212 orders endpoint: GET /api/v0/equity/orders
-      const res = await fetch('https://live.trading212.com/api/v0/equity/orders', {
+      // ⚠️ Resolved host, not a literal — same reason as importPortfolio(). Without it a demo-mode
+      // install read the LIVE account's trade history against the practice positions.
+      const ordersEndpoint = this.resolveEndpoint();
+      if (!ordersEndpoint) {
+        return {
+          success: false,
+          trades: [],
+          summary: { totalTrades: 0, winRate: 0, totalPnl: 0, bestTrade: 0, worstTrade: 0, winningTrades: 0, losingTrades: 0 },
+          error: `No API key for mode '${process.env.TRADING212_MODE || 'unset'}'`,
+          unavailable: true,
+        };
+      }
+      const res = await fetch(`${ordersEndpoint.baseUrl}/equity/orders`, {
         headers: { Authorization: auth },
       });
 

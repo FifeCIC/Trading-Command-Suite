@@ -117,6 +117,12 @@
 }
 .t212p-hint { font-size: 0.78rem; color: var(--ink-soft, var(--color-muted)); }
 
+/* ⚠️ STALENESS ON AN IMPORTED HOLDING IS A WARNING, NOT A MUTED CAPTION (2026-11-18).
+   The owner reported symbols in this table that are not in any account. Those T212 rows are a stored
+   snapshot, and a snapshot older than a few hours can list positions the account has since closed —
+   so it takes the warning tone rather than the same grey as the row count beside it. */
+.t212p-hint--stale { color: var(--color-warning); font-weight: 600; }
+
 /* ── Grand total — now the FIRST TILE of the summary grid ───────────────────────────────────────
    ⚠️ WAS its own full-width row above the grid (owner, 2026-11-06: *"a lot of area for a small amount
    of information"*). The dead `.t212p-grand-total` / `.t212p-grand-label` / `.t212p-grand-value` rules
