@@ -6,6 +6,22 @@
     pwsh -File scripts/tcs-launch.ps1
     pwsh -File scripts/tcs-launch.ps1 -SkipFrontend
 #>
+# ── ⚠️ DO NOT KILL THIS SCRIPT'S SHELL ONCE IT HAS STARTED SERVICES ─────────────────────────────
+#
+# MEASURED 2026-11-18, by an agent that did exactly this. The launcher starts the bridges, the API
+# and Vite as `Start-Process` children of ITS OWN process. Terminating the launcher's shell (Ctrl+C,
+# closing the terminal, or an agent's `stop` on the tool call) takes the whole tree with it: all four
+# ports went DOWN within 5 seconds, having answered 200 moments earlier.
+#
+#     before stop:   3201 UP · 5173 UP · 5000 UP · 5001 UP
+#     +5 s after stop: 3201 DOWN · 5173 DOWN · 5000 DOWN · 5001 DOWN
+#
+# ⇒ Let it run to completion. If you must abandon it, the state to check is the four ports, not the
+#   script's own output — and the recovery is to run it again, or to start the API detached:
+#     Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
+#       CommandLine = 'cmd.exe /c cd /d C:\wamp64\www\trading-command-suite\nest && node dist\src\main.js > ..\nest\logs\console-api.log 2>&1' }
+#   ⚠️ That path is `nest\dist\src\main.js` — NOT `dist\src\main.js`. From the repo root the latter
+#   fails with MODULE_NOT_FOUND, which reads as a broken build and is not one.
 param([switch]$SkipFrontend)
 
 $ROOT = 'C:\wamp64\www\trading-command-suite'
