@@ -99,7 +99,7 @@ PORT=3201
 NODE_ENV=development
 
 # Database (Optional - falls back to no-connection mode)
-DATABASE_URL=mysql://tradingcs:<your-password>@localhost:3306/tradingcs   # set a real value in .env
+DATABASE_URL=mysql://tradingcs:<password>@localhost:3306/tradingcs   # set a real value in .env
 
 # Redis (Optional - queue disabled without it)
 REDIS_HOST=localhost
@@ -200,7 +200,7 @@ The backend uses **MySQL** via Prisma 5. Your WAMP stack already provides MySQL 
 
 ```bash
 # 1. Create the database and user (run once via WAMP MySQL CLI)
-"C:\wamp64\bin\mysql\mysql9.1.0\bin\mysql.exe" -u root -e "CREATE DATABASE IF NOT EXISTS tradingcs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; CREATE USER IF NOT EXISTS 'tradingcs'@'localhost' IDENTIFIED BY '<your-password>'; GRANT ALL PRIVILEGES ON tradingcs.* TO 'tradingcs'@'localhost'; GRANT CREATE ON *.* TO 'tradingcs'@'localhost'; FLUSH PRIVILEGES;"
+"C:\wamp64\bin\mysql\mysql9.1.0\bin\mysql.exe" -u root -e "CREATE DATABASE IF NOT EXISTS tradingcs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; CREATE USER IF NOT EXISTS 'tradingcs'@'localhost' IDENTIFIED BY '<set-a-password>'; GRANT ALL PRIVILEGES ON tradingcs.* TO 'tradingcs'@'localhost'; GRANT CREATE ON *.* TO 'tradingcs'@'localhost'; FLUSH PRIVILEGES;"
 
 # 2. Push schema to database
 cd nest
@@ -218,7 +218,7 @@ npx prisma db seed
 | Database | tradingcs |
 | User | tradingcs |
 | Password | *(set in `nest/.env` — never committed; see #1252)* |
-| DATABASE_URL | set in `nest/.env`, e.g. `mysql://tradingcs:<your-password>@localhost:3306/tradingcs` |
+| DATABASE_URL | set in `nest/.env`, e.g. `mysql://tradingcs:<password>@localhost:3306/tradingcs` |
 
 ### Prisma Version Note
 

@@ -41,7 +41,12 @@ time, as the rule above requires.
 
 ## [Unreleased]
 
-_Nothing yet._
+### Security
+
+- **Removed the development database password that was still written into `nest/README.md`.**
+  #1252 cleared credentials from tracked files on 2026-11-08, but the setup documentation kept the
+  value in a `mysql://user:password@` URL and an `IDENTIFIED BY '<password>'` clause — the two lines a
+  new contributor copies. Both are now placeholders. No value is reproduced here (#1252).
 
 ## [0.164.0] — 2026-11-16
 
@@ -137,6 +142,14 @@ _Nothing yet._
 
 - UI review pass: low-quality features hidden, layout consistency improved.
 - Duplicate backtest archive index and stale archives removed.
+
+### Fixed
+
+- **The app rendered "App Failed to Load — item.items is not iterable" on every page.** Three prose
+  strings had been added to the card contract, which is consumed both by the card grid and by a
+  search-term builder that maps over each card's `items` — a string threw during render and the shell
+  replaced every page. The prose now has its own export, with a build gate so the shape cannot break
+  again (#1253).
 
 ## [0.156.0] — 2026-11-07
 
