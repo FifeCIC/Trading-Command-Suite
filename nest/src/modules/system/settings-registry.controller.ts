@@ -140,7 +140,7 @@ export class SettingsRegistryController {
    * (`directive:adx:maxScore`, `automation.brokerTrading.mt5`) which a path parameter would split.
    *
    * ⚠️ `source: 'absent'` is a real answer, not an error: a family member has no declared default, so an
-   * absent row means the requirement's fallback is in force. Returning a value here would fabricate one.
+   * absent row means the configured fallback is in force. Returning a value here would fabricate one.
    */
   @Get('family')
   async readFamily(@Query('key') key?: string) {

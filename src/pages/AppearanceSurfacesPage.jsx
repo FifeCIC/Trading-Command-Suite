@@ -88,7 +88,7 @@ export default function AppearanceSurfacesPage() {
       </section>
 
       {/* ── Status cards: the number is the answer, the detail is on demand ────────────────────────
-          Requirement, 2026-11-18, reviewing /development/movers-treatment: *"I do not like screen clutter -
+          Requirement (2026-11-18), reviewing /development/movers-treatment: *"I do not like screen clutter -
           large blocks of information need to be displayed through the users desire to see it … some of
           the values within it could be status cards … and hovering over tells us more information. This
           should be a standard approach presented in the Appearance area to encourage it. Maybe a small

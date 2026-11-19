@@ -1223,7 +1223,7 @@ export class AlertTriggerService implements OnModuleInit {
     this.alerts.addAlert('trading', title, message, severity);
     this.logger.log(`ALERT [${severity}] ${title}: ${message}`);
 
-    // ⚠️ THE IN-APP ROW IS NOT ENOUGH FOR THESE, AND THAT IS THE WHOLE POINT (Requirement, 2026-09-27:
+    // ⚠️ THE IN-APP ROW IS NOT ENOUGH FOR THESE, AND THAT IS THE WHOLE POINT (Requirement (2026-09-27):
     // *"the notifications aren't attention demanding - none are integrated with windows"*). The
     // failure mode for `trade-disabled` is that nobody is looking at the app, so an alert that only
     // appears inside it cannot fire.

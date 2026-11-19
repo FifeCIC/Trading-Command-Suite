@@ -7,7 +7,7 @@
  * The 2026-09-15 rescale divided every strength percentage by ~6.3. Target values were fixed in the
  * CODE (`style-thresholds.ts`) and in the SEED (`scoring-strategy-seed.ts`), but **already-persisted
  * rows were not rewritten** — so 25 of 27 rows held 50/55/60, which the live scale (~10-33) can
- * never clear. That is a data/installation mismatch, and the requirement has asked for it aligned so the
+ * never clear. That is a data/installation mismatch, and the requirement is that it be aligned so the
  * system operates correctly for testing.
  *
  * SAFETY — this touches LIVE TRADING CONFIG, so it is deliberately cautious:

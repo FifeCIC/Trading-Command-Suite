@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * validate-no-notice-bar — the requirement has asked REPEATEDLY for the thick coloured left-hand bar to be
+ * validate-no-notice-bar — the thick coloured left-hand bar has been rejected REPEATEDLY to be
  * removed from notice / callout / status surfaces (last: 2026-11-06, *"remove all existence of the
  * notice styling that has the left side border thicker and coloured"*).
  *
@@ -169,7 +169,7 @@ if (reportOnly) {
   process.exit(0);
 }
 console.error(`\n✖ ${all.length} ${noun} carry a thick coloured left bar.`);
-console.error('  The requirement has asked for this styling to be removed everywhere. Replace it with a');
+console.error('  This styling has been rejected everywhere. Replace it with a');
 console.error('  uniform 1px border plus a background tint, or add an entry with a reason to');
 console.error('  scripts/notice-bar-allowlist.json if it is genuinely NOT notice chrome.');
 process.exit(1);

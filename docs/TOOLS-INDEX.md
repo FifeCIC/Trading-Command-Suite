@@ -188,7 +188,7 @@ buried ability `development-philosophy` §7 warns about.
 | `validate-manual-trade-gate.cjs` | nest | validator | yes | prebuild, npm | every ORDER-ORIGINATING path must run the portfolio risk gate. |
 | `validate-news-dedupe.cjs` | repo | validator | — | npm | fails when the two news pipelines store the same story twice. |
 | `validate-no-empty-swallow.cjs` | repo | validator | yes | prebuild, npm | INV-NO-EMPTY-SWALLOW (build-time, ratcheted) |
-| `validate-no-notice-bar.cjs` | repo | validator | yes | prebuild, npm | validate-no-notice-bar — the requirement has asked REPEATEDLY for the thick coloured left-hand bar to be |
+| `validate-no-notice-bar.cjs` | repo | validator | yes | prebuild, npm | validate-no-notice-bar — the thick coloured left-hand bar has been rejected REPEATEDLY to be |
 | `validate-notices.cjs` | repo | validator | yes | prebuild, npm | the notice-registry gate |
 | `validate-output-style-sync.cjs` | repo | validator | yes | prebuild, npm | keeps the versioned style guide in step with its portable source. |
 | `validate-owner-quotes.cjs` | repo | validator | yes | prebuild, npm | keeps private conversation out of a PUBLIC repository. |

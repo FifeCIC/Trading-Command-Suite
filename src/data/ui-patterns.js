@@ -320,7 +320,7 @@ export const UI_PATTERNS = [
     bestFor: 'Any state a reader must notice before reading on — a failed read, a position needing attention, a degraded service',
     sources: [{ view: '/trading/exit-signals', score: null }],
     elements: ['.app-notice--critical', '.app-notice--warning', '.app-notice--success', '.app-notice--info'],
-    // ⚠️ `score: null` ON PURPOSE. The requirement approved the CRITICAL notice by name; they did not give
+    // ⚠️ `score: null` ON PURPOSE. The CRITICAL notice is named explicitly; no UI score was given for
     // the page a UI score, and inventing one would be an agent's judgement dressed as a measurement.
     state: 'strong',
   },

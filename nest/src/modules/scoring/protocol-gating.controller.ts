@@ -142,7 +142,7 @@ export class ProtocolGatingController {
     //
     // ⚠️ "threshold", NOT "bar". In a trading app "bar" means an OHLCV candle, which belongs to
     // the SYMBOL. This number belongs to the BOT (`trading_strategy.minComposite`). The two shared
-    // one word, and the requirement read `barPct` as candle data — the field is now `thresholdPct`.
+    // one word, and `barPct` was read as candle data — the field is now `thresholdPct`.
     //
     // Note the COLLATE: `score_snapshot.protocolId` is defined with a different collation from
     // `trading_strategy.protocolId`, and MySQL refuses the comparison without it.

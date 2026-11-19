@@ -6,7 +6,7 @@
  *
  * WHY THIS EXISTS
  * ---------------
- * Requirement, 2026-09-24: make decisions. With those decisions written into issues and doc comments.
+ * Requirement (2026-09-24): make decisions. With those decisions written into issues and doc comments.
  * We can easily find them and change them if they aren't working out so well.
  *
  * "Easily find them" and "change them" are both **findability** properties, and findability is
@@ -203,7 +203,7 @@ function checkMarkers(files) {
  *
  * The rule is deliberately MECHANICAL: citing is cheap, and requiring a citation turns "did you
  * read the register?" from a hope into a build failure. The declaration lives in the register
- * itself (`## 🔒 Settled subjects`), so the requirement reads the same list the guard enforces.
+ * itself (`## 🔒 Settled subjects`), so the register and the guard read the same list.
  *
  * Two things are checked, and BOTH can fail:
  *   1. a numbered row naming a settled subject without citing its settling row;

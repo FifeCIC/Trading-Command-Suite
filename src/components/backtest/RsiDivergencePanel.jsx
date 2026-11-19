@@ -49,7 +49,7 @@ import RsiDivergenceChart from './RsiDivergenceChart.jsx';
  *
  * ⚠️ Importing another page's stylesheet is deliberate and is the pattern the Appearance page itself
  * uses — *"These are not lookalikes. Each example imports the real stylesheet from the view it came
- * from."* A local copy would drift from the design the requirement approved.
+ * from."* A local copy would drift from the design the requirement specifies.
  */
 import '../../pages/directive-viewer.css';
 

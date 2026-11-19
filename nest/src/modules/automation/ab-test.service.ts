@@ -217,7 +217,7 @@ export class AbTestService {
    *            shared account — fixed since (two distinct accounts or refuse) — while #1082 (no
    *            app-level order choke point) and the pair's non-time-stoppable positions (#1079
    *            find #5) remain OPEN. The requirement chose "A" 2026-10-08: measure via backtest.
-   * REVERSE BY: The requirement authorises a restart. A future restart needs arms on TWO distinct
+   * REVERSE BY: A restart is authorised through the decision register. A future restart needs arms on TWO distinct
    *            accounts (the config currently reads 'mt5' for both — a restart places NOTHING)
    *            and should wait on #1082 + the time-stop attribution fix.
    * REGISTER:  docs/SETTLED-DECISIONS.md row 74

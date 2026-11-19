@@ -6568,7 +6568,7 @@ const QA_CHECKLIST = [
         expected: 'The three values render as `✅ applied` / `❌ outstanding` / `—` and stay distinct; the store reports 27 / 22 of 49 assessed; a string body (`"yes"`) stores `null` (refused, not coerced).',
         category: 'UI',
         priority: 'high',
-        versionNote: '2026-10-07 - batch #28 (ui-review agent indicator) — owner correction: the indicator is for AGENTIC AI to report completion, not a user menu, so both `<select>` menus were replaced by read-only spans and the PUT whitelist accepts booleans or null only. ⚠️ The store is keyed by VIEW ROUTE: eight agent entries and five of the requirement\'s original comments sat on keys no view renders and were migrated.',
+        versionNote: '2026-10-07 - batch #28 (ui-review agent indicator) — correction: the indicator is for AGENTIC AI to report completion, not a user menu, so both `<select>` menus were replaced by read-only spans and the PUT whitelist accepts booleans or null only. ⚠️ The store is keyed by VIEW ROUTE: eight agent entries and five of the project\'s original comments sat on keys no view renders and were migrated.',
       },
       {
         id: 'qa-ui-074',
@@ -7370,7 +7370,7 @@ const QA_CHECKLIST = [
         expected: 'The gate exits 0 and its total is ≤ 286 occurrences. Error text on that page is `#f87171` by default and becomes `#fca5a5` at high contrast. ❌ Before the paydown it was the literal `#991b1b` — a very dark red on black — and did not change at all, because a literal cannot respond to a preference. 177 literals were converged by MEANING, not by colour: `#dc2626` at `.pf-mode-live` was deliberately KEPT, because a LIVE status badge is neither a loss nor an error.',
         category: 'UI',
         priority: 'medium',
-        versionNote: '2026-10-17 - batch #32 (literal paydown) — six batches, 463 → 286 occurrences / 283 → 193 keys / 72 → 62 files; the gate reports the running total so the register cannot drift from reality. Version not bumped; rides the requirement\'s next batched commit.',
+        versionNote: '2026-10-17 - batch #32 (literal paydown) — six batches, 463 → 286 occurrences / 283 → 193 keys / 72 → 62 files; the gate reports the running total so the register cannot drift from reality. Version not bumped; rides the project\'s next batched commit.',
       },
       {
         id: 'qa-ui-090',

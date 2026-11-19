@@ -279,7 +279,7 @@ export const VIEW_COMPONENTS = {
   'strategy-detail': ViewStrategyPage,
   // #876 — the strategies themselves: one card per distinct (protocol x treatment).
   'strategies-derived': DerivedStrategiesPage,
-  // Two of those strategies side by side, diffs marked (Requirement, 2026-09-22).
+  // Two of those strategies side by side, diffs marked (Requirement (2026-09-22)).
   'ab-strategies': AbStrategiesPage,
   // Trading — Legacy strategy pages (under review)
   'strategy-comparison': StrategyComparisonPage,

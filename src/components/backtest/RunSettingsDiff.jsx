@@ -3,7 +3,7 @@ import InfoNote from '../InfoNote';
 /**
  * RunSettingsDiff — WHICH SETTINGS CHANGED between the compared runs.
  *
- * Requirement, 2026-10-31: *"enhance [Compare] so that the compare shows the settings that are
+ * Requirement (2026-10-31): *"enhance [Compare] so that the compare shows the settings that are
  * different, to identify what made the difference in profit loss."*
  *
  * ⚠️ WHY THIS IS NOT JUST MORE COLUMNS. The metrics table already puts every result side by side, and

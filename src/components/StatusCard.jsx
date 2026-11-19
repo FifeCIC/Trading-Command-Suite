@@ -2,7 +2,7 @@
  * StatusCard — a headline number, a short label, and detail that waits to be asked for.
  * =====================================================================================
  *
- * Requirement, 2026-11-18, on /development/movers-treatment:
+ * Requirement (2026-11-18), on /development/movers-treatment:
  *   *"I do not like screen clutter - large blocks of information need to be displayed through the
  *   users desire to see it."* … *"some of the values within it could be status cards … and hovering
  *   over tells us more information. This should be a standard approach presented in the Appearance

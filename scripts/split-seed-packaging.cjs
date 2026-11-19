@@ -4,7 +4,7 @@
  *
  * ── WHY THIS EXISTS ──
  *
- * Requirement, 2026-11-02: I'm planning to package only 2-3 strategies with the app for the public and
+ * Requirement (2026-11-02): I'm planning to package only 2-3 strategies with the app for the public and
  * so the rest will need to exist in my database OR/AND user files on my system: removed from seed
  * data.
  *

@@ -324,7 +324,7 @@ export default function MetaStackExplorerPage() {
 
   // ── PAUSE / PLAY — the one control on this page ─────────────────────────────────────────────
   //
-  // Requirement, 2026-10-20: *"rather than three levels I just want a toggle to Pause or Play.
+  // Requirement (2026-10-20): *"rather than three levels I just want a toggle to Pause or Play.
   // Pause will allow me to view every step on the latest score. Play will automatically refresh the
   // page … instead of two levels of information on the UI I want it all displayed at all times."*
   //

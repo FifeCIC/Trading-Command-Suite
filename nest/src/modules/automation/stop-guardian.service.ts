@@ -534,7 +534,7 @@ const TICK_INTERVAL_SETTING = 'automation.guardianTickIntervalMs';
 /**
  * pickStrictestClaimant() — WHICH bot's rules govern a CONTESTED position (#1041).
  *
- * Requirement, 2026-09-30 (R31): a position built from several bots' orders is **managed, by its
+ * Requirement (2026-09-30) (R31): a position built from several bots' orders is **managed, by its
  * strictest claimant** — *"so it is protected soonest rather than by whichever bot happens to be
  * looked at first."*
  *
@@ -1209,7 +1209,7 @@ export class StopGuardianService {
         pnl,
         exitPrice: target,
         closeReason: 'take-profit',
-        // The published message shows protocol AND bot (Requirement, 2026-11-12). `strat` is the resolved
+        // The published message shows protocol AND bot (Requirement (2026-11-12)). `strat` is the resolved
         // trading strategy for this position — the SAME row the guardian used to decide the target,
         // so these two fields cannot disagree with the decision that closed it.
         strategyName: strat?.name ?? null,

@@ -145,7 +145,7 @@ export class PositionSyncService {
 
         // ── DURABLE PEAK (#998) — recorded HERE because the price is ALREADY IN HAND ──
         //
-        // Requirement, 2026-10-02: *"using what has already been imported and importing a
+        // Requirement (2026-10-02): *"using what has already been imported and importing a
         // primary source that satisfies many other things."* This loop already holds a LIVE broker
         // `currentPrice` for every open position, on a cadence that actually runs.
         //

@@ -1,7 +1,7 @@
 /**
  * ProtocolDirectiveSettings — step 6 ("Directive overrides") as a list of the protocol's DIRECTIVES.
  *
- * ── WHAT WAS WRONG BEFORE (Requirement, 2026-11-01) ───────────────────────────────────────────────────
+ * ── WHAT WAS WRONG BEFORE (Requirement (2026-11-01)) ───────────────────────────────────────────────────
  * The step rendered a flat settings INVENTORY of five override fields with an `honoured / reported /
  * ignored` badge each, a counts strip ("5 listed · 1 honoured · 0 reported · 4 ignored") and a
  * filter toolbar. The project's reaction:

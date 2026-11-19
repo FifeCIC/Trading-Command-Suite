@@ -1,7 +1,7 @@
 /**
  * bot-slug.spec.ts — the BOT naming rule, canaried in both directions.
  *
- * Requirement, 2026-11-05: *"force '-bot' onto slug and 'Bot' suffix onto name"*.
+ * Requirement (2026-11-05): *"force '-bot' onto slug and 'Bot' suffix onto name"*.
  *
  * canary: remove `.replace(/-?bot$/, '')` from `botSlug()` and the double-suffix case fails
  * (`gold-scalp-m5-bot-bot`). Remove the `/bot$/i` test from `normaliseBotName()` and the

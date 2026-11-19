@@ -4,7 +4,7 @@
  *
  * ── WHY THIS EXISTS ──
  *
- * Requirement, 2026-09-25: another later-afternoon to evening drift into the red after sitting with
+ * Requirement (2026-09-25): another later-afternoon to evening drift into the red after sitting with
  * profit… it was steady and we bled that instead of slowly bringing trailing stop up.
  *
  * Measured that day: FOUR positions were in profit and closed red, three of them by the time

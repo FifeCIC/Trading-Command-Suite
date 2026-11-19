@@ -2,7 +2,7 @@
  * useTradeAttention — a BROWSER notification when algo trading is not active.
  *
  * ── WHY ──────────────────────────────────────────────────────────────────────────────────────
- * Requirement, 2026-09-27: Yes I want the browser notification too.
+ * Requirement (2026-09-27): Yes I want the browser notification too.
  *
  * ⚠️ THIS IS THE BACKSTOP, NOT THE PRIMARY CHANNEL — and the difference matters, because it
  * decides how much it can be trusted. A browser notification **only fires while a tab is open and

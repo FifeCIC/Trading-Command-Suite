@@ -39,7 +39,7 @@ const stamp = (iso) => (iso ? String(iso).slice(0, 16).replace('T', ' ') : '—'
 /**
  * useCycleColumn — a column that changes what it shows every 6 seconds (#1150).
  *
- * Requirement, 2026-10-29: *"there's too many columns already so we're going to do something very
+ * Requirement (2026-10-29): *"there's too many columns already so we're going to do something very
  * new and designate a column to be automatic changing every 3 seconds … This will allow me to see more
  * data when browsing."* The approach is named a **Cycle Column** — one grid slot that recycles itself
  * through a short series of related facts instead of widening the table. ("Carousel column" describes

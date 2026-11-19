@@ -1085,7 +1085,7 @@ export default function ViewStrategyPage() {
         </p>
 
         {/*
-          ── THIS STRATEGY'S QUEUED CHANGES (Requirement, 2026-11-19) ──────────────────────────────────
+          ── THIS STRATEGY'S QUEUED CHANGES (Requirement (2026-11-19)) ──────────────────────────────────
           This is the strategy's OWN page, so the rules blocking it belong here and not only on the
           list page: a reader who arrives to inspect one bot should see what we intend to change about
           THAT bot without going back.
@@ -1548,7 +1548,7 @@ export default function ViewStrategyPage() {
           </h2>
 
           {/* ── COVERAGE — WHAT PROTECTS AN OPEN POSITION WHEN THE APP IS NOT RUNNING ────────
-              ⚠️ WHY THIS EXISTS (Requirement, 2026-09-30). Two facts, both learned on the −322.67
+              ⚠️ WHY THIS EXISTS (Requirement (2026-09-30)). Two facts, both learned on the −322.67
               position, neither of them visible anywhere on this page before now:
 
                 1. EVERY mechanism named below runs INSIDE this process. With the PC off there

@@ -761,7 +761,7 @@ export default function T212PortfolioPage() {
           */}
           <div>{syncing ? 'Syncing…' : <LastUpdated at={lastUpdated} inline />}</div>
           {/*
-            ⚠️ ONE ℹ PER PAGE, SO THIS CARRIES EVERY SECTION'S EXPLANATION (Requirement, 2026-11-19). The
+            ⚠️ ONE ℹ PER PAGE, SO THIS CARRIES EVERY SECTION'S EXPLANATION (Requirement (2026-11-19)). The
             positions table used to have its own ℹ inside its heading, and the summary had another —
             two triggers on one page, each positioned by that section's own markup, which is exactly
             the inconsistency being removed. A page contributes its text here; the shell decides where
@@ -838,7 +838,7 @@ export default function T212PortfolioPage() {
                 </span>
               </div>
               {/*
-                ⚠️ THE "Positions" TILE IS GONE (Requirement, 2026-11-19). It counted the rows of the table
+                ⚠️ THE "Positions" TILE IS GONE (Requirement (2026-11-19)). It counted the rows of the table
                 directly below it, which already says "Positions (n)" in its own heading — the same
                 fact twice, and a tile spent on a number the reader is about to scroll past. Nothing
                 was lost: the count is in the section heading and in each account's own summary.
@@ -862,7 +862,7 @@ export default function T212PortfolioPage() {
           alone would close it while the reader is reaching for a control. */}
       <section className="t212p-section">
         {/*
-          ⚠️ THE SECTION TITLE IS GONE AND THE ℹ WITH IT (Requirement, 2026-11-19) — same rule as the summary
+          ⚠️ THE SECTION TITLE IS GONE AND THE ℹ WITH IT (Requirement (2026-11-19)) — same rule as the summary
           above: "titles with the information icon beside them … placed in different places across the
           app" is the inconsistency, and the table's own column headers already say what the section
           is. Everything the heading carried is either in the ONE shell popover (the explanation, and
@@ -952,7 +952,7 @@ export default function T212PortfolioPage() {
                           {p.ticker}
                         </a>
                         {/*
-                          The COMPANY, which the row never stated (Requirement, 2026-11-19). Drawn under the
+                          The COMPANY, which the row never stated (Requirement (2026-11-19)). Drawn under the
                           ticker rather than in its own column: it is the same fact at a second level
                           of detail, and a column of them would compete with the numbers either side.
                         */}

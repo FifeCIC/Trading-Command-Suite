@@ -7,7 +7,7 @@
  * which is why the classification below is driven by the cross, not by an absolute level.
  *
  * ── WHY THIS DIRECTIVE EXISTS ────────────────────────────────────────────────────────────────
- * Requirement, 2026-09-25: I'm looking at Stoch RSI on my chart right now. Its waves peak as high as 95.
+ * Requirement (2026-09-25): I'm looking at Stoch RSI on my chart right now. Its waves peak as high as 95.
  * Stoch RSI is about the crossover indicating change of direction… Are we using Stoch RSI as a
  * directive? — we were not. `stochastic` is plain %K/%D on **price** OHLC, not on RSI, and it was
  * wired into a single protocol that is `active = 0`. There was no Stoch RSI anywhere.

@@ -165,7 +165,7 @@ currently express a different rule-set from another bot — which is the thing t
 
 ## 4. The interface: one place to manage every open position
 
-The requirement, in the project's words: *manage open positions instead of watching MT5 + Pepperstone +
+In the project's words: *manage open positions instead of watching MT5 + Pepperstone +
 TCS.* Today there are **three systems and two accounts**, and the only surface that shows the real
 book is the broker terminal.
 

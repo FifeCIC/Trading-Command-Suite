@@ -55,7 +55,7 @@ export const BOARD_DEFAULTS = {
 };
 
 /**
- * BOARD_RETIRED — defaults the requirement has asked to HIDE, removed once from an existing board.
+ * BOARD_RETIRED — defaults the requirement says to HIDE, removed once from an existing board.
  *
  * ⚠️ This is not the same as deleting them from `BOARD_DEFAULTS`. A default only reaches a NEW board;
  * a widget the requirement already has must be removed from the stored board, and only once, because the

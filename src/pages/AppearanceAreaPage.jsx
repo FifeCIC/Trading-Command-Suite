@@ -1,7 +1,7 @@
 /**
  * AppearanceAreaPage — the landing page of the new **Appearance** area.
  * ======================================================================
- * Requirement, 2026-10-13: *"I'm using this project to establish a theme package that can be
+ * Requirement (2026-10-13): *"I'm using this project to establish a theme package that can be
  * carried forward to other projects."* The area is deliberately TEMPORARY-or-GALLERY: either it
  * becomes an advanced visual-options gallery, or it is the place the package is defined and then
  * adopted. Either way it is the one home for visual decisions.

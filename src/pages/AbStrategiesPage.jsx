@@ -31,7 +31,7 @@
  * shows the first 8 characters, so links should not need more). There is deliberately NO "last
  * pair" persistence: the index is the default view, so a stale pair must not hijack it.
  *
- * ⚠️ LIST | TABLE (Requirement, 2026-09-22). The index renders as the grouped LIST or as a TABLE of one
+ * ⚠️ LIST | TABLE (Requirement (2026-09-22)). The index renders as the grouped LIST or as a TABLE of one
  * pair = two rows (A shaded `--bg-elev-2`, B plain) carrying each side's REALISED P&L from #894's
  * bot-performance attribution, orderable by the profit difference (B − A) — *"to determine the
  * best B out of ALL B's"* — and the same numbers a dashboard widget can later read. A profit cell
@@ -393,7 +393,7 @@ function PairSide({ side, strategy, name }) {
 
 /**
  * PairTable — the index as a TABLE: one pair = TWO rows (A shaded, B plain) carrying each side's
- * realised record, orderable by the profit difference (B − A). Requirement, 2026-09-22: a table... all
+ * realised record, orderable by the profit difference (B − A). Requirement (2026-09-22): a table... all
  * A and B rows together — two rows, slightly different shading + *"order by profit difference
  * between the A's and the B's in order to determine the best B out of ALL B's"*.
  *

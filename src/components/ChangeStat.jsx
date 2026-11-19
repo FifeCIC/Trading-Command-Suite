@@ -5,7 +5,7 @@ import './change-stat.css';
  * ======================================================
  *
  * ── WHY THIS EXISTS ───────────────────────────────────────────────────────────────────────────
- * Requirement, 2026-09-28: *"We're at the point when we need to see not just total performance
+ * Requirement (2026-09-28): *"We're at the point when we need to see not just total performance
  * but performance change."*
  *
  * A total answers "how much". It cannot answer "is this still working?" — and those are different

@@ -815,7 +815,7 @@ export const SETTINGS: SettingDefinition[] = [
     owner: 'notifications',
     label: 'Minimum minutes between Discord signals per strategy',
     description:
-      'One suggestion per strategy per window. 60 (hourly) at the requirement\'s instruction 2026-11-06, ' +
+      'One suggestion per strategy per window. 60 (hourly) at the project\'s instruction 2026-11-06, ' +
       'replacing a global one-per-day allowance: a ration shared by every strategy meant the first ' +
       'signal of the day silenced all the others, so the feed reported the calendar instead of the ' +
       'market. 0 disables the throttle. The per-strategy last-post time is a FAMILY member (see ' +
@@ -866,7 +866,7 @@ export const SETTINGS: SettingDefinition[] = [
     label: 'Minimum |P&L| published for a closed trade',
     description:
       'A closed trade whose ABSOLUTE profit is below this is not published — it is noise in a feed ' +
-      'about outcomes. 1.00 (account currency) at the requirement\'s instruction: wins and losses within a ' +
+      'about outcomes. 1.00 (account currency) at the project\'s instruction: wins and losses within a ' +
       'dollar say nothing. ⚠️ A trade with no recorded P&L is NOT published either: "cannot judge" ' +
       'must never render as a win.',
     userChangeable: true,
@@ -904,7 +904,7 @@ export const SETTINGS: SettingDefinition[] = [
     label: 'Minimum days between support prompts',
     description:
       'How long after a prompt the next one may appear — and also how long a NEW installation ' +
-      'must be in use before the first ask. 90 days is the requirement\'s stated cadence (2026-11-14: ' +
+      'must be in use before the first ask. 90 days is the project\'s stated cadence (2026-11-14: ' +
       '"once every three month in general"). ⚠️ Raising this is the safe direction; lowering it ' +
       'below 30 starts overriding the user\'s own snooze.',
     userChangeable: true,

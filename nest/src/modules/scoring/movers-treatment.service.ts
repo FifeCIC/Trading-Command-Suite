@@ -3,7 +3,7 @@
  * TCS is actually doing about each one" (#1281).
  *
  * ── WHY THIS EXISTS ──
- * Requirement, 2026-11-15: I would like to see a list of all the winners and losers and how TCS is
+ * Requirement (2026-11-15): I would like to see a list of all the winners and losers and how TCS is
  * treating them in terms of scoring, trading, monitoring and decisions made.
  *
  * The app can already answer each of those questions SEPARATELY — `/api/market-data/top-movers` has

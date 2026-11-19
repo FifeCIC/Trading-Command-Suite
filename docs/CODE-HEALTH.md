@@ -13,7 +13,7 @@ line counts change on every edit and a guard that fires during normal work gets 
 ## The rule this file exists for
 
 > "The only time I like seeing a 3000 line file of code is when it's well commented/documented and
-> the code is very well separated into functions and clear arguments." — Requirement, 2026-11-07
+> the code is very well separated into functions and clear arguments." — Requirement (2026-11-07)
 
 | Band | Lines | Meaning |
 |---|---|---|

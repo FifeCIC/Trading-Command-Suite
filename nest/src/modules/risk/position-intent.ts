@@ -37,7 +37,7 @@
  * it is a missed advisory alert.
  *
  * Anything the defaults cannot cover is `unclassified` — which is a QUESTION, not an answer. See
- * `needsDecision()`. The app asks; it does not guess silently. (Requirement, 2026-09-18: if the app
+ * `needsDecision()`. The app asks; it does not guess silently. (Requirement (2026-09-18): if the app
  * itself is missing values it should ask me … It could ask me if I'm happy to hold NVDA Leverage
  * x 3 at a loss and I will say yes.)
  */

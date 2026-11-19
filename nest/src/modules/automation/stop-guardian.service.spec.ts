@@ -953,7 +953,7 @@ describe('StopGuardianService — the per-position OUTCOME (#1056)', () => {
  * by **nothing**. Measured cost: a position built from three bots' orders sat unmanaged for
  * **2 h 20 m**, and ticket `152703882760` lost **−322.67**.
  *
- * Requirement, 2026-09-30 (R31): *"a position built from several bots' orders is CONTESTED and
+ * Requirement (2026-09-30) (R31): *"a position built from several bots' orders is CONTESTED and
  * MANAGED, not refused"* — by its **strictest claimant**, so it is protected soonest rather than by
  * whichever bot happens to be looked at first.
  *

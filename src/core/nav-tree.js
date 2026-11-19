@@ -74,7 +74,7 @@ export const NAV_TREE = {
     views: [
       { id: 'active-symbols', label: 'Active Symbols', icon: '★' },
       { id: 'user-watchlists', label: 'Watchlists', icon: '⊞' },
-      // #1297 — the movers question BOUNDED BY OUR OWN UNIVERSE. Requirement, 2026-11-18: [Our registered
+      // #1297 — the movers question BOUNDED BY OUR OWN UNIVERSE. Requirement (2026-11-18): [Our registered
       // symbols] can be moved to a new page in the Watchlists area … as they're two totally different
       // concepts. It belongs here because a symbol is "ours" by virtue of
       // `symbol_protocol_assignment`, which is a Watchlists concern; the unbounded, market-wide
@@ -223,7 +223,7 @@ export const NAV_TREE = {
       // Placed directly under Trading Bots so the pair reads as "the execution policy" vs
       // "the combinations". Names/ids for these live in the #875 registry, not in this tree.
       { id: 'strategies-derived', label: 'Strategies', icon: '🧩' },
-      // A/B view for the same strategies (Requirement, 2026-09-22): two configurations side by side
+      // A/B view for the same strategies (Requirement (2026-09-22)): two configurations side by side
       // with every differing value marked. The pair is data (?pair=keyA,keyB), not a control —
       // the same decision the A/B Ladder records.
       { id: 'ab-strategies', label: 'A/B Strategies', icon: '🆚' },
@@ -487,7 +487,7 @@ export const NAV_TREE = {
   // so Development's explanatory notes appeared to describe Appearance. A comment block and the entry
   // it explains must stay adjacent.
   //
-  // ⚠️ SAMPLE VIEWS MUST USE THIS APP'S OWN REAL DATA. Requirement, 2026-10-13: I sometimes mention using
+  // ⚠️ SAMPLE VIEWS MUST USE THIS APP'S OWN REAL DATA. Requirement (2026-10-13): I sometimes mention using
   // dummy/demo data. I don't want that applied actually. Only use this apps own real data to create
   // examples but when we update React Stack Core (my boilerplate) we will convert them to a variety of
   // topics with demo data. So a gallery example renders a REAL view of this app — never a fixture.
@@ -500,7 +500,7 @@ export const NAV_TREE = {
     label: 'Appearance',
     views: [
       { id: 'layout-guide', label: 'Layout Guide', icon: '🎨' },
-      // The register of patterns the requirement approved, read from the Page Walkthrough. It sits beside
+      // The register of patterns the requirement specifies, read from the Page Walkthrough. It sits beside
       // Layout Guide because they answer the same question at different depths: Layout Guide is a
       // handful of decisions, this is the full evidence-backed list of what to build a sample from.
       { id: 'patterns', label: 'Pattern Library', icon: '🧩' },
@@ -574,7 +574,7 @@ export const NAV_TREE = {
       // Development because it is an experiment first: does seeing the fitted line and the invalidation
       // level help you judge a score, or is it noise? Observation only — nothing in scoring reads it.
       { id: 'trend-reading', label: 'Trend Reading', icon: '📐' },
-      // #1281 — the market-wide movers feed. Requirement, 2026-11-15: I would like to see a list of all
+      // #1281 — the market-wide movers feed. Requirement (2026-11-15): I would like to see a list of all
       // the winners and losers and how TCS is treating them…, narrowed 2026-11-18: *"can then focus
       // on being fed by a live market feed of the top winners and losers"*. The treatment half moved
       // to `/watchlists/registered-movers`; what is left here is the unbounded discovery question,

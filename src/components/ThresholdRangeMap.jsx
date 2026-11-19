@@ -2,7 +2,7 @@
  * ThresholdRangeMap — the NUMBERS map, not the steps map (#1275).
  * ==============================================================
  *
- * Requirement, 2026-11-14: I wanted all steps, all possible decisions, to be clearly mapped in the
+ * Requirement (2026-11-14): I wanted all steps, all possible decisions, to be clearly mapped in the
  * Diagrams page and architecture documentation: the idea is to form the connections that clarify an
  * algorithm essentially.
  *

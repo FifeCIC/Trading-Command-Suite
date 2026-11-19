@@ -276,7 +276,7 @@ export const BOT_RULES: BotRule[] = [
       'positive literal `\'all-hours\'`; the seed no longer permits null and the build gate ' +
       '`strategy-seed-session-declared.spec.ts` fails on an unfilled slot. GATE BEHAVIOUR IS ' +
       'UNCHANGED — every no-tag form still passes. ⚠️ The TWIN DISAGREEMENT ITSELF IS STILL OPEN: the ' +
-      'NULL twins kept all-hours (behaviour-preserving); which of a twin pair is right is the requirement\'s ' +
+      'NULL twins kept all-hours (behaviour-preserving); which of a twin pair is right is the project\'s ' +
       'call on the name-vs-news reading — do NOT re-gate on a name alone.' },
   { field: 'maxPyramidTiers', label: 'Max pyramid tiers', stage: 'entry', enforcement: 'live',
     enforcedBy: 'nest/src/modules/trading/pyramid-policy.service.ts',

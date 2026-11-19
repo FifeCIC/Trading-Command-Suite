@@ -3404,7 +3404,7 @@ export class AutomationLoopService implements OnModuleInit {
       score: signalPct,
       metadata: {
         protocolId: best.protocolId ?? 'any',
-        // The published message shows protocol AND bot (Requirement, 2026-11-12). `protocolName` is the
+        // The published message shows protocol AND bot (Requirement (2026-11-12)). `protocolName` is the
         // human-readable label the ladder already resolved; `botName` comes from the envelope.
         protocolName: (ladder as any)?.protocolName ?? null,
         strategyName: best.botName ?? null,

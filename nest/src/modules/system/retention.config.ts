@@ -63,7 +63,7 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
   // ═══════════════════════════════════════════════════════════════════════════════════════════
   // CLASS 1 — ACTIVITY AND TRADING HISTORY: SHORT.
   //
-  // Requirement, 2026-10-04: When I said 60 days I meant general trading history and app activity —
+  // Requirement (2026-10-04): When I said 60 days I meant general trading history and app activity —
   // not strictly meaning everything or including bars for backtesting.
   //
   // These tables describe WHAT THE APP DID. Nothing downstream reads them as input, so their depth
@@ -116,7 +116,7 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
   // ═══════════════════════════════════════════════════════════════════════════════════════════
   // CLASS 2 — EVIDENCE FOR BACKTESTING: LONG.
   //
-  // Requirement, 2026-10-04: I understand the benefit of storing a year or even more of bar data and
+  // Requirement (2026-10-04): I understand the benefit of storing a year or even more of bar data and
   // potentially key news headlines, articles etc. For the purpose of backtesting relevant
   // directives that read that.
   //
@@ -138,7 +138,7 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
 
   // ══ NEWS — DELIBERATELY UNBOUNDED, and that IS the project's ask. Read before adding a bound. ══
   //
-  // Requirement, 2026-10-04: I understand the benefit of storing a year or even more of bar data and
+  // Requirement (2026-10-04): I understand the benefit of storing a year or even more of bar data and
   // potentially key news headlines, articles etc. For the purpose of backtesting relevant
   // directives that read that.
   //

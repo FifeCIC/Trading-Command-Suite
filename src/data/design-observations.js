@@ -4,7 +4,7 @@
  *
  * WHY THIS EXISTS (review row R21, answered 2026-09-24; issue #990)
  * -----------------------------------------------------------------
- * Requirement, 2026-09-24: Are we noting observations for review and consideration? This is important for
+ * Requirement (2026-09-24): Are we noting observations for review and consideration? This is important for
  * re-considering designs.
  *
  * The honest answer at the time was **no**. Three homes existed and this observation was in none of
@@ -12,7 +12,7 @@
  *
  *   | home                        | for                              | this finding? |
  *   |-----------------------------|----------------------------------|---------------|
- *   | `.github/REVIEW-QUEUE.md`   | decisions the requirement must make     | no            |
+ *   | `.github/REVIEW-QUEUE.md`   | decisions that need a decision     | no            |
  *   | `.github/AGENT-ATTENTION.md`| blockers needing human attention  | no            |
  *   | GitHub issues               | work to be done                   | no            |
  *   | `/development/theory-registry` | falsifiable predictions        | no            |

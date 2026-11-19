@@ -51,7 +51,7 @@ export default function AppearancePatternsPage() {
           {PATTERN_SOURCE.preferred} with Preferred Elements — measured {PATTERN_SOURCE.measuredAt}
         </p>
               <PageInfoPopover>
-            The UI patterns the requirement approved, read from the Page Walkthrough on{' '}
+            The UI patterns the requirement specifies, read from the Page Walkthrough on{' '}
             {PATTERN_SOURCE.measuredAt}: {PATTERN_SOURCE.entries} recorded pages, {PATTERN_SOURCE.scored}{' '}
             with a UI/10 score and {PATTERN_SOURCE.preferred} with Preferred Elements. Source:{' '}
             <code>{PATTERN_SOURCE.store}</code> in the database. Nothing here is an agent&apos;s

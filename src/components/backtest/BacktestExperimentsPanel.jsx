@@ -11,7 +11,7 @@ import {
  * BacktestExperimentsPanel — the registry that #1295 found was 0.75% adopted.
  *
  * ── WHY THIS PAGE EXISTS ────────────────────────────────────────────────────────────────────────
- * Requirement, 2026-11-18: Are you registering all A/B tests somewhere so they can be tracked by both
+ * Requirement (2026-11-18): Are you registering all A/B tests somewhere so they can be tracked by both
  * user and agentic AI rather than forgotten about? I'm concerned at the huge amount of tests being
  * built… I can't afford to spend tokens for every step.
  *

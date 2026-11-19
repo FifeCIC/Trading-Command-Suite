@@ -3,7 +3,7 @@
  * =======================================================
  * Shows "Old | New". New is the default; choosing Old adds `?variant=A`.
  *
- * ⚠️ NAMING (Requirement, 2026-09-23) — THIS IS NOT A/B TESTING.
+ * ⚠️ NAMING (Requirement (2026-09-23)) — THIS IS NOT A/B TESTING.
  *
  * It was called `ABSwitcher` with `A` / `B` buttons, so **every search for "A/B" matched page
  * styling** — `ab-switcher`, `ab-btn`, `ABSwitcher`. In an app where the real A/B work is protocol

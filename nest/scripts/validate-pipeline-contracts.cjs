@@ -47,7 +47,7 @@ const REPO_ROOT = path.resolve(NEST_ROOT, '..');
  * when neither is present. Added 2026-11-16, matching the resolver `validate-agent-docs.cjs` and
  * `validate-output-style-sync.cjs` adopted in commit `bdfde054`.
  *
- * Requirement, 2026-11-16: the internal development process should not be published, so the 19 instruction
+ * Requirement (2026-11-16): the internal development process should not be published, so the 19 instruction
  * files moved to the docs store under `agent-ops/instructions` and `.github/copilot-instructions.md`
  * became the published replacement. That commit updated TWO of the THREE consumers — this file still
  * read the old repo path and hard-failed with `no invariants found`, turning the whole backend build

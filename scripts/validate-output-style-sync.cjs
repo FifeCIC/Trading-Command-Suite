@@ -200,7 +200,7 @@ function main() {
     stop(2, [
       '[style-sync] ⚠ UNVERIFIED — the portable source is not on this machine, so nothing was compared:',
       `[style-sync]     ${src}`,
-      '[style-sync]   This is NOT a pass. On the requirement\'s machine, the likely cause is VS Code',
+      '[style-sync]   This is NOT a pass. On the project\'s machine, the likely cause is VS Code',
       '[style-sync]   having moved — update sourcePath() in this script.',
     ]);
   }

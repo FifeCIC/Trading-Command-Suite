@@ -1,7 +1,7 @@
 /**
  * symbol-discovery.service.spec.ts — the rule the requirement stated, pinned so it cannot be softened.
  *
- * Requirement, 2026-11-18: they just won't be set as active until the users actions or a bot trades …
+ * Requirement (2026-11-18): they just won't be set as active until the users actions or a bot trades …
  * We cannot activate every symbol that appears in top losers or top winners else by the end of a month
  * we'll have hundreds of active symbols being monitored.
  *

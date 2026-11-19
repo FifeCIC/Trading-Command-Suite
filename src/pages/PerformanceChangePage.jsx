@@ -19,7 +19,7 @@ import './performance-change.css';
  * WHAT:  A Development-area page that shows period-over-period CHANGE per symbol and per bot,
  *        rather than cumulative totals.
  * WHY:   A total cannot distinguish a system recovering from a bad week from a system decaying
- *        from a good one. Requirement, 2026-09-28: We're at the point when we need to see not just
+ *        from a good one. Requirement (2026-09-28): We're at the point when we need to see not just
  *        total performance but performance change. Measured the same day: of ~100 trading pages,
  *        only PerformanceLabPage had a time axis at all, and the symbol page called six endpoints
  *        with no history among them.

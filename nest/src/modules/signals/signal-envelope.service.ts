@@ -376,7 +376,7 @@ export class SignalEnvelopeService {
   /**
    * #R13 — the reason the LIVE ladder should not score this symbol, or `null` to go ahead.
    *
-   * Requirement, 2026-09-23: if the market is closed there is not meant to be new data for those
+   * Requirement (2026-09-23): if the market is closed there is not meant to be new data for those
    * symbols so why score? — ruled a **development decision**, not a policy or A/B change, so
    * there is deliberately no copied configuration behind it.
    *
@@ -668,7 +668,7 @@ export class SignalEnvelopeService {
     //            Measured cost: 108 GER40 snapshots in two hours, EVERY ONE a composite of **89**,
     //            all from a base `1m` series frozen 7.6 hours earlier, feeding six `auto` bots whose
     //            entry threshold is 10. A frozen bar does not score low; it scores the same number
-    //            forever. Requirement, 2026-11-13: Scoring old data is pointless … That's almost like
+    //            forever. Requirement (2026-11-13): Scoring old data is pointless … That's almost like
     //            saying we've designed it to score for the sake of it.
     // INSTEAD OF: Skipping the symbol when its base cadence is stale — measured to remove 11 ALIVE
     //            instruments (#827), because a `1m` feed goes quiet outside cash hours.
@@ -834,7 +834,7 @@ export class SignalEnvelopeService {
    * ── DECISION (2026-11-13, owner) ──
    * WHAT:      When a symbol cannot be scored on fresh data, SAY SO — and say it louder when we hold
    *            a position in it.
-   * WHY:       Requirement, 2026-11-13: we should be refusing to score and maybe warn when a symbol we
+   * WHY:       Requirement (2026-11-13): we should be refusing to score and maybe warn when a symbol we
    *            have a position for cannot get fresh data and warn if an hour passes and there is a
    *            lack of data for a symbol: in the form of a notification. The failure being guarded
    *            is silence: a starved symbol simply stops appearing, which reads as "no signal" rather

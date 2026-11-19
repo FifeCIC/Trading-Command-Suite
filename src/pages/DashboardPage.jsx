@@ -25,7 +25,7 @@ export default function DashboardPage() {
   return (
     <div className="dash-page">
       <SetupBanner />
-      {/* ⚠️ THE LOOP CONTROLS ARE NO LONGER HERE (Requirement, 2026-11-06). They moved INTO the System
+      {/* ⚠️ THE LOOP CONTROLS ARE NO LONGER HERE (Requirement (2026-11-06)). They moved INTO the System
           Status widget, so the loop is controllable from any board that places it — not just the
           Dashboard. `toolbarPosition="top-row"` puts the board's controls on the same line as the
           page's ℹ instead of in a second near-empty band beneath it.

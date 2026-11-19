@@ -446,7 +446,7 @@ export default function AbLadderPage() {
           searchAriaLabel="Search the A/B ladder by symbol, protocol, state or signal"
         />
 
-        {/* No legend and no subtitle here (Requirement, 2026-09-22): visible teaching text is
+        {/* No legend and no subtitle here (Requirement (2026-09-22)): visible teaching text is
             screen clutter. The strip names its side per row, the card names its protocol,
             and the ℹ popover carries the explanation. Do not re-add without being asked. */}
 

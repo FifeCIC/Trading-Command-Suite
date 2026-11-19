@@ -65,7 +65,7 @@ in `scoring-strategy-seed.ts`, deliberately not "tidied".
 
 **Drift found:** four independent implementations. Measured behaviour, not assumed:
 
-| tf | Requirement | `market-status.ts` | `outcome-tracker.service.ts` | `contract-probe.cjs` |
+| tf | owner | `market-status.ts` | `outcome-tracker.service.ts` | `contract-probe.cjs` |
 |---|---|---|---|---|
 | `1m`–`1d` | correct | same | same | same |
 | **`1w`** | 604,800,000 | **undefined** | **3,600,000** (1h — 168×) | same |

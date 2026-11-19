@@ -1570,7 +1570,7 @@
       "name": "validate-no-notice-bar.cjs",
       "where": "repo",
       "category": "validator",
-      "purpose": "validate-no-notice-bar — the requirement has asked REPEATEDLY for the thick coloured left-hand bar to be",
+      "purpose": "validate-no-notice-bar — the thick coloured left-hand bar has been rejected REPEATEDLY to be",
       "selfTest": true,
       "reaches": [
         "prebuild",

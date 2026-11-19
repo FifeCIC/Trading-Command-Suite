@@ -539,7 +539,7 @@ export default function ProtocolsPageB({ initialProtocolId }) {
               </div>
 
               {/*
-                ── QUEUED CHANGES FOR THIS PROTOCOL (Requirement, 2026-11-18) ──────────────────────────────
+                ── QUEUED CHANGES FOR THIS PROTOCOL (Requirement (2026-11-18)) ──────────────────────────────
                 Placed directly under the header, not at the bottom, because it answers "what are we
                 about to try on this protocol?" — a question about the protocol's identity, not a
                 footnote. It also lists this protocol's SUBSCRIBING BOTS' suggestions (one call to

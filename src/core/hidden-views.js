@@ -178,7 +178,7 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
 /**
  * OWNER_SEES_WITHHELD — the curator switch for `filterHiddenViews`.
  *
- * Requirement, 2026-11-06: Reminder that hiding pages is for other users only and I want to be able to
+ * Requirement (2026-11-06): Reminder that hiding pages is for other users only and I want to be able to
  * see them. Before this constant, `DEFAULT_HIDDEN_ROUTES` removed the entry from HIS rail too, so
  * every "hide" also hid the page from the person deciding it needed work.
  *

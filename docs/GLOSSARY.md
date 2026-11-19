@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-03 · **Status:** active · **Category:** C (reference / contract)
 
-> ⚠️ **Why this file exists.** Requirement, 2026-11-03: can we create a term/name for that form of testing.
+> ⚠️ **Why this file exists.** Requirement (2026-11-03): can we create a term/name for that form of testing.
 > We have the longterm A/B testing approach that requires live market data but the comparison approach
 > as part of backtesting is different and I want to avoid confusion when discussing it.
 >

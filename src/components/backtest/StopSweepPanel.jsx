@@ -2,7 +2,7 @@ import InfoNote from '../InfoNote';
 /**
  * StopSweepPanel — "is the stop too distant?", screened against a run's recorded excursions.
  *
- * Requirement, 2026-10-29: *"if 70% of positions that dropped into the red by X amount then triggered
+ * Requirement (2026-10-29): *"if 70% of positions that dropped into the red by X amount then triggered
  * the SL, that would tell us that we're losing money because the SL is too distant. The simulated-stop-loss
  * could be stricter."*
  *

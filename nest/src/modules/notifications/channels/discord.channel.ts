@@ -441,7 +441,7 @@ export class DiscordChannel {
   /**
    * buildFeedEmbed() — ONE layout for all three public message kinds.
    *
-   * Requirement, 2026-11-12: The messages sent to Discord for signals, wins and losses aren't layed out
+   * Requirement (2026-11-12): The messages sent to Discord for signals, wins and losses aren't layed out
    * the same… a uniformal approach should be applied and ensure that both protocol and bot is
    * included. Put the information on additional lines too and maybe we could use rocket emoji on a
    * $50 profit.

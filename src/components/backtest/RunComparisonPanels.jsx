@@ -449,7 +449,7 @@ export function RunPanel({ role, runId, emptyHint, onAccept, onClear, accepted, 
 /**
  * RepeatCheck — does the SAME A→B change point the same way on MORE windows?
  *
- * Requirement, 2026-10-27: *"a third would harden it … add 'repeats on N of M windows'"* — then
+ * Requirement (2026-10-27): *"a third would harden it … add 'repeats on N of M windows'"* — then
  * *"Yes do that"*, and then the reason it matters: *"I see huge potential for agentic AI to use it …
  * Agentic AI will be able to make adjustments. Re-test, and keep doing that over and over again for a
  * set period or target a significant level of improvement."*

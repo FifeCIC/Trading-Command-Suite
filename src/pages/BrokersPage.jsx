@@ -276,7 +276,7 @@ export default function BrokersPage() {
   /**
    * Column sorting — ordered by the SHARED rule (`src/core/use-sort.jsx`), not a copy.
    *
-   * Requirement, 2026-11-18: *"we need column sorting… and column sorting should be added by
+   * Requirement (2026-11-18): *"we need column sorting… and column sorting should be added by
    * default"*. The comparison rule (nulls last, numeric vs text, `aria-sort` vocabulary) is not
    * re-implemented here; this only declares WHICH value each column sorts on. `_name` is the
    * default order because a directory of venues is read alphabetically.

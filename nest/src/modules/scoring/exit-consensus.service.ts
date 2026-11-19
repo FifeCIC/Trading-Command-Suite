@@ -16,7 +16,7 @@ import type { DirectiveInput, DirectiveResult } from '../directives/interfaces/d
  * 🧭 ROADMAP NOTE (added 2026-11-19) — THIS SERVICE IS THE DESIGN, AND IT HAS NO ACTOR YET
  * ═══════════════════════════════════════════════════════════════════════════════════════════════
  *
- * Requirement, 2026-11-19: the exit decision should be expressible by directives reading on their own — and
+ * Requirement (2026-11-19): the exit decision should be expressible by directives reading on their own — and
  * the pyramid and exit services were challenged on whether they need indicator values the directives do
  * not expose. P2 below IS that design: the exit directives read as a VERDICT, not as points folded into
  * an entry composite.

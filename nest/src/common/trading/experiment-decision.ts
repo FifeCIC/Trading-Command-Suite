@@ -167,7 +167,7 @@ export function projectEtaDays(facts: ExperimentFacts): number | null {
 /**
  * ── OBJECTIVE REVIEW — a DIFFERENT rule, on purpose ─────────────────────────────────────────────
  *
- * Requirement, 2026-11-06: You could use the Goals page as a way to remind us to check results.
+ * Requirement (2026-11-06): You could use the Goals page as a way to remind us to check results.
  *
  * ⚠️ WHY THIS IS NOT ANOTHER `ExperimentAction`. An experiment has a SAMPLE (closed trades) and the
  * verdict question is "is it big enough to speak?". An objective has a DATE and a PROMISE — no

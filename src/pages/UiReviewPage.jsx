@@ -467,7 +467,7 @@ export default function UiReviewPage() {
                     />
                   </td>
                   <td>
-                    {/* ⚠️ AN INDICATOR, NOT A CONTROL. Requirement, 2026-10-08: I meant an indicator for
+                    {/* ⚠️ AN INDICATOR, NOT A CONTROL. Requirement (2026-10-08): I meant an indicator for
                         agentic AI - not a menu for the user to select. Nothing here is clickable —
                         the value is written through the API by whichever agent did the work, and this
                         cell only reports it. ⚠️ The three states must stay visually distinct: `—`

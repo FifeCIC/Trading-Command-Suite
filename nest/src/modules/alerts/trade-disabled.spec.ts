@@ -2,7 +2,7 @@
  * #972/#1010 — `trade-disabled` must fire when NOTHING can place an order, and stay silent when
  * something can.
  *
- * Requirement, 2026-09-27: I need the app to draw my attention when algo trading is not active.
+ * Requirement (2026-09-27): I need the app to draw my attention when algo trading is not active.
  *
  * ⚠️ EVERY CASE BELOW IS A DIRECTION, NOT A DECORATION. A rule that only proves it fires cannot be
  * told apart from one that always fires; a rule that only proves it stays quiet cannot be told from

@@ -213,7 +213,7 @@ export function buildBotStagePath(bot, rules) {
 
   // ── THE BRAKE LAYER — what stops a trade, and whether it needs the app to be running ─────
   //
-  // ⚠️ WHY THIS EXISTS (Requirement, 2026-09-30). Two facts were true, important, and named NOWHERE in
+  // ⚠️ WHY THIS EXISTS (Requirement (2026-09-30)). Two facts were true, important, and named NOWHERE in
   // this picture — and both were learned the hard way on the −322.67 position:
   //
   //   1. EVERY app-side brake needs the app to be RUNNING. The guardian, the time-stop, the

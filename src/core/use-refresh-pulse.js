@@ -3,7 +3,7 @@
  *
  * use-refresh-pulse — the countdown that lives in the breadcrumb instead of on every page.
  *
- * ── WHY THIS EXISTS (Requirement, 2026-11-07) ──────────────────────────────────────────────────────────
+ * ── WHY THIS EXISTS (Requirement (2026-11-07)) ──────────────────────────────────────────────────────────
  * *"I like when we have a refreshing indicator like `<span class="pl-refresh">⟳ 59s</span>` but we're
  * going to do something that might be a bit more clever and less clutter. I want
  * `<span class="breadcrumbs-pill breadcrumbs-current">` to have an affect like a loading bar which

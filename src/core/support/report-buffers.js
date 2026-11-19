@@ -14,7 +14,7 @@
  * exclusion is an ALLOWLIST decision — we record four fields plus the body, and
  * there is no code path here that can retain anything else.
  *
- * ── DECISION (Requirement, 2026-11-07, #1248) ─────────────────────────────────────
+ * ── DECISION (Requirement (2026-11-07), #1248) ─────────────────────────────────────
  * WHAT:      a failing response's BODY is retained in memory, so a report can carry it.
  * WHY:       "I like B because sometimes we're going to need to know the numbers."
  *            A status code alone cannot reproduce a WRONG NUMBER, which is the

@@ -4,7 +4,7 @@
  *
  * WHY THIS EXISTS (issue #944, built 2026-09-24 under primary-agent authority)
  * ---------------------------------------------------------------------------
- * Requirement, 2026-09-21: we might need to list our theories, potentially on the goals page, and use
+ * Requirement (2026-09-21): we might need to list our theories, potentially on the goals page, and use
  * that to list the A/B testing goals.
  *
  * And, 2026-09-24: *"multiple levels of sanity checks or complex algorithms infused with
@@ -617,7 +617,7 @@ export const THEORIES = [
     falsification:
       'Re-run across a larger sample and, critically, compare each reading to the chart. It is refuted if (a) the verdicts cluster on `trending` — the tool then labels everything a trend and is worthless, or (b) a human consistently judges the opposite direction, or (c) `indeterminate` never appears, since that would mean the two families are not independent.',
     decision:
-      'BUILT AS AN OBSERVATION AND DELIBERATELY NOT WIRED INTO SCORING. `nest/src/modules/trend/**` is imported by nothing in the scoring, gating, sizing or execution paths, and that is a condition of the experiment rather than an accident: a reading that moved a score would be a maths change, which needs a copied configuration and a monitored A/B under the requirement\'s rule. ⚠️ NEXT, and it is the requirement\'s to judge: open `/development/trend-reading` on the focus symbols (★1 `forex-session-v1` USDJPY, ★2 `xau-speed-v1` XAGUSD, ★3 `momentum-stock-v1` NVDA) and say whether the line and the invalidation match how you would read the same chart. Until that happens the status stays `testing` — a classification distribution is not evidence that the classification is RIGHT.',
+      'BUILT AS AN OBSERVATION AND DELIBERATELY NOT WIRED INTO SCORING. `nest/src/modules/trend/**` is imported by nothing in the scoring, gating, sizing or execution paths, and that is a condition of the experiment rather than an accident: a reading that moved a score would be a maths change, which needs a copied configuration and a monitored A/B under the project\'s rule. ⚠️ NEXT, and it is the project\'s to judge: open `/development/trend-reading` on the focus symbols (★1 `forex-session-v1` USDJPY, ★2 `xau-speed-v1` XAGUSD, ★3 `momentum-stock-v1` NVDA) and say whether the line and the invalidation match how you would read the same chart. Until that happens the status stays `testing` — a classification distribution is not evidence that the classification is RIGHT.',
     area: 'scoring',
     issue: 1188,
   },
@@ -644,7 +644,7 @@ export const THEORIES = [
     falsification:
       'Re-run the contrast at `minComposite: 5` on a DIFFERENT window (the window is 42 days and one regime). It is refuted if the extra trades are unprofitable out of sample — a lower bar admitting more trades is only good if those trades carry an edge. ⚠️ Also check the live record before acting: the bot has only **5 live trades** (80% win, +40.18), so live agrees with the backtest but on a sample far too small to confirm a 7× claim.',
     decision:
-      'RECORDED, NOT APPLIED — this is a maths change and the requirement\'s rule forbids an in-place edit of a value with performance history. `minComposite` stays at 10 on the live bot. ⚠️ The sanctioned path is a COPIED configuration (a variant bot or a `-v2` protocol) run alongside, which cannot be done for free here: two bots on one netting account can hold only one position per symbol, so the copy would compete with the baseline rather than run in parallel. ⚠️ What was applied instead: the three focus bots were ACTIVATED (owner instruction) so live sample accumulates, and the trailing-stop idea is now settled — do not re-propose it for this arm.',
+      'RECORDED, NOT APPLIED — this is a maths change and the project\'s rule forbids an in-place edit of a value with performance history. `minComposite` stays at 10 on the live bot. ⚠️ The sanctioned path is a COPIED configuration (a variant bot or a `-v2` protocol) run alongside, which cannot be done for free here: two bots on one netting account can hold only one position per symbol, so the copy would compete with the baseline rather than run in parallel. ⚠️ What was applied instead: the three focus bots were ACTIVATED (owner instruction) so live sample accumulates, and the trailing-stop idea is now settled — do not re-propose it for this arm.',
     area: 'trading',
     issue: 1188,
   },

@@ -87,7 +87,7 @@ function readAppVersion() {
 /**
  * The RELEASE STAGE printed beside the version — **read from `package.json`, never typed**.
  *
- * ⚠️ WHY THIS IS READ AND NOT PROSE. Requirement, 2026-11-09: apply alpha to github pages and wiki.
+ * ⚠️ WHY THIS IS READ AND NOT PROSE. Requirement (2026-11-09): apply alpha to github pages and wiki.
  * The word "alpha" already appeared on five public pages, typed by hand, and nothing connected it to
  * `package.json.releaseStage` — the field `bump-version.cjs` now checks before allowing 1.0.0. So the
  * public claim and the version gate were two separate statements of the same fact, which is the
@@ -497,7 +497,7 @@ function publishWiki(repo, disclaimerBody, apply) {
     // every page without scrolling, and it was reported on 2026-11-02 that the site was hard to
     // find. A link at the bottom of a long page is not a link a first-time visitor meets.
     ...(siteUrl ? [`**🌐 [Website](${siteUrl})** · **[Screenshots](${siteUrl}showcase/)**`, ''] : []),
-    // Requirement, 2026-11-14: README and key places on Wiki and Website should have a Support Me link.
+    // Requirement (2026-11-14): README and key places on Wiki and Website should have a Support Me link.
     // The sidebar is the "key place" on the wiki — it is on every page, above the fold. It points at
     // the ONE support page rather than listing four donation options, because four equal buttons is a
     // menu, not an ask (DONATION-LINKS.md §4), and the support page already marks Sponsors preferred.
@@ -667,7 +667,7 @@ function main(argv) {
 
   if (!verdict.ok) {
     console.log('\nREFUSED — nothing published. Neither surface is ready, and none of the blockers');
-    console.log('above can be cleared from this script: making a repository public is the requirement\'s decision,');
+    console.log('above can be cleared from this script: making a repository public is the project\'s decision,');
     console.log('and an uncommitted file is fixed by committing it, not by changing a setting.');
     return 1;
   }

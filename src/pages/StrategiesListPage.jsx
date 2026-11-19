@@ -727,7 +727,7 @@ export default function StrategiesListPage() {
                 </div>
 
                 {/*
-                  ── THIS BOT'S QUEUED CHANGES (Requirement, 2026-11-19) ────────────────────────────────
+                  ── THIS BOT'S QUEUED CHANGES (Requirement (2026-11-19)) ────────────────────────────────
                   *"register placeholder changes… I expect them to appear on the strategies own pages
                   in the Strategies area alongwith the outstanding changes to protocols."*
 

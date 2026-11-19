@@ -2,7 +2,7 @@
  * symbol-discovery.service.ts — movers are RECORDED as symbols, never ACTIVATED as symbols.
  * ==========================================================================================
  *
- * Requirement, 2026-11-18: We will need the data to be stored in the database with normal symbol records:
+ * Requirement (2026-11-18): We will need the data to be stored in the database with normal symbol records:
  * they just won't be set as active until the users actions or a bot trades so that will need to be
  * looked at. We cannot activate every symbol that appears in top losers or top winners else by the end
  * of a month we'll have hundreds of active symbols being monitored.

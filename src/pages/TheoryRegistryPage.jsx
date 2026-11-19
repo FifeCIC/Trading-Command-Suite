@@ -7,7 +7,7 @@ import './theory-registry.css';
  *
  * WHY THIS PAGE EXISTS
  * --------------------
- * The registry is only useful if the project owner can READ it. Requirement, 2026-09-24: I still want to
+ * The registry is only useful if the project owner can READ it. Requirement (2026-09-24): I still want to
  * monitor the development, and read the decisions being made. I will interject when I read something
  * that doesn't seem right.
  *

@@ -30,7 +30,7 @@ export const MARKET_MOVERS_SETTINGS: SettingDefinition[] = [
 // The filter thresholds decide WHICH SYMBOLS THE APP WILL CONSIDER TRADING. Measured 2026-11-16,
 // 12 of 20 top gainers and 11 of 20 top losers on the raw feed were warrants/rights at $0.007–$0.83
 // with volume in the low thousands. Those numbers are a judgement about what is worth looking at,
-// not a fact about the market, so the requirement must be able to move them from the UI — and each one
+// not a fact about the market, so they must be movable from the UI — and each one
 // is echoed back in the API response under `filtersApplied` so a list can always be explained.
 {
   key: 'movers.minPrice',

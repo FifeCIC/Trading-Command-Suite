@@ -1845,7 +1845,7 @@ export class BacktestService {
       // ⚠️ BOTH SCORES ARE KEPT (2026-10-27). `signalPct` is the gated directional score that
       // decides BUY/SELL/HOLD; `opportunityPct` is the additive score the Screening area ranks by.
       // The first version stored only `signalPct` under the name `score`, which made a two-score
-      // system look like a one-score system — the requirement read the single column and asked where the
+      // system look like a one-score system — the single column was read as the whole system and the question followed: where the
       // other one was, which is exactly what a missing column should make a reader do.
       scoreSeries.push({
         // ⚠️ THE INSTANT, NOT THE DAY. `barDate` is `YYYY-MM-DD`, so every intraday bar of one day

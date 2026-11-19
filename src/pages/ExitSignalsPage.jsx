@@ -27,7 +27,7 @@ const URGENCY_LABELS = {
  * #1016 — THE EXIT PAGE READS THE BOT BOOK, NOT TRADING 212.
  *
  * ⚠️ WHY THE SOURCE CHANGED. `GET /api/portfolio/exit-signals` reads the **Trading 212** book via
- * `PortfolioService`, which is a data-import concern. Requirement, 2026-09-28: *"I don't want
+ * `PortfolioService`, which is a data-import concern. Requirement (2026-09-28): *"I don't want
  * any Trading212 bot activity going forward. Only data import and updates on the status of the
  * portfolio."* The 40 bot-managed positions are MT5, and the service that evaluates them is
  * `ExitConsensusService` — `GET /api/scoring/exit-consensus`.

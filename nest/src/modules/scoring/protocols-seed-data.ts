@@ -275,7 +275,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
   /**
    * ── movers-v1-long — THE MOVERS STRATEGY, DELIBERATELY SMALL ────────────────────────────────────
    *
-   * Requirement, 2026-11-18: Create the two protocols with a small amount of the directives.
+   * Requirement (2026-11-18): Create the two protocols with a small amount of the directives.
    *
    * ⚠️ **SMALL IS THE DESIGN, NOT AN UNFINISHED STATE.** The directive *inventory* proposed for this
    * strategy is ~20 long-side directives plus 9 that do not exist yet. Attaching all of them at once

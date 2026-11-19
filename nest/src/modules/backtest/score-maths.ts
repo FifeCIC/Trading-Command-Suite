@@ -544,7 +544,7 @@ export function tradeTotals(
 /**
  * stopSweep — "is the stop too distant?", answered from stored excursions.
  *
- * Requirement, 2026-10-29: *"if 70% of positions that dropped into the red by X amount then
+ * Requirement (2026-10-29): *"if 70% of positions that dropped into the red by X amount then
  * triggered the SL, that would tell us that we're losing money because the SL is too distant. The
  * simulated-stop-loss could be stricter."* That is exactly the question below, made countable.
  *
@@ -721,7 +721,7 @@ export function barGapProfile(
 /**
  * periodHealth — THE STANDARD that decides whether a window may be measured at all.
  *
- * Requirement, 2026-10-29: *"we should consider some standard requirements to deem a period
+ * Requirement (2026-10-29): *"we should consider some standard requirements to deem a period
  * healthy/complete enough to use at all … until then we should be strict."*
  *
  * ⚠️ THE THRESHOLDS ARE SETTINGS, NOT CONSTANTS (`backtest.periodMinCoveragePct`,

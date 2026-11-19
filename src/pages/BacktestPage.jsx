@@ -999,7 +999,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
   /**
    * THE CHANGES BEING TESTED — every field where this run departs from the bot's own settings.
    *
-   * Requirement, 2026-10-26: *"capture the changes that the user makes on this page and then
+   * Requirement (2026-10-26): *"capture the changes that the user makes on this page and then
    * highlight those changes where applicable in the results so that the user has clarity on the
    * changes."* The engine already reports this (`drivenBy.overridden`), but only AFTER the run. This
    * is the same list BEFORE it, so the reader can see what they are about to test.
@@ -1794,7 +1794,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
 
   // ── THE SESSION'S CHANGES ────────────────────────────────────────────────────────────────────
   /**
-   * Requirement, 2026-10-30: *"explore a method of presenting the previous value before the most
+   * Requirement (2026-10-30): *"explore a method of presenting the previous value before the most
    * recent change so the user can track the changes made during the backtesting session … we should
    * frame it as a session because users will probably test many times in a row"*, and for step 5:
    * *"remind us of our selections and maybe even list the changes made and show the two values, old
@@ -2764,7 +2764,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
             </div>
 
             {/* ── WHAT CHANGED IN THIS VISIT ─────────────────────────────────────────────────────
-                Requirement, 2026-10-30. It sits BELOW the strip on purpose: the strip is what the
+                Requirement (2026-10-30). It sits BELOW the strip on purpose: the strip is what the
                 run will use, this is the history of how it got there. Two tables, two questions —
                 folding them into one would make "SL 2.00%" appear twice with no way to tell which one
                 the engine reads. */}
@@ -3694,7 +3694,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
             chart as it is useless right now"*). It was never the run's chart — `BacktestChartPane`
             carries its own symbol menu, so it opened on whatever symbol was last picked rather than on
             the run under test, and it drew no scoring overlay. The chart that belongs here is the one
-            the requirement has asked for repeatedly: the run's own bars, coloured by the algorithm's verdict,
+            the requirement states repeatedly: the run's own bars, coloured by the algorithm's verdict,
             with support/resistance levels drawn from the directives. That needs level directives to
             RETURN geometry, which 5 of 6 currently discard into `reason` prose (#1150). Until then a
             chart would be a picture of something else, so there is no chart.

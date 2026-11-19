@@ -1,7 +1,7 @@
 /**
  * AppearanceFormsPage — the Form System, in the Appearance area.
  * =============================================================
- * Requirement, 2026-10-13: *"A dedicated page for Forms that includes this system would be good:
+ * Requirement (2026-10-13): *"A dedicated page for Forms that includes this system would be good:
  * <section.tl-section> Form System — One canonical form standard. Import src/core/form…"*
  *
  * ⚠️ MOVED VERBATIM from `ThemeLabPage.jsx`, and the section was REMOVED there in the same change.

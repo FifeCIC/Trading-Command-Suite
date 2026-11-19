@@ -46,9 +46,9 @@
  *
  * The rule already existed in `agent-environment.instructions.md` and **agents kept breaking it
  * anyway** — including the agent that wrote the rule into this file. A rule with no mechanism does
- * not fire, so the two things that cost the requirement reading time are now checked HERE:
+ * not fire, so the two things that cost a reader the most time are now checked HERE:
  *
- *   1. **CADENCE** — WARN if the previous commit was under 4 hours ago. The requirement reads every
+ *   1. **CADENCE** — WARN if the previous commit was under 4 hours ago. Every commit is read closely —
  *      commit; one every few minutes — 18 in 4.5 hours was measured on 2026-09-23 — trains them to
  *      skim, which is identical to having no evidence trail. Batch instead.
  *   2. **BODY SIZE** — WARN on a message over 1,500 characters. The reasoning belongs in the
@@ -228,7 +228,7 @@ function main() {
                 'Committing anyway.',
             );
             console.warn(
-              '    The requirement reads every commit; frequent small ones train them to skim. If this ' +
+              '    Every commit is read closely; frequent small ones train a reader to skim. If this ' +
                 'one is deliberate, --why="<reason>" records it.',
             );
           }
@@ -363,7 +363,7 @@ function main() {
   // re-read. It costs the requirement nothing because it is console output, not a reply.
   console.log(
     `${TAG}   \u2192 do NOT report this commit in chat. No SHA, no file list, no "committed" line. ` +
-      'The requirement reads every commit; restating it is the noise they asked to remove.',
+      'Every commit is read closely; restating it is the noise to remove.',
   );
 }
 
@@ -545,7 +545,7 @@ function selfTest() {
       'and the reason is RECORDED in the message — an unrecorded exception is invisible',
     );
 
-    // (10) THE BODY WARNING — the requirement reads every commit, so the reasoning belongs in the handoff.
+    // (10) THE BODY WARNING — every commit is read closely, so the reasoning belongs in the handoff.
     fs.writeFileSync(path.join(tmp, 'long.js'), 'l\n');
     const longBody = cli(['-m', 'x'.repeat(2000), '--', 'long.js'], { COMMIT_ONLY_MAX_BODY: '1500' });
     say(

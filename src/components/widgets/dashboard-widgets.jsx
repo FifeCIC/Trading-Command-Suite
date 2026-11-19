@@ -214,7 +214,7 @@ function HScroll({ children, label }) {
 }
 
 /* ── MT5 Portfolio Summary ──
-   Requirement, 2026-11-06: Surely we can add more information … Lets hide some of that additional
+   Requirement (2026-11-06): Surely we can add more information … Lets hide some of that additional
    information if the widget is too small for it. Rather than just relying on scroll bar lets add
    buttons for scrolling information sideways. Also position the information so it's always two
    rows. Right now it's one with a lot of empty space below each piece of data.

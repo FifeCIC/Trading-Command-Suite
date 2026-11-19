@@ -217,7 +217,7 @@ export class SymbolsService implements OnApplicationBootstrap {
    *   `MetaQuotes`  1 — the MT5 PLATFORM, declared by hand on GRML
    *   `Unknown`     1 — an adapter fallback (`x || 'Unknown'` appears in five adapters)
    *
-   * The requirement read the page and asked why a non-existent exchange appeared on most rows. That is
+   * A non-existent exchange appeared on most rows of the page, and the question was why. That is
    * the failure mode: a value that LOOKS like an answer is worse than a blank, because nobody
    * checks it. The seeder now writes NULL, and the 31 rows were reconciled.
    *
