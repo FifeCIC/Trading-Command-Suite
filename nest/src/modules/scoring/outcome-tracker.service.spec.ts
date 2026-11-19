@@ -145,6 +145,46 @@ describe('OutcomeTrackerService — maturation', () => {
     warn.mockRestore();
   });
 
+  // ⚠️ GUARD (2026-11-19) — the saturation warn must not claim progress it did not make.
+  //
+  // Measured in production with the MT5 bridges down: one tick logged
+  //   `visited 1500, filled 0, finalised 0 — backlog 42784 -> 42784`
+  // and, from this branch, `drained 1500 this tick`. 1,500 rows were READ; nothing was
+  // filled, nothing was finalised and the backlog did not move. A reader who trusts
+  // "drained 1500" has no reason to look at the `finalised 0` beside it.
+  //
+  // This asserts the WORD, because the wording is the whole defect: it is the only thing a
+  // human reads at 3am. The mock fills nothing, so any claim of drainage is false.
+  it('does not claim rows were drained when nothing was filled or finalised', async () => {
+    const prisma = mockPrisma();
+    const BATCH = 250;
+    prisma.directiveOutcome.findMany.mockResolvedValue(
+      Array.from({ length: BATCH }, (_, i) => pendingRow({ id: `row-${i}` })),
+    );
+    prisma.directiveOutcome.count.mockResolvedValue(43692);
+    const warn = jest.spyOn(require('@nestjs/common').Logger.prototype, 'warn').mockImplementation(() => undefined);
+
+    const service = new OutcomeTrackerService(prisma as any);
+    (service as any).maturationYieldMs = 0;
+    // ⚠️ Reproduce the PRODUCTION condition, not a comfortable one: with the MT5 bridges
+    // down, `getPriceAt` finds no bar for any horizon, so every row is visited and none
+    // progresses. Assuming the default mock fills nothing was WRONG — it fills everything
+    // (finalised 1500 / filled 1500), which would make this test assert the opposite of the
+    // state it names.
+    (service as any).getPriceAt = async () => null;
+    await service.computeOutcomes();
+
+    const text = warn.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(text).toMatch(/batch saturated/);
+    // The defect was the WORD. `visited` means rows read; `finalised`/`filled` mean rows that
+    // progressed. The warn must never call a visited row "drained", whatever the counters are.
+    expect(text).not.toMatch(/drained/i);
+    // …and it must print BOTH progress counters, so the reader can see visited ≠ progress
+    // without cross-referencing the tick summary line.
+    expect(text).toMatch(/visited \d+ this tick \(finalised \d+, filled \d+\)/);
+    warn.mockRestore();
+  });
+
   // ⚠️ REGRESSION GUARD (#828/#830). `Matured N` counted rows VISITED, not filled, so a
   // sweep that achieved nothing logged identically to one that filled everything. That is
   // what hid a stopped pipeline for a day. These pin the split counters, and the WARN when

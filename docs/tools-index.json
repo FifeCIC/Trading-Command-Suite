@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 203,
+  "count": 204,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -278,6 +278,16 @@
       "selfTest": true,
       "reaches": [
         "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "check-outcome-convergence.cjs",
+      "where": "nest",
+      "category": "check",
+      "purpose": "is the directive-outcome feedback loop KEEPING UP?",
+      "selfTest": true,
+      "reaches": [
         "npm"
       ]
     },

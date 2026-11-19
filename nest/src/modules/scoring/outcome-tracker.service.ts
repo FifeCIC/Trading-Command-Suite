@@ -529,9 +529,17 @@ export class OutcomeTrackerService {
       this.logger.log(summary);
       this.syslog?.info('OutcomeTrackerService', summary, 'scoring');
       if (saturated && visited >= MATURATION_MAX_ROWS_PER_TICK) {
+        // ⚠️ `visited` IS NOT `drained` (measured 2026-11-19). This line used to read
+        // "drained ${visited} this tick", and with the MT5 bridges down the tick logged
+        // `visited 1500, filled 0, finalised 0 — backlog 42784 -> 42784` AND "drained 1500"
+        // at the same time: 1,500 rows read, nothing filled, nothing finalised, the backlog
+        // unchanged. The claim was false in the one situation it mattered most — when the
+        // queue is stuck — which is the #1236 class: a surface reporting a state it never
+        // observed. A reader who trusts "drained 1500" stops looking at `finalised 0`.
         this.logger.warn(
           `Outcome maturation batch saturated — ${backlogAfter ?? '?'} rows pending, ` +
-          `drained ${visited} this tick (ceiling ${MATURATION_MAX_ROWS_PER_TICK}); continues next tick`,
+          `visited ${visited} this tick (finalised ${finalised}, filled ${filled}) ` +
+          `against a ceiling of ${MATURATION_MAX_ROWS_PER_TICK}; continues next tick`,
         );
       }
       return filled;
