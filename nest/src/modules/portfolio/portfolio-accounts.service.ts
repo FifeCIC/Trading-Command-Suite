@@ -110,6 +110,41 @@ export class PortfolioAccountsService {
     return s.removed === true;
   }
 
+  /**
+   * readAccountFlags() — an account's toggles, honouring the PRE-RENAME key (#1205).
+   *
+   * ⚠️ WHY A FALLBACK RATHER THAN A MIGRATION. MT5 account ids gained the bridge
+   * (`mt5:<brokerId>:<login>`) because one login can be configured on TWO bridges — measured
+   * 2026-11-19, `GET /api/portfolio/accounts` returned `mt5:10011309743` twice, once per bridge.
+   * Those toggles are persisted rows keyed `accounts.<id>`, so renaming the id makes every existing
+   * toggle INERT without raising anything: the owner's "removed" flag stops removing and an
+   * excluded account silently reappears in the totals.
+   *
+   * A one-off rewrite would have to guess what a legacy row meant. It cannot: one legacy key
+   * controlled BOTH bridges at once, so copying it to both per-bridge keys is a guess about intent
+   * that happens to be right today and would be wrong the moment the two diverge. A READ fallback
+   * needs no guess — the legacy value applies until the first write to the new key supersedes it,
+   * and after that the new key owns the answer.
+   *
+   * ⚠️ The legacy row is left where it is. Deleting it is unrecoverable and buys nothing: it is read
+   * only when the per-bridge key is absent, which stops being true after the first toggle.
+   */
+  private async readAccountFlags(
+    primaryKey: string,
+    legacyKey?: string,
+  ): Promise<{ enabled: boolean; removed: boolean }> {
+    const primary = await this.readSetting(primaryKey);
+    const legacy =
+      legacyKey && legacyKey !== primaryKey && primary.enabled === undefined && primary.removed === undefined
+        ? await this.readSetting(legacyKey)
+        : {};
+    const source = primary.enabled === undefined && primary.removed === undefined ? legacy : primary;
+    return {
+      enabled: source.enabled === undefined ? true : source.enabled !== false,
+      removed: source.removed === true,
+    };
+  }
+
   private async writeEnabled(key: string, enabled: boolean): Promise<void> {
     await this.patchSetting(key, { enabled });
   }
@@ -196,15 +231,31 @@ export class PortfolioAccountsService {
     }
     if (mt5Accounts.length > 0) {
       for (const a of mt5Accounts) {
-        const id = `mt5:${a.login || a.number}`;
+        // ── #1205 — THE ID MUST CARRY THE BRIDGE ────────────────────────────────────────────
+        // Measured 2026-11-19: `GET /api/portfolio/accounts` returned six MT5 rows for three
+        // logins, because the same login is configured on BOTH bridges and the id was
+        // `mt5:<login>`. Consequences, all silent: duplicate React keys in Screen Options; a
+        // toggle on one row flipping the same login on the other bridge; and the same toggle
+        // changing the total for both.
+        //
+        // ⚠️ `brokerId` is optional on `Mt5Account`, and a row without it CANNOT be
+        // disambiguated — so it keeps the legacy id rather than inventing `mt5:?:<login>`, which
+        // would collide with any other unknown-bridge account and look unique.
+        const login = a.login || a.number;
+        const hasBridge = Number.isFinite(a.brokerId);
+        const id = hasBridge ? `mt5:${a.brokerId}:${login}` : `mt5:${login}`;
+        const legacyId = `mt5:${login}`;
+        const flags = await this.readAccountFlags(`${SETTING_PREFIX}${id}`, `${SETTING_PREFIX}${legacyId}`);
         accounts.push({
           id,
           broker: 'MT5',
-          label: `MT5 · ${a.server || a.login} (${a.login || a.number})`,
+          label: hasBridge
+            ? `MT5 · ${a.server || login} (${login}) · bridge ${a.brokerId}`
+            : `MT5 · ${a.server || login} (${login})`,
           kind: 'mt5',
           category: a.isLive ? 'live' : 'demo',
-          enabled: await this.readEnabled(`${SETTING_PREFIX}${id}`),
-          removed: await this.readRemoved(`${SETTING_PREFIX}${id}`),
+          enabled: flags.enabled,
+          removed: flags.removed,
           connected: !!a.connected,
           value: a.connected ? (a.equity ?? a.balance ?? null) : null,
           positions: 0,

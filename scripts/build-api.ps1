@@ -617,7 +617,13 @@ Write-Ok "API starting in the background (node dist/src/main.js, PID $($apiProc.
 $healthy = Assert-ApiUp -Port 3201 -TimeoutSeconds 180 -Proc $apiProc -LaunchedAtUtc $apiLaunchedAtUtc
 
 # ⚠️ DROPS OUR REFERENCE ONLY. The API is a separate process and is NOT stopped by this.
-$apiProc.Dispose()
+#
+# ⚠️ NULL-GUARDED (#1168, measured 2026-11-19). This line was bare, and when the reference was
+# null it threw a NON-TERMINATING error — `You cannot call a method on a null-valued expression` —
+# printed immediately beside a success line, which is how a verification problem came to look like
+# a cosmetic warning. A guard here is cheap; a reader having to decide whether that error mattered
+# is not. The identity check at `Assert-ApiUp` above is what actually proves the API is ours.
+if ($apiProc) { $apiProc.Dispose() }
 
 # ⚠️ MEASURED 2026-10-22 — DISPOSING THE HANDLE DID **NOT** FIX THE HANG, and this note exists so
 # nobody "fixes" it again on the same theory.

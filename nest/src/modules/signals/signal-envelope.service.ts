@@ -578,6 +578,36 @@ export class SignalEnvelopeService {
     const protocol = protocolId
       ? (this.protocolDb.getCached(protocolId) ?? await this.protocolDb.findBySlug(protocolId))
       : undefined;
+
+    // ── #1267 (2026-11-19) — A NAMED PROTOCOL THAT CANNOT BE RESOLVED IS AN ERROR, NOT A DEFAULT ──
+    //
+    // Measured on this endpoint: `GET /api/signals/envelope/GER40?protocol=euro-stoxx-v1-long`
+    // answered `NO_DATA / composite 0` on a cold call and `HOLD / composite 50` about a minute
+    // later, on unchanged market data. The mechanism is HERE, not in any score cache:
+    // `getCached()` is the protocol REGISTRY cache, and when it is cold this expression fell
+    // through to `findBySlug()`. If that also missed, `protocol` was `undefined` — and everything
+    // below then silently substituted DEFAULTS for the protocol being asked about:
+    //
+    //     baseTimeframe = selectBaseTimeframe(undefined)   ← not this protocol's cadence
+    //     requiredBars  = { '1d': 200 }                    ← not this protocol's requirements
+    //
+    // A different cadence reads a different bar array, which scores differently — so the same
+    // question had two different answers depending on cache temperature, and neither said which.
+    //
+    // The caller NAMED a protocol. If we cannot resolve it, the honest answer is that we could not
+    // answer, and that is a different state from "this tick produced no directional reading"
+    // (`NO_DATA`) and from "nothing was measured at all" (`emptyEnvelope`). Refusing also stops a
+    // default cadence being scored and PERSISTED against a protocol it does not belong to.
+    if (protocolId && !protocol) {
+      const unknown = this.emptyEnvelope(cleanTicker);
+      unknown.preTradeBlockers = [
+        `Protocol '${protocolId}' could not be resolved, so nothing was scored. This is NOT a ` +
+        'neutral reading and NOT "no signal" — the question could not be asked (#1267).',
+      ];
+      unknown.preTradeBlockerCodes = ['UNKNOWN_PROTOCOL'];
+      return unknown;
+    }
+
     const requiredBars = protocolId ? this.protocolDb.getRequiredBars(protocolId) : { '1d': 200 };
     const baseTimeframe = selectBaseTimeframe(protocol?.recommendedTimeframe);
     // ⚠️ #1013 — the BASE cadence must use the ONE sizing rule. `requiredBars[baseTimeframe]
@@ -902,8 +932,24 @@ export class SignalEnvelopeService {
     // Build group panels from breakouts
     const groups = this.buildGroups(gated);
 
-    // Compute confidence from multiple signals
-    const confidence = this.computeConfidence(gated);
+    // ── #1267 (2026-11-19) — AN UNREAD TICK HAS NO CONFIDENCE, AND MUST NOT GET A COMPUTED ONE ──
+    //
+    // `computeConfidence()` starts at a BASE of 50 and adjusts for rarity, distance from the entry
+    // threshold, group agreement and the risk gate. Applied to a `NO_DATA` tick — one where the
+    // scorer decided that NOTHING produced a directional reading — that base is pure invention:
+    // signalPct is 0, distance is −65, and `−Math.min(65 * 0.3, 15)` leaves **35**.
+    //
+    // MEASURED 2026-11-19, `GET /api/signals/envelope/{GER40,XAUUSD,EURUSD}?protocol=euro-stoxx-v1-long`:
+    // all three returned `signal: NO_DATA, composite: 0, confidence: 35, groups: 3`. Three unrelated
+    // symbols agreeing on 35 is not a coincidence and not a symbol-independent fill — it is the base
+    // minus the same penalty, computed over the same absence.
+    //
+    // ⚠️ THE SCORER ALREADY ANSWERS THIS CORRECTLY. `protocol-gating.service.ts` returns
+    // `confidence: 0` on its NO_DATA path; this call OVERWROTE it. So the fix is not a new number,
+    // it is to stop replacing a correct one. `confidence` is a claim about evidence, and a tick with
+    // no evidence cannot have 35% of it.
+    const unread = (gated.signal as string) === 'NO_DATA';
+    const confidence = unread ? 0 : this.computeConfidence(gated);
 
     // Detect conflicts — gate groups excluded (#716): their subScore is
     // structurally 0 and must not manufacture divergences.
@@ -1145,6 +1191,11 @@ export class SignalEnvelopeService {
    *  - Distance from threshold
    *  - Group agreement (low variance = higher confidence)
    *  - Risk gate severity penalty
+   *
+   * ⚠️ THIS IS ONLY MEANINGFUL WHEN SOMETHING WAS MEASURED (#1267). The `50` base below is a
+   * midpoint for a reading that exists, not a neutral floor for one that does not: applied to a
+   * `NO_DATA` tick it produces 35 out of arithmetic over an absence. `enrichEnvelope()` therefore
+   * never calls this for an unread tick — do not "fix" a NO_DATA confidence by tuning this base.
    */
   private computeConfidence(gated: GatedScore): number {
     let confidence = 50; // base

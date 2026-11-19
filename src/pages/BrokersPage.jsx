@@ -633,9 +633,21 @@ export default function BrokersPage() {
                                       <td>{a.active ? <strong>active</strong> : <span className={styles.muted}>standby</span>}</td>
                                       <td>
                                         {(() => {
-                                          // The account id is `mt5:<login>`; the same login on two
-                                          // bridges is ONE account, so both rows honestly agree here.
-                                          const st = accountStateById.get(`mt5:${a.login || a.number}`);
+                                          // ⚠️ THE ID CARRIES THE BRIDGE (#1205, measured 2026-11-19).
+                                          // This used to read `mt5:<login>` under the belief that "the same
+                                          // login on two bridges is ONE account, so both rows honestly
+                                          // agree here". That belief was the defect: the API returned six
+                                          // MT5 rows for three logins, all three ids duplicated, so one
+                                          // toggle flipped both bridges and the totals moved together.
+                                          // They are now two accounts and can disagree — which is the point.
+                                          //
+                                          // A row with no `brokerId` keeps the legacy id, matching
+                                          // `collectAccounts()`: an id that cannot name its bridge must not
+                                          // be given a unique-looking one.
+                                          const mt5Key = Number.isFinite(a.brokerId)
+                                            ? `mt5:${a.brokerId}:${a.login || a.number}`
+                                            : `mt5:${a.login || a.number}`;
+                                          const st = accountStateById.get(mt5Key);
                                           if (!st) return <span className={styles.muted} title="Not present in the account store — the bridge reports it but the app holds no setting for it">—</span>;
                                           if (!st.enabled) return <span className={styles.muted}>excluded</span>;
                                           // ⚠️ "counted" must mean CONTRIBUTES. The overview total needs

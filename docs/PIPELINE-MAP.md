@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**591** source files · **3308** declarations · **397** ratio sites · **1753** nodes · **181** unreferenced
+**591** source files · **3311** declarations · **397** ratio sites · **1754** nodes · **181** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -1042,11 +1042,11 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/strategy-derivation.service.ts:688 text`
 - `nest/src/modules/scoring/strategy-derivation.service.ts:689 flag`
 - `nest/src/modules/screener/screener.service.ts:183 bump`
-- `nest/src/modules/signals/signal-envelope.service.ts:2064 isRouteable`
-- `nest/src/modules/signals/signal-envelope.service.ts:2249 q`
-- `nest/src/modules/signals/signal-envelope.service.ts:2257 first`
+- `nest/src/modules/signals/signal-envelope.service.ts:2115 isRouteable`
+- `nest/src/modules/signals/signal-envelope.service.ts:2300 q`
+- `nest/src/modules/signals/signal-envelope.service.ts:2308 first`
 - `nest/src/modules/signals/signal-envelope.service.ts:327 has`
-- `nest/src/modules/signals/signal-envelope.service.ts:677 newestOfTf`
+- `nest/src/modules/signals/signal-envelope.service.ts:707 newestOfTf`
 - `nest/src/modules/signals/signal-queue.service.ts:264 getQueue`
 - `nest/src/modules/strategies/strategies.service.ts:56 calculateScore`
 - `nest/src/modules/supporter/supporter.service.ts:131 unavailable`
