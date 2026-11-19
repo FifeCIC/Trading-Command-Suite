@@ -18,6 +18,7 @@
  */
 
 import { Injectable, Logger, Optional } from '@nestjs/common';
+import { FaultsService } from '../faults/faults.service';
 
 export type ProviderHealth = 'healthy' | 'degraded' | 'failed' | 'unknown';
 
@@ -40,8 +41,12 @@ export class ProviderDegradationService {
   /** How long to wait before retrying a failed provider (ms) */
   private readonly RETRY_AFTER_MS = 300_000; // 5 min
 
-  constructor() {
-    // NotificationService injected via setter to avoid circular dependency
+  constructor(@Optional() private readonly faults?: FaultsService) {
+    // NotificationService injected via setter to avoid circular dependency.
+    // ⚠️ `FaultsService` is a CONSTRUCTOR parameter because it does not depend back on this module,
+    // and `@Optional()` because several specs construct this service bare (`new ProviderDegradation-
+    // Service()`). An absent registry degrades to "not recorded", never to a throw — a diagnostic
+    // must not be able to break the error path it is observing.
   }
 
   /** Set notification service reference (called by module after construction) */
@@ -162,6 +167,12 @@ export class ProviderDegradationService {
 
   /** Send a notification when provider status changes */
   private notifyStatusChange(providerId: string, status: string, detail: string): void {
+    // ⚠️ THE FAULT IS RECORDED BEFORE THE `notifications` GUARD BELOW, and the order is load-bearing.
+    // That guard returns early when no notification channel is wired, which is the NORMAL state in
+    // tests and on a machine with notifications off — so a fault recorded after it would be silently
+    // dropped exactly when nobody is watching, which is the failure this registry exists to end.
+    if (status === 'failed') this.recordFailureFault(providerId, detail);
+
     if (!this.notifications) return;
     try {
       this.notifications.send({
@@ -174,6 +185,34 @@ export class ProviderDegradationService {
       // Never let notification errors cascade
       this.logger.debug(`Failed to send provider notification: ${(err as Error).message}`);
     }
+  }
+
+  /**
+   * Persist the failure so it survives the restart that used to erase it.
+   *
+   * ⚠️ `count` COUNTS EPISODES, NOT CALLS. This is invoked from `notifyStatusChange`, which fires on
+   * a STATUS TRANSITION (`healthy|degraded → failed`), so a provider that fails and recovers ten
+   * times contributes 10 — while a provider stuck failing contributes 1 and ages via `lastSeen`.
+   * Wiring this into `reportError` instead would have made `count` a measure of traffic, which is
+   * a number that grows fastest when the app is *working*.
+   *
+   * Fire-and-forget on purpose: a registry that can throw into the adapter's error path is worse
+   * than no registry, and the failure is logged rather than swallowed.
+   */
+  private recordFailureFault(providerId: string, detail: string): void {
+    if (!this.faults) return;
+    // 'finnhub' -> 'TCS-PROVIDER-FINNHUB'. The code must match `TCS-<PATHWAY>-<CONDITION>` and must
+    // be stable: the same provider must always produce the same code or its history splits in two.
+    const token = providerId.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '');
+    void this.faults
+      .record({
+        code: `TCS-PROVIDER-${token}`,
+        title: `Provider ${providerId} failed`,
+        area: 'provider',
+        severity: 'warning',
+        evidence: { providerId, detail, at: new Date().toISOString() },
+      })
+      .catch((err) => this.logger.debug(`Could not record provider fault: ${(err as Error).message}`));
   }
 
   /** Reset a provider to unknown (for testing or manual recovery) */

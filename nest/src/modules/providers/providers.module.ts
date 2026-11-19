@@ -1,5 +1,9 @@
 import { Module, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module';
+// A provider that has failed is a PERSISTENT fault, not an in-memory state: the degradation map is
+// lost on restart, so without this the same failure had to be rediscovered every time. No cycle —
+// FaultsModule depends only on the (global) database.
+import { FaultsModule } from '../faults/faults.module';
 import { ModeService } from '../../config/mode.service';
 import { ProvidersController } from './providers.controller';
 import { Mt5Controller } from './mt5.controller';
@@ -34,7 +38,7 @@ import { ProviderCacheService } from './provider-cache.service';
 import { PositionSyncService } from './position-sync.service';
 
 @Module({
-  imports: [DatabaseModule, NotificationsModule],
+  imports: [DatabaseModule, NotificationsModule, FaultsModule],
   controllers: [ProvidersController, Mt5Controller],
   providers: [
     ProvidersService,

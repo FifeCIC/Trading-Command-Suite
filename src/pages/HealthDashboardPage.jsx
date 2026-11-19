@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { motion } from 'motion/react';
-import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './health-dashboard.css';
@@ -217,6 +217,102 @@ function FeedFreshnessSection({ starved, error, totalScanned, isLoading }) {
 }
 
 // ── Main Page ────────────────────────────────────────────
+
+/**
+ * FaultRegistrySection — the persistent fault registry, on the page people already open when
+ * something looks wrong.
+ *
+ * ⚠️ WHY IT LIVES HERE AND NOT ON ITS OWN PAGE (`docs/FAULT-TAXONOMY-GUARDRAILS.md`): a registry on
+ * a page nobody visits is a graveyard. This one is attached to Health & Diagnostics because that is
+ * where a fault is investigated, and it leads with **"not reviewed in N days"** — the counter that
+ * makes neglect visible rather than something somebody has to remember to check.
+ *
+ * ⚠️ ZERO IS NOT THE SAME AS UNKNOWN. `total: 0` renders an explicit "nothing recorded" line, while a
+ * failed query renders "cannot judge" — collapsing the two would make an outage look like a healthy
+ * empty registry, which is the exact failure this whole register exists to stop.
+ */
+function FaultRegistrySection() {
+  const qc = useQueryClient();
+  const summaryQ = useQuery({ queryKey: ['faults-summary'], queryFn: () => apiGet('/api/faults/summary'), refetchInterval: 60000 });
+  const listQ = useQuery({ queryKey: ['faults-all'], queryFn: () => apiGet('/api/faults'), refetchInterval: 60000 });
+
+  const review = useMutation({
+    mutationFn: (code) => apiPost(`/api/faults/${encodeURIComponent(code)}/review`, { reviewedBy: 'dashboard' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['faults-summary'] });
+      qc.invalidateQueries({ queryKey: ['faults-all'] });
+    },
+  });
+
+  const s = summaryQ.data;
+  const rows = listQ.data?.rows || [];
+  const staleDays = s?.staleDays ?? 14;
+
+  return (
+    <motion.section className="hd-section" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+      <h2 className="hd-section-title">🩹 Fault Registry (persistent — survives a restart)</h2>
+
+      {summaryQ.isError || listQ.isError ? (
+        <div className="hd-empty">Cannot judge — the fault registry did not answer. An empty list is NOT shown here, because an outage and a clean registry must not look the same.</div>
+      ) : (
+        <>
+          <div className="fd-strip">
+            <span className="fd-strip-item"><strong>{s?.total ?? '—'}</strong> recorded</span>
+            <span className="fd-strip-item"><strong>{s?.byStatus?.open ?? 0}</strong> open</span>
+            <span className="fd-strip-item"><strong>{s?.byStatus?.retired ?? 0}</strong> retired</span>
+            <span className="fd-strip-item fd-warn"><strong>{s?.neverReviewed ?? 0}</strong> never reviewed</span>
+            <span className="fd-strip-item fd-warn"><strong>{s?.stale ?? 0}</strong> not visited in {staleDays}d</span>
+            {s?.recurredAfterRetirement > 0 && (
+              <span className="fd-strip-item fd-loss"><strong>{s.recurredAfterRetirement}</strong> recurred after being retired</span>
+            )}
+          </div>
+
+          {rows.length === 0 ? (
+            <div className="hd-empty-ok">✅ Nothing recorded. Faults are written when a subsystem observes one (provider failure today) — an empty registry means none has been observed, not that nothing was checked.</div>
+          ) : (
+            <div className="hd-table-wrap">
+              <table className="hd-table hd-table-sm">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Area</th>
+                    <th>Seen</th>
+                    <th>Last seen</th>
+                    <th>Reviewed</th>
+                    <th>Issue</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((f) => {
+                    const neglected = f.neverReviewed || (f.daysSinceReview ?? 0) >= staleDays;
+                    return (
+                      <tr key={f.code}>
+                        <td className="hd-td-mono" title={f.title}>{f.code}</td>
+                        <td>{f.area}</td>
+                        <td className="hd-td-num">×{f.count}</td>
+                        <td className="hd-td-age">{timeAgo(f.lastSeen)}</td>
+                        <td className="hd-td-age" style={{ color: neglected ? 'var(--color-warning)' : undefined }}>
+                          {f.neverReviewed ? 'never' : `${f.daysSinceReview}d ago`}
+                        </td>
+                        <td>{f.issueUrl ? <a href={f.issueUrl} target="_blank" rel="noreferrer">#{f.issueUrl.replace(/.*\//, '')}</a> : <span className="hd-td-age">none</span>}</td>
+                        <td>
+                          <button type="button" className="hd-btn" disabled={review.isPending} onClick={() => review.mutate(f.code)}>
+                            Mark reviewed
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+    </motion.section>
+  );
+}
 
 export default function HealthDashboardPage() {
   const dashQuery = useQuery({
@@ -446,6 +542,8 @@ export default function HealthDashboardPage() {
           {(!data?.traceCorrelations || data.traceCorrelations.length === 0) && <span className="hd-empty">No trace data</span>}
         </div>
       </motion.section>
+
+      <FaultRegistrySection />
 
       <motion.footer className="hd-footer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.32 }}>
         Data fetched at {data?.fetchedAt ? new Date(data.fetchedAt).toLocaleTimeString() : '—'} · Auto-refresh 15s

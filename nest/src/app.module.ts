@@ -26,6 +26,9 @@ import { ReplayModule } from './modules/replay/replay.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ExportModule } from './modules/export/export.module';
 import { AlertsModule } from './modules/alerts/alerts.module';
+// Persistent fault registry — a fault that survives a restart and can be counted. See
+// docs/FAULT-TAXONOMY-GUARDRAILS.md (G1/G2/G3, enforced by scripts/validate-fault-taxonomy.cjs).
+import { FaultsModule } from './modules/faults/faults.module';
 import { CacheModule } from './modules/cache/cache.module';
 import { TrainingModule } from './modules/training/training.module';
 import { NewsModule } from './modules/news/news.module';
@@ -112,6 +115,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     ReplayModule,
     NotificationsModule,
     AlertsModule,
+    FaultsModule,
     ExportModule,
     CacheModule,
     TrainingModule,

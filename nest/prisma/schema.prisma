@@ -1655,6 +1655,20 @@ model TradingStrategy {
   // not collide with it, so the reserved range starts at 234100. NULL = not yet assigned.
   magic         Int?     @unique
   symbol        String   @db.VarChar(20)
+  // ── #1314 · NON-FIXED SYMBOL SCOPE ──
+  // `fixed` = this bot trades `symbol` above. `feed` = it trades whatever ticker is on TODAY'S
+  // movers list named by `feedList`, and `symbol` above is a PLACEHOLDER that routing ignores.
+  //
+  // WHY A DISCRIMINANT RATHER THAN A NULLABLE `symbol`: `symbol` is NOT NULL and is `live` at the
+  // `scope` stage in bot-rules.ts, and every other reader (position attribution, the bots table,
+  // the symbol pages) assumes it names an instrument. Making it nullable would push a null check
+  // into all of them. One fact, in one place — and `'fixed'` is the default, so every row that
+  // predates this keeps exactly the behaviour it already had.
+  scopeMode     String   @default("fixed") @db.VarChar(16)
+  // Which movers list a `feed`-scoped bot draws from. NULL for a fixed-scope bot.
+  // ⚠️ Deliberately NOT defaulted to 'winners': a silent default turns "the author forgot" into
+  // "this bot trades the winners list", which is a decision nobody made. Routing REFUSES on NULL.
+  feedList      String?  @db.VarChar(16)
   brokerId      String   @default("mt5") @db.VarChar(50)
   timeframe     String   @db.VarChar(10)   @default("5m")
   // ⚠️ 65 -> 10 (2026-09-15, #839). This is a POLICY default, not a schema convenience.
@@ -3266,4 +3280,61 @@ model ProtocolChangeSuggestion {
   @@index([protocolSlug, status])
   @@index([priority])
   @@map("protocol_change_suggestion")
+}
+
+// ── Persistent fault registry ──────────────────────────────────────────────────────────────
+// WHY THIS TABLE EXISTS
+//   Several subsystems knew about a persistent fault only in memory — `ProviderDegradationService`
+//   held its state in a `new Map()`, so a restart forgot that a bridge had been failing for hours.
+//   A fault that is forgotten on restart cannot be COUNTED, and an uncounted fault cannot be
+//   prioritised. This table is the one identifier that survives a restart.
+//
+// 🛑 THE THREE RULES THIS TABLE IS BUILT TO SATISFY — see docs/FAULT-TAXONOMY-GUARDRAILS.md and
+//    `scripts/validate-fault-taxonomy.cjs`, which FAILS THE BUILD if they are broken:
+//    G1 — every column below is an INSTANCE field. There is no (title, detail) pair to record the
+//         same fault twice under two spellings; `code` is the identity and `count` the recurrence.
+//    G2 — a row is RETIRED (status change), never deleted. Deleting on issue-close destroys the
+//         evidence that the fault ever happened, and the next occurrence looks brand new.
+//    G3 — any diagram of these rows must be GENERATED from the table, never hand-drawn.
+//
+// ⚠️ `code` is the only stable identity here: a title can be reworded and a service can be renamed,
+//    but a code that is REUSED for a different condition makes the count a lie. A retired code
+//    stays retired; a new condition gets a new code.
+model Fault {
+  id         String    @id @default(uuid()) @db.VarChar(36)
+  /// Stable identifier, e.g. 'TCS-BRIDGE-UNREACHABLE'. Unique for the life of the project.
+  code       String    @unique @db.VarChar(80)
+  title      String    @db.VarChar(200)
+  /// The PATHWAY it sits on: 'bridge' | 'scoring' | 'queue' | 'trading' | 'data' | 'api'.
+  /// Lets the registry be read one subsystem at a time rather than as a flat list of everything.
+  area       String    @db.VarChar(40)
+  severity   String    @default("warning") @db.VarChar(20)  // critical | warning | info
+  /// 'open' | 'acknowledged' | 'retired'. RETIRED, never deleted (G2).
+  status     String    @default("open") @db.VarChar(20)
+  /// First and LAST observation. `lastSeen` is what ages a fault; `firstSeen` is what makes it
+  /// persistent rather than a blip. Neither is ever overwritten past its meaning.
+  firstSeen  DateTime  @default(now()) @db.DateTime(3)
+  lastSeen   DateTime  @default(now()) @db.DateTime(3)
+  /// How many times it has been observed. The number that makes "this happens constantly"
+  /// a measurement instead of an impression.
+  count      Int       @default(1)
+  /// The observation that proves it, as JSON — printed BESIDE the fault, never instead of it.
+  /// A derived claim must not hide the raw value it came from.
+  evidence   Json?
+  /// The GitHub issue that owns the reasoning. NULL means "no issue yet", which is reported as
+  /// such rather than counted as satisfied.
+  issueUrl   String?   @db.VarChar(255)
+  /// ⚠️ THE CADENCE COUNTER, and the reason a registry is not a graveyard. NULL means NOBODY HAS
+  /// EVER REVIEWED IT — reported as "never reviewed", which must never render the same as
+  /// "reviewed today" (the repo's standing rule: 'cannot judge' is not a value).
+  reviewedAt DateTime? @db.DateTime(3)
+  reviewedBy String?   @db.VarChar(60)
+  note       String?   @db.Text
+  createdAt  DateTime  @default(now()) @db.DateTime(3)
+  updatedAt  DateTime  @updatedAt @db.DateTime(3)
+
+  @@index([status, lastSeen])
+  @@index([area, status])
+  @@index([reviewedAt])
+  @@map("fault")
 }
