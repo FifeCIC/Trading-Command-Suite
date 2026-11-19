@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **589** backend source files (specs excluded). Two access paths, because one
+Scanned **591** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -15,7 +15,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 ### `symbol`
 
 - **writers (10):** `backtest-period.service.ts`, `import-jobs.service.ts`, `symbol-discovery.service.ts`, `portfolio.service.ts`, `trading212-import.service.ts`, `mt5.controller.ts`, `symbol-name-enricher.service.ts`, `symbols.controller.ts`, `symbols.service.ts`, `webhooks.controller.ts`
-- **readers (47):** `alert-trigger.service.ts`, `architecture.service.ts`, `automation-loop.service.ts`, `experiment-review.service.ts`, `protocol-runner.service.ts`, `backtest-period.service.ts`, `backtest.service.ts`, `directives.controller.ts`, `data-import-orchestrator.service.ts`, `import-jobs.service.ts`, `indicators.service.ts`, `bar-refresh.service.ts`, `freshness.service.ts`, `market-data.service.ts`, `symbol-discovery.service.ts`, `correlation.service.ts`, `trading212-import.service.ts`, `replay.service.ts`, `research-import.service.ts`, `trading-scheduler.service.ts`, `arena.controller.ts`, `decision-chain.service.ts`, `directive-impact.service.ts`, `exit-consensus.service.ts`, `outcome-tracker.service.ts`, `protocol-consensus.service.ts`, `protocol-gating.controller.ts`, `protocol-gating.service.ts`, `score-history.service.ts`, `score-velocity.service.ts`, `scoring.service.ts`, `sector-rotation.service.ts`, `speed-scan.controller.ts`, `speed-scan.service.ts`, `screener.service.ts`, `signal-envelope.service.ts`, `snapshot-comparison.service.ts`, `snapshots.module.ts`, `suitability.controller.ts`, `broker-symbol-discovery.service.ts`, `symbol-name-enricher.service.ts`, `symbol-resolver.service.ts`, `symbols.controller.ts`, `symbols.service.ts`, `trading-strategy.service.ts`, `trend-read.service.ts`, `webhooks.controller.ts`
+- **readers (48):** `alert-trigger.service.ts`, `architecture.service.ts`, `automation-loop.service.ts`, `experiment-review.service.ts`, `protocol-runner.service.ts`, `backtest-period.service.ts`, `backtest.service.ts`, `directives.controller.ts`, `data-import-orchestrator.service.ts`, `import-jobs.service.ts`, `indicators.service.ts`, `isa.service.ts`, `bar-refresh.service.ts`, `freshness.service.ts`, `market-data.service.ts`, `symbol-discovery.service.ts`, `correlation.service.ts`, `trading212-import.service.ts`, `replay.service.ts`, `research-import.service.ts`, `trading-scheduler.service.ts`, `arena.controller.ts`, `decision-chain.service.ts`, `directive-impact.service.ts`, `exit-consensus.service.ts`, `outcome-tracker.service.ts`, `protocol-consensus.service.ts`, `protocol-gating.controller.ts`, `protocol-gating.service.ts`, `score-history.service.ts`, `score-velocity.service.ts`, `scoring.service.ts`, `sector-rotation.service.ts`, `speed-scan.controller.ts`, `speed-scan.service.ts`, `screener.service.ts`, `signal-envelope.service.ts`, `snapshot-comparison.service.ts`, `snapshots.module.ts`, `suitability.controller.ts`, `broker-symbol-discovery.service.ts`, `symbol-name-enricher.service.ts`, `symbol-resolver.service.ts`, `symbols.controller.ts`, `symbols.service.ts`, `trading-strategy.service.ts`, `trend-read.service.ts`, `webhooks.controller.ts`
 
 ### `symbol_route`
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**589** source files · **3302** declarations · **397** ratio sites · **1738** nodes · **181** unreferenced
+**591** source files · **3308** declarations · **397** ratio sites · **1753** nodes · **181** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -182,7 +182,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/planner/planner.service.ts:149` — `createObjective()`
   - `data.targetAmount&&data.currentAmount?Math.round((data.currentAmount/data.targetAmount)*100):0`
   - guarded by: `data.targetAmount&&data.currentAmount`
-- `nest/src/modules/portfolio/trading212-import.service.ts:467` — `buildSummary()`
+- `nest/src/modules/portfolio/trading212-import.service.ts:545` — `buildSummary()`
   - `trades.length>0?Math.round((winning.length/trades.length)*100):0`
   - guarded by: `trades.length>0`
 - … and 9 more
@@ -509,7 +509,7 @@ Identical after normalisation: variable names differ, the computation does not.
 - `nest/src/modules/planner/planner.service.ts:149` — `createObjective()`
   - `data.targetAmount&&data.currentAmount?Math.round((data.currentAmount/data.targetAmount)*100):0`
   - guarded by: `data.targetAmount&&data.currentAmount`
-- `nest/src/modules/portfolio/trading212-import.service.ts:467` — `buildSummary()`
+- `nest/src/modules/portfolio/trading212-import.service.ts:545` — `buildSummary()`
   - `trades.length>0?Math.round((winning.length/trades.length)*100):0`
   - guarded by: `trades.length>0`
 - … and 9 more
@@ -730,7 +730,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 - `nest/src/modules/planner/planner.service.ts:149` — `createObjective()`
   - `data.targetAmount&&data.currentAmount?Math.round((data.currentAmount/data.targetAmount)*100):0`
   - guarded by: `data.targetAmount&&data.currentAmount`
-- `nest/src/modules/portfolio/trading212-import.service.ts:467` — `buildSummary()`
+- `nest/src/modules/portfolio/trading212-import.service.ts:545` — `buildSummary()`
   - `trades.length>0?Math.round((winning.length/trades.length)*100):0`
   - guarded by: `trades.length>0`
 - … and 9 more
