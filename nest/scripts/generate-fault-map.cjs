@@ -59,8 +59,15 @@ function label(rows) {
 /**
  * The whole rendering, as a pure function of the rows — which is what makes it testable without a
  * database, and what makes "stale" a comparison of two strings rather than a judgement.
+ *
+ * ⚠️ DELIBERATELY OMITS `lastSeen`. Measured 2026-11-19: including a minute-accurate `lastSeen` made
+ * `--check` fail on a file that had just been generated, because an ongoing episode touches that column
+ * every poll (`FaultsService.touch()`). A check that can never be green is a check people learn to
+ * ignore — and an ignored guard is worse than none. What this file is FOR is the SHAPE: which faults
+ * exist, on which pathway, their status and how many episodes. Recency and cadence live in
+ * `GET /api/faults` and on the Health & Diagnostics panel, where they change every minute by design.
  */
-function render(rows, generatedAt = new Date()) {
+function render(rows) {
   const byArea = new Map();
   for (const r of rows) {
     if (!byArea.has(r.area)) byArea.set(r.area, []);
@@ -74,10 +81,9 @@ function render(rows, generatedAt = new Date()) {
   lines.push('# Fault Map');
   lines.push('');
   lines.push(
-    `Derived from the \`fault\` table on ${generatedAt.toISOString().slice(0, 10)}. ` +
-      'Each node is one fault code; the count is how many EPISODES it has been observed in, not how ' +
-      'many times a poller looked. A retired fault keeps its node and its count — recurrence is the ' +
-      'value being preserved (register row 227).',
+    'Derived from the `fault` table. Each node is one fault code; the count is how many EPISODES it ' +
+      'has been observed in, not how many times a poller looked. A retired fault keeps its node and ' +
+      'its count — recurrence is the value being preserved (register row 227).',
   );
   lines.push('');
   lines.push(`**${label(rows)}**`);
@@ -113,23 +119,23 @@ function render(rows, generatedAt = new Date()) {
     lines.push('');
     lines.push('## Rows (raw values, beside the derived ones)');
     lines.push('');
-    lines.push('| code | area | status | count | first seen | last seen | reviewed | issue |');
-    lines.push('|---|---|---|---|---|---|---|---|');
+    lines.push('| code | area | status | count | first seen | reviewed | issue |');
+    lines.push('|---|---|---|---|---|---|---|');
     for (const r of rows) {
       const reviewed = r.reviewedAt ? new Date(r.reviewedAt).toISOString().slice(0, 10) : '**never**';
-      const seen = r.lastSeen ? new Date(r.lastSeen).toISOString().slice(0, 16).replace('T', ' ') : '—';
       const first = r.firstSeen ? new Date(r.firstSeen).toISOString().slice(0, 10) : '—';
       const issue = r.issueUrl ? `[issue](${r.issueUrl})` : 'none';
-      lines.push(`| \`${r.code}\` | ${r.area} | ${r.status} | ${r.count} | ${first} | ${seen} | ${reviewed} | ${issue} |`);
+      lines.push(`| \`${r.code}\` | ${r.area} | ${r.status} | ${r.count} | ${first} | ${reviewed} | ${issue} |`);
     }
   }
   lines.push('');
   lines.push('## Not shown here');
   lines.push('');
   lines.push(
-    '- **Whether anyone has visited.** The registry reports `neverReviewed` and `stale` (not reviewed ' +
-      'in N days) in `GET /api/faults/summary` and on the Health & Diagnostics panel. That counter is ' +
-      'the part no diagram can carry, and the part that decides whether this file means anything.',
+    '- **Recency and cadence.** `GET /api/faults/summary` reports `neverReviewed` and `stale` (not ' +
+      'reviewed in N days), and the Health & Diagnostics panel renders them. They are deliberately NOT ' +
+      'in this file: `lastSeen` moves every poll while a fault is live, so a committed snapshot of it ' +
+      'would go stale within a minute and teach everyone to ignore the staleness check.',
   );
   lines.push(
     '- **The reasoning per fault.** Each fault names its GitHub issue; the issue owns the why, because ' +
@@ -165,7 +171,7 @@ function selfTest() {
     { code: 'TCS-ALERT-DATA-STALENESS', area: 'data', status: 'retired', count: 7, firstSeen: at, lastSeen: at, reviewedAt: at, issueUrl: 'https://github.com/o/r/issues/1' },
   ];
 
-  const out = render(two, at);
+  const out = render(two);
   cases.push(['renders a GENERATED banner in the first 12 lines', /GENERATED/.test(out.split('\n').slice(0, 12).join('\n'))]);
   cases.push(['renders one subgraph per area', (out.match(/subgraph /g) || []).length === 2]);
   cases.push(['renders each fault code as a node', out.includes('TCS_BRIDGE_UNREACHABLE') && out.includes('TCS_ALERT_DATA_STALENESS')]);
@@ -173,10 +179,20 @@ function selfTest() {
   cases.push(['styles a retired node by status', out.includes(':::retired') && out.includes(':::open')]);
   cases.push(['marks a never-reviewed row as "never", not a date', out.includes('| **never** |')]);
   cases.push(['links the issue when one exists, and says "none" when not', out.includes('[issue](https://github.com/o/r/issues/1') && out.includes('| none |')]);
-  cases.push(['an empty registry says so instead of rendering an empty diagram that reads as healthy', /No faults recorded/.test(render([], at))]);
+  cases.push(['an empty registry says so instead of rendering an empty diagram that reads as healthy', /No faults recorded/.test(render([]))]);
   // The stale check must be a pure string comparison, so a changed ROW (not just a changed date) is caught.
-  cases.push(['--check detects a changed row', render(two, at) !== render([{ ...two[0], count: 4 }, two[1]], at)]);
-  cases.push(['--check is silent when nothing changed', render(two, at) === render(two, at)]);
+  cases.push(['--check detects a changed row', render(two) !== render([{ ...two[0], count: 4 }, two[1]])]);
+  cases.push(['--check is silent when nothing changed', render(two) === render(two)]);
+  // ⚠️ THE CASE THAT FOUND THE ORIGINAL DEFECT: an ongoing episode touches `lastSeen` every poll, so
+  // rendering it made a freshly generated file fail its own `--check`.
+  cases.push([
+    'a moving lastSeen does NOT change the rendering — otherwise --check is never green',
+    render(two) === render([{ ...two[0], lastSeen: new Date('2027-01-01T09:00:00Z') }, two[1]]),
+  ]);
+  cases.push([
+    'a status change DOES change the rendering — the diagram tracks shape, not recency',
+    render(two) !== render([{ ...two[0], status: 'acknowledged' }, two[1]]),
+  ]);
 
   let failed = 0;
   for (const [name, pass] of cases) {
