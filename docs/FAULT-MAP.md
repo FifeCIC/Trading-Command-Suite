@@ -6,13 +6,13 @@
 
 Derived from the `fault` table. Each node is one fault code; the count is how many EPISODES it has been observed in, not how many times a poller looked. A retired fault keeps its node and its count — recurrence is the value being preserved (register row 227).
 
-**6 faults · 5 open · 1 retired**
+**7 faults · 3 acknowledged · 4 retired**
 
 ```mermaid
 flowchart LR
   subgraph f_api["api — 1"]
     direction TB
-    f_TCS_ALERT_EARNINGS_PROXIMITY["TCS-ALERT-EARNINGS-PROXIMITY<br/>open · ×2"]:::open
+    f_TCS_ALERT_EARNINGS_PROXIMITY["TCS-ALERT-EARNINGS-PROXIMITY<br/>retired · ×2"]:::retired
   end
   subgraph f_bridge["bridge — 1"]
     direction TB
@@ -20,16 +20,17 @@ flowchart LR
   end
   subgraph f_data["data — 2"]
     direction TB
-    f_TCS_ALERT_SYMBOL_SILENT["TCS-ALERT-SYMBOL-SILENT<br/>open · ×2"]:::open
-    f_TCS_ALERT_DATA_STALENESS["TCS-ALERT-DATA-STALENESS<br/>open · ×2"]:::open
+    f_TCS_ALERT_SYMBOL_SILENT["TCS-ALERT-SYMBOL-SILENT<br/>acknowledged · ×3"]:::acknowledged
+    f_TCS_ALERT_DATA_STALENESS["TCS-ALERT-DATA-STALENESS<br/>acknowledged · ×3"]:::acknowledged
   end
   subgraph f_provider["provider — 1"]
     direction TB
-    f_TCS_PROVIDER_FINNHUB["TCS-PROVIDER-FINNHUB<br/>open · ×1"]:::open
+    f_TCS_PROVIDER_FINNHUB["TCS-PROVIDER-FINNHUB<br/>acknowledged · ×1"]:::acknowledged
   end
-  subgraph f_trading["trading — 1"]
+  subgraph f_trading["trading — 2"]
     direction TB
-    f_TCS_ALERT_POSITION_PNL["TCS-ALERT-POSITION-PNL<br/>open · ×2"]:::open
+    f_TCS_ALERT_POSITION_PNL["TCS-ALERT-POSITION-PNL<br/>retired · ×2"]:::retired
+    f_TCS_ALERT_MARGIN_UTILIZATION["TCS-ALERT-MARGIN-UTILIZATION<br/>retired · ×2"]:::retired
   end
   classDef open fill:#3a1d1d,stroke:#ef4444,color:#fecaca;
   classDef acknowledged fill:#3a321d,stroke:#f59e0b,color:#fde68a;
@@ -40,12 +41,13 @@ flowchart LR
 
 | code | area | status | count | first seen | reviewed | issue |
 |---|---|---|---|---|---|---|
-| `TCS-ALERT-EARNINGS-PROXIMITY` | api | open | 2 | 2026-11-19 | **never** | none |
+| `TCS-ALERT-EARNINGS-PROXIMITY` | api | retired | 2 | 2026-11-19 | 2026-11-19 | none |
 | `TCS-BRIDGE-UNREACHABLE` | bridge | retired | 2 | 2026-11-19 | 2026-11-19 | [issue](https://github.com/FifeCIC/trading-command-suite/issues/1313) |
-| `TCS-ALERT-SYMBOL-SILENT` | data | open | 2 | 2026-11-19 | **never** | none |
-| `TCS-ALERT-DATA-STALENESS` | data | open | 2 | 2026-11-19 | **never** | none |
-| `TCS-PROVIDER-FINNHUB` | provider | open | 1 | 2026-11-19 | **never** | none |
-| `TCS-ALERT-POSITION-PNL` | trading | open | 2 | 2026-11-19 | **never** | none |
+| `TCS-ALERT-SYMBOL-SILENT` | data | acknowledged | 3 | 2026-11-19 | 2026-11-19 | [issue](https://github.com/FifeCIC/trading-command-suite/issues/1318) |
+| `TCS-ALERT-DATA-STALENESS` | data | acknowledged | 3 | 2026-11-19 | 2026-11-19 | [issue](https://github.com/FifeCIC/trading-command-suite/issues/1179) |
+| `TCS-PROVIDER-FINNHUB` | provider | acknowledged | 1 | 2026-11-19 | 2026-11-19 | [issue](https://github.com/FifeCIC/trading-command-suite/issues/1203) |
+| `TCS-ALERT-POSITION-PNL` | trading | retired | 2 | 2026-11-19 | 2026-11-19 | none |
+| `TCS-ALERT-MARGIN-UTILIZATION` | trading | retired | 2 | 2026-11-19 | 2026-11-19 | none |
 
 ## Not shown here
 

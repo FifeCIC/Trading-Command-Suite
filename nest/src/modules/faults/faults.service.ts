@@ -294,16 +294,28 @@ export class FaultsService {
   }
 
   /**
-   * The open fault codes a booting process should ADOPT rather than count as new.
+   * The fault codes a booting process should ADOPT rather than count as new.
+   *
+   * ⚠️ EVERYTHING THAT IS NOT RETIRED, not just `status: 'open'`. Measured 2026-11-19: this filtered
+   * on `open` only, so an ACKNOWLEDGED fault — which means "seen and understood, still happening" —
+   * was never adopted, and the next restart counted it as a new episode (two live rows went ×2 → ×3
+   * across a rebuild). Acknowledged is the state a maintained registry is mostly IN, so the bug hit
+   * exactly the faults people were paying attention to. Retired is the only state that ends an
+   * episode; a recurrence after retirement is genuinely new and IS counted.
    *
    * ⚠️ Filtered in JS on purpose (the registry holds tens-to-hundreds of rows): a SQL prefix + range
    * predicate is the kind of thing that reads correct and quietly matches nothing — this way the
    * caller gets the same answer as `list()` and the two cannot disagree.
    */
   async openCodesSince(prefix: string, since: Date): Promise<string[]> {
-    const rows = (await this.prisma.fault.findMany({ where: { status: 'open' } })) as FaultRow[];
+    const rows = (await this.prisma.fault.findMany({})) as FaultRow[];
     return rows
-      .filter((r) => r.code.startsWith(prefix) && new Date(r.lastSeen).getTime() >= since.getTime())
+      .filter(
+        (r) =>
+          r.status !== 'retired' &&
+          r.code.startsWith(prefix) &&
+          new Date(r.lastSeen).getTime() >= since.getTime(),
+      )
       .map((r) => r.code);
   }
 

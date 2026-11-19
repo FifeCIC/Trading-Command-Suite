@@ -211,6 +211,11 @@ describe('FaultsService', () => {
     await service.record({ ...base, code: 'TCS-ALERT-POSITION-PNL', area: 'trading' }); // retired → no
     await service.record(base); // open + fresh but the wrong prefix → no
 
+    // ⚠️ ACKNOWLEDGED is "seen, still happening" — the state a maintained registry is mostly IN, so
+    // it MUST be adopted. Filtering on `open` only took two live rows from x2 to x3 across a rebuild
+    // (measured 2026-11-19), because acknowledging a fault made it count itself again on reboot.
+    await service.acknowledge('TCS-ALERT-DATA-STALENESS', 'owner');
+
     rows.get('TCS-ALERT-SYMBOL-SILENT')!.lastSeen = new Date(now - 3 * 3_600_000);
     await service.retire('TCS-ALERT-POSITION-PNL', 'owner');
 
