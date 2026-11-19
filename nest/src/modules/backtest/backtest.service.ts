@@ -89,6 +89,57 @@ export const PERIOD_BAR_CAP = 20_000;
 export const MAX_SCORE_SERIES_ROWS = 2_000;
 
 /**
+ * Bars the engine consumes before the FIRST evaluable bar — the indicator warm-up.
+ *
+ * ⚠️ ONE HOME FOR THIS NUMBER. It was the literal `100` in two places: the refusal guard further
+ * down and `const windowSize = 100` in the scoring loop. Two copies of a number that decides whether
+ * a run happens at all is the "one source of truth" rule, and if they ever disagreed the guard would
+ * admit a window the loop then walked past, producing a run with zero evaluable bars and no error.
+ *
+ * Measured cost of the pair agreeing (2026-11-19): a 449-bar 5m period yields **349** scorable bars —
+ * 449 − 100, exactly. A 42-bar period is refused before any work is done.
+ */
+export const BACKTEST_WINDOW_SIZE = 100;
+
+/**
+ * The refusal message for a window too short to reach its first evaluable bar.
+ *
+ * ⚠️ PURE AND EXPORTED because the property that matters is "an EMPTY window and a THIN window are
+ * different problems", and the only way to check that through `run()` is to stage two whole backtests.
+ * The message used to call every shortfall empty, which sent the reader to re-import data that was
+ * already there (fixed 2026-11-19). See `insufficient-bars-message.spec.ts`.
+ */
+export function insufficientBarsMessage(input: {
+  /** Present for a stored-period run; absent for a day-range run. */
+  period: { id: string; name: string; from: Date; to: Date } | null;
+  symbol: string;
+  timeframe: string;
+  /** How many bars the window actually held. `0` is a genuinely empty window. */
+  have: number;
+}): string {
+  const scope = input.period
+    ? `for period '${input.period.name}' (${input.period.from.toISOString()} → ${input.period.to.toISOString()})`
+    : `for ${input.symbol}`;
+  const head =
+    `Not enough data ${scope}: need ${BACKTEST_WINDOW_SIZE}+ ${input.timeframe} bars, have ${input.have}. `;
+  if (input.have === 0) {
+    return (
+      head +
+      (input.period
+        ? 'The window is EMPTY — import bars first ' +
+          `(POST /api/backtest/periods/${input.period.id}/import).`
+        : 'The symbol has no bars in this window — import data first.')
+    );
+  }
+  return (
+    head +
+    `${BACKTEST_WINDOW_SIZE - input.have} more bar(s) are needed before the first evaluable bar. ` +
+    'A thin window usually means the instrument barely traded in this range, so re-importing will ' +
+    'only help if the provider actually holds them; widening the window is the other option.'
+  );
+}
+
+/**
  * Apply the `scoreSeries` cap. Pure, so both directions are testable without the engine.
  *
  * ⚠️ WHY THIS IS A FUNCTION AND NOT AN INLINE `slice(-2000)`. The inline form was a literal in the
@@ -1727,16 +1778,19 @@ export class BacktestService {
       );
     }
 
-    if (rows.length < 100) {
-      const scope = period
-        ? `for period '${period.name}' (${period.from.toISOString()} → ${period.to.toISOString()})`
-        : `for ${symbol}`;
+    if (rows.length < BACKTEST_WINDOW_SIZE) {
+      // THREE STATES, NOT TWO (fixed 2026-11-19): an EMPTY window and a THIN window have different
+      // remedies, and the message used to call both empty. Lives in a pure function so both branches
+      // are testable without staging a whole run.
       throw new Error(
-        `Not enough data ${scope}: need 100+ ${timeframe} bars, have ${rows.length}. ` +
-          (period
-            ? 'The window exists but holds no bars — import them first ' +
-              `(POST /api/backtest/periods/${period.id}/import).`
-            : 'Try importing data first.'),
+        insufficientBarsMessage({
+          period: period
+            ? { id: period.id, name: period.name, from: period.from, to: period.to }
+            : null,
+          symbol,
+          timeframe,
+          have: rows.length,
+        }),
       );
     }
 
@@ -1792,7 +1846,7 @@ export class BacktestService {
      * population; this is the READING, which is what a protocol comparison is actually about.
      */
     const scoreSeries: NonNullable<BacktestResult['scoreSeries']> = [];
-    const windowSize = 100;
+    const windowSize = BACKTEST_WINDOW_SIZE;
 
     /**
      * #1176 — the balance each trade is sized from.
@@ -4296,7 +4350,7 @@ export class BacktestService {
 
     // Generate signals from directive scoring on the full window
     const signals: Array<{ time: string | number; type: string; side?: 'long' | 'short'; score: number; label: string; price: number; pnl?: number }> = [];
-    const windowSize = 100;
+    const windowSize = BACKTEST_WINDOW_SIZE;
 
     for (let day = windowSize; day < rows.length; day++) {
       // Chart bars/indicators remain available without a protocol, but signals

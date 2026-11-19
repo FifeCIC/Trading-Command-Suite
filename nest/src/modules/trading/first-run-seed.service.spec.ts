@@ -22,6 +22,11 @@ import { DEFAULT_TRADING_STRATEGIES } from './strategy-seed-data';
  * ⚠️ These are behavioural, not mock-shaped: the fakes record the ORDER of calls, because a bot
  * created before its protocol would point at a slug that does not exist yet.
  */
+/**
+ * The cap used by the #1193 tests. Shared so the test body and its skip condition cannot drift.
+ */
+const CAPPED_LIMIT = 3;
+
 function makeService(opts: {
   protocolCount: number;
   botCount: number;
@@ -196,7 +201,34 @@ describe('FirstRunSeedService — seed once, never twice', () => {
       expect(bots.every((b, i) => b.active === DEFAULT_TRADING_STRATEGIES[i].active)).toBe(true);
     });
 
-    it('a CAPPED level flips only bots the source had ACTIVE — an already-inactive bot is untouched (#1258)', async () => {
+    // ── WHY THIS ONE CAN BE SKIPPED, AND WHY A SKIP IS THE CORRECT ANSWER ──────────────────
+    //
+    // The test needs a shipped bot at an index BEYOND the cap, whose source flag is `active`.
+    // That data comes from `DEFAULT_TRADING_STRATEGIES`, which merges 3 hand-authored bots with the
+    // GENERATED fleet — and the generated fleet is **deliberately NOT in the repository**
+    // (`docs/SETTLED-DECISIONS.md` row 177: commit `24e70aeb` published 72 bot definitions to a
+    // public repo, so the file was untracked and gitignored on purpose).
+    //
+    // Measured 2026-11-19, by isolating the variable:
+    //   • fleet file present  → 9/9 pass, and the log reads "61 shipped bot(s) created INACTIVE"
+    //   • fleet file absent   → this test fails, `activeBeyond.length` is 0 — the CI condition
+    //
+    // So on a fresh clone the case **cannot exist**, and the assertion was reporting an intended
+    // environment as a code defect. That held both CI workflows red across every commit for hours,
+    // which is the expensive part: nobody reads a failure that is always there, so the bundle-baseline
+    // drift hiding beside it went unnoticed too.
+    //
+    // ⚠️ A `return` with a warning would have made it PASS — junk coverage. It is declared SKIPPED, so
+    // Jest reports it as skipped and the gap is visible in the summary rather than disguised as green.
+      // See #1320.
+    //
+    // ⚠️ `CAPPED_LIMIT` is shared with the test body below. Two copies of `3` would drift, and the
+    // drift would be silent: a limit raised to 5 with the skip still testing 3 would skip a case that
+    // exists, which is the vacuous-pass this file was written to avoid.
+    const fleetHasBotBeyondCap = DEFAULT_TRADING_STRATEGIES.length > CAPPED_LIMIT
+      && DEFAULT_TRADING_STRATEGIES.slice(CAPPED_LIMIT).some((s) => s.active !== false);
+
+    (fleetHasBotBeyondCap ? it : it.skip)('a CAPPED level flips only bots the source had ACTIVE — an already-inactive bot is untouched (#1258)', async () => {
       // ⚠️ THREE properties, because one is not enough to catch a cap that rewrites everything:
       //   1. inside the limit, every flag is the SOURCE flag (the cap must not touch these);
       //   2. beyond the limit, an ACTIVE bot is turned OFF (the cap doing its job);
@@ -208,7 +240,7 @@ describe('FirstRunSeedService — seed once, never twice', () => {
       const { svc, tradingStrategy, progression } = makeService({
         protocolCount: 0, botCount: 0, protocolCountAfterSeed: 3,
       });
-      const LIMIT = 3;
+      const LIMIT = CAPPED_LIMIT;
       progression.activeBotsForFreshInstall = jest.fn(async () => ({ limit: LIMIT, judged: true }));
 
       await svc.seedIfEmpty();

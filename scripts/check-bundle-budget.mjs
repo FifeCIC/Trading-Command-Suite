@@ -60,6 +60,34 @@ const BASELINE = path.join(ROOT, 'scripts', 'bundle-baseline.json');
 /** Warn once an asset is within this fraction of the PWA cap. */
 const CLIFF_WARN_AT = 0.9;
 
+/**
+ * C2 growth allowance — the ratchet fires on a DECISION, not on a byte.
+ *
+ * ⚠️ MEASURED 2026-11-19 (#1320), and this is why the number exists. The ratchet was strict (`current
+ * > baseline`), so the FIRST commit after any re-freeze failed CI. It then stayed red across every
+ * commit that touched the frontend — which is exactly the failure the C1 docblock above describes
+ * for hardcoded budgets: *"a light that is always red is indistinguishable from no light."*
+ *
+ * The numbers, from the same source: baseline `totalDistBytes` 10,460,444 → this build 10,460,877, a
+ * **+432 B** change from a report-header edit. Two workflows were red for that, and for the 12.4 KB of
+ * ordinary content before it.
+ *
+ * A tolerance must be ABOVE what an ordinary content commit moves, and BELOW what a new dependency
+ * or an un-lazy'd page moves. `max(8 KB, 1%)` does that: at today's sizes it is ~102 KB on `dist`,
+ * ~7 KB on the entry chunk — small enough that a real addition still trips it, large enough that
+ * editing a sentence does not.
+ *
+ * ⚠️ Do NOT raise these to silence a failure. If growth is intended, re-freeze the baseline — that is
+ * the reviewable diff the ratchet exists to produce.
+ */
+const GROWTH_ALLOWANCE_BYTES = 8 * 1024;
+const GROWTH_ALLOWANCE_RATIO = 0.01;
+
+/** The growth a figure may gain before it counts as a decision. */
+function allowanceFor(baselineBytes) {
+  return Math.max(GROWTH_ALLOWANCE_BYTES, Math.round(baselineBytes * GROWTH_ALLOWANCE_RATIO));
+}
+
 /** Files `vite-plugin-pwa` precaches — mirrors `workbox.globPatterns` in vite.config.js. */
 const PRECACHE_RE = /\.(js|css|html|svg|png|ico|json|webmanifest)$/;
 
@@ -92,11 +120,12 @@ function cliffVerdict(bytes, cap) {
 }
 
 /**
- * Ratchet: growth fails, shrink passes and is reported so the baseline can be tightened.
+ * Ratchet: growth beyond the allowance fails; a shrink passes and is reported so the baseline can be
+ * tightened. See `GROWTH_ALLOWANCE_*` for why it is not strict.
  * @returns {'grew'|'same'|'shrank'}
  */
 function ratchetVerdict(current, baseline) {
-  if (current > baseline) return 'grew';
+  if (current > baseline + allowanceFor(baseline)) return 'grew';
   if (current < baseline) return 'shrank';
   return 'same';
 }
@@ -204,7 +233,8 @@ function check() {
     const v = ratchetVerdict(current, base);
     if (v === 'grew') {
       problems.push(
-        `C2 ${label} GREW: ${kb(base)} → ${kb(current)} (+${kb(current - base)}, +${(((current - base) / base) * 100).toFixed(1)}%)\n` +
+        `C2 ${label} GREW: ${kb(base)} → ${kb(current)} (+${kb(current - base)}, +${(((current - base) / base) * 100).toFixed(1)}%, ` +
+          `allowance ${kb(allowanceFor(base))})\n` +
           `     If that is intended, re-freeze: node scripts/check-bundle-budget.mjs --update-baseline`
       );
     } else if (v === 'shrank') {
@@ -288,10 +318,16 @@ function selfTest() {
   t('cliff: exactly 90% warns', cliffVerdict(900, 1000), 'warn');
   t('cliff: just under 90% is ok', cliffVerdict(899, 1000), 'ok');
 
-  // ratchetVerdict — all three directions
-  t('ratchet: grew', ratchetVerdict(101, 100), 'grew');
+  // ratchetVerdict — all three directions, and BOTH sides of the growth allowance
+  t('ratchet: grew', ratchetVerdict(1_000_000 + allowanceFor(1_000_000) + 1, 1_000_000), 'grew');
   t('ratchet: same', ratchetVerdict(100, 100), 'same');
   t('ratchet: shrank', ratchetVerdict(99, 100), 'shrank');
+  // The allowance is the whole point of the 2026-11-19 change, so its boundary is asserted too.
+  t('allowance: a small base uses the 8 KB floor', ratchetVerdict(100, 100), 'same');
+  t('allowance: a +432 B edit no longer fails', ratchetVerdict(10_460_877, 10_460_444), 'same');
+  t('allowance: exactly at the limit still passes', ratchetVerdict(1_000_000 + allowanceFor(1_000_000), 1_000_000), 'same');
+  t('allowance: one byte over the limit FAILS', ratchetVerdict(1_000_000 + allowanceFor(1_000_000) + 1, 1_000_000), 'grew');
+  t('allowance: 1% wins over 8 KB on a large base', allowanceFor(10_000_000), 100_000);
 
   let failed = 0;
   for (const c of cases) {

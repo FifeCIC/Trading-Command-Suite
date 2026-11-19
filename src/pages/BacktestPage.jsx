@@ -559,7 +559,11 @@ export default function BacktestPage({ subject: fixedSubject }) {
   const [windowMode, setWindowMode] = useState('period');
   const [periodId, setPeriodId] = useState('');
   /** Calendar days back from the newest bar. NOT a bar count — see the note above. */
-  const [windowDays, setWindowDays] = useState(30);
+  // ⚠️ INITIALISED TO THE MINIMUM, NOT 30 (fixed 2026-11-19). It was 30 while the control's own
+  // onChange clamps to `Math.max(100, …)` — a default the same control refuses. With no matching
+  // stored period the page then opened in bar-count mode already invalid, which is what made step 2
+  // unreachable and hid step 1's Continue button. A default must satisfy the validator that reads it.
+  const [windowDays, setWindowDays] = useState(MIN_RUN_BARS);
 
   const [runId, setRunId] = useState('');
   /**
@@ -1718,11 +1722,26 @@ export default function BacktestPage({ subject: fixedSubject }) {
     for (const s of steps) {
       // ⚠️ The RESULT step is unlocked by the RESULT, not by the Run step being enterable — the Run
       // step is valid before anything has been run, which made "Result" read Ready with no result.
+      //
+      // ⚠️ STEP 2 IS UNLOCKED BY THE SUBJECT ALONE (fixed 2026-11-19). It used to require
+      // `stepValid[2]` — i.e. a RESOLVED WINDOW — before the window step could be entered. The window
+      // is CHOSEN on step 2, so whenever it did not resolve by itself the page was a dead end:
+      //   · no stored period matched the bot's symbol+timeframe → `periodId` cleared → bar-count mode,
+      //     whose initial `windowDays` WAS 30, below the control's own 100 minimum (default raised to
+      //     the minimum in the same change — see the note where `windowDays` is declared);
+      //   · ⇒ step 2 invalid ⇒ step 1's Continue button was never rendered ⇒ no way to reach the one
+      //     screen that fixes it.
+      // Owner report: the button vanished after pausing an active strategy and never came back. The
+      // pause was not the cause — it removed the FIRST blocker (an active bot) and revealed this one.
+      // A step is ENTERABLE when its prerequisite is satisfied; it is COMPLETE when its own values are
+      // valid. Steps 3+ still require a resolved window, because nothing before them sets one.
       out[s.n] = s.n === 1
         ? true
         : s.n === STEP_RESULT
           ? stepValid[STEP_RESULT]
-          : stepValid[1] && stepValid[2];
+          : s.n === 2
+            ? stepValid[1]
+            : stepValid[1] && stepValid[2];
     }
     return out;
   }, [stepValid]);
