@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **596** backend source files (specs excluded). Two access paths, because one
+Scanned **598** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -15,7 +15,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 ### `symbol`
 
 - **writers (10):** `backtest-period.service.ts`, `import-jobs.service.ts`, `symbol-discovery.service.ts`, `portfolio.service.ts`, `trading212-import.service.ts`, `mt5.controller.ts`, `symbol-name-enricher.service.ts`, `symbols.controller.ts`, `symbols.service.ts`, `webhooks.controller.ts`
-- **readers (48):** `alert-trigger.service.ts`, `architecture.service.ts`, `automation-loop.service.ts`, `experiment-review.service.ts`, `protocol-runner.service.ts`, `backtest-period.service.ts`, `backtest.service.ts`, `directives.controller.ts`, `data-import-orchestrator.service.ts`, `import-jobs.service.ts`, `indicators.service.ts`, `isa.service.ts`, `bar-refresh.service.ts`, `freshness.service.ts`, `market-data.service.ts`, `symbol-discovery.service.ts`, `correlation.service.ts`, `trading212-import.service.ts`, `replay.service.ts`, `research-import.service.ts`, `trading-scheduler.service.ts`, `arena.controller.ts`, `decision-chain.service.ts`, `directive-impact.service.ts`, `exit-consensus.service.ts`, `outcome-tracker.service.ts`, `protocol-consensus.service.ts`, `protocol-gating.controller.ts`, `protocol-gating.service.ts`, `score-history.service.ts`, `score-velocity.service.ts`, `scoring.service.ts`, `sector-rotation.service.ts`, `speed-scan.controller.ts`, `speed-scan.service.ts`, `screener.service.ts`, `signal-envelope.service.ts`, `snapshot-comparison.service.ts`, `snapshots.module.ts`, `suitability.controller.ts`, `broker-symbol-discovery.service.ts`, `symbol-name-enricher.service.ts`, `symbol-resolver.service.ts`, `symbols.controller.ts`, `symbols.service.ts`, `trading-strategy.service.ts`, `trend-read.service.ts`, `webhooks.controller.ts`
+- **readers (49):** `alert-trigger.service.ts`, `architecture.service.ts`, `automation-loop.service.ts`, `experiment-review.service.ts`, `protocol-runner.service.ts`, `backtest-period.service.ts`, `backtest.service.ts`, `selection-run.service.ts`, `directives.controller.ts`, `data-import-orchestrator.service.ts`, `import-jobs.service.ts`, `indicators.service.ts`, `isa.service.ts`, `bar-refresh.service.ts`, `freshness.service.ts`, `market-data.service.ts`, `symbol-discovery.service.ts`, `correlation.service.ts`, `trading212-import.service.ts`, `replay.service.ts`, `research-import.service.ts`, `trading-scheduler.service.ts`, `arena.controller.ts`, `decision-chain.service.ts`, `directive-impact.service.ts`, `exit-consensus.service.ts`, `outcome-tracker.service.ts`, `protocol-consensus.service.ts`, `protocol-gating.controller.ts`, `protocol-gating.service.ts`, `score-history.service.ts`, `score-velocity.service.ts`, `scoring.service.ts`, `sector-rotation.service.ts`, `speed-scan.controller.ts`, `speed-scan.service.ts`, `screener.service.ts`, `signal-envelope.service.ts`, `snapshot-comparison.service.ts`, `snapshots.module.ts`, `suitability.controller.ts`, `broker-symbol-discovery.service.ts`, `symbol-name-enricher.service.ts`, `symbol-resolver.service.ts`, `symbols.controller.ts`, `symbols.service.ts`, `trading-strategy.service.ts`, `trend-read.service.ts`, `webhooks.controller.ts`
 
 ### `symbol_route`
 
@@ -27,7 +27,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 ### `marketbar`
 
 - **writers (8):** `backtest-period.service.ts`, `import-jobs.service.ts`, `bar-refresh.service.ts`, `replay.service.ts`, `scoring.service.ts`, `tick-recorder.service.ts`, `trading-strategy.service.ts`, `webhooks.controller.ts`
-- **readers (26):** `alert-trigger.service.ts`, `backtest-period.service.ts`, `backtest.controller.ts`, `backtest.service.ts`, `directive-preview.service.ts`, `import-jobs.service.ts`, `indicators.service.ts`, `bar-refresh.service.ts`, `freshness.service.ts`, `market-data.service.ts`, `correlation.service.ts`, `replay.service.ts`, `research-overview.service.ts`, `weekend-gap-risk.service.ts`, `trading-scheduler.service.ts`, `movers-treatment.service.ts`, `outcome-tracker.service.ts`, `scoring.service.ts`, `tick-recorder.service.ts`, `snapshot-comparison.service.ts`, `snapshots.module.ts`, `strategies.controller.ts`, `symbols.controller.ts`, `symbols.service.ts`, `system-health.service.ts`, `trading-strategy.service.ts`
+- **readers (27):** `alert-trigger.service.ts`, `backtest-period.service.ts`, `backtest.controller.ts`, `backtest.service.ts`, `directive-preview.service.ts`, `selection-run.service.ts`, `import-jobs.service.ts`, `indicators.service.ts`, `bar-refresh.service.ts`, `freshness.service.ts`, `market-data.service.ts`, `correlation.service.ts`, `replay.service.ts`, `research-overview.service.ts`, `weekend-gap-risk.service.ts`, `trading-scheduler.service.ts`, `movers-treatment.service.ts`, `outcome-tracker.service.ts`, `scoring.service.ts`, `tick-recorder.service.ts`, `snapshot-comparison.service.ts`, `snapshots.module.ts`, `strategies.controller.ts`, `symbols.controller.ts`, `symbols.service.ts`, `system-health.service.ts`, `trading-strategy.service.ts`
 
 ## Score
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**596** source files · **3340** declarations · **397** ratio sites · **1759** nodes · **181** unreferenced
+**598** source files · **3348** declarations · **400** ratio sites · **1767** nodes · **181** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -95,9 +95,9 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 31 sites — `((V1-V2)/V2)*100`
 
-- `nest/src/modules/backtest/backtest.controller.ts:856` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:887` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:864` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:895` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
 - `nest/src/modules/backtest/backtest.service.ts:4033` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
@@ -114,7 +114,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - guarded by: `sma20>0`
 - … and 23 more
 
-### 27 sites — `(V1/V2)*100`
+### 29 sites — `(V1/V2)*100`
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:754` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
@@ -128,14 +128,15 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:2197` — `observeExhaustion()`
   - `(prior/entry)*100`
+- `nest/src/modules/backtest/selection-run.service.ts:206` — `runSelection()`
+  - `kept.length?(wins/kept.length)*100:0`
+  - guarded by: `kept.length`
+- `nest/src/modules/backtest/selection-run.service.ts:279` — `runSelection()`
+  - `totalTrades?(totalWins/totalTrades)*100:0`
+  - guarded by: `totalTrades`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:233` — `calculate()` → `percentile`
-  - `rank>=0?(rank/sortedAtr.length)*100:50`
-  - guarded by: `rank>=0`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1090` — `calculate()` → `atrPct`
-  - `(currentAtr/lastClose)*100`
-- … and 19 more
+- … and 21 more
 
 ### 19 sites — `(V1-V2)/V3`
 
@@ -422,9 +423,9 @@ Identical after normalisation: variable names differ, the computation does not.
 
 ### 31 sites — `((V1-V2)/V2)*100`
 
-- `nest/src/modules/backtest/backtest.controller.ts:856` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:887` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:864` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:895` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
 - `nest/src/modules/backtest/backtest.service.ts:4033` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
@@ -441,7 +442,7 @@ Identical after normalisation: variable names differ, the computation does not.
   - guarded by: `sma20>0`
 - … and 23 more
 
-### 27 sites — `(V1/V2)*100`
+### 29 sites — `(V1/V2)*100`
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:754` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
@@ -455,14 +456,15 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:2197` — `observeExhaustion()`
   - `(prior/entry)*100`
+- `nest/src/modules/backtest/selection-run.service.ts:206` — `runSelection()`
+  - `kept.length?(wins/kept.length)*100:0`
+  - guarded by: `kept.length`
+- `nest/src/modules/backtest/selection-run.service.ts:279` — `runSelection()`
+  - `totalTrades?(totalWins/totalTrades)*100:0`
+  - guarded by: `totalTrades`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:233` — `calculate()` → `percentile`
-  - `rank>=0?(rank/sortedAtr.length)*100:50`
-  - guarded by: `rank>=0`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1090` — `calculate()` → `atrPct`
-  - `(currentAtr/lastClose)*100`
-- … and 19 more
+- … and 21 more
 
 ### 19 sites — `(V1-V2)/V3`
 
@@ -646,9 +648,9 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 - `nest/src/modules/automation/stop-guardian.service.ts:2173` — `observeExhaustion()` → `decelPct`
   - `((prior-recent)/prior)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:856` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:887` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:864` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:895` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
 - `nest/src/modules/backtest/backtest.service.ts:4033` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
@@ -684,7 +686,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - guarded by: `mid>0`
 - … and 28 more
 
-### 27 sites — `(VN/VN)*N`
+### 29 sites — `(VN/VN)*N`
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:754` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
@@ -698,14 +700,15 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:2197` — `observeExhaustion()`
   - `(prior/entry)*100`
+- `nest/src/modules/backtest/selection-run.service.ts:206` — `runSelection()`
+  - `kept.length?(wins/kept.length)*100:0`
+  - guarded by: `kept.length`
+- `nest/src/modules/backtest/selection-run.service.ts:279` — `runSelection()`
+  - `totalTrades?(totalWins/totalTrades)*100:0`
+  - guarded by: `totalTrades`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
   - `(currentAtr/lastClose)*100`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:233` — `calculate()` → `percentile`
-  - `rank>=0?(rank/sortedAtr.length)*100:50`
-  - guarded by: `rank>=0`
-- `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:1090` — `calculate()` → `atrPct`
-  - `(currentAtr/lastClose)*100`
-- … and 19 more
+- … and 21 more
 
 ### 17 sites — `Math.round((VN/VN)*N)`
 
@@ -929,7 +932,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/automation/stop-guardian.service.ts:629 flat`
 - `nest/src/modules/backtest/affordable-size.ts:146 floorToStep`
 - `nest/src/modules/backtest/backtest-period.service.ts:910 countBars`
-- `nest/src/modules/backtest/backtest.controller.ts:751 mapResult`
+- `nest/src/modules/backtest/backtest.controller.ts:782 mapResult`
 - `nest/src/modules/backtest/backtest.service.ts:4309 chartTime`
 - `nest/src/modules/backtest/backtest.service.ts:663 pick`
 - `nest/src/modules/backtest/backtest.service.ts:821 labelled`

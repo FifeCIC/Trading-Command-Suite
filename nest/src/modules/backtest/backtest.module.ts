@@ -7,6 +7,9 @@ import { BacktestController } from './backtest.controller';
 // window guard, no comparison.
 import { DirectivePreviewService } from './directive-preview.service';
 import { DirectivePreviewController } from './directive-preview.controller';
+// #1319 — a strategy that CHOOSES its instrument each day. It reuses `BacktestService.run()` unchanged
+// and adds only the ranking + selection filter, so there is no second engine to drift.
+import { SelectionRunService } from './selection-run.service';
 import { DirectivesModule } from '../directives/directives.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { DatabaseModule } from '../../database/database.module';
@@ -20,7 +23,7 @@ import { SystemModule } from '../system/system.module';
 
 @Module({
   imports: [DirectivesModule, forwardRef(() => ScoringModule), DatabaseModule, ProvidersModule, SystemModule],
-  providers: [BacktestService, BacktestPeriodService, DirectivePreviewService],
+  providers: [BacktestService, BacktestPeriodService, DirectivePreviewService, SelectionRunService],
   controllers: [BacktestController, DirectivePreviewController],
   exports: [BacktestPeriodService],
 })

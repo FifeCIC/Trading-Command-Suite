@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Delete, Param, Body, Query, BadRequestException, NotFoundException, Patch } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Param, Body, Query, BadRequestException, NotFoundException, HttpException, Patch } from '@nestjs/common';
 import {
   ScoreBar,
   RepeatWindowResult,
@@ -15,6 +15,8 @@ import { buildSettingsInventory } from './settings-inventory';
 import { PrismaService } from '../../database/prisma.service';
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 import type { BacktestRunRequest } from './backtest.service';
+import { SelectionRunService } from './selection-run.service';
+import type { SelectionRunRequest } from './selection-run.service';
 import { LongRunning } from '../../common/decorators/long-running.decorator';
 
 /**
@@ -43,6 +45,7 @@ export class BacktestController {
     private readonly periods: BacktestPeriodService,
     private readonly prisma: PrismaService,
     private readonly settingsResolver: SettingsResolverService,
+    private readonly selectionRun: SelectionRunService,
   ) {}
 
   @Get('datasets')
@@ -50,6 +53,34 @@ export class BacktestController {
   @ApiOkResponse({ description: 'Array of dataset metadata' })
   async getDatasets() {
     return this.backtestService.getDatasets();
+  }
+
+  /**
+   * #1319 — a strategy that chooses its instrument each day.
+   *
+   * ⚠️ A SEPARATE ROUTE FROM `/run` ON PURPOSE. `run()` resolves exactly ONE symbol from a
+   * `periodId` (and `backtest_period.symbolId` is singular), so a ranked strategy — "trade the top 3
+   * of today's 10 candidates" — cannot be expressed through it. This route ranks, then calls `run()`
+   * per selected symbol: one engine, one answer to "would the protocol have entered here?".
+   *
+   * ⚠️ `cutoffUtc` is not a convenience. Ranking on a day's full move and counting trades from the
+   * open scores the strategy against the answer key. The ranking reads bars at or before the cutoff
+   * ONLY, and entries before it are dropped.
+   *
+   * Long-running for the same reason as `/run`: it runs the engine once per selected symbol.
+   */
+  @LongRunning(600_000)
+  @Post('selection-run')
+  @ApiOperation({ summary: 'Run a ranked-selection backtest (top N per day) over a dataset group' })
+  async runSelection(@Body() body: SelectionRunRequest) {
+    try {
+      return await this.selectionRun.runSelection(body);
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      const message = err instanceof Error ? err.message : String(err);
+      // A failure must be a failure — see the comment on `/run` above.
+      throw new BadRequestException(message || 'Selection backtest failed');
+    }
   }
 
   // ⚠️ A backtest scores ONE BAR AT A TIME and legitimately takes minutes (#1139). The global 30 s
