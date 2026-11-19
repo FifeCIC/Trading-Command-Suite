@@ -1,7 +1,7 @@
 /**
  * ProgressionPanel — the earned level, the XP behind it, and the active-bot ceiling it decides.
  *
- * WHERE THIS SITS: `/trading/trading-bots`, the page where the ceiling actually bites. It is not a
+ * WHERE THIS SITS: `/bots/trading-bots`, the page where the ceiling actually bites. It is not a
  * new page and not a new nav entry — a first-time reader meets it at the moment it matters.
  *
  * ⚠️ THE FRAMING IS THE FEATURE (#1193). The owner's words, and the panel must carry their intent:

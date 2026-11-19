@@ -1,7 +1,7 @@
 /**
  * ScoringMechanicsPanel — the scoring maths, broken down, on live numbers.
  *
- * Owner request (Page Walkthrough, `/trading/trading-bots`): *"I dont trust our approach to generating
+ * Owner request (Page Walkthrough, `/bots/trading-bots`): *"I dont trust our approach to generating
  * that score... The whole thing needs re-examined. Lets create a UI for the scoring mechanism - wire
  * all of it to a view that merges diagram with a dynamic page. We will do this with every approach to
  * scoring so that the maths is broken down and it makes it easier for me to understand."*
@@ -61,7 +61,19 @@ export default function ScoringMechanicsPanel({ strategies = [] }) {
     // and FALSE: `xau-speed-m5-copy` returns a real score (signalMax 910), while `dow-speed-v1-long` — not
     // a copy at all — returns NO_DATA. Data availability, not the name, decides it, and a heuristic
     // that cannot be justified is a silent lie in the default the reader sees first.
-    .map((s) => ({ key: `${s.protocolId}|${s.symbol}`, protocolId: s.protocolId, symbol: s.symbol, name: s.name }));
+    .map((s) => ({ key: `${s.protocolId}|${s.symbol}`, protocolId: s.protocolId, symbol: s.symbol, name: s.name }))
+    /**
+     * ⚠️ DEDUPED BY `protocolId|symbol` (fixed 2026-11-19). TWO BOTS CAN SHARE ONE PAIR — e.g. two
+     * bots subscribing to `dax-speed-v1-long` on `GER40` — and this list is keyed by that pair, so the
+     * `<select>` below rendered two `<option>`s with the same key. React logged
+     * "Encountered two children with the same key" on every render of /bots/trading-bots and warns
+     * that such children may be DUPLICATED OR OMITTED, which in a picker means the option the reader
+     * is aiming for can vanish.
+     *
+     * The duplicate is also meaningless: the mechanics shown here are per PROTOCOL+SYMBOL, so a second
+     * bot on the same pair would display identical figures. First one wins.
+     */
+    .filter((p, i, all) => all.findIndex((x) => x.key === p.key) === i);
   const [pairKey, setPairKey] = useState(null);
   const active = pairs.find((p) => p.key === pairKey) || pairs[0] || null;
 

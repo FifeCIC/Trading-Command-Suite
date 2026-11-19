@@ -25,7 +25,7 @@ import { lazy } from 'react';
 
 // ── Trading ──
 // TradingStrategiesPage was RETIRED 2026-09-23 (owner, option A). Its table + sticky sidebar layout
-// moved to StrategiesListPage (`/trading/trading-bots`), so TWO view ids had to go with it:
+// moved to StrategiesListPage (`/bots/trading-bots`), so TWO view ids had to go with it:
 //   'trading-strategies'  -> the routed view
 //   'strategies'          -> an ORPHAN id with no nav entry and no view-meta key; nothing routed to
 //                            it, so it was only discoverable by deleting the import and watching
@@ -218,6 +218,7 @@ const BlockedSignalsPage = lazy(() => import('../pages/BlockedSignalsPage.jsx'))
 // #1190 — the trend READING experiment. Development because it is an experiment first.
 const TrendReadingPage = lazy(() => import('../pages/TrendReadingPage.jsx'));
 const MoversTreatmentPage = lazy(() => import('../pages/MoversTreatmentPage.jsx'));
+const QueuedChangesPage = lazy(() => import('../pages/QueuedChangesPage.jsx'));
 // Performance Change (2026-09-28) — the CHANGE lens over the same stored data: period over period,
 // not a running total. Sits beside Blocked Signals because both answer a question from the DB.
 const PerformanceChangePage = lazy(() => import('../pages/PerformanceChangePage.jsx'));
@@ -427,6 +428,7 @@ export const VIEW_COMPONENTS = {
   'blocked-signals': BlockedSignalsPage,
   'trend-reading': TrendReadingPage,
   'movers-treatment': MoversTreatmentPage,
+  'queued-changes': QueuedChangesPage,
   'performance-change': PerformanceChangePage,
   'meta-stack-explorer': MetaStackExplorerPage,
   'file-inventory': FileInventoryPage,

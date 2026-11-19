@@ -1,6 +1,9 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { resolveEffectiveRole, directionAllowed } from '../../common/utils/signal-direction';
+// #1314 — the single symbol-scope authority (fixed vs feed).
+import { scopeVerdict, type FeedSnapshot } from '../trading/feed-scope';
+import { MarketMoversService } from '../market-data/market-movers.service';
 // #882 — the ONE freshness bound, shared with the consumer gate (AutomationLoopService).
 import { getMaxSignalAgeMinutes } from '../../common/utils/signal-freshness';
 // #974 — persists WHY a signalled symbol was blocked, so the reason is queryable rather than
@@ -50,6 +53,16 @@ export class SignalQueueService {
      * test edge, not for production.
      */
     @Optional() private readonly auditLog?: AuditLogService,
+    /**
+     * #1314 — OPTIONAL for the same reason as `auditLog`: the existing specs build this service with
+     * a prisma stub and no Nest container, and a required third parameter would break them for a
+     * reason unrelated to what they assert. At runtime `SignalsModule` imports `MarketDataModule`,
+     * which now exports this provider.
+     *
+     * Absent means a feed-scoped bot REFUSES (`feed-unavailable`) rather than trading optimistically
+     * — the `?` is a refusal path, never an allow path.
+     */
+    @Optional() private readonly movers?: MarketMoversService,
   ) {}
 
   /** Sync queues from this run's routing records + all scored pairs.
@@ -74,6 +87,7 @@ export class SignalQueueService {
     if (!this.prisma.isAvailable) return;
     if (actionable.length === 0 && scoredPairs.size === 0) return;
     const directionSkips: string[] = [];
+    const scopeSkips: string[] = [];
     try {
       // Subscriptions joined to the bot config (symbol scope + active flag).
       //
@@ -83,11 +97,40 @@ export class SignalQueueService {
       // 2026-09-17: 24 subscriptions `role='long'`, 1 `role='short'`, and the routing filter matched
       // on protocol + symbol only.
       const subs: any[] = await (this.prisma as any).$queryRawUnsafe(
-        `SELECT sp.strategyId, sp.protocolId, sp.role, ts.requireDirection, ts.symbol AS strategySymbol
+        `SELECT sp.strategyId, sp.protocolId, sp.role, ts.requireDirection, ts.symbol AS strategySymbol,
+                ts.scopeMode AS strategyScopeMode, ts.feedList AS strategyFeedList
          FROM strategy_protocol sp
          JOIN trading_strategy ts ON ts.id = sp.strategyId
          WHERE ts.active = 1`,
       );
+
+      // #1314 — today's movers lists, read ONCE per sync and only if a feed-scoped bot is in play.
+      // A fixed-scope deployment never pays for this call, and every feed-scoped bot in the run
+      // makes the SAME decision from the SAME snapshot (two bots must not see two lists).
+      const feedScopeUsed = subs.some(
+        (s: any) => String(s.strategyScopeMode ?? 'fixed').trim() === 'feed',
+      );
+      let feed: FeedSnapshot | null = null;
+      if (feedScopeUsed) {
+        try {
+          const payload = await this.movers?.getMovers();
+          feed = payload
+            ? {
+                entryAllowed: payload.entryAllowed,
+                entryRefusalReason: payload.entryRefusalReason,
+                winners: payload.winners,
+                losers: payload.losers,
+              }
+            : null;
+        } catch (err) {
+          // A feed we cannot read is a REFUSAL, not an empty list — `scopeVerdict` distinguishes
+          // them, and this log line is how a silent refusal becomes visible.
+          this.logger.warn(
+            `Feed scope: could not read movers, feed-scoped bots will refuse this run — ${(err as Error).message}`,
+          );
+          feed = null;
+        }
+      }
 
       // Upsert pending entries for each actionable record.
       for (const rec of actionable) {
@@ -97,7 +140,22 @@ export class SignalQueueService {
         }
         for (const sub of subs) {
           if (sub.protocolId !== rec.protocolId) continue;
-          if (sub.strategySymbol && sub.strategySymbol !== rec.symbol) continue;
+          // Gate −1 — SYMBOL SCOPE. ONE decision, via the single authority (#1314).
+          // Replaces `if (sub.strategySymbol && sub.strategySymbol !== rec.symbol) continue;`,
+          // which pinned every bot to exactly one instrument and could not express a bot whose
+          // symbol comes from a daily list.
+          const scope = scopeVerdict({
+            scopeMode: sub.strategyScopeMode,
+            feedList: sub.strategyFeedList,
+            strategySymbol: sub.strategySymbol,
+            candidateSymbol: rec.symbol,
+            feed,
+          });
+          if (scope.allowed === false) {
+            scopeSkips.push(`${rec.symbol} for ${sub.strategyId} (${scope.code}: ${scope.reason})`);
+            continue;
+          }
+
           // Gate 0 — DIRECTION PERMISSION. ONE decision, via the single authority.
           const role = resolveEffectiveRole(sub.role, sub.requireDirection);
           if (!directionAllowed(role, rec.direction)) {
@@ -112,6 +170,15 @@ export class SignalQueueService {
         this.logger.log(
           `Queue direction filter: dropped ${directionSkips.length} entry(ies) whose role does not permit the direction — ` +
             [...new Set(directionSkips)].join(', '),
+        );
+      }
+      if (scopeSkips.length > 0) {
+        // #1314 — a scope refusal and "the protocol never signalled" must not look alike. A
+        // feed-scoped bot refusing every symbol today is the EXPECTED state when the feed is stale,
+        // and it is indistinguishable from a silent strategy without this line.
+        this.logger.log(
+          `Queue scope filter: dropped ${scopeSkips.length} entry(ies) whose bot may not trade that symbol — ` +
+            [...new Set(scopeSkips)].join(', '),
         );
       }
 

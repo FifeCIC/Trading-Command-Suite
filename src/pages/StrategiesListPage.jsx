@@ -414,20 +414,13 @@ export default function StrategiesListPage() {
         <h1>Trading Bots</h1>
 
         {/*
-          ── THE COMBINED QUEUE OF CHANGES WE INTEND TO TRY (owner, 2026-11-18) ─────────────────────
-          *"We will also display that same information in the Strategies area on the strategies page so
-          that at the end: the combined suggestion changes to try for both protocol and bot are in one
-          place."*
-
-          ⚠️ IT SITS ABOVE THE TABLE, not beside the selected strategy, because its job is to answer
-          "what are we about to change?" before the reader starts filtering — and a queue that only
-          appears once a row is selected is a queue most readers never see.
-
-          ⚠️ IT SHOWS PROTOCOL ROWS TOO. `GET /api/suggestions` unfiltered returns every queued row
-          whatever its scope, which is the point: a bot change and the protocol change it depends on
-          must be read together, or the reader sees half the plan and treats it as the whole.
+          ⚠️ THE COMBINED QUEUE MOVED OUT 2026-11-19 (owner). It used to sit here, above the table,
+          because a queue that only appears once a row is selected is a queue most readers never see.
+          The owner's verdict after living with it: *"This is actually just becoming screen clutter and
+          noise … and it takes way focus [away from] the bot table itself."* It now lives at
+          `/development/queued-changes`, and this page keeps only the SELECTED bot's queue, further
+          down — that one is about the row in front of you rather than a dump of everything.
         */}
-        <SuggestionQueue mode="all" title="Queued changes — protocols and bots" />
 
         {/* ── Control bar ─────────────────────────────────────────────────────────────────────
             Modelled on `.lad-toolbar` (LadderPage, `/scoring/live-ordering-stack`): ONE panel row
@@ -639,7 +632,27 @@ export default function StrategiesListPage() {
                       </span>
                     </td>
                     <td>
-                      <strong>{s.symbol || '—'}</strong>
+                      {s.scopeMode === 'feed' ? (
+                        // ── #1314 · NON-FIXED SYMBOL SCOPE ──
+                        // A feed-scoped bot has no instrument of its own: it trades whatever is on
+                        // today's movers list. `s.symbol` still holds a PLACEHOLDER, and printing it
+                        // here would state an instrument the bot never trades — the "plausible
+                        // output, no error" shape. The placeholder is named in the title so it stays
+                        // findable, and never in the cell.
+                        <span
+                          className={styles.cardType}
+                          style={{ fontSize: 11, letterSpacing: '.02em' }}
+                          title={
+                            `Non-fixed symbols — trades whatever is on today's ` +
+                            `${s.feedList === 'winners' || s.feedList === 'losers' ? s.feedList : 'UNDECLARED'} list. ` +
+                            `The stored symbol "${s.symbol || '—'}" is a placeholder and is ignored by routing.`
+                          }
+                        >
+                          ◈ Non-fixed{s.feedList ? ` · ${s.feedList}` : ' · no list'}
+                        </span>
+                      ) : (
+                        <strong>{s.symbol || '—'}</strong>
+                      )}
                       {Number(s.maxPyramidTiers) > 1 && (
                         // ⚠️ PYRAMID PRESENCE (2026-11-04, owner request). Pyramid is an OPTIONAL
                         // per-bot mechanism and part of what makes one strategy distinct from
@@ -696,7 +709,11 @@ export default function StrategiesListPage() {
               <>
                 <h2 className={styles.sidebarTitle}>{sel.name}</h2>
                 <p className={styles.sidebarSub}>
-                  {sel.symbol || 'no symbol'} · {sel.mode || 'mode unset'} · broker {sel.brokerId || '—'}
+                  {/* #1314 — the placeholder is not this bot's instrument, so name the scope instead. */}
+                  {sel.scopeMode === 'feed'
+                    ? `◈ non-fixed symbols${sel.feedList ? ` (${sel.feedList})` : ' (no list declared)'}`
+                    : sel.symbol || 'no symbol'}{' '}
+                  · {sel.mode || 'mode unset'} · broker {sel.brokerId || '—'}
                 </p>
                 {sel.description && <p className={styles.detailDesc}>{sel.description}</p>}
 

@@ -3,7 +3,7 @@
  * ======================================
  * Single merged view (2026-08-31): stat grid + filters + sl-card strategy
  * cards. Former Overview / Strategies / Compare tabs were consolidated into
- * one scrollable view; comparison lives at /trading/strategy-comparison.
+ * one scrollable view; comparison lives at /bots/strategy-comparison.
  *
  * Data: /api/trading/strategies/with-ratios, /api/automation/status
  *

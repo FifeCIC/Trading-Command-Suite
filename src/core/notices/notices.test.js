@@ -270,7 +270,7 @@ test('listNotices() exposes the whole catalogue to tooling', () => {
   });
 
   test('an ACTIVATION refusal renders its reason, not the generic HTTP-400 text (#905)', () => {
-    // ⚠️ MEASURED 2026-11-04 on /trading/trading-bots. Clicking a bot's toggle showed
+    // ⚠️ MEASURED 2026-11-04 on /bots/trading-bots. Clicking a bot's toggle showed
     // "Request failed — the request to the API failed (HTTP 400)" and nothing else, because
     // `assertCeilingAllowsActivation` threw a bare BadRequestException: the refusal reached the
     // client with no code, so the adapter fell through to the transport notice and the sentence

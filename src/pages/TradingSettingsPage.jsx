@@ -395,9 +395,9 @@ export default function TradingSettingsPage() {
             real route. */}
         {true && (
           <MovedNote>
-            Add and edit bots on <a href="/trading/trading-bots">Trading Bots</a> or{' '}
-            <a href="/trading/bot-create">Create Bot</a>. Live evaluations are on{' '}
-            <a href="/trading/strategy-monitor">Bot Monitor</a>. The queue that paces them is
+            Add and edit bots on <a href="/bots/trading-bots">Trading Bots</a> or{' '}
+            <a href="/bots/bot-create">Create Bot</a>. Live evaluations are on{' '}
+            <a href="/bots/strategy-monitor">Bot Monitor</a>. The queue that paces them is
             on <a href="/settings/automation">Automation</a>.
           </MovedNote>
         )}

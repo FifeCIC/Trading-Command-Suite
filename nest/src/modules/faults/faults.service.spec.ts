@@ -222,6 +222,21 @@ describe('FaultsService', () => {
     expect(adopted).toEqual(['TCS-ALERT-DATA-STALENESS']);
   });
 
+  it('review can attach the owning issue in the same write — an unlinked fault is one nobody can act on', async () => {
+    const { prisma, rows } = fakePrisma();
+    const service = new FaultsService(prisma);
+
+    await service.record(base);
+    const reviewed = await service.review(base.code, 'owner', 'investigated', 'https://github.com/FiceCIC/x/issues/9');
+    void reviewed;
+
+    expect(rows.get(base.code)!.issueUrl).toBe('https://github.com/FiceCIC/x/issues/9');
+    expect(rows.get(base.code)!.reviewedBy).toBe('owner');
+    // …and reviewing without one does not wipe an existing link
+    await service.review(base.code, 'owner');
+    expect(rows.get(base.code)!.issueUrl).toBe('https://github.com/FiceCIC/x/issues/9');
+  });
+
   it('summary reports counts of rows plus the threshold they were measured against', async () => {
     const { prisma } = fakePrisma();
     const service = new FaultsService(prisma);

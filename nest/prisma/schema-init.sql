@@ -1195,6 +1195,8 @@ CREATE TABLE `trading_strategy` (
     `duplicatedFromId` VARCHAR(36) NULL,
     `magic` INTEGER NULL,
     `symbol` VARCHAR(20) NOT NULL,
+    `scopeMode` VARCHAR(16) NOT NULL DEFAULT 'fixed',
+    `feedList` VARCHAR(16) NULL,
     `brokerId` VARCHAR(50) NOT NULL DEFAULT 'mt5',
     `timeframe` VARCHAR(10) NOT NULL DEFAULT '5m',
     `minComposite` DOUBLE NOT NULL DEFAULT 10,

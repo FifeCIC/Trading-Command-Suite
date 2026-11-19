@@ -12,11 +12,15 @@
  *   2. ✅ Every rule that BLOCKS the strategy is a `protocol_change_suggestion` row with
  *         `scope='bot'`, `kind='bot-rule'`, `targetKey=<a column declared below>` — visible on the
  *         strategy's own panel and on the Strategies page together with the protocol changes.
- *   3. ⏭ **Non-fixed symbol scope** — a bot defined by a DAILY LIST rather than `trading_strategy.symbol`.
- *         Issue #1314. `symbol` below is `live` at the `scope` stage and pins exactly one instrument,
- *         so the two movers bots currently carry a PLACEHOLDER ticker and are inactive on purpose.
- *   4. ⏭ Backtesting a daily-list strategy — impossible before 3, because a backtest must know which
- *         symbols the strategy would have chosen on each day.
+ *   3. ✅ **Non-fixed symbol scope** — a bot defined by a DAILY LIST rather than `trading_strategy.symbol`.
+ *         Issue #1314, landed 2026-11-19. `scopeMode='feed'` + `feedList` declare it, and
+ *         `feed-scope.ts` is the ONE authority that decides whether a scored symbol may reach a bot.
+ *         The two movers bots still carry a placeholder ticker — that is now legal and IGNORED, not
+ *         a blocker — but they stay inactive on purpose until 4 exists.
+ *   4. ⏭ Backtesting a daily-list strategy — blocked on knowing which symbols the strategy would have
+ *         chosen on each day. #1314 supplies the FORWARD decision; the backtest needs the same
+ *         question answered for a past date, which the movers feed cannot retro-answer. That is the
+ *         remaining design question.
  *
  * ⚠️ **THE QUEUE IS THE SPEC.** If a rule below is `display-only` and the strategy needs it, the
  * correct move is NOT to quietly implement it here — it is to accept the queued row, make the field
@@ -168,8 +172,24 @@ export const BOT_RULES: BotRule[] = [
 
   // ── scope ──────────────────────────────────────────────────────────────────────────────────
   { field: 'symbol', label: 'Symbol', stage: 'scope', enforcement: 'live',
-    enforcedBy: 'nest/src/modules/signals/signal-queue.service.ts',
-    summary: 'Scopes the bot: routing only writes a queue entry whose symbol matches.' },
+    enforcedBy: 'nest/src/modules/trading/feed-scope.ts',
+    summary: 'Scopes the bot: routing only writes a queue entry whose symbol matches.',
+    // ⚠️ #1314 — this field is no longer the whole story. When `scopeMode = 'feed'` it is a
+    // PLACEHOLDER and `feedList` is the authority. A reader who assumes this column pins the
+    // instrument will conclude a feed-scoped bot trades `AAPL`, which it does not.
+    caveat: 'IGNORED when scopeMode = feed — read feedList and today\'s movers list instead.' },
+  { field: 'scopeMode', label: 'Symbol scope', stage: 'scope', enforcement: 'live',
+    enforcedBy: 'nest/src/modules/trading/feed-scope.ts',
+    summary: '`fixed` (default) = trade `symbol`. `feed` = trade whatever is on today\'s movers list named by `feedList`; `symbol` is then a placeholder.',
+    // WHY a discriminant rather than a nullable symbol: `symbol` is NOT NULL and seven readers
+    // assume it names an instrument. One fact, one column. #1314.
+    caveat: 'An unrecognised value REFUSES (scope-mode-unknown) — never treated as fixed or feed. Canary: feed-scope.spec.ts.' },
+  { field: 'feedList', label: 'Movers list', stage: 'scope', enforcement: 'live',
+    enforcedBy: 'nest/src/modules/trading/feed-scope.ts',
+    summary: 'Which list a feed-scoped bot draws from: `winners` or `losers`. NULL for a fixed-scope bot.',
+    // ⚠️ Deliberately not defaulted to 'winners'. A default would turn "the author forgot" into a
+    // decision nobody made, and the bot would trade a list it never declared.
+    caveat: 'NULL on a feed-scoped bot REFUSES that bot every run (feed-list-unspecified).' },
   { field: 'brokerId', label: 'Broker', stage: 'scope', enforcement: 'live',
     enforcedBy: 'nest/src/modules/automation/automation-loop.service.ts',
     summary: 'Chooses the adapter the order is dispatched to.' },

@@ -197,7 +197,7 @@ const PIPELINE = [
     // clamped 0–100" — BOTH halves were wrong (measured XAUUSD composite = 106, no clamp).
     // The composite is an additive raw sum; classification is percentage-based against the
     // protocol's own capacity (signalPct = signalRaw ÷ directional capacity).
-    // Live number-by-number breakdown: ScoringMechanicsPanel (/trading/trading-bots).
+    // Live number-by-number breakdown: ScoringMechanicsPanel (/bots/trading-bots).
     fnDesc: 'Computes the composite as an additive sum of directive raw scores — no 0–100 clamp. Signal classification is percentage-based against the protocol\'s own capacity: signalPct = signalRaw ÷ directional capacity (≥13% STRONG, ≥6% BUY, <6% HOLD). Stores snapshot in score_snapshot for rarity percentile computation.',
     dbTable: 'score_snapshot (output)',
     dbColumns: 'protocolId, symbol, composite, signal, rarityPercentile, snappedAt',
@@ -205,7 +205,7 @@ const PIPELINE = [
   { isMarker: true, type: 'sees-end', label: 'SEES End' },
   // ── Post-scoring: Strategy layers ──
   {
-    id: 'scoring-strategy', title: 'Trading Strategy Rules', linkTo: '/trading/bot-create', linkLabel: 'Create Strategy',
+    id: 'scoring-strategy', title: 'Trading Strategy Rules', linkTo: '/bots/bot-create', linkLabel: 'Create Strategy',
     fn: 'AutomationLoopService.evaluateStrategy() → gate checks',
     fnDesc: 'Active trading strategies carry rules beyond the raw protocol score: trade threshold comparison (composite must exceed minComposite), budget gate (daily loss limits), and mode-based filtering (manual/semi-auto/auto). A strategy can permit or block a trade independently of the signal. (The scoring_strategy layer was retired from the trading loop 2026-08-27 — its config now lives on the trading strategy.)',
     dbTable: 'trading_strategy, automation_rule',
@@ -225,7 +225,7 @@ const PIPELINE = [
     ],
   },
   {
-    id: 'trading-strategy', title: 'Trading Strategy Evaluation', linkTo: '/trading/trading-bots', linkLabel: 'Trading Bots',
+    id: 'trading-strategy', title: 'Trading Strategy Evaluation', linkTo: '/bots/trading-bots', linkLabel: 'Trading Bots',
     fn: 'TradingStrategyService.evaluate() → portfolio-aware decision',
     fnDesc: 'Trading strategies add the portfolio context: Are existing positions profitable? Is the symbol already held? Would this exceed max positions? Does the strategy allow averaging down? Some strategies require existing positions to be in profit before opening new ones. Cooldown periods prevent overtrading.',
     dbTable: 'trading_strategy, decision_log',
@@ -251,7 +251,7 @@ const PIPELINE = [
   //    straight from evaluation to execution; everything the bot layer does around those two — queue,
   //    permission, guards, exits, attribution — was invisible on the one page meant to show the path.
   {
-    id: 'subscription-gate', title: 'Subscription Gate', linkTo: '/trading/trading-bots', linkLabel: 'Trading Bots',
+    id: 'subscription-gate', title: 'Subscription Gate', linkTo: '/bots/trading-bots', linkLabel: 'Trading Bots',
     fn: 'SignalQueueService.syncQueues() — routing reads strategy_protocol',
     fnDesc: 'A bot is routed to a protocol through a SUBSCRIPTION row (strategy_protocol), not through trading_strategy.protocolId. ⚠️ A bot with no subscription row SILENTLY NEVER TRADES: it appears active in the UI, produces no queue entries, and reports no error. This is the single most common reason a correctly-configured bot does nothing, and it sits between "evaluation" and "execution" where nothing else explains the silence.',
     dbTable: 'strategy_protocol (the routing authority), trading_strategy',
@@ -1097,7 +1097,7 @@ export default function MetaStackExplorerPage() {
         { label: 'Active timeline events', pass: timelineEvents.length >= 0, detail: timelineEvents.length > 0 ? `${timelineEvents.length} events (risk ×${globalRiskMultiplier.toFixed(2)})` : 'none — risk multiplier ×1.0' },
       ],
       'trading-strategy': [
-        { label: 'Trading strategy selected', pass: !!selectedStrategy, detail: selectedStrategy ? selectedStrategy.name : '⬇ Select below', link: '/trading/trading-bots', linkLabel: 'Bots' },
+        { label: 'Trading strategy selected', pass: !!selectedStrategy, detail: selectedStrategy ? selectedStrategy.name : '⬇ Select below', link: '/bots/trading-bots', linkLabel: 'Bots' },
         { label: 'Strategy ID', pass: !!selectedStrategy?.id, detail: selectedStrategy?.id || '—' },
         { label: 'Strategy active', pass: selectedStrategy?.active === true, detail: selectedStrategy ? (selectedStrategy.active ? 'active' : 'inactive') : '—' },
         { label: 'Symbol assigned', pass: !!selectedStrategy?.symbol, detail: selectedStrategy?.symbol || 'no symbol' },

@@ -186,22 +186,26 @@ export class FaultsService {
   /**
    * The cadence beat. Recording that somebody looked is a first-class operation, because a
    * registry with no record of being visited cannot report that it has been neglected.
+   *
+   * `issueUrl` is accepted here because the most useful output of a review is "this is owned by #N" —
+   * needing a second write to attach the owner would make linking an issue feel like extra work, and
+   * an unlinked fault is one nobody can act on.
    */
-  async review(code: string, reviewedBy: string, note?: string): Promise<FaultView> {
-    return this.updateReviewed(code, { reviewedBy, note });
+  async review(code: string, reviewedBy: string, note?: string, issueUrl?: string): Promise<FaultView> {
+    return this.updateReviewed(code, { reviewedBy, note, issueUrl });
   }
 
   /** Acknowledge: seen and understood, still happening. Keeps the row in the open set. */
-  async acknowledge(code: string, reviewedBy: string, note?: string): Promise<FaultView> {
-    return this.updateReviewed(code, { reviewedBy, note }, 'acknowledged');
+  async acknowledge(code: string, reviewedBy: string, note?: string, issueUrl?: string): Promise<FaultView> {
+    return this.updateReviewed(code, { reviewedBy, note, issueUrl }, 'acknowledged');
   }
 
   /**
    * Retire — the ONLY exit path (G2). The row stays, keeps its count, and stays in every 'all'
    * view, because the recurrence history is the value being preserved.
    */
-  async retire(code: string, reviewedBy: string, note?: string): Promise<FaultView> {
-    return this.updateReviewed(code, { reviewedBy, note }, 'retired');
+  async retire(code: string, reviewedBy: string, note?: string, issueUrl?: string): Promise<FaultView> {
+    return this.updateReviewed(code, { reviewedBy, note, issueUrl }, 'retired');
   }
 
   /** The registry. `staleDays` returns the neglected set — the one that needs a visit. */
@@ -305,7 +309,7 @@ export class FaultsService {
 
   private async updateReviewed(
     code: string,
-    input: { reviewedBy: string; note?: string },
+    input: { reviewedBy: string; note?: string; issueUrl?: string },
     status?: FaultStatus,
   ): Promise<FaultView> {
     const existing = await this.prisma.fault.findUnique({ where: { code } });
@@ -324,6 +328,7 @@ export class FaultsService {
         reviewedBy: input.reviewedBy,
         ...(status ? { status } : {}),
         ...(input.note ? { note: input.note } : {}),
+        ...(input.issueUrl ? { issueUrl: input.issueUrl } : {}),
       },
     })) as FaultRow;
     return toView(row);

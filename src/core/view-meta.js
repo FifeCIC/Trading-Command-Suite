@@ -16,6 +16,14 @@ const VIEW_META = {
     css: 'src/pages/MoversTreatmentPage.css',
     api: ['GET /api/market-data/market-movers'],
   },
+  '/development/queued-changes': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Queued Changes',
+    file: 'src/pages/QueuedChangesPage.jsx',
+    css: 'src/pages/queued-changes.css',
+    api: ['GET /api/suggestions'],
+  },
   '/watchlists/registered-movers': {
     tier: 'premium',
     review: 'pending',
@@ -164,7 +172,7 @@ const VIEW_META = {
     css: 'src/pages/ab-strategies.module.css',
     api: ['GET /api/scoring/strategies/derived', 'GET /api/scoring/strategy-registry'],
   },
-  '/trading/strategy-comparison': {
+  '/bots/strategy-comparison': {
     tier: 'premium',
     review: 'approved',
     label: 'Bot Comparison',
@@ -199,7 +207,7 @@ const VIEW_META = {
     // Kept in step with the '/research/symbol' entry above — same component, same endpoints.
     api: ['GET /api/symbols/:ticker/focus', 'GET /api/signals/envelope/:ticker?protocol=', 'GET /api/symbols/:ticker/overview', 'GET /api/earnings/symbol/:ticker', 'GET /api/news/feed?symbol=:ticker&limit=5'],
   },
-  '/trading/trading-bots': {
+  '/bots/trading-bots': {
     tier: 'premium',
     review: 'approved',
     label: 'Trading Bots',
@@ -207,7 +215,7 @@ const VIEW_META = {
     css: 'src/pages/strategies-list.module.css',
     api: ['GET /api/trading/strategies', 'GET /api/portfolio?source=mt5'],
   },
-  '/trading/strategy-monitor': {
+  '/bots/strategy-monitor': {
     tier: 'premium',
     review: 'approved',
     label: 'Bot Monitor',
@@ -215,7 +223,7 @@ const VIEW_META = {
     css: 'src/pages/strategy-monitor.css',
       api: ['GET /api/trading/strategies/with-ratios', 'GET /api/automation/status', 'GET /api/trading/strategy-comparison', 'GET /api/scoring/arena', 'GET /api/scoring/gated/thresholds'],
   },
-  '/trading/bot-create': {
+  '/bots/bot-create': {
     tier: 'premium',
     review: 'approved',
     label: 'Create Bot',

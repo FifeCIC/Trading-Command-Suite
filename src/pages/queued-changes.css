@@ -1,0 +1,16 @@
+/* queued-changes.css — the page wrapper for `/development/queued-changes`.
+ *
+ * ⚠️ There is almost nothing here ON PURPOSE. The queue renders itself from
+ * `src/components/suggestion-queue.css`; this file exists only so the page has the same outer
+ * padding and width as every other page, and so `src/core/view-meta.js` has a real stylesheet to
+ * name. Adding a second set of `.sq-*` rules here is how two copies of a component's look get made.
+ *
+ * ⚠️ Every token is checked by `scripts/validate-css-tokens.cjs`. An undefined token is not an
+ * error at runtime — the declaration is silently dropped and the element inherits.
+ */
+
+.qc-page {
+  padding: 1.25rem 1.5rem 3rem;
+  color: var(--ink);
+  max-width: 1500px;
+}

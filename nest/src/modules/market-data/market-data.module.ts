@@ -15,6 +15,8 @@ import { SymbolDiscoveryService } from './symbol-discovery.service';
   imports: [DatabaseModule, ImportJobsModule, ProvidersModule, SymbolsModule],
   controllers: [MarketDataController],
   providers: [MarketDataService, FreshnessService, PriceRefreshService, BarRefreshService, MarketMoversService, SymbolDiscoveryService],
-  exports: [MarketDataService, FreshnessService, PriceRefreshService, BarRefreshService],
+  // `MarketMoversService` is exported for #1314: a feed-scoped bot's routing decision needs today's
+  // winners/losers lists (`SignalQueueService`). No cycle — `SignalsModule` already imports this.
+  exports: [MarketDataService, FreshnessService, PriceRefreshService, BarRefreshService, MarketMoversService],
 })
 export class MarketDataModule {}

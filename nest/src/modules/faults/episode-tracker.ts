@@ -18,6 +18,41 @@
  * poll — otherwise a condition that ends and later returns is never counted a second time, and the
  * recurrence this registry exists to record is silently lost.
  */
+/**
+ * Which alert triggers are FAULTS, and which are merely CONDITIONS worth noticing.
+ *
+ * ⚠️ MEASURED 2026-11-19, on the first hour of live data: recording every firing alert produced six
+ * open faults, and **three of them were not faults at all** — "5 earnings events in the next 24h", "8
+ * positions past −50%", "margin at 50.0% of equity". Those are market and risk notices: the system is
+ * WORKING when they fire. Only the other three named something broken.
+ *
+ * Without this line the registry becomes a second alert list with a permanent tail — the exact bloat
+ * `docs/FAULT-TAXONOMY-GUARDRAILS.md` exists to prevent, and the thing the owner asked to be
+ * protected from ("a huge amount of tests being built and how we'll keep coming back to them").
+ *
+ * THE TEST, and it is the only one that matters: **is there a path that should work and does not?**
+ *   · mt5-disconnected     — the bridge path is broken
+ *   · bridge-clock-skew    — the timestamp path is broken
+ *   · provider-degraded    — an external path is failing
+ *   · data-staleness       — the bar path is delivering nothing new
+ *   · symbol-silent        — scoring works, execution never happens: a broken path
+ *   · trade-disabled       — order placement is refused
+ * Everything else (P&L, margin, earnings, market hours, swap, gap risk) is the market being the market.
+ */
+export const FAULT_WORTHY_TRIGGERS = new Set([
+  'mt5-disconnected',
+  'bridge-clock-skew',
+  'provider-degraded',
+  'data-staleness',
+  'symbol-silent',
+  'trade-disabled',
+]);
+
+/** Kept as a function so the classification is one call site and can be tested in both directions. */
+export function isFaultWorthy(triggerKey: string): boolean {
+  return FAULT_WORTHY_TRIGGERS.has(triggerKey);
+}
+
 export type EpisodeEvent =
   /** The condition was false and is now true — count this. */
   | 'started'

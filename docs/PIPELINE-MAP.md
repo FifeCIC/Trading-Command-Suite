@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**596** source files · **3338** declarations · **397** ratio sites · **1758** nodes · **181** unreferenced
+**596** source files · **3339** declarations · **397** ratio sites · **1758** nodes · **181** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -116,7 +116,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 27 sites — `(V1/V2)*100`
 
-- `nest/src/modules/alerts/alert-trigger.service.ts:747` — `checkMarginUtilization()` → `utilPct`
+- `nest/src/modules/alerts/alert-trigger.service.ts:754` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
 - `nest/src/modules/automation/automation-loop.service.ts:3093` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
@@ -443,7 +443,7 @@ Identical after normalisation: variable names differ, the computation does not.
 
 ### 27 sites — `(V1/V2)*100`
 
-- `nest/src/modules/alerts/alert-trigger.service.ts:747` — `checkMarginUtilization()` → `utilPct`
+- `nest/src/modules/alerts/alert-trigger.service.ts:754` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
 - `nest/src/modules/automation/automation-loop.service.ts:3093` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
@@ -686,7 +686,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 ### 27 sites — `(VN/VN)*N`
 
-- `nest/src/modules/alerts/alert-trigger.service.ts:747` — `checkMarginUtilization()` → `utilPct`
+- `nest/src/modules/alerts/alert-trigger.service.ts:754` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
 - `nest/src/modules/automation/automation-loop.service.ts:3093` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
@@ -911,11 +911,11 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/common/cache/cache.service.ts:58 set`
 - `nest/src/common/cache/cache.service.ts:69 del`
 - `nest/src/common/trading/overfit-verdict.ts:65 pct`
-- `nest/src/modules/alerts/alert-trigger.service.ts:1039 toMap`
+- `nest/src/modules/alerts/alert-trigger.service.ts:1046 toMap`
 - `nest/src/modules/alerts/alert-trigger.service.ts:236 stop`
-- `nest/src/modules/alerts/alert-trigger.service.ts:375 label`
-- `nest/src/modules/alerts/alert-trigger.service.ts:510 canTrade`
-- `nest/src/modules/alerts/alert-trigger.service.ts:518 definitelyBlocked`
+- `nest/src/modules/alerts/alert-trigger.service.ts:382 label`
+- `nest/src/modules/alerts/alert-trigger.service.ts:517 canTrade`
+- `nest/src/modules/alerts/alert-trigger.service.ts:525 definitelyBlocked`
 - `nest/src/modules/automation/ab-test.service.ts:316 getActiveTest`
 - `nest/src/modules/automation/ab-test.service.ts:375 isActive`
 - `nest/src/modules/automation/ab-test.service.ts:606 summarize`

@@ -133,7 +133,7 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   //                      `member` would claim a working feature is behind a paywall.
   //   trading-plans    — *"as it is weak, it might also become member only page"*. Same reasoning.
   '/trading/speed-scanner',
-  '/trading/strategy-comparison',
+  '/bots/strategy-comparison',
   '/trading/trading-plans',
 
   // ── Pack 8: the movers pair (2026-11-18) ──────────────────────────────────────────────────────
@@ -151,6 +151,10 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   // unbuilt feature should not be the first thing a new user opens.
   '/watchlists/registered-movers',
   '/development/movers-treatment',
+  // The queue of edits we have not made yet (moved off `/bots/trading-bots` 2026-11-19). Withheld for
+  // the same reason the movers pages are: it is an unfinished working list, and a page whose numbers
+  // describe unbuilt directives should not be the first thing a new user opens.
+  '/development/queued-changes',
 
   // ── Pack 9: the Strategies area (2026-11-18) ───────────────────────────────────────────────────
   // Owner directive: I would like a Strategies area (again)! … The area will list all strategies in a separate

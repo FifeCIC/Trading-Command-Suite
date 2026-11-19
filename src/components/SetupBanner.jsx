@@ -42,7 +42,7 @@ const STEPS = [
     icon: '⚙',
     label: 'Create Trading Bot',
     desc: 'Bind a protocol to a symbol with thresholds and sizing',
-    href: '/trading/bot-create',
+    href: '/bots/bot-create',
   },
 ];
 

@@ -1,5 +1,5 @@
 /**
- * StrategyComparisonPage — /trading/strategy-comparison
+ * StrategyComparisonPage — /bots/strategy-comparison
  * =====================================================
  * A HORIZONTAL comparison matrix: one COLUMN per strategy, one ROW per comparison criterion.
  *
@@ -97,7 +97,7 @@ export default function StrategyComparisonPage() {
 
   const query = useQuery({
     queryKey: ['strategy-comparison'],
-    queryFn: () => apiGet('/api/trading/strategy-comparison'),
+    queryFn: () => apiGet('/api/bots/strategy-comparison'),
     refetchInterval: 30000,
   });
 

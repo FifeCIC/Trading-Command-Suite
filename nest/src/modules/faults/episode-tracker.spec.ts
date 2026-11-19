@@ -5,7 +5,7 @@
  * counted once per poll looks exactly like a fault counted once per episode, right up until someone
  * reads "1,440 occurrences" as "this happened 1,440 times".
  */
-import { EpisodeTracker } from './episode-tracker';
+import { EpisodeTracker, isFaultWorthy } from './episode-tracker';
 
 describe('EpisodeTracker', () => {
   it('counts ONE for a condition observed on 100 consecutive polls', () => {
@@ -42,6 +42,19 @@ describe('EpisodeTracker', () => {
     expect(t.observe('TCS-ALERT-POSITION-PNL', true)).toBe('ongoing');
     // …but a fault that was NOT adopted is still a new episode.
     expect(t.observe('TCS-ALERT-SYMBOL-SILENT', true)).toBe('started');
+  });
+
+  it('classifies a BROKEN PATH as fault-worthy and a market notice as not — both directions', () => {
+    // A path that should work and does not.
+    for (const k of ['mt5-disconnected', 'data-staleness', 'symbol-silent', 'provider-degraded', 'trade-disabled', 'bridge-clock-skew']) {
+      expect(isFaultWorthy(k)).toBe(true);
+    }
+    // The market being the market. Recording these made the registry a second alert list: measured
+    // 2026-11-19, three of the first six recorded faults were notices, not faults.
+    for (const k of ['position-pnl', 'margin-utilization', 'earnings-proximity', 'market-close', 'weekend-gap-risk', 'swap-accrual']) {
+      expect(isFaultWorthy(k)).toBe(false);
+    }
+    expect(isFaultWorthy('a-trigger-nobody-has-heard-of')).toBe(false);
   });
 
   it('stays quiet for a condition that was never active', () => {

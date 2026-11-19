@@ -1030,12 +1030,12 @@ export default function ViewStrategyPage() {
     <main className={styles.page} ref={revealRef}>
       <header className={styles.header}>
         {/* ⚠️ THE LABEL AND THE DESTINATION NOW AGREE, and the DESTINATION was the wrong half.
-            This button read "Back to bots" while navigating to `/trading/strategy-monitor` — a
+            This button read "Back to bots" while navigating to `/bots/strategy-monitor` — a
             reader who arrived from Trading Bots landed somewhere the button had not promised.
             Bot Detail is reached from `trading-bots` ("Truth view — all 29 rules + enforcement"),
             and `docs/trading-bot-model.md` §1b rule 3 names Trading Bots as the execution layer,
             so this is where "back to bots" belongs. */}
-        <button type="button" className={styles.back} onClick={() => navigate('/trading/trading-bots')}>
+        <button type="button" className={styles.back} onClick={() => navigate('/bots/trading-bots')}>
           ← Back to bots
         </button>
 
@@ -1062,7 +1062,25 @@ export default function ViewStrategyPage() {
         </div>
 
         <p className={styles.identity}>
-          {bot.symbol} · broker {bot.brokerId} · tf {bot.timeframe} · v{bot.version}
+          {/* #1314 — a feed-scoped bot's `symbol` is a PLACEHOLDER. Printing it beside the broker
+              would state an instrument this bot never trades. */}
+          {bot.scopeMode === 'feed' ? (
+            <>
+              <span
+                title={
+                  `Trades whatever is on today's ` +
+                  `${bot.feedList === 'winners' || bot.feedList === 'losers' ? bot.feedList : 'UNDECLARED'} list. ` +
+                  `The stored symbol "${bot.symbol}" is a placeholder and is ignored by routing.`
+                }
+              >
+                ◈ non-fixed symbols{bot.feedList ? ` (${bot.feedList})` : ' (no list declared)'}
+              </span>
+              {' · '}
+            </>
+          ) : (
+            <>{bot.symbol} · </>
+          )}
+          broker {bot.brokerId} · tf {bot.timeframe} · v{bot.version}
           {bot.description ? ` · ${bot.description}` : ''}
         </p>
 

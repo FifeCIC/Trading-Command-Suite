@@ -67,22 +67,25 @@ export class FaultsController {
 
   /** POST /api/faults/:code/review — the cadence beat. Records that somebody looked. */
   @Post(':code/review')
-  review(@Param('code') code: string, @Body() body: { reviewedBy: string; note?: string }) {
+  review(@Param('code') code: string, @Body() body: { reviewedBy: string; note?: string; issueUrl?: string }) {
     if (!body?.reviewedBy) throw new BadRequestException('reviewedBy is required — an unattributed review is not a review');
-    return this.faults.review(code, body.reviewedBy, body.note);
+    return this.faults.review(code, body.reviewedBy, body.note, body.issueUrl);
   }
 
   /** POST /api/faults/:code/acknowledge — seen and understood, still happening. */
   @Post(':code/acknowledge')
-  acknowledge(@Param('code') code: string, @Body() body: { reviewedBy: string; note?: string }) {
+  acknowledge(@Param('code') code: string, @Body() body: { reviewedBy: string; note?: string; issueUrl?: string }) {
     if (!body?.reviewedBy) throw new BadRequestException('reviewedBy is required');
-    return this.faults.acknowledge(code, body.reviewedBy, body.note);
+    return this.faults.acknowledge(code, body.reviewedBy, body.note, body.issueUrl);
   }
 
-  /** POST /api/faults/:code/retire — the only exit path. The row and its count stay. */
+  /**
+   * POST /api/faults/:code/retire — the only exit path. The row and its count stay.
+   * `issueUrl` is optional here too: a fault retired because its issue was fixed should point at it.
+   */
   @Post(':code/retire')
-  retire(@Param('code') code: string, @Body() body: { reviewedBy: string; note?: string }) {
+  retire(@Param('code') code: string, @Body() body: { reviewedBy: string; note?: string; issueUrl?: string }) {
     if (!body?.reviewedBy) throw new BadRequestException('reviewedBy is required');
-    return this.faults.retire(code, body.reviewedBy, body.note);
+    return this.faults.retire(code, body.reviewedBy, body.note, body.issueUrl);
   }
 }

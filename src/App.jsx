@@ -62,12 +62,17 @@ import SupportReportPanel from './components/SupportReportPanel';
  * ⚠️ There was a second filter here until 2026-10-28: a build-time `VITE_EDITION` define that split
  * a paid and a free bundle. The free edition was cancelled (SETTLED-DECISIONS row 96), so this is
  * a single-edition app and the base tree is simply the whole tree.
+ *
+ * 🛑 NO `BASE_NAV_STRUCTURE` / `BASE_NAV_TREE` SNAPSHOT IS TAKEN HERE ANY MORE (2026-11-19). The two
+ * navigation surfaces used to read module-level constants captured once at load — the left rail from
+ * `getNavStructure()` and the top bar from `NAV_TREE` — so anything that changed the tree without
+ * re-evaluating those constants left the two surfaces describing DIFFERENT menus. The owner reported
+ * exactly that: *"the new Strategies area sometimes hides/vanishes and I can also see the Strategy
+ * Library page in the Trading area too … as if two versions of the menu exist."*
+ *
+ * They are now derived at render (see the two `useMemo`s in `AppShell`), so both surfaces read the
+ * same tree in the same tick and there is no snapshot to go stale.
  */
-const BASE_NAV_STRUCTURE = getNavStructure();
-// The TOP navigation bar enumerates NAV_TREE directly, so it needs the same base reference — the
-// sidebar and the top bar must never disagree about which areas exist. Measured live 2026-09-23:
-// filtering one and not the other left the top bar offering areas the sidebar had hidden.
-const BASE_NAV_TREE = NAV_TREE;
 
 /**
  * Views the SHELL renders inline, with access to App's own state.
@@ -198,11 +203,11 @@ function AppShell({ directContent = null, directArea = null, directView = null }
   const { prefs } = usePreferences();
   const experienceLevel = prefs?.experienceLevel || 'beginner';
   const NAV_STRUCTURE = useMemo(
-    () => filterByExperience(filterHiddenViews(BASE_NAV_STRUCTURE, hiddenRoutes, { keepWithheld: OWNER_SEES_WITHHELD }), experienceLevel),
+    () => filterByExperience(filterHiddenViews(getNavStructure(), hiddenRoutes, { keepWithheld: OWNER_SEES_WITHHELD }), experienceLevel),
     [hiddenRoutes, experienceLevel],
   );
   const EDITION_NAV_TREE = useMemo(
-    () => filterByExperience(filterHiddenViews(BASE_NAV_TREE, hiddenRoutes, { keepWithheld: OWNER_SEES_WITHHELD }), experienceLevel),
+    () => filterByExperience(filterHiddenViews(NAV_TREE, hiddenRoutes, { keepWithheld: OWNER_SEES_WITHHELD }), experienceLevel),
     [hiddenRoutes, experienceLevel],
   );
   // ⚠️ `symbolId` IS GONE FROM THIS DESTRUCTURE (#1266, 2026-11-18). No route declares `:symbolId`,
@@ -1266,6 +1271,15 @@ export default function App() {
           <Route path="/scoring/sees-arena" element={<Navigate to="/protocols/sees-arena" replace />} />
           <Route path="/lab/dual-protocol-inspector" element={<Navigate to="/protocols/dual-protocol-inspector" replace />} />
           <Route path="/scoring/exit-signals" element={<Navigate to="/trading/exit-signals" replace />} />
+          {/* ⚠️ THE BOTS AREA (owner request, 2026-11-19). Four bot views moved out of Trading into
+              their own area between Signals and Trading: the list, the create form, the per-bot
+              monitor and the A/B comparison. Their IDs are unchanged (deep links, QA procedures and
+              bookmarks address a view by id), so only the area prefix moved — which is why these four
+              redirects exist rather than a rename. */}
+          <Route path="/trading/strategy-monitor" element={<Navigate to="/bots/strategy-monitor" replace />} />
+          <Route path="/trading/trading-bots" element={<Navigate to="/bots/trading-bots" replace />} />
+          <Route path="/trading/bot-create" element={<Navigate to="/bots/bot-create" replace />} />
+          <Route path="/trading/strategy-comparison" element={<Navigate to="/bots/strategy-comparison" replace />} />
           {/* ⚠️ TARGET CORRECTED 2026-10-15. This pointed at `/lab/dual-protocol-inspector`, which is
               not a route — the nav routes that view at `/protocols/dual-protocol-inspector`. A
               redirect to a dead path is worse than no redirect: it looks handled while landing the

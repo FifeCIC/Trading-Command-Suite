@@ -202,6 +202,16 @@ export interface StrategySummary {
    */
   maxTradeRiskPct?: number | null;
   /**
+   * #1314 — SYMBOL SCOPE. `fixed` = the bot trades `symbol`; `feed` = it trades whatever ticker is
+   * on today's movers list named by `feedList`, and `symbol` is a PLACEHOLDER.
+   *
+   * Carried on the summary for the same reason as `maxTradeRiskPct`: the strategies list renders this
+   * column, and a hand-written mapper that drops it would show the placeholder ticker — stating an
+   * instrument the bot never trades.
+   */
+  scopeMode?: 'fixed' | 'feed';
+  feedList?: 'winners' | 'losers' | null;
+  /**
    * THE MARKET SCOPE of this strategy — the watchlist(s) its protocol is bound to.
    *
    * WHY THIS EXISTS: the owner defines a strategy as protocol + market + bot treatment, and the
@@ -558,6 +568,12 @@ export class TradingStrategyService {
         // list — a column not named here vanishes from the strategies list, which is how `magic` was
         // lost (#1018). A configurable rule with no surface is a rule nobody can tune.
         maxTradeRiskPct: (s as any).maxTradeRiskPct ?? null,
+        // #1314 — the symbol SCOPE. Same hand-written-list rule as `magic` above: a column not named
+        // here vanishes from the strategies list, and the list would then render the PLACEHOLDER
+        // ticker for a feed-scoped bot — stating an instrument it never trades. Derived in the UI
+        // from these two fields, never guessed from an empty symbol list.
+        scopeMode: (s as any).scopeMode ?? 'fixed',
+        feedList: (s as any).feedList ?? null,
         // #1189 — THE NARRATIVE FLAGS. ⚠️ This mapper is a HAND-WRITTEN FIELD LIST, so a column not
         // named here silently vanishes from the strategies list — that is exactly how `magic` was
         // lost (#1018). `theory` itself is deliberately NOT carried: the list is a table, prose does
@@ -3324,6 +3340,16 @@ export class TradingStrategyService {
         if ((s as any).maxTradeRiskPct !== undefined) {
           desired.maxTradeRiskPct = (s as any).maxTradeRiskPct;
         }
+        // #1314 — symbol SCOPE. Same optional contract as every slot above: the 76 fixed-scope bots
+        // declare neither field, so absent must mean "no opinion" — NOT "reset to fixed". A
+        // converging seeder that defaulted `scopeMode` would turn a feed-scoped bot back into one
+        // that trades its PLACEHOLDER ticker, and nothing would report it.
+        if ((s as any).scopeMode !== undefined) {
+          desired.scopeMode = (s as any).scopeMode;
+        }
+        if ((s as any).feedList !== undefined) {
+          desired.feedList = (s as any).feedList;
+        }
         // 2026-11-13 (#1258) — the CONVERGENCE half of the three columns nothing wrote. Both paths
         // must carry them or a re-seed could insert a value and never repair one — the failure the
         // sim-TSL block above records, measured on 2026-11-03.
@@ -3545,6 +3571,12 @@ export class TradingStrategyService {
             // before the reinstall can then never be attributed to the bot that opened it.
             ...(s.magic != null ? { magic: s.magic } : {}),
             symbol: s.symbol,
+            // #1314 — a fresh install must restore the SCOPE, or every feed-scoped bot comes back
+            // as `fixed` and starts trading its placeholder ticker. The same CREATE-path omission
+            // that gave every bot a null `magic` (#1258) — a field read by a consumer and written by
+            // only one of the two seed paths.
+            ...((s as any).scopeMode !== undefined ? { scopeMode: (s as any).scopeMode } : {}),
+            ...((s as any).feedList !== undefined ? { feedList: (s as any).feedList } : {}),
             protocolId: s.protocolId,
             brokerId: s.brokerId,
             mode: s.mode,

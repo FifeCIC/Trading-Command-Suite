@@ -54,6 +54,18 @@ export interface SeedTradingStrategy {
   name: string;
   symbol: string;
   /**
+   * #1314 — `fixed` (default, omitted) = this bot trades `symbol`.
+   * `feed` = it trades whatever ticker is on today's movers list named by `feedList`, and
+   * `symbol` is a PLACEHOLDER that routing ignores.
+   *
+   * ⚠️ A feed-scoped bot MUST declare `feedList`; routing refuses a feed bot without one rather
+   * than defaulting to `winners`, because a default turns "the author forgot" into a decision
+   * nobody made. See `feed-scope.ts`.
+   */
+  scopeMode?: 'fixed' | 'feed';
+  /** Which list a feed-scoped bot draws from. Meaningless (and refused) when `scopeMode` is fixed. */
+  feedList?: 'winners' | 'losers';
+  /**
    * #1018 — the bot's MT5 MAGIC, from the reserved range (>= 234100). SEEDED, not allocated, so
    * a reinstall restores the SAME number and a position opened long ago still attributes to the
    * bot that opened it. ⚠️ Must never be 234000 — that is the bridge DEFAULT_MAGIC, i.e. "no bot

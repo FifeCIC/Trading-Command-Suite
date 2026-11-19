@@ -75,6 +75,16 @@ export interface StrategyTreatment {
    * is the limit that decides whether an idea is tradeable at its configured size.
    */
   maxTradeRiskPct: number | null;
+  /**
+   * #1314 — SYMBOL SCOPE. Part of the identity, for the same reason `symbol` is hashed at the top
+   * level: `fixed` and `feed` decide which INSTRUMENTS the bot may trade at all, which is the most
+   * fundamental difference two strategies can have. A feed-scoped bot and a pinned bot on the same
+   * protocol are not the same strategy, and hashing them the same would report one as a duplicate of
+   * the other.
+   */
+  scopeMode: string;
+  /** Which movers list a feed-scoped bot draws from. Meaningless under `fixed`, hashed either way. */
+  feedList: string | null;
   /** How the size is computed, and the risk it commits. Part of the identity (#1224). */
   sizingModel: string | null;
   sizingRiskPct: number | null;
@@ -226,6 +236,13 @@ interface BotRow {
   takeProfitAmount?: number | null;
   /** #1257 — per-trade money-at-risk ceiling, % of equity. Part of the identity. */
   maxTradeRiskPct?: number | null;
+  /**
+   * #1314 — SYMBOL SCOPE. Identity, exactly like `symbol` at the top level: a bot that draws from
+   * today's winners list and a bot pinned to one ticker trade different instruments, so hashing them
+   * the same would let the derivation report two different strategies as duplicates.
+   */
+  scopeMode?: string | null;
+  feedList?: string | null;
   sizingModel?: string | null;
   sizingRiskPct?: number | null;
   allocationAmount?: number | null;
@@ -633,6 +650,12 @@ export function buildTreatment(bot: any): StrategyTreatment {
     // `takeProfitAmount` above (v2, #1224), which is exactly the field whose omission made two exit
     // policies share one identity.
     maxTradeRiskPct: bot.maxTradeRiskPct ?? null,
+    // #1314 — SYMBOL SCOPE joins the hash for the same reason as `maxTradeRiskPct`: it changes which
+    // INSTRUMENTS the bot may trade at all, which is the most fundamental difference two strategies
+    // can have. `'fixed'` is written explicitly rather than left undefined, so a row predating #1314
+    // hashes identically to one that declares `fixed`.
+    scopeMode: bot.scopeMode ?? 'fixed',
+    feedList: bot.feedList ?? null,
     // REGISTER: docs/SETTLED-DECISIONS.md row 171 · ISSUE: #1257
     sizingModel: bot.sizingModel ?? null,
     sizingRiskPct: bot.sizingRiskPct ?? null,

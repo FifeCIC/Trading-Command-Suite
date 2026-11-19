@@ -19,7 +19,7 @@
 
 import { Injectable, Logger, Optional, OnModuleInit } from '@nestjs/common';
 import { FaultsService } from '../faults/faults.service';
-import { EpisodeTracker } from '../faults/episode-tracker';
+import { EpisodeTracker, isFaultWorthy } from '../faults/episode-tracker';
 import { AlertsService, type AlertSeverity } from './alerts.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { PrismaService } from '../../database/prisma.service';
@@ -279,21 +279,28 @@ export class AlertTriggerService implements OnModuleInit {
         case 'risk-portfolio-risk':condition = await this.checkRiskCapBreach('risk-portfolio-risk', cfg); break;
       }
 
-      // ⚠️ The tracker is keyed by the FAULT CODE, not the trigger key, so a restarted process can
-      // adopt the codes it reads back from the table (`adoptRunningEpisodes`) without a mapping.
+      // ⚠️ ONLY fault-worthy triggers reach the registry. A firing P&L, margin or earnings notice is
+      // the market being the market; recording those turned six faults out of six into three real
+      // ones plus three notices (measured 2026-11-19). See `isFaultWorthy()` for the test applied.
+      const faultWorthy = isFaultWorthy(key);
       const faultCode = this.conditionFaultCode(key);
+      if (faultWorthy) {
+        if (condition?.triggered) {
+          // ONE fault observation per EPISODE, not per poll. This loop runs 15 conditions every 60 s;
+          // recording each poll would make a single stuck symbol read as ~500 occurrences a day.
+          const event = this.episodes.observe(faultCode, true);
+          if (event === 'started') this.recordConditionFault(key, condition);
+          // ⚠️ An ongoing episode still moves `lastSeen` (count untouched) — otherwise a fault that is
+          // failing RIGHT NOW keeps the timestamp from when it started and ages into looking stale.
+          else if (event === 'ongoing') this.touchConditionFault(key, condition);
+        } else {
+          // Clears the episode so a returning condition is counted again — see EpisodeTracker.
+          this.episodes.observe(faultCode, false);
+        }
+      }
+
       if (condition?.triggered) {
-        // ONE fault observation per EPISODE, not per poll. This loop runs 15 conditions every 60 s;
-        // recording each poll would make a single stuck symbol read as ~500 occurrences a day.
-        const event = this.episodes.observe(faultCode, true);
-        if (event === 'started') this.recordConditionFault(key, condition);
-        // ⚠️ An ongoing episode still moves `lastSeen` (count untouched) — otherwise a fault that is
-        // failing RIGHT NOW keeps the timestamp from when it started and ages into looking stale.
-        else if (event === 'ongoing') this.touchConditionFault(key, condition);
         this.fireAlert(key, cfg, condition.title, condition.message, condition.severity || cfg.severity);
-      } else {
-        // Clears the episode so a returning condition is counted again — see EpisodeTracker.
-        this.episodes.observe(faultCode, false);
       }
     } catch (err) {
       this.logger.warn(`Trigger "${key}" evaluation failed: ${(err as Error).message}`);

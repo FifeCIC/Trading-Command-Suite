@@ -1453,7 +1453,7 @@ export const ROUTE_CONTRACTS = [
         status: 'active',
       },
       {
-        route: 'GET /api/trading/strategy-comparison',
+        route: 'GET /api/bots/strategy-comparison',
         method: 'GET',
         permission: 'Authenticated',
         owner: 'StrategyComparisonService',
@@ -1682,7 +1682,7 @@ export const ROUTE_CONTRACTS = [
       status: 'active',
     },
     {
-      route: 'GET /api/trading/strategy-comparison',
+      route: 'GET /api/bots/strategy-comparison',
       method: 'GET',
       permission: 'Authenticated',
       owner: 'TradingController',

@@ -137,6 +137,9 @@ function buildEntries(rows, subsByBot, skipNames) {
     out.push({
       name: r.name,
       symbol: r.symbol,
+      // #1314 — carried so the fleet round-trips. `fixed` is the default and is omitted by render().
+      scopeMode: r.scopeMode ?? 'fixed',
+      feedList: r.feedList ?? null,
       magic: num(r.magic),
       protocolId: r.protocolId,
       brokerId: r.brokerId,
@@ -212,6 +215,10 @@ function render(entries) {
     lines.push(`  {`);
     lines.push(`    name: ${lit(e.name).replace(/^'|'$/g, "'").replace(/^'(.*)'$/, "'$1'")},`);
     lines.push(`    symbol: '${e.symbol}',`);
+    // #1314 — emitted ONLY when not the default, so the 76 fixed-scope bots stay byte-identical
+    // and this change cannot churn the whole generated fleet.
+    if (e.scopeMode && e.scopeMode !== 'fixed') lines.push(`    scopeMode: '${e.scopeMode}',`);
+    if (e.feedList) lines.push(`    feedList: '${e.feedList}',`);
     lines.push(`    magic: ${e.magic},`);
     lines.push(`    protocolId: '${e.protocolId}',`);
     lines.push(`    brokerId: '${e.brokerId}',`);
@@ -326,7 +333,11 @@ if (process.argv.includes('--stdout') || process.argv.includes('--check')) {
              maxHoldHours, exitBeforeUtc, active, allocationAmount, maxTradeRiskPct,
              cooldownMinutes, maxPyramidTiers, maxPositions,
              simTslEnabled, simTslActivationPct, simTslDistancePct,
-             exhaustionObserveEnabled, exhaustionDecelPct
+             exhaustionObserveEnabled, exhaustionDecelPct,
+             -- #1314 — WITHOUT these two, a reinstall silently resets a feed-scoped bot to fixed
+             -- and it starts trading its PLACEHOLDER ticker. The generator is the only thing that
+             -- restores the fleet, so a column it does not read is a column it destroys.
+             scopeMode, feedList
       FROM trading_strategy ORDER BY symbol, name`);
     const subs = await prisma.$queryRawUnsafe(`SELECT strategyId, protocolId, role FROM strategy_protocol`);
     const subsByBot = {};

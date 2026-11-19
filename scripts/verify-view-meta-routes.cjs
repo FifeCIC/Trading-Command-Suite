@@ -98,8 +98,8 @@ const CASES = [
   // The trading mirror, plus the strategy-* family it sits beside.
   ['/trading/symbol/EURUSD', '/trading/symbol'],
   ['/trading/strategy/7d3f1a2b', '/trading/strategy'],
-  ['/trading/strategy-comparison', '/trading/strategy-comparison'],
-  ['/trading/strategy-monitor', '/trading/strategy-monitor'],
+  ['/bots/strategy-comparison', '/bots/strategy-comparison'],
+  ['/bots/strategy-monitor', '/bots/strategy-monitor'],
   // ⚠️ MOVED 2026-11-18 to its own Strategies area. This fixture follows the route, because a
   // fixture that still names the OLD path asserts the move did not happen — it failed exactly once,
   // here, when the view left /trading.

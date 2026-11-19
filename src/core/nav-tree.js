@@ -183,24 +183,38 @@ export const NAV_TREE = {
       { id: 'day-top-losers', label: "Day's Top Losers", icon: '🕳️' },
     ],
   },
+  // ⚠️ THE BOTS AREA (owner request, 2026-11-19): *"Create a Bots area between Signals and Trading in
+  // the menu"*, moving Bot Monitor, Trading Bots, Create Bot and Bot Comparison into it.
+  //
+  // WHY THIS IS NOT JUST TIDYING. The four views are about ONE OBJECT — a bot: the list of them, the
+  // form that creates one, the monitor over the whole pipeline per bot, and the A/B comparison of two
+  // configurations. They were scattered through Trading between Speed Scanner, Manual Trading and
+  // Trade Journal, which are about operating POSITIONS. The nav now reads as the pipeline:
+  // protocols → scoring → signals → BOTS → trading.
+  //
+  // ⚠️ `strategy-monitor` (labelled "Bot Monitor") belongs here rather than beside the strategies: its
+  // API is `/api/trading/strategies/with-ratios` + `/api/automation/status`, i.e. bot state, and the
+  // id is historical — the route is `/bots/bot-monitor` now, and `/bots/strategy-monitor`
+  // redirects.
+  bots: {
+    label: 'Bots',
+    views: [
+      { id: 'trading-bots', label: 'Trading Bots', icon: '🤖' },
+      { id: 'bot-create', label: 'Create Bot', icon: '⊞' },
+      { id: 'strategy-monitor', label: 'Bot Monitor', icon: '📊' },
+      { id: 'strategy-comparison', label: 'Bot Comparison', icon: '⚖' },
+    ],
+  },
   trading: {
     label: 'Trading',
     views: [
-      { id: 'strategy-monitor', label: 'Bot Monitor', icon: '📊' },
       // MOVED from the Automation area 2026-10-02 (owner, Page Walkthrough: "Also move this page to
       // the Trading area"). It scans for fast, score-driven entries, so it belongs with the thing it
       // trades rather than with the machinery that ran it. Its route became /trading/speed-scanner.
       { id: 'speed-scanner', label: 'Speed Scanner', icon: '⚡' },
-      // ── BOTS ──
-      // `Trading Bots` = a BOT, per `docs/trading-bot-model.md` §1: the EXECUTION POLICY (a
-      // `TradingStrategy` row) - money management, risk, entry/exit rules, position building. The
-      // Strategy Monitor above is the WHOLE PIPELINE (protocol + bot), which is a different thing.
-      // §5 (user-confirmed) is explicit that the display label is "Trading Bots".
-      { id: 'trading-bots', label: 'Trading Bots', icon: '🤖' },
-      // Renamed from `strategy-create` 2026-09-18: it creates a BOT row, so "Create Strategy"
-      // named the wrong layer. The alias `create-strategy` was removed - it mapped to this same
-      // component and nothing navigated to it except three stale QA procedure strings.
-      { id: 'bot-create', label: 'Create Bot', icon: '⊞' },
+      // ── BOTS moved to their own area 2026-11-19 (owner request) ──────────────────────────────
+      // `trading-bots`, `bot-create`, `strategy-monitor` and `strategy-comparison` now live under
+      // NAV_TREE.bots, which sits between Signals and Trading. Their comments went with them.
       // ── STRATEGIES (derived) ──
       // The owner's definition (updated 2026-09-19, docs/trading-bot-model.md §1c): a strategy is
       // a bot's WHOLE configuration (protocol + role + market + broker + execution policy). A
@@ -220,7 +234,6 @@ export const NAV_TREE = {
       // build's nav. §9.2 called it "promoted to a first-class area"; this is that move. The
       // education-facing copy stays at /education/mt5-demo-trading.
       { id: 'mt5-trading', label: 'Manual Trading', icon: '📈' },
-      { id: 'strategy-comparison', label: 'Bot Comparison', icon: '⚖' },
       { id: 'trading-plans', label: 'Trading Plans', icon: '📋' },
       { id: 'exit-signals', label: 'Exit Signals', icon: '🚪' },
       // #988 (owner request 2026-09-24) — the statistics page for the ONLY post-entry stop
@@ -238,7 +251,7 @@ export const NAV_TREE = {
       //
       // ⚠️ The header was the thing making the judgement, so removing it removes the claim. These
       // four were never legacy: Market Context is live session data, Strategy Library is the
-      // protocol catalogue, and Trading Performance reads `/api/trading/strategy-comparison`. The
+      // protocol catalogue, and Trading Performance reads `/api/bots/strategy-comparison`. The
       // label dated from when they were superseded in name only — it told a reader to expect dead
       // pages and then showed them working ones.
       { id: 'market-context', label: 'Market Context', icon: '🌐' },
@@ -541,6 +554,11 @@ export const NAV_TREE = {
       { id: 'design-observations', label: 'Design Observations', icon: '👁' },
       // ── Engineering tools — build and inspect the UI itself ──
       { kind: 'section-header', id: 'dev-engineering', label: 'Engineering Tools', icon: '🛠' },
+      // MOVED here from `/bots/trading-bots` 2026-11-19 (owner: the queue "is actually just becoming
+      // screen clutter and noise … it takes way focus [away from] the bot table itself"). It is a list
+      // of edits we are considering, most of which will never be applied — that is working material,
+      // so it belongs with the tooling. The bots page keeps only the queue for the SELECTED bot.
+      { id: 'queued-changes', label: 'Queued Changes', icon: '📝' },
       { id: 'feature-lab', label: 'Feature Lab', icon: '🔬' },
       { id: 'ui-review', label: 'Page Walkthrough', icon: '📋' },
       // ⚠️ `responsive-layout-lab` MOVED to the Appearance area 2026-10-13 (owner request). It is a

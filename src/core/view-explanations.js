@@ -122,6 +122,14 @@ export const VIEW_EXPLANATIONS = {
     'short list. The question about OUR symbols — what is TCS doing with the movers we hold? — is ' +
     '/watchlists/registered-movers.',
 
+  'queued-changes':
+    'Every protocol and bot change we have written down but not yet made — the working list behind ' +
+    '“what are we about to try?”, moved out of the bots page because it is a list of edits we are ' +
+    'considering, not a record of trading. Each row names its kind, its target, who queued it and ' +
+    'the issue that justifies it; a row with no issue says so rather than looking finished, and a ' +
+    'row naming a directive that does not exist yet is a placeholder to build, never something you ' +
+    'could attach. Nothing here is applied by this page: status is a record of what someone did.',
+
   'screener':
     'The Screener ranks catalyst events — upcoming earnings and recent news ' +
     'mentions — by attention weight (strength × source reliability × how close ' +
