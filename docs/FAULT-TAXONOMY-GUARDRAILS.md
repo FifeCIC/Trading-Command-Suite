@@ -1,5 +1,11 @@
 # Fault Taxonomy — the guardrails, and why they exist
 
+**Status:** active
+**Category:** C
+**Created:** 2026-11-19
+**Last updated:** 2026-11-19
+**Owner:** primary agent — owner-accepted decision, 2026-11-19
+
 > **Decision, 2026-11-19 (owner, accepting the primary agent's recommendation).**
 > The reasoning below is not context. It is the **rule**, and `scripts/validate-fault-taxonomy.cjs`
 > fails the build when a rule is broken. A standard in a paragraph costs tokens every turn; a
