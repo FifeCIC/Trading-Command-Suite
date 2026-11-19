@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 204,
+  "count": 205,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1474,6 +1474,17 @@
       "where": "nest",
       "category": "validator",
       "purpose": "a performance STAT must be computed, never typed.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-fault-taxonomy.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "the anti-bloat guardrail for the fault registry.",
       "selfTest": true,
       "reaches": [
         "prebuild",

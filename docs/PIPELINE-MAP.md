@@ -298,11 +298,11 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/automation/stop-guardian.service.ts:2182` — `observeExhaustion()` → `profitPct`
   - `((isBuy?pos.priceCurrent-entry:entry-pos.priceCurrent)/entry)*100`
   - conditions: `isBuy`
-- `nest/src/modules/scoring/exit-consensus.service.ts:373` — `assessOne()` → `profitPct`
+- `nest/src/modules/scoring/exit-consensus.service.ts:407` — `assessOne()` → `profitPct`
   - `entry>0?((side==='buy'?current-entry:entry-current)/entry)*100:0`
   - conditions: `side==='buy'`
   - guarded by: `entry>0`
-- `nest/src/modules/scoring/exit-consensus.service.ts:374` — `assessOne()` → `peakProfitPct`
+- `nest/src/modules/scoring/exit-consensus.service.ts:408` — `assessOne()` → `peakProfitPct`
   - `peak==null||entry<=0?null:((side==='buy'?peak-entry:entry-peak)/entry)*100`
   - conditions: `side==='buy'`
   - guarded by: `peak==null||entry<=0`
@@ -881,11 +881,11 @@ A difference and its mirror in one expression. **This is the tier that finds a c
 - `nest/src/modules/automation/stop-guardian.service.ts:2182` — `observeExhaustion()` → `profitPct`
   - `((isBuy?pos.priceCurrent-entry:entry-pos.priceCurrent)/entry)*100`
   - conditions: `isBuy`
-- `nest/src/modules/scoring/exit-consensus.service.ts:373` — `assessOne()` → `profitPct`
+- `nest/src/modules/scoring/exit-consensus.service.ts:407` — `assessOne()` → `profitPct`
   - `entry>0?((side==='buy'?current-entry:entry-current)/entry)*100:0`
   - conditions: `side==='buy'`
   - guarded by: `entry>0`
-- `nest/src/modules/scoring/exit-consensus.service.ts:374` — `assessOne()` → `peakProfitPct`
+- `nest/src/modules/scoring/exit-consensus.service.ts:408` — `assessOne()` → `peakProfitPct`
   - `peak==null||entry<=0?null:((side==='buy'?peak-entry:entry-peak)/entry)*100`
   - conditions: `side==='buy'`
   - guarded by: `peak==null||entry<=0`
@@ -1018,7 +1018,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/averaging-scorer.ts:52 setPolicy`
 - `nest/src/modules/scoring/averaging-scorer.ts:56 getPolicy`
 - `nest/src/modules/scoring/averaging-scorer.ts:60 evaluate`
-- `nest/src/modules/scoring/exit-consensus.service.ts:264 assessAll`
+- `nest/src/modules/scoring/exit-consensus.service.ts:298 assessAll`
 - `nest/src/modules/scoring/movers-treatment.service.ts:336 build`
 - `nest/src/modules/scoring/pnl-statistics.service.ts:165 empty`
 - `nest/src/modules/scoring/pnl-statistics.service.ts:237 inPopulation`
