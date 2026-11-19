@@ -21,7 +21,7 @@ import LoopControls from '../LoopControls';
 
 /* ── System Status (health + the automation loop) ─────────────────
  *
- * ⚠️ THE LOOP CONTROLS LIVE HERE NOW (owner directive, 2026-11-06): Merge `<div.lc-strip>` … so that widget
+ * ⚠️ THE LOOP CONTROLS LIVE HERE NOW (requirement, 2026-11-06): Merge `<div.lc-strip>` … so that widget
  * becomes system status with the control over the loop which is a key functionality. They used to
  * render as a standalone strip above the board, which put the app's most consequential switch in a
  * band of its own and left it off every OTHER board (the Lab board, the screenshot cockpit) that has

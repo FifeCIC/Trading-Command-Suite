@@ -2,7 +2,7 @@
  * useTradeAttention — a BROWSER notification when algo trading is not active.
  *
  * ── WHY ──────────────────────────────────────────────────────────────────────────────────────
- * Owner directive, 2026-09-27: Yes I want the browser notification too.
+ * Requirement, 2026-09-27: Yes I want the browser notification too.
  *
  * ⚠️ THIS IS THE BACKSTOP, NOT THE PRIMARY CHANNEL — and the difference matters, because it
  * decides how much it can be trusted. A browser notification **only fires while a tab is open and
@@ -143,7 +143,7 @@ export default function useTradeAttention() {
 }
 
 /**
- * Whether the browser can currently deliver these alerts — so a surface can TELL the owner rather
+ * Whether the browser can currently deliver these alerts — so a surface can TELL the requirement rather
  * than silently doing nothing.
  *
  * ⚠️ `'unsupported'` and `'denied'` are deliberately distinct from `'default'`. Development

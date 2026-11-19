@@ -3,7 +3,7 @@
  *
  * ⚠️ WHY EXPECTANCY, NOT WIN RATE, IS TESTED HARDEST
  * The single most dangerous error in this file would be computing a POSITIVE expectancy for a
- * losing system — it would tell the owner to keep building when they should stop. That happens
+ * losing system — it would tell the requirement to keep building when they should stop. That happens
  * the moment `avgLoss` is treated as a positive magnitude. The sign cases below exist
  * specifically to make that error fail loudly.
  */

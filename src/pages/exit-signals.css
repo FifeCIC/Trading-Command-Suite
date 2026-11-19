@@ -15,7 +15,7 @@
 /*
  * ⚠️ THE GROUP HEADER IS NOT A NOTICE (2026-11-07).
  *
- * Owner directive: This <div.es-group-header-high> might actually be a notice. If it is then the styling is
+ * Requirement: This <div.es-group-header-high> might actually be a notice. If it is then the styling is
  * wrong when compared to the red one … the strength of the coloured background is too much and the
  * triangle icon tells me nothing.
  *
@@ -72,7 +72,7 @@
 .es-card--critical:hover, .es-card--high:hover { box-shadow: var(--shadow-card); }
 
 /* ── Card Header ────────────────────────────────────────────────────────────
-   ⚠️ RESTRUCTURED 2026-11-07. Owner directive: the symbol in bold a little larger text is not enough to
+   ⚠️ RESTRUCTURED 2026-11-07. Requirement: the symbol in bold a little larger text is not enough to
    designate it as the title/header, bits like es-pnl are in different places on every card as some
    have a sentence too es-bot and others don't.
 

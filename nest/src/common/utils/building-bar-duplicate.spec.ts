@@ -47,7 +47,7 @@ describe('dropFormingDuplicate', () => {
 
   it('ONLY ever drops the newest — a historical duplicate is left alone', () => {
     // ⚠️ Load-bearing. Restricting to the newest means this rule can never delete a settled row;
-    // the historical 205 are a decision for the owner, not something a refresh should silently undo.
+    // the historical 205 are a decision for the requirement, not something a refresh should silently undo.
     const dup = bar('2026-09-05T21:00:00.000Z', 1.16114, 1.165, 1.158, 1.15983, 195012);
     const r = dropFormingDuplicate([THU, dup, bar('2026-09-30T21:00:00.000Z', 1.13, 1.14, 1.12, 1.135, 9)]);
     expect(r.bars).toHaveLength(3);

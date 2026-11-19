@@ -241,7 +241,7 @@ describe('Mt5Adapter — multi-broker deal history (#1089)', () => {
 
     expect(posts.some((p) => p.url.includes(':5000') && p.url.includes('/history/recover'))).toBe(true);
     expect(posts.some((p) => p.url.includes(':5001') && p.url.includes('/history/recover'))).toBe(true);
-    // The SAME ticket list reaches both — resolving on the owner is the broker's job.
+    // The SAME ticket list reaches both — resolving on the requirement is the broker's job.
     expect(posts.every((p) => Array.isArray(p.body.positions) && p.body.positions.length === 3)).toBe(true);
     expect(res.recovered).toEqual(['93621464']);
     expect(res.stillMissing.sort()).toEqual(['89649760', '91105906']);

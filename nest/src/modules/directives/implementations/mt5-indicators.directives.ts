@@ -33,7 +33,7 @@ import {
   macd,
   rsi,
 } from '../utils/indicators';
-// #1077 (owner ruling "B", 2026-10-09) — the canonical ratcheting SuperTrend, ONE home.
+// #1077 (requirement "B", 2026-10-09) — the canonical ratcheting SuperTrend, ONE home.
 import { computeSuperTrend } from '../utils/supertrend';
 
 // ── Helpers ─────────────────────────────────────────────────
@@ -509,7 +509,7 @@ export class KeltnerChannelDirective implements IDirective {
 // =====================================================================
 
 /**
- * ── DECISION (2026-10-09, primary — owner ruling "B" on #1077 / review-queue R50) ──
+ * ── DECISION (2026-10-09, primary — requirement "B" on #1077 / review-queue R50) ──
  * WHAT:      Bands come from `computeSuperTrend()` (utils/supertrend.ts) — a canonical
  *            RATCHETING SuperTrend. Direction maps to bullish/bearish at a flat score 55.
  *            The old `score 75` "strong" branches are REMOVED, not re-invented — the measured
@@ -778,7 +778,7 @@ export class BollingerPctBDirective implements IDirective {
 // =====================================================================
 
 /**
- * ── DECISION (2026-10-09, primary — owner ruling "B" on #1075) ──
+ * ── DECISION (2026-10-09, primary — requirement "B" on #1075) ──
  * WHAT:      The gap between price and each trailing stop is expressed in ATR UNITS:
  *            longGap = (close − longStop)/ATR, shortGap = (close − shortStop)/ATR.
  *            Grades: ≥ 2 ATR beyond the stop = strong (75); ≥ 0.5 ATR = moderate (60);

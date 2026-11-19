@@ -12,7 +12,7 @@
  * ⚠️ WHY THIS MODULE READS IT BUT DOES NOT ENFORCE IT
  * --------------------------------------------------
  * Wiring `instrumentTypes` into a gate **changes what a scored symbol scores**, so it is a MATHS
- * change and the owner's rule applies (`maths-change-requires-ab.instructions.md`): create a COPIED
+ * change and the project's rule applies (`maths-change-requires-ab.instructions.md`): create a COPIED
  * configuration and compare, never edit in place.
  *
  * Measured blast radius on the live database 2026-10-01 — **111** directive-symbol pairs would be

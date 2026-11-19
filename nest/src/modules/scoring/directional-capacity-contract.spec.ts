@@ -6,7 +6,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * WHY THIS FILE EXISTS
  * ─────────────────────────────────────────────────────────────────────────────
- * The project owner asked why areas keep being re-opened. Investigation on
+ * The project the brief asked why areas keep being re-opened. Investigation on
  * 2026-09-11 found that one specific decision has **already been tried and
  * reverted once**, for a reason that had to be re-discovered from 7 days of data.
  * That is the most expensive kind of loop, and it is recorded here so the next

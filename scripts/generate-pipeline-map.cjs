@@ -910,7 +910,7 @@ function renderPhase2(p2) {
   };
 
   // ⚠️ PRINTED FIRST, AND IT IS NOT A CONVENIENCE. The #1069 group has 3 sites; ten other groups
-  // have more, so a report ordered by size alone buries the one group the owner asked about. The
+  // have more, so a report ordered by size alone buries the one group the brief asked about. The
   // order here is by INTEREST: same maths, and the sites disagree about the rules around it.
   section('Divergent edges — the same maths, DIFFERENT rules', p2.maths.exact.filter((g) => g.divergent),
     '**This is the #1069 shape.** The computation is identical after normalisation, but the sites '

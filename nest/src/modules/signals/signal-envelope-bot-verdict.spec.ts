@@ -8,7 +8,7 @@ import { SignalEnvelopeService } from './signal-envelope.service';
  * (`src/core/tradeability.js`) from a bot list built on the DISPLAY-ONLY `trading_strategy.protocolId`
  * column — while the server's gate reconciliation (#759, corrected 2026-10-06) had already moved
  * onto `strategy_protocol` SUBSCRIPTIONS. Two implementations of one fact, two bot lists, two views.
- * The owner (2026-10-12): bots do not belong on the scoring ladder; ONE service generates the
+ * The requirement (2026-10-12): bots do not belong on the scoring ladder; ONE service generates the
  * sentence and the signal card renders it.
  *
  * ⚠️ The grammar case is here because the retired client implementation shipped

@@ -40,7 +40,7 @@ export interface TaskStatus {
   listenerPid: number | null;
   listenerProcess: string | null;
   /**
-   * HOW `listenerPid` was attributed — `socket` is measured (the OS named the owner), `command-line`
+   * HOW `listenerPid` was attributed — `socket` is measured (the OS named the requirement), `command-line`
    * is inferred (a single process runs this task's entry point, so it is almost certainly that one).
    * The distinction exists because #1238 is a bug about a status surface that could not be trusted;
    * answering with an inference that looks identical to a measurement would repeat it.
@@ -135,7 +135,7 @@ export class ProcessManagerService {
     // ── The `issue` field is how this surface says "cannot judge" (#1238) ─────────────────────────
     //
     // ⚠️ IT USED TO BE UNREACHABLE ON THIS HOST, twice over: the guard tested `&& listenerPid`, and
-    // `listenerPid` was `0` — which is FALSY — whenever the owner could not be attributed. So the
+    // `listenerPid` was `0` — which is FALSY — whenever the requirement could not be attributed. So the
     // branch was skipped and the field stayed `null`, i.e. the API answered 200 with `running: false`
     // and NO indication that anything was uncertain. A confident negative, silently.
     //
@@ -460,7 +460,7 @@ export class ProcessManagerService {
    * The SECOND, INDEPENDENT source for "which process is this task?" (#1238, criterion 2).
    *
    * ⚠️ WHY THIS EXISTS. The socket tier answers "who holds the port?". That is the right question
-   * right up until the OS will not name the owner — which was the whole of #1238, where the listener
+   * right up until the OS will not name the requirement — which was the whole of #1238, where the listener
    * existed, served HTTP, and could not be attributed. Asking the SAME question twice ("who holds
    * the port?") in two ways does not help when the answer is unavailable; asking a DIFFERENT question
    * does. The task's entry point is a property of the process, not of the socket.

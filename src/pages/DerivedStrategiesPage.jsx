@@ -14,7 +14,7 @@
  * protocol + role + market + broker + execution policy. It renders one strategy per bot
  * (27 on 2026-09-19, one unreachable), never merged across markets.
  *
- * The difference is the owner's rule, and it is not cosmetic:
+ * The difference is the project's rule, and it is not cosmetic:
  *
  *     "A strategy is about different treatment of a symbol."  — §1c
  *
@@ -39,7 +39,7 @@
  * loudly here rather than folded into one tidy row, because folding would hide the fault.
  *
  * #875 UPDATE (2026-09-20): the REGISTRY half now exists. Every materialised combination gets a
- * stable id automatically (source 'auto') and the owner can name it; a part edit shows as DRIFT
+ * stable id automatically (source 'auto') and the requirement can name it; a part edit shows as DRIFT
  * against the accepted definition until re-accepted. The derived view below stays pure — names
  * live in `/api/scoring/strategy-registry`, never in the content key.
  */
@@ -185,7 +185,7 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
             <span className={styles.symbol} key={s}>{s}</span>
           ))}
         </span>
-        {/* ⚠️ STATE AND SIZE, ON THE COLLAPSED CARD (2026-11-07). Owner directive: The strategies page cards
+        {/* ⚠️ STATE AND SIZE, ON THE COLLAPSED CARD (2026-11-07). Requirement: The strategies page cards
             for each strategy are a bit dull … theres surely more informaton about strategies that can
             be added to the card. A collapsed card said nothing about whether the strategy could
             trade or how many bots were behind it — both facts were already in `strategy`, on the
@@ -211,7 +211,7 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
             ⚠️
           </span>
         )}
-        {/* ⚠️ THE AFFORDANCE WAS ONE GLYPH AT 60% OPACITY (2026-11-07). Owner directive: it's not even
+        {/* ⚠️ THE AFFORDANCE WAS ONE GLYPH AT 60% OPACITY (2026-11-07). Requirement: it's not even
             obvious they can be clicked on unless we hover the cursor over one bar. A bare `▸` is
             a decoration until you already know the rule. This is a real labelled control: it says
             what it does, it is focusable, and the CSS gives it a hover band and a visible box so the
@@ -231,7 +231,7 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
             className={styles.regBadge}
             title={reg.source === 'auto'
               ? 'Auto-registered: this combination materialised (a live bot) and got a stable id.'
-              : 'Registered by the owner.'}
+              : 'Registered by the requirement.'}
           >
             {reg.source === 'auto' ? 'auto id' : 'registered'}
           </span>
@@ -262,7 +262,7 @@ function StrategyCard({ strategy, reg, drift, editing, draft, saving, onEditStar
       )}
 
       {/* #875 — drift: this card IS the current configuration of a registered strategy whose parts
-          changed. The name survives (it is pinned to the id, not the key); the owner re-accepts or
+          changed. The name survives (it is pinned to the id, not the key); the requirement re-accepts or
           edits the bot back. Shared component — the A/B Strategies page renders the same note
           READ-ONLY (it passes no onReaccept). */}
       <DriftNote drift={drift} onReaccept={onReaccept} saving={saving} />
@@ -580,7 +580,7 @@ export default function DerivedStrategiesPage() {
           <span className={styles.statValue}>{data?.duplicateGroups ?? 0}</span>
           <span
             className={styles.statLabel}
-            title="Bots sharing a key with NO declared copy between them — an accidental duplicate. The owner's rule: these should never exist."
+            title="Bots sharing a key with NO declared copy between them — an accidental duplicate. The project's rule: these should never exist."
           >
             duplicates
           </span>

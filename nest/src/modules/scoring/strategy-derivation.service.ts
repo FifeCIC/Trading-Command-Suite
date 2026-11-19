@@ -22,7 +22,7 @@ import { parseSessionWindow, parseExitBoundary } from '../trading/session-window
  *         edit to one of its parts and the UI can show WHAT changed.
  *
  * ─────────────────────────────────────────────────────────────────────────────────────────────
- * ⚠️ THE OWNER'S RULE — corrected 2026-09-18, and this is the load-bearing comment in the file
+ * ⚠️ THE PROJECT'S RULE — corrected 2026-09-18, and this is the load-bearing comment in the file
  * ─────────────────────────────────────────────────────────────────────────────────────────────
  *
  *     "Two different bots results in two strategies."
@@ -37,7 +37,7 @@ import { parseSessionWindow, parseExitBoundary } from '../trading/session-window
  * ⚠️⚠️ THIS FILE PREVIOUSLY GOT THIS WRONG, and the mistake is worth keeping on the record.
  *   An earlier version EXCLUDED `symbol` from the identity on the reasoning that "symbols are scope,
  *   not identity", and therefore counted 6 FX bots sharing one config as ONE strategy. That is
- *   backwards, and the owner corrected it: **a different market IS a different configuration**, so
+ *   backwards, and the requirement corrected it: **a different market IS a different configuration**, so
  *   those six are six strategies. The same error also collapsed the count to a reported "15" by
  *   dropping `sessionWindow` from a counting query.
  *
@@ -152,7 +152,7 @@ export interface DerivedStrategy {
   active: boolean;
   /**
    * ⚠️ DEFECT SURFACE — bot names byte-identical to this one (same protocol, role, market, broker
-   * AND treatment). The owner's rule: *"we should never have bots that do the exact same thing...
+   * AND treatment). The project's rule: *"we should never have bots that do the exact same thing...
    * it would mean its a duplicate and should be avoided."*
    *
    * This is the ONLY case in which two bots share a `strategyKey`. It is reported rather than
@@ -315,7 +315,7 @@ export class StrategyDerivationService {
 
       for (const link of links) {
         // ⚠️ The MARKET and the BROKER are in the key. A previous version excluded them as
-        // "scope", which collapsed six FX markets into one strategy. The owner's rule: a different
+        // "scope", which collapsed six FX markets into one strategy. The project's rule: a different
         // market IS a different configuration. The only way two bots now share a key is by being
         // byte-identical — reported as a duplicate below.
         const key = this.strategyKey(link.protocolId, link.role, bot.symbol, bot.brokerId, treatment);
@@ -377,7 +377,7 @@ export class StrategyDerivationService {
       if (isDuplicate) {
         duplicateGroups += 1;
         this.logger.warn(
-          `Duplicate bots detected (${strategyKey}): ${names.join(' == ')} — same protocol, role, market, broker and execution policy, and NOT a declared copy${pair.differingFields.length ? `; they differ in [${pair.differingFields.join(', ')}]` : ''}. Per the owner's rule these should not both exist.`,
+          `Duplicate bots detected (${strategyKey}): ${names.join(' == ')} — same protocol, role, market, broker and execution policy, and NOT a declared copy${pair.differingFields.length ? `; they differ in [${pair.differingFields.join(', ')}]` : ''}. Per the project's rule these should not both exist.`,
         );
       }
 
@@ -442,7 +442,7 @@ export class StrategyDerivationService {
    *
    * ⚠️ `symbol` and `brokerId` are INCLUDED, deliberately. A previous version excluded them on the
    * reasoning that "symbols are scope, not identity", which collapsed six FX markets into one
-   * strategy. The owner's rule: *"Different markets. Is different configuration therefore the end
+   * strategy. The project's rule: *"Different markets. Is different configuration therefore the end
    * result is a unique strategy."* Two bots trading different markets are different strategies.
    *
    * The only way two bots share this key is by being byte-identical — which this service reports as
@@ -621,7 +621,7 @@ export const IDENTITY_TOP_LEVEL_COLUMNS = ['protocolId', 'symbol', 'brokerId'] a
  */
 export const DECLARED_UNKEYED_FIELDS: Record<string, string> = {
   id: 'the row key, not the configuration',
-  name: 'a label the owner can change without changing behaviour',
+  name: 'a label the requirement can change without changing behaviour',
   slug: 'a URL-safe label',
   description: 'prose',
   active: 'whether it is running, not what it does — one configuration can be on or off',
@@ -772,7 +772,7 @@ export function canonicaliseTreatment(t: StrategyTreatment): Record<string, stri
  *
  * ⚠️ `symbol` and `brokerId` are INCLUDED, deliberately. A previous version excluded them on the
  * reasoning that "symbols are scope, not identity", which collapsed six FX markets into one
- * strategy. The owner's rule: *"Different markets. Is different configuration therefore the end
+ * strategy. The project's rule: *"Different markets. Is different configuration therefore the end
  * result is a unique strategy."*
  *
  * Returns `v2:<16 hex>`. Version-1 keys carry no prefix, so a stored key self-identifies.

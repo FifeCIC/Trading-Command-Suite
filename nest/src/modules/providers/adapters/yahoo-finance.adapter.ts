@@ -205,7 +205,7 @@ export class YahooFinanceAdapter implements IProviderAdapter {
    *
    * ⚠️ WHY `period1`/`period2` AND NOT `range`. Yahoo's `range=1mo|3mo|...` always counts BACK from
    * now, so it can describe only the recent past. `period1`/`period2` (unix seconds) is the only
-   * form that NAMES a window — and naming a window is the entire requirement: the owner wants to
+   * form that NAMES a window — and naming a window is the entire requirement: the requirement is to
    * capture "the 300% surge of Greenland Mining ... over just 2 days" and re-measure it repeatedly.
    *
    * ⚠️ INTRADAY HISTORY IS CAPPED BY YAHOO, and the cap depends on the interval — roughly 30 days

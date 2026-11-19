@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * audit-protocol-health.cjs — the five questions the owner asked, answered per protocol.
+ * audit-protocol-health.cjs — the five questions the brief asked, answered per protocol.
  *
  *   1 DATA SOURCE   is each protocol's market data coming from MT5 / PepperstoneUK MT5?
  *   2 DIRECTIVE DATA does every directive get the bars it declares it needs?
@@ -8,20 +8,20 @@
  *   4 RESULTS STORED are per-directive results recorded?
  *   5 SCORE STORED   is the protocol's score recorded?
  *
- * WHY ONE TOOL FOR FIVE QUESTIONS (owner, 2026-11-03). Each answer is a property of the SAME
+ * WHY ONE TOOL FOR FIVE QUESTIONS (requirement, 2026-11-03). Each answer is a property of the SAME
  * protocol, and they fail in a chain: no bars -> directives starve -> nothing scores -> nothing is
  * stored. Checking them separately produces five green reports that each miss the cause. This walks
  * the chain in order and stops explaining at the first break, which is why the sections are
  * numbered rather than alphabetised.
  *
- * ⚠️ "EVEN IF TEMPORARY" — the owner's phrasing, and it matters. Some of this is deliberately NOT
+ * ⚠️ "EVEN IF TEMPORARY" — the project's phrasing, and it matters. Some of this is deliberately NOT
  * persisted (the score table rotates). So a table holding nothing is only a fault when the thing
  * that should write it is idle too. Every check compares a WRITE against a WORKLOAD rather than
  * asserting a row count, because "0 rows" on an idle system is not evidence of a defect.
  *
  * ⚠️ PROVIDER IS MEASURED, NOT INTENDED. `symbol_route` records where a symbol SHOULD come from; it
  * is not what happened. `marketbar.provider` is what actually supplied the bar. Measured
- * 2026-11-03: 4 crypto symbols route to `binance` while the owner's stated requirement is MT5 only —
+ * 2026-11-03: 4 crypto symbols route to `binance` while the project's stated requirement is MT5 only —
  * a route table alone would not have shown that.
  *
  * USAGE
@@ -92,7 +92,7 @@ function classifyStorage({ scored, snapshotted, reachable }) {
 /**
  * `--compare <slugA> <slugB>` — the CONTROL/VARIANT report for a copied configuration.
  *
- * ⚠️ WHY THIS IS A FLAG AND NOT A NEW TOOL (owner directive, 2026-11-03): consider how realistic it is at this
+ * ⚠️ WHY THIS IS A FLAG AND NOT A NEW TOOL (requirement, 2026-11-03): consider how realistic it is at this
  * point to continue adding complexity). The comparison needs exactly what this file already
  * queries — both protocols' stored scores, tick counts, and per-directive breakdowns. A second tool
  * would duplicate the connection layer, the staleness rules and the parser, and only one of the two

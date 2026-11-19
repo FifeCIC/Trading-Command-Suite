@@ -109,7 +109,7 @@ export class PriceRefreshService {
    * for every open position, on a cadence that actually runs.
    *
    * ⚠️ DO NOT ADD IT BACK HERE. A second price fetch for a price the sync loop already asked for is
-   * the duplication the owner's principle names — and two sources for one field can disagree.
+   * the duplication the project's principle names — and two sources for one field can disagree.
    * If this service ever gains a real cadence, the correct move is still to record the peak at the
    * SINGLE place that receives the broker's price, not to add a second writer.
    */

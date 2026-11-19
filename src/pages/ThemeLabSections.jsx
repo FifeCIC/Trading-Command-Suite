@@ -4,12 +4,12 @@ import './theme-lab.css';
 import '../core/forms.css'; // canonical shared Form System (.ff-*)
 import PageInfoPopover from '../components/PageInfoPopover';
 // The three lab SECTIONS, merged 2026-10-01. This page used to be a HUB that only linked out to them
-// (`LAB_SECTIONS.map` + `navigate('/development/' + id)`). The owner's instruction was "add the
+// (`LAB_SECTIONS.map` + `navigate('/development/' + id)`). The project's instruction was "add the
 // examples to the theme-lab page and delete this page", so the examples now RENDER here and the hub
 // is gone. Each file exports a SECTION — no page wrapper, no <h1>.
 //
 // ⚠️ TRANSITIONS LAB was deleted 2026-10-01 with its examples NOT migrated: asked whether to move
-// them first, the owner answered "all 21". Recover from git if that call is reversed.
+// them first, the requirement answered "all 21". Recover from git if that call is reversed.
 // ⚠️ REMOVED 2026-10-13: MotionLabSection / ScrollLabSection / PopoverLabSection were imported and
 // rendered here. They are rendered by AppearanceMotionPage instead — importing them here put the
 // motion examples on every group page. If this file needs them again, guard them by group.
@@ -43,7 +43,7 @@ const CARD_SHADES = [
 // (AAPL $198.32, TSLA $227.91, …) and fed the "Table at Different Shade Levels" section, which the
 // owner removed from /appearance/data-display. Deleted rather than left behind because a section
 // nothing renders is the "buried ability" the repo's own rules warn about — and because fabricated
-// market data is exactly what the owner ruled out for this area: *"Only use this apps own real data
+// market data is exactly what decided out for this area: *"Only use this apps own real data
 // to create examples."* Real tables replaced it, fetching live rows.
 
 const FORM_STANDARD_CLASSES = [
@@ -310,7 +310,7 @@ export function ThemeLabSections({ group }) {
       )}
 
       {/* ⚠️ "Table at Different Shade Levels" WAS HERE AND IS DELETED (2026-10-13, owner request).
-          It rendered four invented rows, and the owner removed it from /appearance/data-display, which
+          It rendered four invented rows, and the requirement removed it from /appearance/data-display, which
           now carries five tables built from the app's own stylesheets and live data instead. The
           SECTION is deleted, not just its render, so the `data` group does not become a guard that
           nothing satisfies — a section no page renders is a buried ability. It survives in git history

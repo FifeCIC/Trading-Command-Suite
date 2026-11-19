@@ -195,7 +195,7 @@ export default function StrategyMonitorPage() {
   }, [stratList]);
 
   // ── Loop state (#52 tick telemetry) moved to the topbar status popout on 2026-11-07 ──
-  // Owner directive: Remove sm-loop-badge … and add the stat to the top right status menu. It was one
+  // Requirement: Remove sm-loop-badge … and add the stat to the top right status menu. It was one
   // number about the whole machine sitting inside one page's header. The topbar already polls
   // `/api/automation/status` for the same payload, so this page no longer needs its own copy of
   // the three fields — `autoStatus` below is still used for `brokerStates`.

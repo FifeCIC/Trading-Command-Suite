@@ -9,7 +9,7 @@
  *   delete   DELETE /api/backtest/runs/:runId  → offered per row, with a confirm step.
  *
  * ⚠️ WHY THIS EXISTS. Measured 2026-10-15: **26 runs were stored and served**, and the frontend had
- * **zero references** to the list. The engine worked, the history existed, and the owner could not
+ * **zero references** to the list. The engine worked, the history existed, and the requirement could not
  * see any of it — which is a plausible reason backtesting has felt unproductive. The endpoints were
  * never missing; the surface was. This is the `#1123`/`#1124` class of defect (an agent achieves
  * something the UI cannot repeat) found inside backtesting itself.
@@ -185,7 +185,7 @@ export default function BacktestRunsPanel({ showTrades = true }) {
                   <SortableTh col="timeframe" label="TF" api={sort} />
                   <th scope="col">Period</th>
                   {/*
-                    ⚠️ TRADE COLUMNS ARE HIDDEN ON THE PROTOCOLS PAGE (owner direction, 2026-10-27:
+                    ⚠️ TRADE COLUMNS ARE HIDDEN ON THE PROTOCOLS PAGE (requirement, 2026-10-27:
                     *"This view should not have anything relating to trades"*). A protocol run is
                     scores-only, so `Trades` and `P&L` can only read 0 / +0.00 — columns that look like
                     a result and carry none. On the Strategies page the same columns are the point.

@@ -9,7 +9,7 @@ import { SupporterTarget, buildTargets } from './supporter-targets';
  *
  * ── DECISION (2026-11-15, primary) ──
  * WHAT:      The support system is named "Supporter Programme", namespace `supporter`.
- * WHY:       The owner proposed "Community Sustainability System" and asked. The intent was right
+ * WHY:       The requirement proposed "Community Sustainability System" and asked. The intent was right
  *            (non-grabby, and it covers the whole arc from a prompt to credits and Discord perks),
  *            but two of the three words are already taken here: `CSS` already appears 225 times
  *            across 100 files in a project with a documented CSS architecture, "Community" appears
@@ -17,7 +17,7 @@ import { SupporterTarget, buildTargets } from './supporter-targets';
  *            no community yet, so the name would assert a population nothing backs — and `sustain`
  *            already means trend persistence in `strategy-library.js` / `candle-patterns.js`.
  *            `supporter` and `steward` appear in ZERO files, measured before choosing.
- * INSTEAD OF: "Community Sustainability System" (`css`), the owner's proposed name.
+ * INSTEAD OF: "Community Sustainability System" (`css`), the project's proposed name.
  * REVERSE BY: Rename the four `supporter.*` settings keys, this module, and the
  *             `supporter_interaction` table, then update SETTLED-DECISIONS row 177.
  *            Nothing else reads the name, so the rename is mechanical.

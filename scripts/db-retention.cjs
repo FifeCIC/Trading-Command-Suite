@@ -3,7 +3,7 @@
  * db-retention.cjs — trim OPERATIONAL HISTORY, never measurement history.
  *
  * ── WHY THIS EXISTS ──────────────────────────────────────────────────────────────────────────────
- * Measured 2026-10-22: the database is **1,233.6 MB across 133 tables**, and the owner's instinct was
+ * Measured 2026-10-22: the database is **1,233.6 MB across 133 tables**, and the project's instinct was
  * that this slows the app. Part of that instinct is right — but the cause is not volume, and the
  * obvious fix (keep "2 weeks of data") would destroy the one thing that makes backtests comparable.
  *
@@ -15,7 +15,7 @@
  *     weeks. That is the silently-different-measurement defect, permanently.
  *   · `score`, `score_snapshot`, `directiveoutcome` — scoring history. Rarity needs 30+ snapshots per
  *     symbol; trimming changes what the scorer produces, i.e. a MATHS change with no A/B.
- *   · `marketbar_ts_backup_*` — the #750 repair safety net. Dropping it is a decision for the owner,
+ *   · `marketbar_ts_backup_*` — the #750 repair safety net. Dropping it is a decision for the requirement,
  *     not a retention policy.
  *
  * What is left is OPERATIONAL history: request logs, transport events, scheduler events, decision
@@ -68,7 +68,7 @@ const TRIMMABLE = Object.freeze([
 /** Refused by name, with the reason — so a future reader does not have to re-derive it. */
 const PROTECTED = Object.freeze({
   marketbar: 'MEASUREMENT SUBSTRATE — dev-window-v1 is 6 weeks (2026-09-09 → 2026-10-20). Trimming bars breaks every comparison.',
-  marketbar_ts_backup_20260910: 'The #750 timestamp-repair backup. Dropping it is an owner decision, not retention.',
+  marketbar_ts_backup_20260910: 'The #750 timestamp-repair backup. Dropping it is an requirement, not retention.',
   score: 'Scoring history — reading it drives research percentiles.',
   score_snapshot: 'Scoring history — rarity needs 30+ snapshots per symbol; trimming is a maths change.',
   directiveoutcome: 'Directive outcome history — the direction-eligibility evidence lives here.',

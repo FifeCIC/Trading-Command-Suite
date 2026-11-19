@@ -63,7 +63,7 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
   // ═══════════════════════════════════════════════════════════════════════════════════════════
   // CLASS 1 — ACTIVITY AND TRADING HISTORY: SHORT.
   //
-  // Owner directive, 2026-10-04: When I said 60 days I meant general trading history and app activity —
+  // Requirement, 2026-10-04: When I said 60 days I meant general trading history and app activity —
   // not strictly meaning everything or including bars for backtesting.
   //
   // These tables describe WHAT THE APP DID. Nothing downstream reads them as input, so their depth
@@ -90,13 +90,13 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
   //        the only one of the top ten with no declared window (the next undeclared was 18 MB, 14×
   //        smaller). It is pure telemetry: endpoint, method, status, duration. Nothing reads its
   //        history.
-  // OWNER'S REASONING: *"nothing is reading 90 days and might not for a long time… 30 days by
+  // The project's REASONING: *"nothing is reading 90 days and might not for a long time… 30 days by
   //        default is suitable."* The 7/30/90 fork was put to them and 30 was chosen.
   // ⚠️  THIS IS THE DEFAULT, NOT A CEILING. `DATA_RETENTION_APIACTIVITY_DAYS` overrides it, which is
   //        the existing opt-in mechanism for a longer window.
   // REVERSE BY: change `defaultDays`, or set the env key. One line either way.
   // REGISTER:  docs/SETTLED-DECISIONS.md row 62.
-  // NOT BUILT — the owner also raised framing long-term storage as an OPT-IN FEATURE the user
+  // NOT BUILT — the requirement also raised framing long-term storage as an OPT-IN FEATURE the user
   //        switches on for analysis (*"the user has to initiate long term data storage"*). Not done
   //        here: a default bound and an opt-in feature are different sizes of change, and only the
   //        first was decided. Recorded on **#1070** with the related finding below.
@@ -116,7 +116,7 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
   // ═══════════════════════════════════════════════════════════════════════════════════════════
   // CLASS 2 — EVIDENCE FOR BACKTESTING: LONG.
   //
-  // Owner directive, 2026-10-04: I understand the benefit of storing a year or even more of bar data and
+  // Requirement, 2026-10-04: I understand the benefit of storing a year or even more of bar data and
   // potentially key news headlines, articles etc. For the purpose of backtesting relevant
   // directives that read that.
   //
@@ -130,15 +130,15 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
   // **THE RULE: a window here must not be tighter than the deepest `minBars` of any directive that
   // can run against it.** Depth is a functional requirement, not a storage preference.
   // ═══════════════════════════════════════════════════════════════════════════════════════════
-  // ⚠️ RAISED 60 → 365 on 2026-10-04. The 60-day figure was MINE, not the owner's: they had been
+  // ⚠️ RAISED 60 → 365 on 2026-10-04. The 60-day figure was MINE, not the project's: they had been
   //    asking about *"general trading history and app activity"*, and bars were never in scope.
   //    The binding declaration is `btc-halving-cycle` at **365 daily bars**, in the ACTIVE
   //    `btc-speed-v1-long` — so 60 could never have satisfied it. See #1070.
   marketbar:           { dateCol: 'timestamp',    defaultDays: 365, envKey: 'DATA_RETENTION_BARS_DAYS',      label: 'Market Bars' },
 
-  // ══ NEWS — DELIBERATELY UNBOUNDED, and that IS the owner's ask. Read before adding a bound. ══
+  // ══ NEWS — DELIBERATELY UNBOUNDED, and that IS the project's ask. Read before adding a bound. ══
   //
-  // Owner directive, 2026-10-04: I understand the benefit of storing a year or even more of bar data and
+  // Requirement, 2026-10-04: I understand the benefit of storing a year or even more of bar data and
   // potentially key news headlines, articles etc. For the purpose of backtesting relevant
   // directives that read that.
   //
@@ -221,7 +221,7 @@ export function resolveRetentionDays(table: string): number {
  * the reason that detail is unavailable beyond ~4 hours.
  *
  * ⚠️ THE VALUE IS NOT CHANGED HERE. Raising it would change what every analysis surface sees — that
- * is a decision with a cost in rows, not a tidy-up, and it is deliberately left to the owner. What
+ * is a decision with a cost in rows, not a tidy-up, and it is deliberately left to the requirement. What
  * this declaration buys is that the number has a name, a reason, an override and one home.
  */
 export const SCORE_KEEP_PER_GROUP = {

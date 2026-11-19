@@ -211,17 +211,17 @@ const safeParse = (raw) => {
 };
 
 /**
- * applyRetired(board, retiredWidgets) — remove a default that the owner has since RETIRED, once.
+ * applyRetired(board, retiredWidgets) — remove a default that the requirement has since RETIRED, once.
  *
  * WHY THIS EXISTS BESIDE applyNewDefaults: changing `BOARD_DEFAULTS` only affects a brand-new board.
- * A widget the owner asked to hide is already sitting in his stored board, so hiding it needs a
+ * A widget the brief asked to hide is already sitting in his stored board, so hiding it needs a
  * one-time REMOVAL — and it has to be one-time, because the widget stays in the library and he may
  * add it back by hand. `retired` records what has been removed; a widget re-added later is not
  * removed again.
  *
  * Measured 2026-11-06: the dashboard board held 15 items, of which `diversification` (a two-line
  * "Mode: OFF / no duplicates" panel) and `automation` (a duplicate of the loop state now shown inside
- * System Status) were the two the owner asked to hide.
+ * System Status) were the two the brief asked to hide.
  */
 export function applyRetired(board, retiredWidgets = []) {
   const done = Array.isArray(board.retired) ? board.retired : [];

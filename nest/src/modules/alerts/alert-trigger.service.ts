@@ -132,8 +132,8 @@ export class AlertTriggerService implements OnModuleInit {
     // a symbol scoring 20+ times a day is being evaluated continuously, so producing zero
     // executions is a signal about the PATH, not about the market being quiet.
     'symbol-silent':     { enabled: true, cooldownSeconds: 3600, severity: 'warning', threshold: 20 },
-    // ── #972/#1010, added 2026-09-27 at the owner's request ──────────────────────────────────
-    // Owner directive: I need the app to draw my attention when algo trading is not active.
+    // ── #972/#1010, added 2026-09-27 at the project's request ──────────────────────────────────
+    // Requirement: I need the app to draw my attention when algo trading is not active.
     //
     // ⚠️ THIS IS NOT `mt5-disconnected`. A bridge can be fully `connected: true` and still refuse
     // every single order, because AutoTrading (`trade_allowed`) or the API trade path
@@ -527,7 +527,7 @@ export class AlertTriggerService implements OnModuleInit {
 
       if (connected.some(canTrade)) {
         // Trading is possible again. No throttle to clear here — `NotificationService` decides
-        // delivery from the owner's stored preferences, not from a counter this class owns.
+        // delivery from the project's stored preferences, not from a counter this class owns.
         return { triggered: false, title: '', message: '' };
       }
       if (!connected.some(definitelyBlocked)) {
@@ -957,7 +957,7 @@ export class AlertTriggerService implements OnModuleInit {
    * Measured 2026-09-22: five USD majors (AUDUSD, EURUSD, GBPUSD, USDCAD, USDCHF) each had
    * an `active=1` auto bot, live prices and live bars, and their SYMBOLS produced **no score,
    * no decision and no trade for a week** — because nothing had assigned them a protocol, so
-   * no protocol was scoring them. No error was raised anywhere. the only reason it was found is that the owner asked why nothing was
+   * no protocol was scoring them. No error was raised anywhere. the only reason it was found is that the brief asked why nothing was
    * trading.
    *
    * VIX is the second instance: its SYMBOL was scored 5–190 times a day by its protocols, and
@@ -1223,7 +1223,7 @@ export class AlertTriggerService implements OnModuleInit {
     this.alerts.addAlert('trading', title, message, severity);
     this.logger.log(`ALERT [${severity}] ${title}: ${message}`);
 
-    // ⚠️ THE IN-APP ROW IS NOT ENOUGH FOR THESE, AND THAT IS THE WHOLE POINT (owner, 2026-09-27:
+    // ⚠️ THE IN-APP ROW IS NOT ENOUGH FOR THESE, AND THAT IS THE WHOLE POINT (Requirement, 2026-09-27:
     // *"the notifications aren't attention demanding - none are integrated with windows"*). The
     // failure mode for `trade-disabled` is that nobody is looking at the app, so an alert that only
     // appears inside it cannot fire.
@@ -1232,7 +1232,7 @@ export class AlertTriggerService implements OnModuleInit {
     // A MISTAKE I MADE. I originally built a `WindowsNotifyService` here because I grepped THIS
     // module for a dispatcher, found none, and concluded none existed — without looking in
     // `modules/notifications/`, where a Windows toast channel has existed all along. That duplicate
-    // was worse than redundant: it BYPASSED THE OWNER'S PREFERENCES ENTIRELY, so a notification
+    // was worse than redundant: it BYPASSED THE PROJECT'S PREFERENCES ENTIRELY, so a notification
     // could not be turned off, prioritised or routed. This repo's own rule is "prefer the existing
     // canonical mechanism", and a second implementation gets the next fix while the first does not.
     //

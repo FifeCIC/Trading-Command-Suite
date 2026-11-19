@@ -1,5 +1,5 @@
 /**
- * DirectiveSettingsPanel — step 4 of **Backtesting Protocols** (owner direction, 2026-10-27).
+ * DirectiveSettingsPanel — step 4 of **Backtesting Protocols** (requirement, 2026-10-27).
  * =============================================================================================
  *
  * *"This step should be replaced (on the Backtesting Protocols view only) with a list of directives
@@ -299,7 +299,7 @@ export default function DirectiveSettingsPanel({ protocolSlug }) {
       ))}
 
       {/* ── TUNING & INSTANCES (#1165) ─────────────────────────────────────────────────────────
-          Owner direction 2026-11-01: *"Do the wiring"* — the instance control on the Configure
+          Requirement 2026-11-01: *"Do the wiring"* — the instance control on the Configure
           Directives surface. Every number below is a `params` value stored on
           `protocol_directive_entry` and READ by the scorer (unlike the maxScore field above, which the
           engine ignores for scoring). A directive may hold several CONFIGURATIONS; they are AVERAGED

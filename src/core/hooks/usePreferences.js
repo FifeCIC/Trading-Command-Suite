@@ -11,7 +11,7 @@ const DEFAULTS = {
   defaultSignalSymbols: '',
   defaultProtocol: '',
   /**
-   * ── THE FOCUSED STRATEGY (owner direction, 2026-11-04) ────────────────────────────────────────
+   * ── THE FOCUSED STRATEGY (requirement, 2026-11-04) ────────────────────────────────────────
    * *"I think the current strategy can be held across the entire app to help the user focus. There may
    * already be a value for that and it can be used where applicable."*
    *

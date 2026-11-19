@@ -5,7 +5,7 @@
  * `backtest_period` is ONE SYMBOL PER ROW. That is right for the engine, which loads a window for a
  * symbol. It is wrong for a library: measured 2026-11-16, `dev-window-v1` holds **27 rows** and the
  * two extreme-mover sets hold **10 each** — so a flat list shows **20 identical names with the same
- * paragraph of reasoning repeated 20 times**. The owner asked for a library of "data sets of a
+ * paragraph of reasoning repeated 20 times**. The requirement is for a library of "data sets of a
  * specific period", and a set is the thing they name, note and reason about.
  *
  * A set is therefore identified by what makes it one piece of stored evidence:

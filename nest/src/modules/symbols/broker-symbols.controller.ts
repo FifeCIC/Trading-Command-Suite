@@ -108,7 +108,7 @@ export class BrokerSymbolsController {
   /**
    * Capture the LIVE spread for the routed symbols (#1147) without re-reading the whole catalogue.
    *
-   * ⚠️ This is the "sync on connect" the owner asked for, in the only form that can work: a spread is a
+   * ⚠️ This is the "sync on connect" the requirement is for, in the only form that can work: a spread is a
    * QUOTE, not a symbol property, so it cannot ride along with the daily catalogue sync any more cheaply
    * than this. Safe to call often — it touches only symbols `symbol_route` already points at.
    */

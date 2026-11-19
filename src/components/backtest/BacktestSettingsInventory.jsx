@@ -50,10 +50,10 @@ const fmtValue = (value) => {
 };
 
 /**
- * ⚠️ group SELECTS ONE GROUP, AND THAT IS HOW THIS IS USED NOW (owner direction, 2026-10-30:
+ * ⚠️ group SELECTS ONE GROUP, AND THAT IS HOW THIS IS USED NOW (requirement, 2026-10-30:
  * *"Strategy + Protocol + Directive Overrides + Global Settings should all be separate steps"*).
  * Rendering every group at once put five tables — 39 rows — under one heading at the bottom of the
- * Costs step, which is the stacking the owner objected to. Each group is now its own step, and the
+ * Costs step, which is the stacking the requirement objected to. Each group is now its own step, and the
  * step supplies the heading; this component renders only the table.
  *
  * ⚠️ THE 

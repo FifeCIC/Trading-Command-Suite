@@ -3,13 +3,13 @@ import { computeSuperTrend } from '../utils/supertrend';
 import { MarketBar } from '../interfaces/directive.interface';
 
 /**
- * supertrend.directive.spec.ts — the #1077 replacement (owner ruling "B", 2026-10-09).
+ * supertrend.directive.spec.ts — the #1077 replacement (requirement "B", 2026-10-09).
  *
  * WHY THIS SUITE EXISTS
  * ---------------------
  * The directive used to build its bands from the LAST BAR's own high/low: ±55 was decided by a
  * fraction of a pip and the `score 75` branches were unreachable by construction. The replacement
- * computes a canonical ratcheting SuperTrend; these tests pin the SEMANTICS the owner authorised,
+ * computes a canonical ratcheting SuperTrend; these tests pin the SEMANTICS the requirement authorised,
  * and the discriminating cases are chosen to FAIL if anyone restores the one-bar formula or
  * disables the ratchet (canaried both directions — see the two mutations in the handoff).
  *

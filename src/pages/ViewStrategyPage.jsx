@@ -46,7 +46,7 @@
  * — a truthiness check would misreport `useRaritySizing: false` as "not configured" when it is in
  * fact configured and nothing reads it.
  *
- * MODES — ONE VIEW, TWO OF THEM (#985 §2, owner direction 2026-09-23)
+ * MODES — ONE VIEW, TWO OF THEM (#985 §2, requirement 2026-09-23)
  * ---------------------------------------------------------------
  * > *"for viewing the settings only and not the full information, it could even be on the same
  * > view, but with a url parameter that displays a simplified version for focusing on the
@@ -496,7 +496,7 @@ function BotRecord({ query, row }) {
 /**
  * RouteAccountPanel — which BROKER BRIDGE fills this bot's orders, and the way to re-select it.
  *
- * WHY IT EXISTS (owner directive, 2026-10-11): when we view a bot there is no way to re-select a broker —
+ * WHY IT EXISTS (requirement, 2026-10-11): when we view a bot there is no way to re-select a broker —
  * asked while the Pepperstone demo the bot's symbol was routed to had expired. Two facts were true
  * at once, and neither was visible anywhere near the bot:
  *
@@ -900,7 +900,7 @@ export default function ViewStrategyPage() {
   // ── WHO READS EACH COLUMN — the ONE axis this page was missing (2026-09-28) ─────────────
   //
   // ⚠️ WHY THIS EXISTS. `bot-rules.ts` and `GUARDIAN_RULES` are two declarations of ONE subject,
-  // and this page rendered them as two INDEPENDENT lists. The cost, measured on the owner's own
+  // and this page rendered them as two INDEPENDENT lists. The cost, measured on the project's own
   // bot: Simulated TSL appeared as THREE loose rows under "Exit" *and* again as a mechanism under
   // "Exit management", while the exhaustion observer was attributed to the guardian by
   // `bot-rules.ts` and declared by `GUARDIAN_RULES` NOWHERE — so it showed in one list and was
@@ -1085,7 +1085,7 @@ export default function ViewStrategyPage() {
         </p>
 
         {/*
-          ── THIS STRATEGY'S QUEUED CHANGES (owner, 2026-11-19) ──────────────────────────────────
+          ── THIS STRATEGY'S QUEUED CHANGES (Requirement, 2026-11-19) ──────────────────────────────────
           This is the strategy's OWN page, so the rules blocking it belong here and not only on the
           list page: a reader who arrives to inspect one bot should see what we intend to change about
           THAT bot without going back.
@@ -1204,7 +1204,7 @@ export default function ViewStrategyPage() {
 
       {/* WHERE THE BOT'S ORDERS ACTUALLY GO — the account is chosen per SYMBOL (symbol_route),
           not per bot, and nothing on this page said which bridge fills them or how to move them
-          (owner directive, 2026-10-11: no way to re-select a broker). Mt5-venue bots only; a bot on
+          (requirement, 2026-10-11: no way to re-select a broker). Mt5-venue bots only; a bot on
           another venue does not travel through `symbol_route` at all. */}
       {bot.brokerId === 'mt5' && <RouteAccountPanel bot={bot} />}
 
@@ -1366,7 +1366,7 @@ export default function ViewStrategyPage() {
 
           {/* ── THE MECHANISMS ACTING HERE — and the precedence that is NOT declared (2026-09-28) ──
 
-              ⚠️ WHY THIS IS A TABLE AND NOT A DIAGRAM OF ARROWS. The owner asked for the steps an
+              ⚠️ WHY THIS IS A TABLE AND NOT A DIAGRAM OF ARROWS. The requirement is for the steps an
               algorithm can take to be visible. Measured: they are NOT all visible, and the honest
               reason is that **no execution ORDER is declared anywhere**. `bot-rules.ts` orders rules
               by STAGE, `GUARDIAN_RULES` orders mechanisms by its own array, and neither is a runtime
@@ -1548,12 +1548,12 @@ export default function ViewStrategyPage() {
           </h2>
 
           {/* ── COVERAGE — WHAT PROTECTS AN OPEN POSITION WHEN THE APP IS NOT RUNNING ────────
-              ⚠️ WHY THIS EXISTS (owner, 2026-09-30). Two facts, both learned on the −322.67
+              ⚠️ WHY THIS EXISTS (Requirement, 2026-09-30). Two facts, both learned on the −322.67
               position, neither of them visible anywhere on this page before now:
 
                 1. EVERY mechanism named below runs INSIDE this process. With the PC off there
                    is no management of any open position at all — no trailing, no time-stop, no
-                   guardian. The owner had not factored that in, and this page did not say it.
+                   guardian. The requirement had not factored that in, and this page did not say it.
                 2. The brakes that DO survive come from places this page never named — the
                    BRIDGE's own caps and the BROKER's SL/TP. One of those, the daily-loss cap,
                    releases at midnight (`mt5_bridge_v2.py:1680`, window

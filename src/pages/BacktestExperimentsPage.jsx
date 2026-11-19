@@ -11,7 +11,7 @@ const BacktestExperimentsPanel = lazy(() => import('../components/backtest/Backt
  * tokens to ask an agent, so a comparison existed only if somebody remembered it — measured at the
  * time: 1,722 runs, **13** filed.
  *
- * ⚠️ NO VISIBLE PAGE HEADER, matching BacktestRunsPage (owner direction 2026-10-31: *"Remove … as it
+ * ⚠️ NO VISIBLE PAGE HEADER, matching BacktestRunsPage (requirement 2026-10-31: *"Remove … as it
  * is duplicate information"*). The shell renders this view's label from `view-meta.js`, so a heading
  * here would put the same words on screen twice. The `<h2>` stays `sr-only` because it is what names
  * the page for a screen reader.

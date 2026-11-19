@@ -23,10 +23,10 @@ import './directive-viewer.css';
 const READINESS_LABELS = { ready: 'READY', beta: 'BETA', alpha: 'ALPHA' };
 
 /**
- * DirectivePicker — the page's ENTRY POINT, and the search the owner asked for.
+ * DirectivePicker — the page's ENTRY POINT, and the search the requirement is for.
  *
  * ⚠️ WHY IT EXISTS (Page Walkthrough 2026-10-01, fixed 2026-10-06).
- * Owner directive: This page does not load anything and I think its meant to offer a breakdown of directives.
+ * Requirement: This page does not load anything and I think its meant to offer a breakdown of directives.
  * Ability to search directives. The endpoint was fine — `GET /api/directives/:id/viewer` returns a
  * full payload (readiness, nature, directionBias, requiredDataFeeds, scores, protocols). What was
  * missing was a way IN: the page read `?id=` and nothing else, so opening it from the navigation

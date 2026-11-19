@@ -190,7 +190,7 @@ export interface BacktestRunRequest {
   botId?: string;
   /**
    * ── A TIGHTENING STOP, SIMULATED (2026-10-29) ───────────────────────────────────────────────────
-   * Owner direction: *"a gradually tighter simulated-stop-loss. Acting like a trailing stop loss …
+   * Requirement: *"a gradually tighter simulated-stop-loss. Acting like a trailing stop loss …
    * and also an actual change of broker side stop loss that gets tighter depending on trade style and
    * strategy i.e. closing day trades before market close."*
    *
@@ -309,7 +309,7 @@ export interface BacktestRunRequest {
   newsExclusion?: 'none' | 'exclude' | 'only' | 'reduce';
   /**
    * ── WHICH SIDES THIS RUN MAY OPEN (#1155, 2026-10-31) ──────────────────────────────────────────
-   * Owner direction: *"I read that it's easier to profit on VIX by shorting it but we can only tell
+   * Requirement: *"I read that it's easier to profit on VIX by shorting it but we can only tell
    * that when we can test the same period both SHORT and LONG."*
    *
    * Before this, the trade loop was `if (signal === 'BUY' || signal === 'STRONG_BUY')` with
@@ -320,7 +320,7 @@ export interface BacktestRunRequest {
    *
    *   'long'  — the historical behaviour, and the DEFAULT. Nothing stored changes meaning.
    *   'short' — SELL / STRONG_SELL only. A like-for-like mirror of the long run on the same window.
-   *   'both'  — ⚠️ **LEGACY / REFUSED FOR NEW RUNS (owner direction, confirmed 2026-11-01).** It opens
+   *   'both'  — ⚠️ **LEGACY / REFUSED FOR NEW RUNS (requirement, confirmed 2026-11-01).** It opens
    *             longs AND shorts from ONE protocol's signal in ONE run. Production cannot do that: the
    *             standing decision is that long and short are **two active strategies**, never one bot
    *             trading both ways, and never one protocol scored both ways. A result from 'both'
@@ -882,7 +882,7 @@ export interface BacktestResult extends BacktestResultBracketFields {
   totals?: RunTotals;
   trades?: TradeRecord[];
   /**
-   * The money, over EVERY trade — win rate, Σ P&L, average and best/worst per trade (owner direction,
+   * The money, over EVERY trade — win rate, Σ P&L, average and best/worst per trade (requirement,
    * 2026-10-29: *"more trade based and show us profit loss at least"*).
    *
    * ⚠️ SERVED, NOT DERIVED IN THE PANEL. `src/core/backtest-totals.js` already forbids client-side
@@ -1232,7 +1232,7 @@ export class BacktestService {
     protocolId?: string | null,
   ): Promise<{ id: string; iteration: number } | null> {
     // ⚠️ #1295 — AN UNNAMED RUN IS NOW FILED, NOT DISCARDED INTO ANONYMITY (2026-11-18).
-    // Owner directive: I'm concerned at the huge amount of tests being built and how we'll keep coming back
+    // Requirement: I'm concerned at the huge amount of tests being built and how we'll keep coming back
     // to them… I can't afford to spend tokens for every step. Measured: 1,722 runs existed and
     // **13** were ever filed (0.75%), with 1,412 unfiled in one day. An unfiled run is not wrong, it
     // is simply unfindable later — which is the same as losing it.
@@ -1565,7 +1565,7 @@ export class BacktestService {
     const directionMode = await this.resolveDirectionMode(requestedDirectionMode, protocolId);
 
     /**
-     * ── REFUSE 'both' (owner direction, confirmed 2026-11-01) ───────────────────────────────────────
+     * ── REFUSE 'both' (requirement, confirmed 2026-11-01) ───────────────────────────────────────
      * 'both' opens longs AND shorts from ONE protocol's signal inside ONE run. Production cannot do
      * that: the standing decision is that long and short are **two active strategies** — never one bot
      * trading both ways, and never one protocol scored both ways. A 'both' result therefore describes a
@@ -1607,7 +1607,7 @@ export class BacktestService {
     //            several times wider than gold's, plus slippage on both sides. At 3% a 1% target could
     //            never win — measured `tradeWinRate 0.0%`, every trade a guaranteed loss — so the Lab
     //            could not answer a question about any stock or index.
-    // INSTEAD OF: leaving 3% and waiting for the owner to name a figure. The broker reports its spread;
+    // INSTEAD OF: leaving 3% and waiting for the requirement to name a figure. The broker reports its spread;
     //            asking a human to guess what the machine already knows is the wrong source.
     // REVERSE BY: setting these two branch values back, or overriding per run (`spread`/`slippage` are
     //            already request fields, so a single backtest can still be costed at 3%).
@@ -1782,7 +1782,7 @@ export class BacktestService {
     /** #1142 — trades SKIPPED because the account could not afford one unit. Reported, never silent. */
     const sizingRefusals: Array<{ at: string; symbol: string; because: string }> = [];
     /**
-     * EVERY bar the SEES engine scored, not only the ones that became entries (owner direction,
+     * EVERY bar the SEES engine scored, not only the ones that became entries (requirement,
      * 2026-10-26: *"it needs to be captured for comparison"*).
      *
      * ⚠️ THIS WAS THROWN AWAY. A run calls `fullScore()` once per bar — the canonical
@@ -1845,7 +1845,7 @@ export class BacktestService {
       // ⚠️ BOTH SCORES ARE KEPT (2026-10-27). `signalPct` is the gated directional score that
       // decides BUY/SELL/HOLD; `opportunityPct` is the additive score the Screening area ranks by.
       // The first version stored only `signalPct` under the name `score`, which made a two-score
-      // system look like a one-score system — the owner read the single column and asked where the
+      // system look like a one-score system — the requirement read the single column and asked where the
       // other one was, which is exactly what a missing column should make a reader do.
       scoreSeries.push({
         // ⚠️ THE INSTANT, NOT THE DAY. `barDate` is `YYYY-MM-DD`, so every intraday bar of one day
@@ -1928,7 +1928,7 @@ export class BacktestService {
 
           /**
            * ── EXCURSION + AN OPTIONAL TIGHTENING STOP (2026-10-29) ─────────────────────────────
-           * Owner direction: *"I want to establish an average time to SL trigger … and an average to
+           * Requirement: *"I want to establish an average time to SL trigger … and an average to
            * TP … Where I'm going with this is to consider the speed of movement"*, and then: *"the
            * speed of movement … how many on average, actually recover once they go one way or the
            * other … The goal is to consider a method to identify tighter simulated-stop-loss."*
@@ -1968,7 +1968,7 @@ export class BacktestService {
 
             /**
              * ⚠️ A HOLE IN THE BAR SERIES MEANS THE BRACKET WAS NOT MONITORED (2026-10-29).
-             * The owner: *"Sometimes the PC is shutdown while positions are open so some of our data
+             * The requirement: *"Sometimes the PC is shutdown while positions are open so some of our data
              * could be skewed by the app being asleep."* Measured on the VIX 5m dev window: **464 of
              * 1,027 trades (45.2%) crossed a hole longer than an hour**, the longest 111.3 hours.
              *
@@ -2757,7 +2757,7 @@ export class BacktestService {
     if (outcome.shouldWarn) {
       this.logger.error(`Backtest ${symbol} ${totalDays}d ${outcome.message}`);
     }
-    // ⚠️ `tradeTotals` IS ATTACHED ON BOTH PATHS (owner direction, 2026-10-29). It is attached here —
+    // ⚠️ `tradeTotals` IS ATTACHED ON BOTH PATHS (requirement, 2026-10-29). It is attached here —
     // the live POST /run response — AND in `getResult()`, because the two surfaces show the same
     // table. Attaching it in only one made the freshly-run view print "this response carried no
     // tradeTotals" while the stored view beside it showed the summary, which reads as a broken panel
@@ -2893,7 +2893,7 @@ export class BacktestService {
     /**
      * ── THE BRACKET THE BOT CARRIES, ON THE READ PATH (2026-10-31) ─────────────────────────────
      * `slPct`/`tpPct` are NOT columns on `backtestrun` — only the resulting prices are, on each
-     * trade. So a stored run cannot say what it was CONFIGURED with, and the owner's question
+     * trade. So a stored run cannot say what it was CONFIGURED with, and the project's question
      * (*"our VIX bot will I assume yes?"*) could not be answered from a stored run at all.
      *
      * ⚠️ THIS IS THE BOT'S CURRENT SETTING, NOT NECESSARILY WHAT THIS RUN USED — and the UI says so
@@ -2940,7 +2940,7 @@ export class BacktestService {
     }
 
     /**
-     * ── `totals` ON EVERY READ (owner direction, 2026-10-27: gaps 1 and 2 for agentic use) ──
+     * ── `totals` ON EVERY READ (requirement, 2026-10-27: gaps 1 and 2 for agentic use) ──
      * An agent comparing runs needs ~20 numbers; the payload it had to read for them was 399 KB of
      * per-bar scores. The totals are computed HERE from the same series the payload carries, and with
      * the same rules the repeat check uses (`score-maths.ts`) — one implementation, not one per client.
@@ -2952,7 +2952,7 @@ export class BacktestService {
     }
 
     /**
-     * ── `tradeTotals` ON EVERY READ (owner direction, 2026-10-29) ──
+     * ── `tradeTotals` ON EVERY READ (requirement, 2026-10-29) ──
      * *"This table needs to be more trade based and show us profit loss at least."* The money figures
      * a reader wants from a run — win rate, Σ P&L, average per trade, best and worst — are computed
      * HERE for the same reason `totals` is: the panel and an agent must not hold two implementations
@@ -3523,7 +3523,7 @@ export class BacktestService {
       note: string;
     };
     /**
-     * WHICH SETTINGS ACTUALLY DIFFER between the selected runs (owner direction, 2026-10-31).
+     * WHICH SETTINGS ACTUALLY DIFFER between the selected runs (requirement, 2026-10-31).
      *
      * A side-by-side metrics table answers "which run won"; it cannot answer "what did I change",
      * which is the question a backtest session is made of. Four runs were listed with identical
@@ -3735,7 +3735,7 @@ export class BacktestService {
     })();
 
     // ── SAME NEWS FILTER (#1139 follow-up) ────────────────────────────────────────────────────
-    // The Lab's news mode became `exclude` by default on 2026-10-26 (owner direction). Every run
+    // The Lab's news mode became `exclude` by default on 2026-10-26 (requirement). Every run
     // stored before that was measured with `none`, so an old-vs-new comparison differs in the BAR
     // POPULATION as well as in whatever the operator meant to change.
     //
@@ -3743,7 +3743,7 @@ export class BacktestService {
     // cannot be credited to the protocol, so that pair is worthless; two different news filters are
     // a legitimate experiment ("does skipping news days help?"), and refusing it would block the
     // question the control exists to ask. What must not happen is the difference going unmentioned.
-    // ── WHAT ELSE DIFFERS (owner direction, 2026-10-31) ───────────────────────────────────────
+    // ── WHAT ELSE DIFFERS (requirement, 2026-10-31) ───────────────────────────────────────
     // Computed from the STORED columns, once, so every branch below returns the same diff. It is
     // ordered to match `formatted` (createdAt desc) so a column position means the same run in both
     // the metrics table and the settings table.

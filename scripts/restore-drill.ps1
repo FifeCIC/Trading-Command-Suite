@@ -43,7 +43,7 @@ $SCRATCH = "tcs_clone_test"
 $BACKUP_ROOT = "G:\My Drive\Project Management\Live\Trading-Command-Suite-Documentation\backups\db"
 
 # Config tables: if ANY of these is short, the restored copy is not the system we traded with.
-# ⚠️ This is the list that answers the owner's actual worry — "we do not want to give my bots away".
+# ⚠️ This is the list that answers the project's actual worry — "we do not want to give my bots away".
 $CONFIG_TABLES = @(
   'trading_strategy', 'strategy_protocol', 'scoring_strategy', 'protocol',
   'protocol_directive_entry', 'protocol_directive_group', 'directive',
@@ -142,7 +142,7 @@ try {
   # obvious repair for "the backup is broken" is to make another backup, and the backup was fine.
   #
   # Only the CONFIG tables are counted exactly — 15 tables, sub-second — which is exactly the set
-  # whose loss the owner is worried about. The 1.3 GB of market data is not counted: its restore is
+  # whose loss the requirement is worried about. The 1.3 GB of market data is not counted: its restore is
   # proven by the import exiting 0 and by the table count matching.
   Write-Host "`nComparing row counts (restored vs live)..." -ForegroundColor Cyan
   $tableCountLive = (& $mysql -u tradingcs "-p$DB_PASS" -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$LIVE';" 2>&1 | Where-Object { $_ -notmatch 'Warning' } | Select-Object -First 1).Trim()

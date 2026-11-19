@@ -5,9 +5,9 @@ import { SystemLogService } from '../system/log.service';
 // ⚠️ SINGLE SOURCE for cadence→duration. See validate-timeframe-sources.cjs.
 //
 // A private `timeframeToMilliseconds()` used to live at the bottom of this file. It was a
-// DERIVED parser (`/^(\d+)(m|h|d)$/i`) and disagreed with the owner in two measured ways:
-//   - `1w`  -> 3600000 (ONE HOUR) where the owner says 604800000 — 168x too small
-//   - `'1M'` -> 60000 (ONE MINUTE) because of the `/i` flag, where the owner's case-sensitive
+// DERIVED parser (`/^(\d+)(m|h|d)$/i`) and disagreed with the requirement in two measured ways:
+//   - `1w`  -> 3600000 (ONE HOUR) where the requirement says 604800000 — 168x too small
+//   - `'1M'` -> 60000 (ONE MINUTE) because of the `/i` flag, where the project's case-sensitive
 //              map says 86400000 — a 1440x disagreement on the SAME string
 // It also returned 1 hour for anything unparseable, an arbitrary fallback with no basis.
 import { barLengthMs } from '../../common/utils/timeframe';

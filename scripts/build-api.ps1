@@ -78,7 +78,7 @@ function Write-Warn2($msg){ Write-Host "   !!  $msg" -ForegroundColor Yellow }
 
   ⚠️ `State -eq 'Listen'` IS NOT AN OWNER LOOKUP ON THIS HOST (#1238, measured twice by two agents).
   The node sockets report NO `Listen` row at all (3201, 5173 -> 0), and the Python bridges report
-  2-7 rows that ALL carry `OwningProcess = 0`. The one row that names the owner, on every port, is
+  2-7 rows that ALL carry `OwningProcess = 0`. The one row that names the requirement, on every port, is
   the one with NO REMOTE PEER — `RemotePort -eq 0` — because a listener has no peer while every
   client row names a real remote port.
 
@@ -558,7 +558,7 @@ $errLog = Join-Path $logDir 'console-build-api-err.log'
 # ── ⚠️ AND THE WINDOW IS CREATED HIDDEN (2026-10-26) ───────────────────────────────────────────
 # `Win32_Process.Create` with no `ProcessStartupInformation` gives a console-subsystem child
 # (`cmd.exe`) a BRAND-NEW VISIBLE CONSOLE — an empty black window titled `C:\WINDOWS\system32\cmd.exe`
-# that displays nothing and belongs to nobody. The owner reported exactly that (*"2-3 times you've
+# that displays nothing and belongs to nobody. It was reported exactly that (*"2-3 times you've
 # caused a new one to open but it never displays anything"*), and this line was the only launcher in
 # the toolchain that omitted the flag: `tcs-launch.ps1` already passes `-WindowStyle Hidden` for the
 # same reason. `ShowWindow = 0` (SW_HIDE) creates the same console, hidden.

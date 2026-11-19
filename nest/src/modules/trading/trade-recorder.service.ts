@@ -151,7 +151,7 @@ export class TradeRecorderService {
      * the argument breaks no caller and makes the omission a compile error rather than a wrong
      * attribution. The nine `user:manual` closes this issue opened with were NOT this default: their
      * broker deals carry `reason: 0` and an EMPTY comment, i.e. they were closed from the MT5 client
-     * side, and `closeReasonFromDealReason(0)` maps them to `user:manual` by owner direction
+     * side, and `closeReasonFromDealReason(0)` maps them to `user:manual` by requirement
      * (2026-10-07, R46). See #1255.
      *
      * REGISTER: docs/SETTLED-DECISIONS.md row 170 · ISSUE: #1255

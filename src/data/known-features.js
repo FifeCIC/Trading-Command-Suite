@@ -628,12 +628,12 @@ export const KNOWN_FEATURES = {
   //    capability: twelve with a QA entry only, and one report — `applied-status-columns` — whose
   //    status selects were replaced by the read-only indicator that follows it). Theme: WHAT MAY
   //    BE TRUSTED TO PRICE OR NAME A TRADE — two arms need two accounts, a frozen quote cannot
-  //    size an order, and an unattributed close is the owner's. uiSurfaces: 0 is a FINDING, not a
+  //    size an order, and an unattributed close is the project's. uiSurfaces: 0 is a FINDING, not a
   //    blank (2 of the 10).
     'A/B live pair — two-account precondition': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'partial' },
     'Netted-position P&L split — multi-order detection': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
     'Risk-cap breach alerts': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
-    'Close attribution — every close names its actor, unattributed closes assume the owner': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Close attribution — every close names its actor, unattributed closes assume the requirement': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'complete' },
     'Walkthrough agent-reported completion indicator': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
     'Stale-quote sizing refusal': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
     'Exit-data recovery (in-app gap prompt + button)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
@@ -941,7 +941,7 @@ export const KNOWN_FEATURES = {
   //    `devCompletion: 'partial'` on ALL THREE because the tracker names each remainder: #1189
   //    (OPEN — 41 of 54 protocols and 65 of 68 bots still carry no theory, and no UI records an
   //    observation), #1190 (OPEN — the reading is built and canaried, but whether it is USEFUL is
-  //    the owner's judgement, theory status `testing`), #1186 (OPEN — the 14 coverage bots are
+  //    the project's judgement, theory status `testing`), #1186 (OPEN — the 14 coverage bots are
   //    DB-only, so a reinstall drops coverage back to 25/54).
     'Strategy Theory and Track Record': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'none', devCompletion: 'partial' },
     'Trend Reading (experiment)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },

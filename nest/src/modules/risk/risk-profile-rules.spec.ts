@@ -184,7 +184,7 @@ describe('risk-profile-rules registry — the caps declared once', () => {
   /**
    * applyRiskProfile — the `development` profile (#2026-11-07, owner).
    *
-   * The owner asked for a switch that lets a DEMO book open as many positions as the venue allows.
+   * The requirement is for a switch that lets a DEMO book open as many positions as the venue allows.
    * The danger is the failure DIRECTION, so every case here is about which way a mistake falls:
    * an unknown value must behave as `live`, and the two caps a typo could relax are the two that
    * refuse orders.

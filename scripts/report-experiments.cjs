@@ -27,7 +27,7 @@
  * HISTORICAL tuning loops and is served at `/api/backtest/experiments` — which has **no page**.
  * Measured: 1,722 backtest runs exist and only **13** were ever filed into an experiment, so a
  * comparison that is not registered is indistinguishable from the other 1,709 rows.
- * `--backtest` exists so an agent or the owner can see that registry with one command instead of
+ * `--backtest` exists so an agent or the requirement can see that registry with one command instead of
  * remembering it. It is deliberately a MODE of this tool, not a second tool: two scripts drift and
  * only one gets the next fix.
  */
@@ -204,7 +204,7 @@ function selfTest() {
 /**
  * The BACKTEST experiment registry (#1295).
  *
- * ⚠️ What this is FOR: the owner, 2026-11-18 — *"I'm concerned at the huge amount of tests being
+ * ⚠️ What this is FOR: the requirement, 2026-11-18 — *"I'm concerned at the huge amount of tests being
  * built and how we'll keep coming back to them… I can't afford to spend tokens for every step."*
  * Measured the same day: 1,722 backtest runs, **13** filed into an experiment. An unfiled run is not
  * wrong, it is simply unfindable later — which is the same as losing it.

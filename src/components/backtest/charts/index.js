@@ -2,7 +2,7 @@
  * charts/ — EVERY chart in this folder is **lightweight-charts** (`createChart`), nothing else.
  * ==============================================================================================
  *
- * Owner direction, 2026-10-27: *"Please sure that you maintain a tidy file system where related
+ * Requirement, 2026-10-27: *"Please sure that you maintain a tidy file system where related
  * library files are grouped together and we don't confuse different chart technology with one
  * another."*
  *

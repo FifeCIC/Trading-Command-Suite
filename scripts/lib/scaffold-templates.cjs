@@ -16,7 +16,7 @@ const TEMPLATES = {
   gitignore: `# ── Ignored by default, because each of these has shipped to a public repo before ──
 #
 # MEASURED (Trading Command Suite, 2026-09): a logs/ folder held 576 files and **435 were tracked**
-# in a public repository, one of them carrying a note the owner did not want published. Nothing was
+# in a public repository, one of them carrying a note the requirement did not want published. Nothing was
 # wrong with git — nothing had told it to look away.
 
 # Agent and session output. Working material, never product.
@@ -146,7 +146,7 @@ Report the gates you ran, the result you observed, and **what you did not do**.
 
   reviewQueue: `# Review Queue — the one list every agent adds to
 
-**Purpose:** the things only the owner can decide. **How to answer:** the row id and a word.
+**Purpose:** the things only the requirement can decide. **How to answer:** the row id and a word.
 
 | ✅ A row | 🛑 not a row |
 |---|---|

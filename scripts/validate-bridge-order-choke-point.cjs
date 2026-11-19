@@ -36,12 +36,12 @@
  * | R2 | It is inside `order_send_checked()` | the one call was moved out of the wrapper |
  * | R3 | `BridgeRefusal` is raised AND caught twice | the gate cannot fire, or a refusal becomes a 500 |
  * | R4 | `ensure_mt5()` does NOT carry the gate | reads got gated too — the app could no longer SEE the position |
- * | R5 | Every CLOSE request stamps `TCS:<origin>` | an unattributed close would read as "the owner did it" |
+ * | R5 | Every CLOSE request stamps `TCS:<origin>` | an unattributed close would read as "the requirement did it" |
  *
- * ⚠️ R5's CONTEXT (owner direction, 2026-10-07, R46): *"The app should assume that it was me if
+ * ⚠️ R5's CONTEXT (requirement, 2026-10-07, R46): *"The app should assume that it was me if
  * there is no record of the bot closing a position."* That assumption is only SAFE while every close
  * path of ours leaves a record — a close through our own bridge with no `TCS:` stamp would be
- * silently attributed to the owner. Measured before this rule: `/close/partial` stamped
+ * silently attributed to the requirement. Measured before this rule: `/close/partial` stamped
  * `'Partial close'` and `/orders/bulk` stamped `'TCS Bulk Close'` — neither matches the parser's
  * `TCS:<origin>` shape, so both parsed as foreign and fell through to the deal-reason enum.
  *
@@ -146,7 +146,7 @@ function requestDicts(src) {
  *
  * PURE, so `--self-test` can drive it. The manager's form (`?origin=${...}` on the line, or a
  * `query` variable built from `origin` 2 lines above) passes via a small window; anything else is
- * a close that would be recorded as "the owner" by default (R46 direction) when it is really ours.
+ * a close that would be recorded as "the requirement" by default (R46 direction) when it is really ours.
  */
 function nestCloseViolations(text) {
   const lines = text.split(/\r?\n/);
@@ -223,17 +223,17 @@ function checkSource(src) {
     }
   }
 
-  // ── R5 — every CLOSE stamps its closer (#916; owner direction 2026-10-07, R46). ──
+  // ── R5 — every CLOSE stamps its closer (#916; requirement 2026-10-07, R46). ──
   // A position-targeting MARKET request (DEAL + 'position') is a close. Each one must carry a
   // `TCS:` comment — otherwise `closeReasonFromComment()` parses it as foreign and the close is
-  // attributed to the OWNER by the new default. Opens carry no 'position' key and are skipped.
+  // attributed to the requirement by the new default. Opens carry no 'position' key and are skipped.
   for (const d of requestDicts(src)) {
     if (!d.text.includes('TRADE_ACTION_DEAL') || !/'position':/.test(d.text)) continue;
     const m = /'comment':\s*([^\n]+)/.exec(d.text);
     if (!m || !m[1].includes('TCS:')) {
       errors.push(
         `R5 the position-targeting market request at L${d.line} carries NO \`TCS:\` comment — an ` +
-          'unattributed close reads as "the owner did it" (owner direction 2026-10-07). Every ' +
+          'unattributed close reads as "the requirement did it" (requirement 2026-10-07). Every ' +
           'bridge close must stamp `TCS:<origin>`.',
       );
     }
@@ -357,7 +357,7 @@ if (process.argv.includes('--self-test')) {
     for (const v of nestCloseViolations(fs.readFileSync(file, 'utf8'))) {
       nestErrors.push(
         `R5 ${path.relative(process.cwd(), file)}:${v.line} — /close call site without \`origin=\` ` +
-          '(an unattributed close would read as "the owner", R46 direction): ' + v.text,
+          '(an unattributed close would read as "the requirement", R46 direction): ' + v.text,
       );
     }
   }

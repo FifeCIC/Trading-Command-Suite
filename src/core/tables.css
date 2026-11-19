@@ -8,7 +8,7 @@
  * `8px 12px`, `10px 14px` and others. None of that was a decision; it is what happens when each page
  * writes its own table.
  *
- * The owner's goal, stated 2026-10-15: *"reducing the number of different style arrangements within the
+ * The project's goal, stated 2026-10-15: *"reducing the number of different style arrangements within the
  * slate theme."* This file is that reduction: 57 families, ONE arrangement.
  *
  */
@@ -547,7 +547,7 @@
   /* ⚠️ THE HOVER BODY WAS MISSING ENTIRELY (found 2026-11-06). This selector list ended in a dangling
      comma followed by a comment and then the `.num` selectors, so the comment was stripped and ALL of
      these `:hover` selectors were merged into the rule below — `text-align: right; font-variant-numeric`
-     — and the hover had no background at all. The symptom the owner reported: *"There is an annoying
+     — and the hover had no background at all. The symptom it was reported: *"There is an annoying
      rollover effect on the rows for this table which just pushes the information to the right"*.
      Hovering right-aligned every cell in the row, so text appeared to jump right. One missing `}`
      caused it, in about fifty tables at once. */

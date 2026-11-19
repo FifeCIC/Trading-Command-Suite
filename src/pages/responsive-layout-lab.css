@@ -244,7 +244,7 @@
 }
 
 /* ── Fluid vs stepped sizing (2026-11-06) ────────────────────────────────────────────────────────
-   The owner's report, verbatim: *"There's a lack of fluidity in many elements such as
+   The project's report, verbatim: *"There's a lack of fluidity in many elements such as
    <div class="t212p-summary-grid"> ... there's plenty room in some of the cards for them to shrink
    when I open the Dev Tools sidebar or resize the screen."*
    Measured on /trading212/t212-portfolio at 1600 → 640px: tile width went 148 → 147 → 162 → 178 →

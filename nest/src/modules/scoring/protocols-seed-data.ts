@@ -60,7 +60,7 @@ export interface SeedProtocol {
    * working on.
    *
    * ⚠️ It is NOT `active`. `active = 0` is a kill switch for score writes (#803), and on
-   * 2026-11-03 the owner activated every protocol — so `active` separates nothing and cannot be
+   * 2026-11-03 the requirement activated every protocol — so `active` separates nothing and cannot be
    * used to answer "which are mine?".
    */
   focusRank?: number;
@@ -156,7 +156,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
     "recommendedTimeframe": "5m–1d",
     // FOCUS 3 of 3 (#1187). Ranked last of the three on MEASURED evidence: its NVDA baseline is
     // −2,878 on the canonical window, the only arm of the three that is negative. It stays in the
-    // focus set because the owner wants a stock strategy and NVDA is the instrument, not because the
+    // focus set because the requirement is a stock strategy and NVDA is the instrument, not because the
     // numbers justify prominence. Do not read rank 3 as "about to be dropped".
     "focusRank": 3,
     "theory": "Momentum stocks — the names that carry a narrative, where price is driven by expectation rather than book value. Technical group reads trend continuation; sentiment group reads whether the narrative is still being believed. A good day: a leader holds structure after a gap and continues, and the sentiment layer does not contradict it. Known weakness: these names reverse hard on the first doubt, so the protocol is long-only by design and its ceiling on a quiet tape is low — a flat day should read as flat, not as a failure.",
@@ -275,7 +275,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
   /**
    * ── movers-v1-long — THE MOVERS STRATEGY, DELIBERATELY SMALL ────────────────────────────────────
    *
-   * Owner directive, 2026-11-18: Create the two protocols with a small amount of the directives.
+   * Requirement, 2026-11-18: Create the two protocols with a small amount of the directives.
    *
    * ⚠️ **SMALL IS THE DESIGN, NOT AN UNFINISHED STATE.** The directive *inventory* proposed for this
    * strategy is ~20 long-side directives plus 9 that do not exist yet. Attaching all of them at once
@@ -384,7 +384,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
 /**
  * ── THE SHORT LEG OF EACH SHIPPED PROTOCOL (#1185, shape B, 2026-11-02) ────────────────────────
  *
- * The owner's design: one bot holding a LONG protocol and a SHORT protocol, summarised as ONE
+ * The project's design: one bot holding a LONG protocol and a SHORT protocol, summarised as ONE
  * strategy.
  *
  * 🛑 **A SHORT LEG IS NOT A COPY.** The first version of this code derived each short leg as a plain

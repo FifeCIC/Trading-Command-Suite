@@ -72,7 +72,7 @@
   font-size: 0.82rem;
   min-width: 220px;
   font-family: inherit;
-  /* ⚠️ THE CHIPS NOW SHARE THIS LINE INSTEAD OF DROPPING BELOW IT (owner directive, 2026-11-07): Make
+  /* ⚠️ THE CHIPS NOW SHARE THIS LINE INSTEAD OF DROPPING BELOW IT (requirement, 2026-11-07): Make
      <button.cm-filter-chip.active>All positioned just after <input.cm-search>).
      Before: the search was a fixed-width item and the chip group was a single flex item wide enough
      to exceed the row, so `flex-wrap` pushed the WHOLE group — including the active "All" chip — onto
@@ -182,7 +182,7 @@
 
 /* ── Badges ── */
 .cm-badge {
-  /* ⚠️ `inline-flex` + `nowrap`, NOT `inline-block` (owner directive, 2026-11-07): is messy when the text is
+  /* ⚠️ `inline-flex` + `nowrap`, NOT `inline-block` (requirement, 2026-11-07): is messy when the text is
      long because the text drops to a new line leaving the icon on a line of its own).
      An `inline-block` badge with `white-space: normal` breaks between the emoji and the label, so
      "💨 localStorage" became a lone 💨 above the word — the badge looked broken, not long.

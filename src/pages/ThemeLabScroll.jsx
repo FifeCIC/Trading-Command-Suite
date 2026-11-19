@@ -32,7 +32,7 @@ function RevealCard({ index }) {
 /**
  * ScrollLabSection — the Scroll Animations examples, rendered INSIDE Theme Lab.
  *
- * ⚠️ Was `ThemeLabScroll`, a PAGE at /development/theme-lab-scroll until 2026-10-01; the owner
+ * ⚠️ Was `ThemeLabScroll`, a PAGE at /development/theme-lab-scroll until 2026-10-01; the requirement
  * deleted the view and asked for its examples to move here. Exported as a SECTION: no `tl-page`
  * wrapper, no `<h1>`. The progress bar below is `position: fixed` and stays that way — it was
  * viewport-wide on its own page too.

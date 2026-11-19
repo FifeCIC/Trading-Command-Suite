@@ -1,9 +1,9 @@
 /**
  * ExitDataRecoveryNotice — the OPTIONAL prompt + button for exit-data gaps (#1093).
  *
- * ⚠️ WHY THIS EXISTS, IN THE OWNER'S OWN TERMS. The recovery below replaces a manual desktop
+ * ⚠️ WHY THIS EXISTS, IN THE PROJECT'S OWN TERMS. The recovery below replaces a manual desktop
  * ritual: formerly, chasing an old close meant *"Toolbox → History tab → right-click → Period →
- * Custom, set 15 Sep 2026 → now"* inside the MT5 terminal — which the owner rejected outright as
+ * Custom, set 15 Sep 2026 → now"* inside the MT5 terminal — which the requirement rejected outright as
  * falling *"way outside the automation this app is designed to offer"*. The direction given was
  * *"an optional prompt with button where/when there is a gap in the information and the user
  * feels they need that data"*. So this renders ONLY when the gap count is non-zero, says how many

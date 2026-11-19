@@ -65,7 +65,7 @@ in `scoring-strategy-seed.ts`, deliberately not "tidied".
 
 **Drift found:** four independent implementations. Measured behaviour, not assumed:
 
-| tf | owner | `market-status.ts` | `outcome-tracker.service.ts` | `contract-probe.cjs` |
+| tf | Requirement | `market-status.ts` | `outcome-tracker.service.ts` | `contract-probe.cjs` |
 |---|---|---|---|---|
 | `1m`–`1d` | correct | same | same | same |
 | **`1w`** | 604,800,000 | **undefined** | **3,600,000** (1h — 168×) | same |
@@ -167,7 +167,7 @@ Named here so they are tracked rather than rediscovered. **None is guarded yet.*
 
 ## Why this exists instead of a big review
 
-The owner asked whether reading the whole META.Stack pipeline for broken logic was worth it. The
+The question was whether reading the whole META.Stack pipeline for broken logic was worth it. The
 conclusion: **the goal is right, the method is not.**
 
 Reading 166K lines is unreliable (it flags correct code and misses things), non-repeatable (a

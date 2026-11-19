@@ -3,11 +3,11 @@ import InfoNote from '../InfoNote';
 /**
  * RunSettingsDiff — WHICH SETTINGS CHANGED between the compared runs.
  *
- * Owner direction, 2026-10-31: *"enhance [Compare] so that the compare shows the settings that are
+ * Requirement, 2026-10-31: *"enhance [Compare] so that the compare shows the settings that are
  * different, to identify what made the difference in profit loss."*
  *
  * ⚠️ WHY THIS IS NOT JUST MORE COLUMNS. The metrics table already puts every result side by side, and
- * it could not answer the question. Measured on the four VIX runs the owner was looking at: identical
+ * it could not answer the question. Measured on the four VIX runs the requirement was looking at: identical
  * protocol, symbol, timeframe, trade count, win rate and profit factor, and P&Ls from +76,617 to
  * +141,219. The rows differed in `spread` (0.01% vs 0.93%) and `slippage` — a £64,600 swing on the
  * SAME trades — and nothing on the page mentioned costs at all. "Which run won" and "what did I

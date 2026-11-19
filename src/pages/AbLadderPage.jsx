@@ -31,7 +31,7 @@
  * view) — else the persisted `abladder:pair`, else a one-time seed of the first two
  * scoreable protocols so the page is never blank. The pair is NOT stated prominently
  * anywhere: every card names its protocol and every strip names its side, so the pairing
- * is legible from the rows themselves (2026-09-22 — the owner removed BOTH the subtitle
+ * is legible from the rows themselves (2026-09-22 — the requirement removed BOTH the subtitle
  * and the legend as screen clutter: "I don't like training to be highly visible it just
  * creates screen clutter". Do not re-add either without being asked; the ℹ popover is
  * where explanation lives).
@@ -446,7 +446,7 @@ export default function AbLadderPage() {
           searchAriaLabel="Search the A/B ladder by symbol, protocol, state or signal"
         />
 
-        {/* No legend and no subtitle here (owner, 2026-09-22): visible teaching text is
+        {/* No legend and no subtitle here (Requirement, 2026-09-22): visible teaching text is
             screen clutter. The strip names its side per row, the card names its protocol,
             and the ℹ popover carries the explanation. Do not re-add without being asked. */}
 

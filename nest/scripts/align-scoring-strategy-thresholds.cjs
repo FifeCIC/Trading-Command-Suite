@@ -7,14 +7,14 @@
  * The 2026-09-15 rescale divided every strength percentage by ~6.3. Target values were fixed in the
  * CODE (`style-thresholds.ts`) and in the SEED (`scoring-strategy-seed.ts`), but **already-persisted
  * rows were not rewritten** — so 25 of 27 rows held 50/55/60, which the live scale (~10-33) can
- * never clear. That is a data/installation mismatch, and the owner has asked for it aligned so the
+ * never clear. That is a data/installation mismatch, and the requirement has asked for it aligned so the
  * system operates correctly for testing.
  *
  * SAFETY — this touches LIVE TRADING CONFIG, so it is deliberately cautious:
  *
  *   1. **Backup first.** Every row's prior value is written to nest/data-repairs/ before any write.
  *      (Pattern established by the #780/#832 repairs.)
- *   2. **Uses the OWNER FUNCTION, not a copy.** The target comes from the compiled
+ *   2. **Uses the requirement FUNCTION, not a copy.** The target comes from the compiled
  *      `style-thresholds.js resolveStyleThreshold()` — the same function the running app uses.
  *      Re-implementing "÷6.3" here would be a second owner, i.e. the very defect being fixed.
  *   3. **Dry run by default.** Pass `--apply` to write.
@@ -38,7 +38,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const APPLY = process.argv.includes('--apply');
 
-/** The owner — loaded from the COMPILED output so this uses the same logic the API runs. */
+/** The requirement — loaded from the COMPILED output so this uses the same logic the API runs. */
 const owner = require('../dist/src/common/utils/style-thresholds.js');
 
 /** Above this, a bar cannot be cleared by any protocol's measured composite. */
@@ -51,7 +51,7 @@ const BACKUP_DIR = path.join(__dirname, '..', 'data-repairs');
     `SELECT id, name, protocolId, tradeThreshold FROM scoring_strategy ORDER BY protocolId, name`,
   );
 
-  // Protocol styles — the owner function needs them to resolve a bar.
+  // Protocol styles — the requirement function needs them to resolve a bar.
   let styles = new Map();
   try {
     const protos = await prisma.$queryRawUnsafe(

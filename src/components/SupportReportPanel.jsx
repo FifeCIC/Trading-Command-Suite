@@ -2,7 +2,7 @@
  * SupportReportPanel — the REVIEW half of the support service (#1248).
  *
  * ⚠️ THE REVIEW STEP IS THE SAFETY MECHANISM, NOT A NICETY.
- * Owner decision 2026-11-07, option B: response bodies are allowed into a report
+ * Requirement 2026-11-07, option B: response bodies are allowed into a report
  * because "sometimes we're going to need to know the numbers" — but the report is
  * shown in full, here, before anything is copied. There is no send button, no
  * telemetry and no endpoint: the report is a local artefact the user hands over.

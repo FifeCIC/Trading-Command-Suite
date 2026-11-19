@@ -2,7 +2,7 @@
  * report-rule-inventory.cjs — every rule between "a bot has an opinion" and "an order is placed",
  * in ONE place, with how often each one actually fired.
  *
- * ── WHY THIS EXISTS (owner, 2026-11-04) ──────────────────────────────────────────────────────────
+ * ── WHY THIS EXISTS (requirement, 2026-11-04) ──────────────────────────────────────────────────────────
  * "Rule inventory sounds like an idea we should have already had, all rule types available to bots in
  * one place with global stats from ALL activity." A bot's rules were spread across the automation
  * loop, the queue, the duplicate guard, the risk gates and the exit path, and NOTHING answered

@@ -48,7 +48,7 @@ buried ability `development-philosophy` §7 warns about.
 | `audit-project-readiness.cjs` | repo | audit | yes | npm | new project bootstrap: what setup, scaffold, environment, guardrails are missing? |
 | `audit-protocol-copies.cjs` | repo | audit | — | npm | "which comparison does this copy serve?" |
 | `audit-protocol-faults.cjs` | nest | audit | yes | npm | every fault CLASS this project has found, checked across ALL |
-| `audit-protocol-health.cjs` | nest | audit | yes | npm | the five questions the owner asked, answered per protocol. |
+| `audit-protocol-health.cjs` | nest | audit | yes | npm | the five questions the brief asked, answered per protocol. |
 | `audit-protocol-scrub-safety.cjs` | repo | audit | yes | docs | refuse a protocol scrub that would orphan a symbol. |
 | `audit-schema-drift.cjs` | nest | audit | yes | npm | FIELD-LEVEL drift between `schema.prisma` and the live database. |
 | `audit-signal-capacity.cjs` | nest | audit | — | ⚠️ **NOTHING** | answers "why is the Signal denominator 725?" (#781 follow-up) |
@@ -57,7 +57,7 @@ buried ability `development-philosophy` §7 warns about.
 | `audit-theme-contrast.cjs` | repo | audit | yes | npm | "would this colour pair be readable in EVERY mode?" |
 | `audit-threshold-basis-calibration.cjs` | repo | audit | yes | npm | is `EARN_ABLE_BAR` still doing the job it was measured for? |
 | `audit-trade-pnl-attribution.cjs` | nest | audit | yes | npm | is a position's realised P&L attributed to the rows that own it? |
-| `audit-ui-review.cjs` | repo | audit | — | docs | READ the owner's Page Walkthrough verdicts (`uiScore` + "Preferred |
+| `audit-ui-review.cjs` | repo | audit | — | docs | READ the project's Page Walkthrough verdicts (`uiScore` + "Preferred |
 | `audit-webroot-exposure.cjs` | repo | audit | yes | npm | does the local Apache hand out a secret-shaped path? |
 | `check-backtest-determinism.cjs` | repo | check | — | npm | PHASE 0 of #1133: is POST /api/backtest/run deterministic? |
 | `check-bundle-budget.mjs` | repo | check | yes | npm | bundle size is a property, so it needs a guard that can PASS |
@@ -188,7 +188,7 @@ buried ability `development-philosophy` §7 warns about.
 | `validate-manual-trade-gate.cjs` | nest | validator | yes | prebuild, npm | every ORDER-ORIGINATING path must run the portfolio risk gate. |
 | `validate-news-dedupe.cjs` | repo | validator | — | npm | fails when the two news pipelines store the same story twice. |
 | `validate-no-empty-swallow.cjs` | repo | validator | yes | prebuild, npm | INV-NO-EMPTY-SWALLOW (build-time, ratcheted) |
-| `validate-no-notice-bar.cjs` | repo | validator | yes | prebuild, npm | validate-no-notice-bar — the owner has asked REPEATEDLY for the thick coloured left-hand bar to be |
+| `validate-no-notice-bar.cjs` | repo | validator | yes | prebuild, npm | validate-no-notice-bar — the requirement has asked REPEATEDLY for the thick coloured left-hand bar to be |
 | `validate-notices.cjs` | repo | validator | yes | prebuild, npm | the notice-registry gate |
 | `validate-output-style-sync.cjs` | repo | validator | yes | prebuild, npm | keeps the versioned style guide in step with its portable source. |
 | `validate-owner-quotes.cjs` | repo | validator | yes | prebuild, npm | keeps private conversation out of a PUBLIC repository. |

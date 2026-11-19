@@ -19,7 +19,7 @@
  *   3. show "not recorded" as a blank or a zero — SL/TP are not persisted per trade, and the
  *      caveats say so in words.
  *
- * ── TECHNOLOGY BOUNDARY (owner direction, 2026-10-27) ────────────────────────────────────────
+ * ── TECHNOLOGY BOUNDARY (requirement, 2026-10-27) ────────────────────────────────────────
  * *"We can remove this panel for Backtesting Protocols … but we will be improving it on Backtest
  * Strategies so that it shows where trades are executed and exited. It is different chart technology
  * so will require additional work."*
@@ -29,7 +29,7 @@
  * it lives in `replay/` and not beside them — two technologies, two lifecycles, two folders, so a
  * reader knows which one a change is touching without opening the file.
  *
- * ⚠️ The entry/exit markers the owner wants next are a REPLAY-LAYER job: draw them on the existing
+ * ⚠️ The entry/exit markers the requirement is next are a REPLAY-LAYER job: draw them on the existing
  * timeline. Do NOT "improve" this by importing `createChart` — that replaces the thing that makes it a
  * replay with the thing it deliberately is not.
  */

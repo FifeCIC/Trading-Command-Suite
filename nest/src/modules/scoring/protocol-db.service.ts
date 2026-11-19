@@ -942,7 +942,7 @@ export class ProtocolDbService implements OnModuleInit {
             // ⚠️ Why this is seeded and `active` is not (the DECISION above): `active` is a
             // per-protocol kill switch the operator flips while working, so seeding it would revert
             // their choice. `focusRank` answers "which protocols are we shipping and tuning", which
-            // is a property of the PACKAGE, not of a working session — and the owner's requirement is
+            // is a property of the PACKAGE, not of a working session — and the project's requirement is
             // that it survives a reinstall. `?? null` means a protocol that stops declaring a rank
             // has it CLEARED on re-seed, which is the same seed→database convergence rule as #833.
             focusRank: config.focusRank ?? null,

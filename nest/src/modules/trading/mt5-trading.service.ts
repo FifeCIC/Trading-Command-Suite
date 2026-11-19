@@ -983,8 +983,8 @@ price, `price` came back `0`, and the per-symbol cap refused:
     try {
       // #1033 — the holding bridge, same reasoning as closePosition().
       // `origin: 'manual'` stamps `TCS:manual` on the closing deal (#916, 2026-10-07) — this is
-      // the operator's close-partial action, and an unstamped close now reads as "the owner" by
-      // default (owner direction, R46); a manual close should say so deliberately.
+      // the operator's close-partial action, and an unstamped close now reads as "the requirement" by
+      // default (requirement, R46); a manual close should say so deliberately.
       const bridge = await this.bridgeForTicket(ticket);
       const res = await fetch(`${bridge.url}/close/partial/${ticket}`, {
         method: 'POST',

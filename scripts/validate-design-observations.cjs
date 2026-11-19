@@ -8,7 +8,7 @@
  * ---------------
  * `src/data/design-observations.js` is now where a design tension is held open. Left unguarded it
  * would become a list of opinions that LOOK like findings — which is worse than no register, because
- * it lends a preference the authority of a record. The owner's own framing was *"for review and
+ * it lends a preference the authority of a record. The project's own framing was *"for review and
  * consideration"*: a thing to be reconsidered, not a thing to be believed.
  *
  * So the file's own rules are enforced here:

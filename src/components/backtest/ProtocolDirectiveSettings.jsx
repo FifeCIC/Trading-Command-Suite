@@ -1,10 +1,10 @@
 /**
  * ProtocolDirectiveSettings — step 6 ("Directive overrides") as a list of the protocol's DIRECTIVES.
  *
- * ── WHAT WAS WRONG BEFORE (owner, 2026-11-01) ───────────────────────────────────────────────────
+ * ── WHAT WAS WRONG BEFORE (Requirement, 2026-11-01) ───────────────────────────────────────────────────
  * The step rendered a flat settings INVENTORY of five override fields with an `honoured / reported /
  * ignored` badge each, a counts strip ("5 listed · 1 honoured · 0 reported · 4 ignored") and a
- * filter toolbar. The owner's reaction:
+ * filter toolbar. The project's reaction:
  *
  *   *"What does this even mean … Only one of these five fields is actually applied per protocol — the
  *   rest are inert? … Why would we have settings that aren't applied? … It's a bit much to cope with.
@@ -13,7 +13,7 @@
  * ⚠️ FOUR OF THOSE FIVE FIELDS DID NOTHING. Measured from `/api/backtest/settings-inventory`:
  * `maxScore` = **honoured**; `minScore`, `priority`, `category`, `directionBias` = **ignored** (they
  * exist and decide nothing in a run). Four controls that cannot change a result, plus two summary rows
- * to describe them, is the noise the owner was reacting to. They are now ONE line, not four rows.
+ * to describe them, is the noise the requirement was reacting to. They are now ONE line, not four rows.
  *
  * ── WHAT THIS SHOWS INSTEAD ────────────────────────────────────────────────────────────────────
  * One accordion per directive the protocol actually contains, in the protocol's own group order, so the

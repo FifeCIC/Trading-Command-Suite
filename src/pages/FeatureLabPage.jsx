@@ -33,7 +33,7 @@ export default function FeatureLabPage() {
           Visual demonstrations of trading automation concepts and design decisions. Each demo shows the logic and events before full implementation.
         </p>
         {/* "← Back to Lab Overview" REMOVED 2026-10-01: `/lab/lab-landing` (the Lab Directory) was
-            deleted at the owner's direction in the Page Walkthrough. The nav rail is the way back
+            deleted at the project's direction in the Page Walkthrough. The nav rail is the way back
             now; a back-link to a deleted page is worse than no back-link. */}
       </header>
 

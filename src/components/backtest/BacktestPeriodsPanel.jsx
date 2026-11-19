@@ -9,10 +9,10 @@
  *
  * ⚠️ WHY THIS IS A PANEL AND NOT A NEW PAGE. The engine and the replay both hang off the backtest
  * page already, and `shared-core.instructions.md` / #965 item 5 both say a fourth surface for the
- * same job is churn. The owner's requirement is that a window is CAPTURED and REUSED — that is a
+ * same job is churn. The project's requirement is that a window is CAPTURED and REUSED — that is a
  * control on the page that runs it, not a destination of its own.
  *
- * ⚠️ THE OWNER'S OWN WORDS DEFINE THE FEATURE: *"the 300% surge of Greenland Mining when Trump
+ * ⚠️ THE PROJECT'S OWN WORDS DEFINE THE FEATURE: *"the 300% surge of Greenland Mining when Trump
  * signed a deal, over just 2 days. I will use the manual tool to capture that period and store it
  * for many tests."* So the NAME and the NOTE are the point — a list of date ranges is unreadable,
  * and a window nobody can identify is one that gets measured twice by accident.
@@ -151,7 +151,7 @@ export default function BacktestPeriodsPanel({ onRunPeriod }) {
    *
    * ⚠️ THE SERVER REFUSES while a backtest run still references a member (`cascade` is opt-in), and
    * that refusal is the CORRECT behaviour — deleting the label a run was measured against would make
-   * the run's period unnameable. So this does not pass `cascade`: the error is shown, and the owner
+   * the run's period unnameable. So this does not pass `cascade`: the error is shown, and the requirement
    * decides. The bars themselves are retained either way; they belong to the symbol, not the label.
    */
   const deleteSetMutation = useMutation({

@@ -2,7 +2,7 @@ import { ATRTrailingStopDirective } from './mt5-indicators.directives';
 import { MarketBar } from '../interfaces/directive.interface';
 
 /**
- * atr-trailing-stop.directive.spec.ts — the #1075 replacement (owner ruling "B", 2026-10-09).
+ * atr-trailing-stop.directive.spec.ts — the #1075 replacement (requirement "B", 2026-10-09).
  *
  * WHY THIS SUITE EXISTS
  * ---------------------

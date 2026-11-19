@@ -2,8 +2,8 @@
 /**
  * measure-packaging-candidates.cjs — the evidence behind "which 2-3 strategies ship?".
  *
- * Owner, 2026-11-02: only 2-3 strategies will be packaged for the public; the rest stay in the
- * local database. The question is which, and the owner named a specific worry: positions reach
+ * Requirement, 2026-11-02: only 2-3 strategies will be packaged for the public; the rest stay in the
+ * local database. The question is which, and the requirement named a specific worry: positions reach
  * profit and then bleed it away before closing.
  *
  * ⚠️ WHY THIS IS A SCRIPT AND NOT A ONE-OFF QUERY. Every figure below is re-derivable after the
@@ -15,7 +15,7 @@
  *   1. Realised P&L per protocol/bot — cannot rank strategies: sample sizes are 1-23 and the P&L
  *      unit differs per instrument (0.01-lot FX pennies vs 0.1-lot index pounds).
  *   2. GIVE-BACK — of the trades that were ever in profit, how many closed at or below zero, and
- *      how much peak profit was surrendered. This is the owner's complaint, measured.
+ *      how much peak profit was surrendered. This is the project's complaint, measured.
  *      ⚠️ Only meaningful for trades after #998 (2026-09-25) because `trade.peakProfitPct` did
  *      not exist before it. The script states the earliest usable date rather than blending.
  *   3. Backtest evidence per protocol — the only place a strategy can be judged on more than a
@@ -51,7 +51,7 @@ async function main() {
       GROUP BY ts.id, ts.protocolId, ts.name, ts.symbol, ts.active
       ORDER BY SUM(t.pnl) DESC`);
 
-    // ── 2. GIVE-BACK — the owner's complaint ──
+    // ── 2. GIVE-BACK — the project's complaint ──
     // `trade.peakProfitPct` is the high-water mark of signed profit% while the position was open
     // (common/trading/peak.ts, #998). A trade that PEAKED positive and CLOSED <= 0 surrendered
     // the whole move.
@@ -125,7 +125,7 @@ async function main() {
       );
     }
 
-    console.log('\n════════ 2. GIVE-BACK (#998 peak record — the owner\'s complaint) ════════');
+    console.log('\n════════ 2. GIVE-BACK (#998 peak record — the requirement\'s complaint) ════════');
     console.log(`sampled: ${N(giveBackOverall[0].sampled)} trades with a recorded peak, ` +
       `${String(giveBackOverall[0].firstSeen).slice(0, 10)} -> ${String(giveBackOverall[0].lastSeen).slice(0, 10)}`);
     console.log(`PEAKED POSITIVE AND CLOSED AT/BELOW ZERO: ${N(giveBackOverall[0].bledToRed)} of ${N(giveBackOverall[0].sampled)}`);

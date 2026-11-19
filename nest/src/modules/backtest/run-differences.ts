@@ -2,7 +2,7 @@
  * describeRunDifferences() — WHICH SETTINGS CHANGED between runs, so a P&L difference has an
  * explanation rather than an anecdote.
  *
- * ── WHY THIS EXISTS (owner direction, 2026-10-31) ───────────────────────────────────────────────
+ * ── WHY THIS EXISTS (requirement, 2026-10-31) ───────────────────────────────────────────────
  * *"this table also doesn't show any differences"* — and it could not. Four runs of the same protocol
  * were listed at +76,617 … +141,219 with identical protocol, symbol, timeframe, trade count, win rate
  * and profit factor, and NOTHING on the page said why the P&L moved. Measured by diffing the rows

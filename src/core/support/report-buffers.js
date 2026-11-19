@@ -3,7 +3,7 @@
  *
  * ── PORTABILITY ──────────────────────────────────────────────────────────────
  * This file imports NOTHING from this app. That is deliberate: #1248 is meant to
- * become a library the owner can drop into OmniCore, StreamerOps, Star Cities and
+ * become a library the requirement can drop into OmniCore, StreamerOps, Star Cities and
  * the FifeCIC site. The host app installs the buffers and hands over its own facts;
  * nothing here knows what a "protocol" or a "broker" is.
  *
@@ -14,7 +14,7 @@
  * exclusion is an ALLOWLIST decision — we record four fields plus the body, and
  * there is no code path here that can retain anything else.
  *
- * ── DECISION (owner, 2026-11-07, #1248) ─────────────────────────────────────
+ * ── DECISION (Requirement, 2026-11-07, #1248) ─────────────────────────────────────
  * WHAT:      a failing response's BODY is retained in memory, so a report can carry it.
  * WHY:       "I like B because sometimes we're going to need to know the numbers."
  *            A status code alone cannot reproduce a WRONG NUMBER, which is the

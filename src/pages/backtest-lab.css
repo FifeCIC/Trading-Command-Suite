@@ -33,7 +33,7 @@
 
 .pb-header h1 { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.35rem; }
 /* `.pb-intro` retired 2026-10-17 — the page description now lives in the PageInfoPopover (ℹ),
-   per the owner's direction. Leaving the rule would be dead CSS naming a class nothing renders. */
+   per the project's direction. Leaving the rule would be dead CSS naming a class nothing renders. */
 
 .pb-panel {
   padding: 1rem;
@@ -44,7 +44,7 @@
 
 /* ⚠️ LAYOUT ONLY. The control styling is the canonical Form System (`.ff-input` / `.ff-select` /
    `.ff-btn` in `src/core/forms.css`), imported by the page.
-   Measured 2026-10-17 — the owner reported "the fields are dark and text cannot be read". This file
+   Measured 2026-10-17 — it was reported "the fields are dark and text cannot be read". This file
    was restating the fields with `background: var(--color-input-bg)` (a fixed `#111318`) and had NO
    rule for `select option`, so the dropdown was dark-on-dark under the active theme while the
    canonical `.ff-select` styles both. Do not re-add control styling here: it is how the app ended
@@ -346,7 +346,7 @@
 }
 .bt-ref-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* The search sits in the run-head beside the subject toggle (owner direction, 2026-10-25) and must
+/* The search sits in the run-head beside the subject toggle (requirement, 2026-10-25) and must
  * therefore be able to SHRINK. `.pb-search` is `flex: 1 1 16rem`, which is right in a toolbar but
  * overflows a row that already holds two buttons and a count — so the head wraps the count to the next
  * line rather than squashing the input below its usable width. */
@@ -354,12 +354,12 @@
 .pb-run-head { align-items: center; }
 .pb-run-head .pb-count { flex: 0 0 auto; }
 
-/* Direction select in the subject header (#1136 follow-up, owner direction 2026-10-25). Fixed width so
+/* Direction select in the subject header (#1136 follow-up, requirement 2026-10-25). Fixed width so
  * the search keeps the flexible space; it sits AFTER the count deliberately — the count belongs to the
  * search, the direction is a separate facet. */
 .pb-run-head .pb-direction { flex: 0 0 auto; width: auto; min-width: 9rem; }
 
-/* ── STEPS (#1138, owner direction 2026-10-26) ──────────────────────────────────────────────────
+/* ── STEPS (#1138, requirement 2026-10-26) ──────────────────────────────────────────────────
  * The Lab is one ordered sequence, and a step you have not reached is not interactive. Two things
  * make that legible without explanation:
  *

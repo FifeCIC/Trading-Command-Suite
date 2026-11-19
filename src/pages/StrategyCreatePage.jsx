@@ -177,7 +177,7 @@ export default function StrategyCreatePage() {
    * ⚠️ WHY THIS IS A FETCH AND NOT A CONSTANT (#839).
    *
    * The backend owns this value (`nest/src/common/utils/style-thresholds.ts`, rescaled
-   * 2026-09-15). When the frontend kept its own copy, the rescale updated the owner and left the
+   * 2026-09-15). When the frontend kept its own copy, the rescale updated the requirement and left the
    * copy behind — and a bot created here silently never traded, because its bar was ~2x the
    * maximum the scoring scale can produce.
    *

@@ -2,7 +2,7 @@
  * symbol-discovery.service.ts — movers are RECORDED as symbols, never ACTIVATED as symbols.
  * ==========================================================================================
  *
- * Owner directive, 2026-11-18: We will need the data to be stored in the database with normal symbol records:
+ * Requirement, 2026-11-18: We will need the data to be stored in the database with normal symbol records:
  * they just won't be set as active until the users actions or a bot trades so that will need to be
  * looked at. We cannot activate every symbol that appears in top losers or top winners else by the end
  * of a month we'll have hundreds of active symbols being monitored.
@@ -12,7 +12,7 @@
  * minutes across two sessions that is thousands of distinct tickers a week, most of them penny stocks
  * having one bad day. `symbol.active` is what the scoring and monitoring paths read, so activating on
  * sight converts a discovery feed into an unbounded workload — and, worse, into a universe that is
- * indistinguishable from one the owner chose.
+ * indistinguishable from one the requirement chose.
  *
  * ── THE THREE-WAY RULE ──
  *
@@ -23,7 +23,7 @@
  * | exists, `active = 1` | **NEVER TOUCH.** Activation is a decision someone made — a watchlist add, a protocol assignment, a bot trading it — and discovery has no standing to reverse it |
  *
  * ⚠️ THE THIRD ROW IS THE ONE WORTH GUARDING. A naive `upsert` with `update: { active: false }` would
- * DEACTIVATE a symbol the owner had activated, silently, every time it appeared in a movers list. That
+ * DEACTIVATE a symbol the requirement had activated, silently, every time it appeared in a movers list. That
  * is a far worse failure than activating one, because it removes a symbol from monitoring while looking
  * like a successful write. So the write is an insert-if-absent and nothing else: `update: {}` is
  * deliberate, and `symbol-discovery.service.spec.ts` fails if anyone gives it a body.
@@ -57,7 +57,7 @@ export interface DiscoveryResult {
  * (`stock`, `crypto`, `forex` — measured across 401 rows). `suitability.service.ts` compares a
  * symbol's type against the protocol's declared `symbolTypes` by exact lowercased equality, so a
  * `cryptocurrency` row would be REJECTED by a protocol declaring `crypto` — the scoring gate would
- * refuse to score a symbol the owner had just discovered. That is a money-path miss produced by a
+ * refuse to score a symbol the requirement had just discovered. That is a money-path miss produced by a
  * dictionary disagreement, not by a bug anyone could see.
  *
  * ⚠️ `unknown` IS A REAL ANSWER. `symbol.type` is `NOT NULL`, and inventing `stock` for a row whose
@@ -101,11 +101,11 @@ export function symbolType(quoteType?: string | null): string {
  * ── DECISION (2026-11-18, TCS-Dev) ──
  * WHAT:       Discovery is INSERT-ONLY, always `active: false`, and the type vocabulary it writes is
  *             the COLUMN'S (lowercase, mapped) rather than the feed's.
- * WHY:        owner directive, 2026-11-18: We cannot activate every symbol that appears in top losers or top
+ * WHY:        requirement, 2026-11-18: We cannot activate every symbol that appears in top losers or top
  *             winners else by the end of a month we'll have hundreds of active symbols being
  *             monitored. ~95 gainers + ~174 losers per fetch, and `symbol.active` is what scoring
  *             and monitoring read — so activating on sight is unbounded, and produces a universe
- *             indistinguishable from one the owner chose. The vocabulary half is not cosmetic
+ *             indistinguishable from one the requirement chose. The vocabulary half is not cosmetic
  *             either: the column collates `utf8mb4_unicode_ci`, so SQL matches both spellings and
  *             only case-sensitive JavaScript disagrees — which is exactly how 120 `STOCK` rows
  *             silently skipped the profile chain (see symbolType()).

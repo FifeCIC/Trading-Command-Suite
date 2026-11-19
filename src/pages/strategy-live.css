@@ -5,7 +5,7 @@
  * (`src/components/market-movers-panel.css`). This file is the page frame and the FACT LIST only, so a
  * change to how tables look happens in one place for every surface.
  *
- * REWRITTEN 2026-11-18: the owner reported "blocks of text appearing on the pages". `.slv-lead` and
+ * REWRITTEN 2026-11-18: it was reported "blocks of text appearing on the pages". `.slv-lead` and
  * `.slv-theory-body` were paragraphs above a table; both are gone and are replaced by `.slv-facts`, a
  * term/value grid. A rule that only exists as prose in a page is what produced them - see
  * `ui-standards.instructions.md`, "No prose walls".

@@ -9,7 +9,7 @@
  *                                    last check, latency, and any adapter-declared feature notes
  *   GET /api/providers/mt5/accounts — only to name the SOURCES an MT5 bridge supplies
  *
- * ⚠️ MT5 IS A VENDOR HERE, ON PURPOSE (owner directive, 2026-11-06): MT5 and Pepperstone MT5 can be factored
+ * ⚠️ MT5 IS A VENDOR HERE, ON PURPOSE (requirement, 2026-11-06): MT5 and Pepperstone MT5 can be factored
  * into the Vendors page as the aim will be to list sources of data basically. A broker is also a
  * data feed — it is where prices and account state come from — so the list is "where does data come
  * from", not "which API keys do I have". The ACCOUNTS behind MT5 are named beneath it, which is how

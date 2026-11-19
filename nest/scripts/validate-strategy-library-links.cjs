@@ -85,7 +85,7 @@ const MIN_LINKS = 3;
 /**
  * The slugs the public package ships. Named, so a mis-parse cannot look like a small seed.
  *
- * ⚠️ These are SLUGS, and the bot/protocol naming standard (owner direction, 2026-11-05) makes the
+ * ⚠️ These are SLUGS, and the bot/protocol naming standard (requirement, 2026-11-05) makes the
  * direction token the LAST token of a protocol slug. When `xau-speed-v1-long` became
  * `xau-speed-v1-long` this list was the one place that still named the old three, and the build
  * failed here rather than in the app — which is the guard working. Keep it in step with the seed.

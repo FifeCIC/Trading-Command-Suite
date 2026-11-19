@@ -310,7 +310,7 @@ describe('DiscordChannel — public feed policy', () => {
   });
 
   /**
-   * ⚠️ THE LAYOUT IS THE FEATURE (owner directive, 2026-11-12): The messages sent to Discord for signals,
+   * ⚠️ THE LAYOUT IS THE FEATURE (requirement, 2026-11-12): The messages sent to Discord for signals,
    * wins and losses aren't layed out the same… a uniformal approach should be applied and ensure
    * that both protocol and bot is included.
    *

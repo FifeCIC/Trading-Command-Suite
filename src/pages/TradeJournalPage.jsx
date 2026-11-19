@@ -141,7 +141,7 @@ function ActivityRow({ event }) {
 // ⚠️ THE PAGE BEING REPLACED NEVER PERSISTED "READ". It kept `readIds` in local useState, so every
 // acknowledgement was thrown away on reload — while `POST /api/alerts/:id/acknowledge` had been
 // DB-backed since 2026-09-23. This merge does NOT copy that defect: marking a row seen calls the
-// endpoint. That is the owner's own instruction working as intended — "Treat compacted journal
+// endpoint. That is the project's own instruction working as intended — "Treat compacted journal
 // entries with an alert status attached as seen and the alert becomes seen."
 const ALERT_LEVEL_SEVERITY = {
   critical: 'high', high: 'high', warning: 'medium', medium: 'medium', info: 'low', low: 'low',
@@ -166,7 +166,7 @@ const ALERT_FALLBACKS = {
 /**
  * Compact CONSECUTIVE identical alerts into one row with a repeat count.
  *
- * ⚠️ This is the ONLY compaction that exists, and it is carried over rather than invented. The owner
+ * ⚠️ This is the ONLY compaction that exists, and it is carried over rather than invented. The requirement
  * said "There might need to be mechanism to compact related information" — that is a design question
  * (which alerts are 'related'?) and is NOT answered here. This does what the deleted page did.
  */
@@ -184,7 +184,7 @@ function compactAlerts(list) {
 function AlertRow({ alert, onSeen, onOpen, acking }) {
   const sev = ALERT_LEVEL_SEVERITY[alert.level] || 'low';
   return (
-    /* ⚠️ LEFT-HAND COLOURED STRIPE REMOVED 2026-11-07. Owner directive: the entries … also use the left side
+    /* ⚠️ LEFT-HAND COLOURED STRIPE REMOVED 2026-11-07. Requirement: the entries … also use the left side
        border styling I'm about to lose my mind over. ui-standards has disfavoured `border-left` as a
        state carrier since 2026-09-18 and asks for a FULL coloured border. A row is not a card, so the
        severity now rides on the border of the whole row (1px, rounded by CSS) AND on the badge — two
@@ -279,7 +279,7 @@ export default function TradeJournalPage() {
   for (const e of events) eventStats[e.type] = (eventStats[e.type] || 0) + 1;
 
   // ⚠️ `hideBlocked` defaults OFF on purpose. BLOCKED is the most common refusal, and hiding it by
-  // default would make the journal read as though everything executed. The owner asked for the
+  // default would make the journal read as though everything executed. The requirement is for the
   // CONTROL ("Create controls for filtering journal entries including filter out BLOCKED signals"),
   // not for a different default.
   const activity = useMemo(() => events.filter((e) => {
@@ -385,7 +385,7 @@ export default function TradeJournalPage() {
       {/* ── Primary Loop (absorbed from the Execution Queue's `.eq-routine`) ──
           ⚠️ `execution.willPlaceRealOrders` is the EFFECTIVE state and is kept verbatim, because the
           layer flag ALONE once showed "🟢 Trading" while every dispatch was being diverted to paper
-          — which hid a months-long throughput collapse. The owner asked for "some of the stats"; the
+          — which hid a months-long throughput collapse. The requirement is for "some of the stats"; the
           per-step tick sequence stays with the dashboard's automation controls. */}
       {loopStatus && (
         <section className="eq-routine">
@@ -437,7 +437,7 @@ export default function TradeJournalPage() {
         </div>
       )}
       {/* ── EXIT QUALITY — "did we leave profit on the table?" (#1149) ────────────────────────────
-          The owner's question from the start of this work: are positions being closed before they
+          The project's question from the start of this work: are positions being closed before they
           reach what they showed? Answered from the trades themselves — `peakProfitPct` against a
           realised percentage derived from entry/exit prices, NEVER against `pnl`, which is currency.
 
@@ -577,7 +577,7 @@ export default function TradeJournalPage() {
         </div>
       )}
       {/* View switcher — the journal now carries TWO kinds of row: reconciled trades (its own data)
-          and the activity feed absorbed from the Execution Queue. The owner's instruction was that
+          and the activity feed absorbed from the Execution Queue. The project's instruction was that
           this becomes "essentially a journal of most activity, even rejected trades". */}
       <div className="eq-tabs">
         <button className={`eq-tab ${view === 'trades' ? 'eq-tab-active' : ''}`} onClick={() => setView('trades')}>
@@ -722,7 +722,7 @@ export default function TradeJournalPage() {
 
       {/* Alerts — shown for the Alerts tab and for All. ⚠️ A refreshed list losing rows is the
           ACKNOWLEDGE taking effect, not a fetch error: the endpoint removes the alert from
-          /api/alerts/active, which is the behaviour the owner described. */}
+          /api/alerts/active, which is the behaviour the requirement described. */}
       {(view === 'alerts' || view === 'all') && (
         <div className="tj-entries">
           {alertsQuery.isLoading && <p>Loading alerts...</p>}

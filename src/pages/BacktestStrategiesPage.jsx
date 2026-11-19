@@ -1,5 +1,5 @@
 /**
- * BacktestStrategiesPage — `/lab/backtest-strategies` (owner direction, 2026-10-26).
+ * BacktestStrategiesPage — `/lab/backtest-strategies` (requirement, 2026-10-26).
  *
  * A COMPLETE STRATEGY is a bot: a protocol plus execution. So this page asks for everything the
  * protocol page does **and** the execution settings — stop, target, entry bar, costs and sizing —

@@ -14,7 +14,7 @@ const CATEGORY_LABELS = {
   'portfolio-recovery': 'Portfolio Recovery',
   'long-term': 'Long Term',
   'instrument-trading': 'Instrument Trading',
-  // Added 2026-10-06 at the owner's request (Page Walkthrough, /planner/objectives: "Add Education to
+  // Added 2026-10-06 at the project's request (Page Walkthrough, /planner/objectives: "Add Education to
   // <select.ob-select>"). Safe as a new value: the API stores `category` as a plain string with no
   // enum, so an objective carrying it is accepted and rendered — see planner.service.ts.
   'education': 'Education',
@@ -83,7 +83,7 @@ export default function ObjectivesPage() {
   });
 
   /**
-   * Objective REVIEW status — the owner's 2026-11-06 request: "You could use the Goals page as a way
+   * Objective REVIEW status — the project's 2026-11-06 request: "You could use the Goals page as a way
    * to remind us to check results."
    *
    * ⚠️ The `action` (OVERDUE / NO-DATE / DUE-SOON / ON-TIME) is decided on the SERVER by
@@ -271,7 +271,7 @@ export default function ObjectivesPage() {
               <option value="instrument-trading">Instrument Trading</option>
               <option value="portfolio-recovery">Portfolio Recovery</option>
               <option value="long-term">Long Term</option>
-              {/* Placed before `Custom` so the catch-all stays last — the owner asked for it to be
+              {/* Placed before `Custom` so the catch-all stays last — the requirement is for it to be
                   added, not for it to displace anything. */}
               <option value="education">Education</option>
               <option value="custom">Custom</option>

@@ -89,7 +89,7 @@ export class SettingsController {
      * stored entries carried the key.
      *
      * IGNORED, NOT CLAMPED — an unknown string is a caller bug, and quietly storing `public` would
-     * record a decision the owner never made (the same reasoning as the `uiScore` check in the service,
+     * record a decision the requirement never made (the same reasoning as the `uiScore` check in the service,
      * which throws). Measured 2026-11-06: PUT `{"visibility":"premium"}` leaves the stored value exactly
      * as it was rather than writing a guess.
      */
@@ -109,7 +109,7 @@ export class SettingsController {
    * locally and breaks behind a proxy.
    *
    * ⚠️ `all: true` is REQUIRED to clear the whole table. An absent `viewKey` alone does NOT mean
-   * "delete everything": a caller that forgets the field must not wipe the owner's whole walkthrough
+   * "delete everything": a caller that forgets the field must not wipe the project's whole walkthrough
    * by accident. The destructive case is opt-in and named.
    */
   @Delete('ui-review')

@@ -23,7 +23,7 @@ import { resolveAbArmAccounts } from './automation-loop.service';
  *   3. The orders escape the safety chain entirely (they go `dispatchSideTrade` -> `placeOrder`,
  *      never `dispatchTrade`) — that half remains open on #1079 and is tracked by #1082.
  *
- * OWNER DIRECTION (2026-10-07, `external-systems-are-data.instructions.md`):
+ * REQUIREMENT (2026-10-07, `external-systems-are-data.instructions.md`):
  *   > The pair must refuse to run when it cannot get two distinct, viable accounts — never fall
  *   > back to one.
  *

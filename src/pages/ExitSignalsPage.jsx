@@ -27,7 +27,7 @@ const URGENCY_LABELS = {
  * #1016 — THE EXIT PAGE READS THE BOT BOOK, NOT TRADING 212.
  *
  * ⚠️ WHY THE SOURCE CHANGED. `GET /api/portfolio/exit-signals` reads the **Trading 212** book via
- * `PortfolioService`, which is a data-import concern. Owner direction, 2026-09-28: *"I don't want
+ * `PortfolioService`, which is a data-import concern. Requirement, 2026-09-28: *"I don't want
  * any Trading212 bot activity going forward. Only data import and updates on the status of the
  * portfolio."* The 40 bot-managed positions are MT5, and the service that evaluates them is
  * `ExitConsensusService` — `GET /api/scoring/exit-consensus`.
@@ -160,7 +160,7 @@ export default function ExitSignalsPage() {
                       <div className="es-card-header">
                         <div className="es-card-title">
                           <span className="es-symbol">{sig.symbol || sig.ticker}</span>
-                          {/* ⚠️ ALWAYS RENDERED (2026-11-07). Owner directive: bits like es-pnl are in
+                          {/* ⚠️ ALWAYS RENDERED (2026-11-07). Requirement: bits like es-pnl are in
                               different places on every card as some have a sentence too es-bot and
                               others don't. An absent bot used to remove the element entirely, so
                               every field after it shifted left. A slot that is always present keeps

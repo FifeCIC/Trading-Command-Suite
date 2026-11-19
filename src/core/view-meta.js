@@ -5,7 +5,7 @@
  */
 
 const VIEW_META = {
-  // #1190 — the trend READING experiment. `review: 'pending'` because the owner has not looked at
+  // #1190 — the trend READING experiment. `review: 'pending'` because the requirement has not looked at
   // it yet; it becomes 'approved' when they have, and claiming otherwise would be a claim without
   // an observation behind it.
   '/development/movers-treatment': {
@@ -284,7 +284,7 @@ const VIEW_META = {
     css: 'src/pages/exit-signals.css',
     api: ['GET /api/scoring/exit-consensus'],
   },
-  // #988 — new page, so `review: 'pending'` until the owner has looked at it (the editions pass
+  // #988 — new page, so `review: 'pending'` until the requirement has looked at it (the editions pass
   // treats an unapproved entry as pending rather than as a failure).
   '/trading/stop-guardian': {
     tier: 'premium',
@@ -328,7 +328,7 @@ const VIEW_META = {
     css: 'src/pages/decision-trail.css',
     api: ['GET /api/scoring/breakdown/:symbol', 'GET /api/automation/status'],
   },
-  // MOVED from /automation/speed-scanner 2026-10-02 — the Automation area was retired and the owner
+  // MOVED from /automation/speed-scanner 2026-10-02 — the Automation area was retired and the requirement
   // asked for this page "to the Trading area". The ROUTE changed with the area, because a route's
   // first segment names where the view lives.
   '/trading/speed-scanner': {
@@ -339,7 +339,7 @@ const VIEW_META = {
     css: 'src/pages/speed-scanner.css',
     api: ['POST /api/speed/scan'],
   },
-  // Moved out of the deleted /automation/execution-queue page, 2026-10-02 (owner direction:
+  // Moved out of the deleted /automation/execution-queue page, 2026-10-02 (requirement:
   // "Preserve them and put the Protocol Queue somewhere in the Protocol area and Schedule Jobs in
   // the Status area"). `tier` mirrors the page they came from, so the free edition is unchanged.
   // `review: 'pending'` is the honest value — neither has been looked at since the move, so they
@@ -429,7 +429,7 @@ const VIEW_META = {
   },
   '/development/blocked-signals': {
     tier: 'premium',
-    // 'pending' until the owner has actually looked at it — the skill is explicit that this
+    // 'pending' until the requirement has actually looked at it — the skill is explicit that this
     // becomes 'approved' when they have, and claiming otherwise would be a claim without an
     // observation behind it.
     review: 'pending',
@@ -440,7 +440,7 @@ const VIEW_META = {
   },
   '/development/performance-change': {
     tier: 'premium',
-    // 'pending' until the owner has actually looked at it. Claiming 'approved' here would be a
+    // 'pending' until the requirement has actually looked at it. Claiming 'approved' here would be a
     // claim with no observation behind it — the skill is explicit that this flips only after the
     // owner has seen the page.
     review: 'pending',
@@ -455,7 +455,7 @@ const VIEW_META = {
   },
   '/development/ui-review': {
     tier: 'premium',
-    // 'pending' until the owner has actually looked at it — the rule this repo applies to every new
+    // 'pending' until the requirement has actually looked at it — the rule this repo applies to every new
     // page (#988). `tier` is metadata only since the free edition was cancelled (2026-10-28); it no
     // longer hides or ships anything, and nothing branches on it.
     review: 'pending',
@@ -472,7 +472,7 @@ const VIEW_META = {
   // example renders unstyled (a failure that looks like broken components, not a missing stylesheet).
   // A stale row here is not harmless: scripts/verify-view-meta-routes.cjs compares view-meta against
   // the live routes, and nav renders from the same list.
-  // ⚠️ '/status/meta-stack-pipeline' WAS HERE AND IS DELETED (2026-10-08, owner direction).
+  // ⚠️ '/status/meta-stack-pipeline' WAS HERE AND IS DELETED (2026-10-08, requirement).
   // Its board is now a SECTION of /development/pipeline-graph-lab, so there is no page to describe.
   // A stale row here is not harmless: scripts/verify-view-meta-routes.cjs compares view-meta against
   // the live routes, and nav renders from the same list.
@@ -569,7 +569,7 @@ const VIEW_META = {
     css: 'src/pages/t212-portfolio.css',
     api: [],
   },
-  // Accounts area — added 2026-11-06 (owner direction). `review: 'pending'` because the owner has not
+  // Accounts area — added 2026-11-06 (requirement). `review: 'pending'` because the requirement has not
   // walked either page yet; flipping it to `approved` is the walkthrough's verdict, not the author's.
   '/trading212/brokers': {
     tier: 'premium',
@@ -651,7 +651,7 @@ const VIEW_META = {
     ],
   },
   /**
-   * ⚠️ ADDED 2026-10-26 — the STRATEGIES half of the Lab split (owner direction: *"Lets separate
+   * ⚠️ ADDED 2026-10-26 — the STRATEGIES half of the Lab split (requirement: *"Lets separate
    * them. Split … into two pages."*). It shares `BacktestPage.jsx` with the protocols route, so
    * `file` names the shared implementation and `entry` names the wrapper that fixes the subject.
    *
@@ -678,7 +678,7 @@ const VIEW_META = {
     ],
   },
   // ⚠️ ADDED 2026-10-31. "Completed runs" moved off `/lab/backtest-strategies` onto its own page
-  // (owner direction — the strategies page had eleven steps and four tabs). It reads and compares
+  // (requirement — the strategies page had eleven steps and four tabs). It reads and compares
   // stored runs and nothing else, so its API list is deliberately short: `runs`, `runs/compare` and
   // the per-run delete. It does NOT run a backtest and must not be given the run endpoints.
   '/lab/walk-forward-survivors': {
@@ -712,7 +712,7 @@ const VIEW_META = {
       'DELETE /api/backtest/runs/:runId',
     ],
   },
-  // ⚠️ ADDED 2026-11-04 (owner direction). The A/B reference panels left `/lab/backtest-strategies`
+  // ⚠️ ADDED 2026-11-04 (requirement). The A/B reference panels left `/lab/backtest-strategies`
   // — *"it has results displayed twice"* — and became their own page about ONE strategy. It runs
   // nothing: the API list is stored-run reads plus the baseline settings the panels write.
   '/lab/current-strategy': {
@@ -1204,7 +1204,7 @@ const VIEW_META = {
 
   // ── REGISTERED 2026-09-22 — the NAV-LEAF METADATA GAP ─────────────────────────────────────────
   // Every sidebar link resolves to `/area/viewId` and the Dev Overlay reports "No metadata
-  // registered for this route" when the lookup misses. Measured 2026-09-22 (after the owner hit
+  // registered for this route" when the lookup misses. Measured 2026-09-22 (after the requirement hit
   // /trading/strategies-derived): 14 of 125 nav leaves had NO entry — this block registers them
   // all, and `scripts/verify-view-meta-routes.cjs` now ENFORCES coverage, so the next nav link
   // added without metadata fails the verifier instead of landing on the user.

@@ -4,7 +4,7 @@
  *
  * © 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite
  *
- * WHY THIS EXISTS (owner direction, 2026-11-07)
+ * WHY THIS EXISTS (requirement, 2026-11-07)
  * ----------------------------------------------
  * *"I suspect the epic size of development will have created some messy files, maybe some
  * duplication, maybe theres redundant files etc. Is there a tool for checking the quality without
@@ -19,7 +19,7 @@
  * well-documented file that does one job is not a defect — which is exactly why the thresholds below
  * exist as written.
  *
- * THE OWNER'S THRESHOLDS (verbatim, 2026-11-07)
+ * THE PROJECT'S THRESHOLDS (verbatim, 2026-11-07)
  * ---------------------------------------------
  *   *"3000 to me seems like a lot. I would [be] creating a warning at around 1500 and additional
  *    warning at 2000. The only time I like seeing a 3000 line file of code is when it's well
@@ -131,7 +131,7 @@ const CONTROL = /^\s*(?:if|for|while|switch|catch|else|do|try|finally|return|\}|
  *
  * Measured 2026-11-07 while writing this tool: including it reported `backtest.service.ts`'s longest
  * "function" as **3,792 lines** — that was the CLASS body. Every method inside it is short. A metric
- * that counts a class as one function turns the owner's "well separated into functions" test into a
+ * that counts a class as one function turns the project's "well separated into functions" test into a
  * constant failure for every large service, which is the false positive that gets a guard ignored.
  * Methods are measured individually instead; the class is just their container.
  */
@@ -208,7 +208,7 @@ function bandOf(lines) {
 /**
  * The verdict for one file. This is the ONLY place the exemption is decided.
  *
- * ⚠️ `>= 3,000` is not automatically a defect: the owner's own rule is that a large file is
+ * ⚠️ `>= 3,000` is not automatically a defect: the project's own rule is that a large file is
  * acceptable when it is documented AND decomposed. Both conditions, not either.
  */
 function verdictOf(a) {
@@ -520,7 +520,7 @@ line counts change on every edit and a guard that fires during normal work gets 
 ## The rule this file exists for
 
 > "The only time I like seeing a 3000 line file of code is when it's well commented/documented and
-> the code is very well separated into functions and clear arguments." — owner, 2026-11-07
+> the code is very well separated into functions and clear arguments." — requirement, 2026-11-07
 
 | Band | Lines | Meaning |
 |---|---|---|
@@ -672,7 +672,7 @@ function stamp(state, issue, kind, apply) {
   const targets = [];
   if (kind === 'oversized' || kind === 'all') {
     for (const f of state.files) {
-      // ⚠️ `large-but-structured` is NOT stamped. It meets the owner's own test (documented AND
+      // ⚠️ `large-but-structured` is NOT stamped. It meets the project's own test (documented AND
       // decomposed), so a marker saying "MISSING: decomposition" would be a false accusation in the
       // one place an agent is most likely to read it. It stays visible in docs/CODE-HEALTH.md.
       if (['warn', 'high', 'critical'].includes(f.verdict)) targets.push({ ...f });
@@ -751,7 +751,7 @@ function selfTest() {
     const bad = mk('bad.ts', filler(3100));
     check1('3,100 lines, no comments, no long fns -> critical', verdictOf(bad) === 'critical', verdictOf(bad));
 
-    // 3 — 3,000+ documented AND decomposed is TOLERATED (the owner's exemption).
+    // 3 — 3,000+ documented AND decomposed is TOLERATED (the project's exemption).
     const good = mk(
       'good.ts',
       filler(3100, '/** documented line for the exemption case */\nconst pad = 1;'),

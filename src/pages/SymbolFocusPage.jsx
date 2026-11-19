@@ -46,7 +46,7 @@ export default function SymbolFocusPage() {
 
   // ── #926 follow-on — the COMPARISON view ──────────────────────────────────────────────────
   // A SEPARATE question from `/focus`. `/focus` answers "what is this symbol doing right now";
-  // this answers "which of the protocols scoring it is earning its keep". The owner's ask
+  // this answers "which of the protocols scoring it is earning its keep". The project's ask
   // (2026-09-27): *"show a list of the protocols that score it, compared… statistics for averages
   // and highest scorer… and lowest scorer… something to help investigate the strongest and
   // weakest protocols."*

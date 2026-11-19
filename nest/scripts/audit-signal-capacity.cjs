@@ -2,7 +2,7 @@
 /**
  * audit-signal-capacity.cjs — answers "why is the Signal denominator 725?" (#781 follow-up)
  *
- * WHY THIS EXISTS: the owner observed Signal 110/725 (15%) and Opportunity 354/825, and
+ * WHY THIS EXISTS: the requirement observed Signal 110/725 (15%) and Opportunity 354/825, and
  * remembered the signal maximum being ~250. Two claims need separating:
  *
  *   1. Have Signal and Opportunity been SWAPPED?  -> arithmetic can answer this exactly.
@@ -49,7 +49,7 @@ const sum = (arr) => arr.reduce((a, b) => a + b, 0);
     out.thresholds ??= { error: `${p} -> ${r.error || r.status}` };
   }
 
-  // ── 2. Find a symbol whose numbers look like the owner's (110/725, 354/825) ──
+  // ── 2. Find a symbol whose numbers look like the project's (110/725, 354/825) ──
   const ranked = await get('/api/scoring/ranked');
   if (ranked.error || ranked.status >= 400) {
     out.ranked = { error: ranked.error || `HTTP ${ranked.status}` };

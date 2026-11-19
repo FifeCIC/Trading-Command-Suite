@@ -621,7 +621,7 @@ input[type='radio'] {
   border-radius: 0;
 }
 
-/* ── Refresh countdown in the current crumb (owner, 2026-11-07) ────────────────────────────────────
+/* ── Refresh countdown in the current crumb (Requirement, 2026-11-07) ────────────────────────────────────
    *"I want the breadcrumb to have an affect like a loading bar which acts as the refresh count down …
    every page that has reloading."*
    A 2px line along the bottom edge of the pill fills left-to-right over the polling interval, then
@@ -899,8 +899,8 @@ button.nav-active {
 .left-rail-collapsed .rail-links button.nav-active { background: var(--accent); }
 .left-rail-collapsed .rail-collapse-toggle { font-size: 0.6rem; padding: 0.3rem; min-width: 32px; min-height: 32px; border-radius: 3px; }
 
-/* ── Withheld from other users — the owner's work queue (2026-11-06) ──────────────────────────────
- Owner directive: change the colour of the text in the menu for pages that will be hidden for other users so
+/* ── Withheld from other users — the project's work queue (2026-11-06) ──────────────────────────────
+ Requirement: change the colour of the text in the menu for pages that will be hidden for other users so
  I know which ones still need work done to them the most. A withheld view is KEPT in the rail and
  tagged by `filterHiddenViews({ keepWithheld })`, so an amber label means "everyone else cannot see
  this yet". Colour only — no bar, no badge, nothing that competes with `nav-active`. */
@@ -1048,7 +1048,7 @@ button {
    44px). Which one a button got depended on source order, and `className="btn"` had nothing to do
    with it. Measured 2026-11-06 on /watchlists/active-symbols: "Export CSV" and "⚙ Columns" computed
    `background: rgb(0,0,0)` with `border: 0px none` on a #0f172a page — a black button on a dark
-   panel, reported by the owner as *"styling is broken"*.
+   panel, reported by the requirement as *"styling is broken"*.
    Eight pages use `className="btn"`, so they were all in that state. A class beats an element
    selector whatever the order, so this is the fix rather than editing one of the two `button` rules
    again — the next agent to touch either of those should collapse them into one. */
@@ -1184,7 +1184,7 @@ button.nav-active {
   /* ⚠️ SYMPTOM GUARD — inert while this is `display: grid`, load-bearing if the header is ever
      `display: flex`. Measured 2026-10-04: forcing `.topbar{display:flex}` put the market tape on
      the SAME ROW as the nav and off to the RIGHT (`tapeLeft: 1236`, header 115px → 67px) — exactly
-     the owner's report — because a flex row has `flex-wrap: nowrap` by default. With `wrap` here,
+     the project's report — because a flex row has `flex-wrap: nowrap` by default. With `wrap` here,
      `.market-tape { flex-basis: 100% }` claims a line of its own instead. Grid ignores both. */
   flex-wrap: wrap;
   /* Same #853 trap as `.topbar-row-main`: `.topbar` is a GRID ITEM of `.site-shell`, so
@@ -2247,7 +2247,7 @@ button.nav-active {
    line without clipping a digit — the two failures that matter here. */
 .bt-stat-value--money { font-size: clamp(0.8rem, 1.15vw + 0.45rem, 1.05rem); letter-spacing: -0.01em; }
 
-/* ── THE EXPLANATION POPOVER (owner direction, 2026-11-04) ────────────────────────────────────────
+/* ── THE EXPLANATION POPOVER (requirement, 2026-11-04) ────────────────────────────────────────
    *"as for the cards - we need a popover explaining them when mouse hovered over for 2 seconds."*
    The delay lives in `StatCard.jsx`; this is only the box. It is `absolute` inside the tile rather
    than a native `popover`, because a native popover is placed in the top layer and would detach from
@@ -2287,7 +2287,7 @@ button.nav-active {
 /* #986 — a run that measured a CAPTURED period says so by name, not only by date range. The date
    range alone does not say why the window mattered, and a captured-window result must never read
    as an ordinary day-range run. */
-/* `.bt-measured-period` RETIRED 2026-10-30 — the captured period is a popover in the step panel header now (owner direction: *"Hide this as a popout"*). The class is deleted rather than left behind: a rule nothing renders is a style that looks available and is not. */
+/* `.bt-measured-period` RETIRED 2026-10-30 — the captured period is a popover in the step panel header now (requirement: *"Hide this as a popout"*). The class is deleted rather than left behind: a rule nothing renders is a style that looks available and is not. */
 .bt-measured-bars { color: var(--ink-soft); font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; font-size: 0.72rem; }
 /* The active-scope banner. Visible so the reader can tell a period-scoped run from a day-range one
    BEFORE the run rather than inferring it from the result afterwards. */
@@ -3289,7 +3289,7 @@ button.nav-active {
    and `.topbar-calc-btn` with it. Owner report: *"<button.topbar-status-summary> Online and
    <button.topbar-calc-btn> 🮈 are no longer positioned to the far right."*
 
-   The owner asked for the CONTENT to reach the edges, not the chrome. A negative inline margin on the
+   The requirement is for the CONTENT to reach the edges, not the chrome. A negative inline margin on the
    main column cancels exactly `.site-shell.layout-omni`'s `10px` gutter for that column alone, so the
    topbar and footer keep their spacing while `main`, `.dash-page` and the widget grid run edge to edge.
    ⚠️ The `10px` is duplicated from `.site-shell.layout-omni` on purpose — it is the value being

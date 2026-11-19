@@ -166,7 +166,7 @@ export default function CreateProtocolsPage() {
 
   // ── Signal capacity — the number this form never showed ──────────────────────────────────────
   //
-  // ⚠️ WHY THIS EXISTS (owner, 2026-11-07). `NEUTRAL_ONLY_DIRECTIVES` was referenced in exactly two
+  // ⚠️ WHY THIS EXISTS (Requirement, 2026-11-07). `NEUTRAL_ONLY_DIRECTIVES` was referenced in exactly two
   // places repo-wide: a comment, and a reporting-only accumulation. Nothing at save time warned that
   // a directive CANNOT emit a direction — and the arithmetic consequence is brutal, because a
   // direction-incapable directive still occupies the signal denominator while contributing exactly 0

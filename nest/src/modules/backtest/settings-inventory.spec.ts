@@ -155,7 +155,7 @@ describe('settings inventory — the bot fields a backtest HONOURS, proven behav
     });
 
     it('refuses a half-built plan rather than defaulting a missing number', () => {
-      // Enabled, but no distance: a default here would tighten stops the owner never asked for.
+      // Enabled, but no distance: a default here would tighten stops the requirement never asked for.
       const merged = mergeBotConfig({ botId: 'bot-1' } as any, bot({ simTslDistancePct: null }));
       expect(merged.request.stopPlan).toBeUndefined();
     });
@@ -307,7 +307,7 @@ describe('settings inventory — the builder never fabricates a value', () => {
   });
 
   it('the RUN group shows the BOT’s entry bar — the field the operator actually set', () => {
-    // ⚠️ This is the owner's requirement in one assertion: "the fields are wired to the same as used
+    // ⚠️ This is the project's requirement in one assertion: "the fields are wired to the same as used
     // by each strategy loaded". A bot set to skip anything under 10% must show 10, not the engine
     // default of 0.
     const { groups } = buildSettingsInventory({

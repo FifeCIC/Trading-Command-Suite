@@ -22,7 +22,7 @@
   border: 1px solid var(--line); border-radius: 8px;
   /* ⚠️ `--bg-elev`, NOT `--panel`, and NOT the `#0d1117` this used to be. Per
      ui-standards.instructions.md the themed tokens are `--bg-elev`/`--bg-elev-2`; `--panel` is
-     themed too but is #000000 in this pack, which is the "too dark" the owner reported. `--bg-elev`
+     themed too but is #000000 in this pack, which is the "too dark" it was reported. `--bg-elev`
      is the app's raised surface and is what the pinned toolbar buttons use. */
   background: var(--bg-elev);
 }

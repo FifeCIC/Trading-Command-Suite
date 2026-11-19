@@ -47,7 +47,7 @@
      2. `inset: unset` plus `top: anchor(bottom)` / `left: anchor(left)`, where the `anchor()` values
         need `anchor-name` on the TRIGGER and `.pip-trigger` never declared one — so both were invalid.
    With no inset, no auto margin and no valid anchor, the element sat at the top layer's default:
-   (0, 0). Exactly the owner's report.
+   (0, 0). Exactly the project's report.
 
    ⚠️ AND ANCHOR POSITIONING IS NOT USABLE HERE, so it is not restored. Declaring `anchor-name` and
    wrapping `anchor()` in `@supports` was tried and MEASURED in this same session: the panel cleared

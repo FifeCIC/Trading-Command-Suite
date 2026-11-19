@@ -2,7 +2,7 @@
  * market-movers.service.ts — a MARKET-WIDE winners/losers feed, from a ready-made provider (#1283).
  *
  * ── WHY THIS IS SEPARATE FROM `getTopMovers()` ──
- * Owner directive, 2026-11-16: we would ideally use a ready made source of top movers: top winners and top
+ * Requirement, 2026-11-16: we would ideally use a ready made source of top movers: top winners and top
  * losers. It doesn't make sense to only process our registered symbols for the strategy I want the
  * app to support. That doesn't mean it's not a good idea to have a page that shows us the top movers
  * out of the symbols that are registered — those are two separate purposes/features.
@@ -245,7 +245,7 @@ export function classifyInstrument(ticker: string): 'common' | 'warrant' | 'righ
  *
  * ⚠️ ORDER MATTERS AND IS DELIBERATE: instrument first, then price, then volume. If a warrant is
  * also sub-$1, the reason recorded is "instrument" — because that is the reason it can never be
- * traded, whereas price is a preference the owner may change.
+ * traded, whereas price is a preference the requirement may change.
  */
 export function applyFilters(
   rows: RawMover[],
@@ -437,7 +437,7 @@ export class MarketMoversService {
    * reason the second is used rather than swallowed.
    *
    * ⚠️ `movers.provider` CAN PIN ONE. `auto` is the default because the standing requirement is that
-   * when a ready-made source stops working the feed keeps working; pinning exists so the owner can
+   * when a ready-made source stops working the feed keeps working; pinning exists so the requirement can
    * compare the two on purpose rather than by accident.
    */
   private async fetchFromProviders(preferred: string, limit: number): Promise<ProviderResult> {

@@ -229,7 +229,7 @@
    unavailable, so the row carries a reason instead of a verdict. It must never look like a pass, or
    the exact defect this contract exists to prevent comes back through the styling. */
 .mse-check-warn { background: rgba(245,158,11,0.08); }
-/* ⚠️ `na` MUST STAND OUT. Owner direction, 2026-10-20: *"styled like the other rows so they're
+/* ⚠️ `na` MUST STAND OUT. Requirement, 2026-10-20: *"styled like the other rows so they're
    ticked even just to confirm that the data value is present … else style it to show otherwise.
    It's to make it so that when I scroll down any issues will stand out."*
    So a row that reports a real value is a PASS (ticked). `na` is reserved for "this could not be
@@ -249,7 +249,7 @@
 .mse-check-warn .mse-check-label,
 .mse-check-na .mse-check-label { opacity: 0.95; }
 /* Technical block — separated from the pipeline rows by spacing only. The heading and the dashed
-   divider were removed at the owner's request (2026-10-20): they cost a line and labelled rows the
+   divider were removed at the project's request (2026-10-20): they cost a line and labelled rows the
    reader can already identify.
    Same snapshot, deeper level — no visual claim that these are a different kind of fact. */
 .mse-check-list--technical {
@@ -448,7 +448,7 @@
 .mse-feed-gap {
   margin: 0 0 0.75rem;
   padding: 0.55rem 0.75rem;
-  /* 1px border + tint, not a thick left bar — the owner asked for that styling to be removed */
+  /* 1px border + tint, not a thick left bar — the requirement is for that styling to be removed */
   border: 1px solid color-mix(in srgb, var(--color-loss) 45%, transparent);
   background: color-mix(in srgb, var(--color-loss) 10%, transparent);
   color: var(--ink);

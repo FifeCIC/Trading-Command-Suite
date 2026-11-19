@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * audit-ui-review.cjs — READ the owner's Page Walkthrough verdicts (`uiScore` + "Preferred
- * Elements" = `noteNew`) and report them, so the Appearance area can be built from what the owner
+ * audit-ui-review.cjs — READ the project's Page Walkthrough verdicts (`uiScore` + "Preferred
+ * Elements" = `noteNew`) and report them, so the Appearance area can be built from what the requirement
  * ACTUALLY approved rather than from what an agent assumes a good UI looks like.
  *
  * ⚠️ WHY THE DATABASE AND NOT THE API. The API (:3201) is DOWN right now — measured, `curl` returns
@@ -95,7 +95,7 @@ const onlyMirror = mirrorKeys.filter((k) => !dbEntries[k]);
 if (onlyDb.length) console.log(`⚠️ in DB only     (${onlyDb.length}): ${onlyDb.slice(0, 12).join(', ')}`);
 if (onlyMirror.length) console.log(`⚠️ in mirror only (${onlyMirror.length}): ${onlyMirror.slice(0, 12).join(', ')}`);
 
-// ── 4. What the owner actually recorded ────────────────────────────────────────────────────────────
+// ── 4. What the requirement actually recorded ────────────────────────────────────────────────────────────
 const E = dbEntries; // canonical
 const all = Object.entries(E).map(([k, v]) => ({ key: k, ...v }));
 const scored = all.filter((e) => typeof e.uiScore === 'number');
@@ -114,7 +114,7 @@ for (let s = 10; s >= 1; s--) {
   if (n) console.log(`  ${String(s).padStart(2)}/10  ${'█'.repeat(n).padEnd(30)} ${n}`);
 }
 console.log(`  unrated  ${all.filter((e) => e.uiScore == null).length}` +
-  `   ⚠️ "unrated" is NOT "rated low" — it means the owner has not judged that page yet.`);
+  `   ⚠️ "unrated" is NOT "rated low" — it means the requirement has not judged that page yet.`);
 
 // ── 5. The preferred elements, best-scored first — this is the material ────────────────────────────
 console.log('\n══════════════════════════════════════════════════════════════════════');

@@ -1,12 +1,12 @@
 /**
- * symbol-discovery.service.spec.ts — the rule the owner stated, pinned so it cannot be softened.
+ * symbol-discovery.service.spec.ts — the rule the requirement stated, pinned so it cannot be softened.
  *
- * Owner directive, 2026-11-18: they just won't be set as active until the users actions or a bot trades …
+ * Requirement, 2026-11-18: they just won't be set as active until the users actions or a bot trades …
  * We cannot activate every symbol that appears in top losers or top winners else by the end of a month
  * we'll have hundreds of active symbols being monitored.
  *
  * ⚠️ THE FAILURE THIS GUARDS IS THE QUIET ONE. An `upsert` with `update: { active: false }` would
- * DEACTIVATE a symbol the owner had activated — silently, on every re-discovery — which removes it from
+ * DEACTIVATE a symbol the requirement had activated — silently, on every re-discovery — which removes it from
  * monitoring while looking like a successful write. That is worse than activating one by mistake,
  * because nobody goes looking for a symbol that disappeared from a list nobody was watching.
  */
@@ -128,7 +128,7 @@ describe('symbolType', () => {
     // ⚠️ This is a dictionary mapping, not a case change. `suitability.service.ts` compares a
     // symbol's type against a protocol's declared `symbolTypes` by exact lowercased equality, so a
     // `cryptocurrency` row would be REFUSED by a protocol declaring `crypto` — the scoring gate
-    // declining a symbol the owner had just discovered, with no error anywhere.
+    // declining a symbol the requirement had just discovered, with no error anywhere.
     expect(symbolType('EQUITY')).toBe('stock');
     expect(symbolType('CRYPTOCURRENCY')).toBe('crypto');
     expect(symbolType('CURRENCY')).toBe('forex');

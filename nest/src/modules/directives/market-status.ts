@@ -54,7 +54,7 @@ export interface MarketStatus {
  * ⚠️ THE CADENCE TABLE THAT USED TO LIVE HERE IS GONE (2026-09-15).
  *
  * It was a verbatim copy of `barLengthMs()` minus `1w`, so `1w` resolved to `undefined` here
- * while the owner returned 604800000. Two tables, one concept.
+ * while the requirement returned 604800000. Two tables, one concept.
  *
  * The fix uses `barLengthMsOrUndefined()` — NOT `barLengthMs()` — because the `undefined` is
  * load-bearing: the fail-closed branch tests `!declaredCadenceMs` to detect an unmeasurable feed.

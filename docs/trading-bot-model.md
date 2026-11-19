@@ -81,7 +81,7 @@ directive side and not on the score side.
 > error** — the silent-empty-result failure this repo keeps re-finding. If you need to match generated
 > names, match `Signals Workbench%`, not the punctuation.
 
-So the owner's question — *"strategies ARE generated when certain other things are made?"* — is
+So the project's question — *"strategies ARE generated when certain other things are made?"* — is
 **correct**: a `strategy` row is created per protocol for scoring. That is why listing them feels
 like listing protocols.
 
@@ -112,7 +112,7 @@ config:      { "weights": {}, "entryThreshold": 60, "watchThreshold": 40, "defen
    whether a strategy should only come into being when a human names one. Raise it; do not assume
    either answer.
 
-### 1c. How to COUNT strategies — the owner's definition (2026-09-18)
+### 1c. How to COUNT strategies — the project's definition (2026-09-18)
 
 > *"A strategy is about different treatment of a symbol."* — the project owner
 
@@ -128,7 +128,7 @@ config:      { "weights": {}, "entryThreshold": 60, "watchThreshold": 40, "defen
 - **A strategy IS a bot's whole configuration**: protocol + role + **market** + broker + execution
   policy.
 - **Any difference at all makes a different strategy.** No field can be dismissed, however trivial
-  the difference looks — that is the owner's explicit position.
+  the difference looks — that is the project's explicit position.
 - **A different market IS a different configuration.** Six bots on six FX pairs are six strategies.
 - **Two byte-identical bots are a DUPLICATE — a defect, not a merge.** Such bots "should never"
   exist. The derivation does not fold them into one tidy row; it groups them (a stable key is what
@@ -159,7 +159,7 @@ are kept here because the *shape* of the mistake is the reusable part.
 | Attempt | Said | Wrong because |
 |---|---|---|
 | 1st | **15** | the counting query omitted `sessionWindow`, even though the query that produced the raw rows had printed it (`EURGBP … london`, `AUDUSD … asian`) and the same run printed the with-session figure of **17**, unused |
-| 2nd | **18** | the identity *excluded* `symbol`, on the reasoning "symbols are scope, not identity". The owner corrected this: a different market **is** a different configuration |
+| 2nd | **18** | the identity *excluded* `symbol`, on the reasoning "symbols are scope, not identity". The requirement corrected this: a different market **is** a different configuration |
 | **correct** | **26** | every field contributes; identical bots are duplicates |
 
 **Both wrong answers had one shape: treating a field that happened to be UNCHANGED as though it
@@ -207,7 +207,7 @@ detector is blind to exactly the difference that makes them different strategies
 **The derivation rule.**
 
 > A **derived strategy** is a distinct FULL configuration. The `strategyKey` is a stable SHA-256
-> over every part — it is the "ID along with the IDs of each part" the owner asked for. Two bots
+> over every part — it is the "ID along with the IDs of each part" the requirement is for. Two bots
 > share a key only by being byte-identical, which is reported as a duplicate.
 
 ```
@@ -238,7 +238,7 @@ strategies. Three rules, each verified by the guard:
 
 - **Derived** (no name) — computed on every read, never stored. Recomputed when a part changes,
   which is why a config edit *replaces* a key rather than mutating one.
-- **Pinned** (named by the owner) — a name plus the part IDs recorded against the key, so the
+- **Pinned** (named by the requirement) — a name plus the part IDs recorded against the key, so the
   strategy survives a part being edited. **This is the follow-up (#875) and is NOT built yet.**
 - **Derivation is tracked by #876.** Naming and full-pipeline backup are #875.
 
@@ -247,7 +247,7 @@ that shows **26 strategies** rather than 26 anonymous rows or 27 blended ratings
 snapshot/restore keyed on the STRATEGY rather than on `scoringStrategyId` (see #875).
 
 **Scope boundary.** `MetaStackVersioningService` already snapshots and restores, and
-`MetaStackSnapshot` (13 rows) already does the backup the owner described. It is keyed on
+`MetaStackSnapshot` (13 rows) already does the backup the requirement described. It is keyed on
 `scoringStrategyId`, so it covers 22 of 26 bots and collapses the FX fourteen into one. This is
 **widening an existing mechanism, not building a second one** — see #875.
 

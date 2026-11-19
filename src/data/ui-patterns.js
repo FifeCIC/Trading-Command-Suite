@@ -1,9 +1,9 @@
 /**
- * ui-patterns.js — the owner's APPROVED UI patterns, read out of the Page Walkthrough.
+ * ui-patterns.js — the project's APPROVED UI patterns, read out of the Page Walkthrough.
  *
  * ⚠️ THIS IS NOT AN AGENT'S OPINION OF GOOD DESIGN. Every entry below is traceable to a verdict the
  * owner recorded on `/development/ui-review` — a UI/10 score and/or a "Preferred Elements" note
- * (`noteNew`). Where a pattern comes from a page the owner scored LOW, that is stated, because the
+ * (`noteNew`). Where a pattern comes from a page the requirement scored LOW, that is stated, because the
  * owner sometimes names the ONE strong element on an otherwise weak page (`/protocols/directive-viewer`
  * is 4/10 and its status pills are the thing they want to decide between).
  *
@@ -13,16 +13,16 @@
  * 2026-10-13T16:58:17.755Z). Re-read it with:
  *     node scripts/audit-ui-review.cjs       # DB is canonical; the mirror is a claim about it
  *
- * ⚠️ WHY A DATA FILE AND NOT MARKUP. The owner's requirement is that this library be REMOVABLE —
+ * ⚠️ WHY A DATA FILE AND NOT MARKUP. The project's requirement is that this library be REMOVABLE —
  * *"I need to be able to remove it from this app once we update the apps existing theme lab"* — and
  * that it be lifted into React Stack Core later. So it is plain data with **no imports**: it can be
  * copied to another project, re-topiced with different subject matter, and deleted from this one
  * without untangling anything.
  *
  * ⚠️ `state` IS THE HONEST BIT — do not collapse it:
- *   'strong'     the pattern is proven in this app and the owner said so.
- *   'requested'  the owner asked explicitly for a sample in the library; not built yet.
- *   'undecided'  the owner asked to see TWO approaches side by side before choosing. A sample that
+ *   'strong'     the pattern is proven in this app and the brief said so.
+ *   'requested'  the brief asked explicitly for a sample in the library; not built yet.
+ *   'undecided'  the brief asked to see TWO approaches side by side before choosing. A sample that
  *                silently picks one answers a question they have deliberately left open.
  */
 
@@ -37,7 +37,7 @@ export const PATTERN_SOURCE = {
 /** Families are the order a reader asks the questions in: shape → table → status → control → container. */
 export const PATTERN_FAMILIES = [
   { id: 'shape', label: 'Page shape', lede: 'How the whole page is arranged before any component is chosen.' },
-  { id: 'table', label: 'Tables', lede: 'The workhorse. The owner named five distinct table jobs rather than one table style.' },
+  { id: 'table', label: 'Tables', lede: 'The workhorse. The requirement named five distinct table jobs rather than one table style.' },
   { id: 'status', label: 'Status language', lede: 'How a state, a taxonomy or a number is made visible.' },
   { id: 'control', label: 'Controls & forms', lede: 'Choosing, adding and filtering.' },
   { id: 'container', label: 'Containers', lede: 'What holds the content, and when that container is itself the message.' },
@@ -46,7 +46,7 @@ export const PATTERN_FAMILIES = [
 export const UI_PATTERNS = [
   // ── Page shape ────────────────────────────────────────────────────────────────────────────────────
   {
-    // ADDED 2026-11-18. The owner reported "blocks of text appearing on the pages" twice in one day,
+    // ADDED 2026-11-18. It was reported "blocks of text appearing on the pages" twice in one day,
     // naming `<p.slv-lead>` and `<p.slv-theory-body>` on /strategies/day-top-winners. Both were prose
     // the reader had to work through to REACH the table — which was the only reason the page existed.
     // This entry is the replacement pattern, so the next page has something to copy instead of a
@@ -67,7 +67,7 @@ export const UI_PATTERNS = [
     id: 'master-detail-rail',
     family: 'shape',
     name: 'Master–detail with a control rail',
-    what: 'A wide list of selectable rows on the left, and a right-hand sidebar that is a mix of quick controls and detail for whatever is selected. Described by the owner as "like quick settings for something that is selected".',
+    what: 'A wide list of selectable rows on the left, and a right-hand sidebar that is a mix of quick controls and detail for whatever is selected. Described by the requirement as "like quick settings for something that is selected".',
     bestFor: 'Large collections where the user works one item at a time',
     sources: [{ view: '/protocols/directives-registry', score: 8 }, { view: '/research/symbols-browser', score: 8 }],
     elements: ['wide selectable rows', 'right rail (symbol-detail-rail)', 'title with slug beneath'],
@@ -87,7 +87,7 @@ export const UI_PATTERNS = [
     id: 'step-through',
     family: 'shape',
     name: 'Step-through with per-step status',
-    what: 'A pipeline shown as ordered steps, each carrying its own state, so a long process is readable in one screen. Called "highly unique" by the owner.',
+    what: 'A pipeline shown as ordered steps, each carrying its own state, so a long process is readable in one screen. Called "highly unique" by the requirement.',
     bestFor: 'Multi-stage pipelines and processes with a per-stage outcome',
     sources: [{ view: '/status/meta-stack-explorer', score: 9 }],
     elements: ['step list', 'per-step status', 'high-impact notice banner (mse-signal-banner)'],
@@ -97,7 +97,7 @@ export const UI_PATTERNS = [
     id: 'flow-page',
     family: 'shape',
     name: 'Flow page: text → cards → text → controls → table',
-    what: 'A long page that alternates prose, cards and a table, with restrained colour. The owner could not fully explain why it works and said so.',
+    what: 'A long page that alternates prose, cards and a table, with restrained colour. The requirement could not fully explain why it works and said so.',
     bestFor: 'Statistical reference pages that must be explained and read, not just scanned',
     sources: [{ view: '/status/broker-catalogue', score: null }],
     elements: ['broker stat cards (bc-broker)', 'inline explanatory text', 'closing table'],
@@ -109,7 +109,7 @@ export const UI_PATTERNS = [
     id: 'ladder-table',
     family: 'table',
     name: 'Paired-comparison ladder',
-    what: 'Two columns holding comparable statistics side by side, with a shared ranking. Built for a stat that changes constantly. The owner calls the design "almost perfect".',
+    what: 'Two columns holding comparable statistics side by side, with a shared ranking. Built for a stat that changes constantly. The requirement calls the design "almost perfect".',
     bestFor: 'Live monitoring of paired/competing values (score vs score, protocol vs protocol)',
     sources: [{ view: '/scoring/live-ordering-stack', score: 9 }],
     elements: ['paired rows', 'rectangular status icons', 'partly-coloured values'],
@@ -119,7 +119,7 @@ export const UI_PATTERNS = [
     id: 'stats-status-table',
     family: 'table',
     name: 'Common stats-and-status table',
-    what: 'A row-heavy table where most columns are a status rather than a number, all drawn in one consistent style. The owner wants the app to converge on one of these.',
+    what: 'A row-heavy table where most columns are a status rather than a number, all drawn in one consistent style. The requirement is the app to converge on one of these.',
     bestFor: 'The default list-of-things table across the app',
     sources: [{ view: '/protocols/protocols-ladder', score: 7 }, { view: '/scoring/symbols-ladder', score: 8 }],
     elements: ['rectangular status icons', 'slashed stats with a partly coloured value'],
@@ -128,7 +128,7 @@ export const UI_PATTERNS = [
   {
     // ADDED 2026-11-18. Two defects in one table, both measured on /strategies/day-top-winners:
     //   1. Every numeric header was right-aligned while its cells were left-aligned, because `num` was
-    //      passed to the `th` and forgotten on the `td`. The owner: "columns aren't under their headers".
+    //      passed to the `th` and forgotten on the `td`. The requirement: "columns aren't under their headers".
     //   2. One list rendered alone stretched a four-column table to 1,452px of a 1,500px page.
     // Both are RULES, not tastes: a column's alignment is one fact declared at both ends, and a table's
     // width is set by its content, not by the page.
@@ -226,7 +226,7 @@ export const UI_PATTERNS = [
     id: 'status-pill-fork',
     family: 'status',
     name: '⚠️ Status pills — TEXT vs RECTANGLE (undecided)',
-    what: 'Two existing ways of showing the same state. The TEXT pill makes the word itself striking; the RECTANGLE badge is what most tables currently use. The owner has NOT chosen and asked for both to be shown together.',
+    what: 'Two existing ways of showing the same state. The TEXT pill makes the word itself striking; the RECTANGLE badge is what most tables currently use. The requirement has NOT chosen and asked for both to be shown together.',
     bestFor: 'Wherever a state or signal class is displayed — this decision propagates app-wide',
     sources: [{ view: '/protocols/directive-viewer', score: 4 }, { view: '/scoring/symbols-ladder', score: 8 }],
     elements: ['dv-signal (text pill)', 'rectangular status icons (badge)'],
@@ -256,13 +256,13 @@ export const UI_PATTERNS = [
   },
   {
     id: 'add-items-form',
-    // Sample BUILT 2026-10-13, TRIMMED 2026-10-14 — the owner chose A (inline rows) and B (one card per
+    // Sample BUILT 2026-10-13, TRIMMED 2026-10-14 — the requirement chose A (inline rows) and B (one card per
     // item) from three offered, and C was deleted. B is the one kept for items that need a warning or a
     // confirmation underneath their values; that reason is recorded at the code site.
     sampleAt: '/appearance/forms',
     family: 'control',
     name: 'Add-items form arrangement',
-    what: 'A repeating "add item" block — currently monochrome. The owner wants 2–3 variants to choose from before settling.',
+    what: 'A repeating "add item" block — currently monochrome. The requirement is 2–3 variants to choose from before settling.',
     bestFor: 'Building an ordered collection (groups, steps, rules)',
     sources: [{ view: '/protocols/protocol-builder', score: 7 }],
     elements: ['cp-section (Directive Groups)'],
@@ -296,7 +296,7 @@ export const UI_PATTERNS = [
     // ⚠️ CORRECTED 2026-10-13, AND THE ORIGINAL ENTRY WAS WRONG. Measured: the `.pip-trigger` class
     // belongs to `src/components/PageInfoPopover.jsx` — it is the small CIRCULAR ℹ button that opens a
     // native popover, and the shell renders it in the top row for any view with a VIEW_EXPLANATIONS
-    // entry. It is NOT a square button and it does NOT open a symbol or detail panel. The owner's
+    // entry. It is NOT a square button and it does NOT open a symbol or detail panel. The project's
     // walkthrough note attached it to /watchlists/active-symbols because that is the page where their
     // element picker sampled it — the element is shell-level, not page-level.
     // The `what` / `bestFor` lines below were written before that was measured; the `sampleAt` note is
@@ -320,7 +320,7 @@ export const UI_PATTERNS = [
     bestFor: 'Any state a reader must notice before reading on — a failed read, a position needing attention, a degraded service',
     sources: [{ view: '/trading/exit-signals', score: null }],
     elements: ['.app-notice--critical', '.app-notice--warning', '.app-notice--success', '.app-notice--info'],
-    // ⚠️ `score: null` ON PURPOSE. The owner approved the CRITICAL notice by name; they did not give
+    // ⚠️ `score: null` ON PURPOSE. The requirement approved the CRITICAL notice by name; they did not give
     // the page a UI score, and inventing one would be an agent's judgement dressed as a measurement.
     state: 'strong',
   },
@@ -348,7 +348,7 @@ export const UI_PATTERNS = [
     id: 'widget-system',
     family: 'container',
     name: 'Dashboard widget system',
-    what: 'The whole widget board — placement, sizing and per-widget minimums. The single strongest thing on the walkthrough per the owner, and the thing they intend to reuse most.',
+    what: 'The whole widget board — placement, sizing and per-widget minimums. The single strongest thing on the walkthrough per the requirement, and the thing they intend to reuse most.',
     bestFor: 'Any page where the user should arrange their own information',
     sources: [{ view: '/dashboard/dashboard', score: 8 }, { view: '/status/broker-catalogue', score: null }],
     elements: ['widget board', 'bc-broker cards'],
@@ -380,7 +380,7 @@ export const UI_PATTERNS = [
   },
 ];
 
-/** Element the owner named as actively DISLIKED — worth as much as the approved list. */
+/** Element the requirement named as actively DISLIKED — worth as much as the approved list. */
 export const REJECTED_PATTERNS = [
   {
     id: 'deletable-chips',

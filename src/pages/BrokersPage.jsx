@@ -276,7 +276,7 @@ export default function BrokersPage() {
   /**
    * Column sorting — ordered by the SHARED rule (`src/core/use-sort.jsx`), not a copy.
    *
-   * Owner direction, 2026-11-18: *"we need column sorting… and column sorting should be added by
+   * Requirement, 2026-11-18: *"we need column sorting… and column sorting should be added by
    * default"*. The comparison rule (nulls last, numeric vs text, `aria-sort` vocabulary) is not
    * re-implemented here; this only declares WHICH value each column sorts on. `_name` is the
    * default order because a directory of venues is read alphabetically.
@@ -310,7 +310,7 @@ export default function BrokersPage() {
           VISIBLE page title as a violation, and this is not one. */}
       <h1 className="sr-only">Brokers — venues and accounts</h1>
 
-      {/* ⚠️ NO <h1> AND NO PAGE-LEVEL ℹ (owner direction, 2026-11-18).
+      {/* ⚠️ NO <h1> AND NO PAGE-LEVEL ℹ (requirement, 2026-11-18).
           *"I don't like headers at the top of pages… We know we're on the Brokers page based on the
           menu highlight."* The title is the breadcrumb in `.main-top-row`, and the ONE ℹ is
           rendered by the shell (`MainTopInfo`) at its top-right, in line with those breadcrumbs.
@@ -346,7 +346,7 @@ export default function BrokersPage() {
           Enter/Space operates it, and the state is announced. A clickable <tr> would need the same
           three attributes and still would not be focusable. */}
       <section className={styles.broker} aria-label="Broker directory">
-        {/* ⚠️ NO `<h2>Broker directory</h2>` AND NO STATS LINE HERE (owner direction, 2026-11-18).
+        {/* ⚠️ NO `<h2>Broker directory</h2>` AND NO STATS LINE HERE (requirement, 2026-11-18).
             *"This table has two headers in a way, it's silly… the additional line 'Broker directory'
             is like another header that isn't needed."* A section heading that restates the page's
             own name adds a second title to a page whose identity is already the nav highlight and

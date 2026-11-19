@@ -287,7 +287,7 @@ export default function UserWatchlistsPage() {
        *
        * It is `sr-only` rather than visible on purpose: this page's identity is carried by the sidebar
        * and the breadcrumb, and it deliberately opens straight into its content. A visible title would
-       * duplicate the nav and change a design the owner is actively reviewing. `sr-only` keeps it in the
+       * duplicate the nav and change a design the requirement is actively reviewing. `sr-only` keeps it in the
        * accessibility tree (unlike `display:none`, which would remove it) and out of the way visually.
        */}
       <h1 className="sr-only">Watchlists</h1>
@@ -334,7 +334,7 @@ export default function UserWatchlistsPage() {
         <div className="wl-split">
           {/* ── Left: Accordion List ── */}
           <div className="wl-list-pane">
-            {/* ⚠️ ONE LIST, NOT TWO (owner directive, 2026-11-06): Remove <div.wl-group-label> Built-in
+            {/* ⚠️ ONE LIST, NOT TWO (requirement, 2026-11-06): Remove <div.wl-group-label> Built-in
                 Watchlists and make <div.wl-list-header> ★ Trading212 Portfolio appear in the full list
                 instead). The built-ins were in their own group behind a heading, which pushed the
                 one built-in below a label that told the reader nothing. They now sit first inside the

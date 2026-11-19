@@ -13,7 +13,7 @@
  *
  * ⚠️ The id is a PERSISTED KEY (`accounts.<id>`), which is why the fix reads the pre-rename key as a
  * fallback instead of migrating. One legacy row controlled both bridges, so copying it to each
- * per-bridge key would be a guess about the owner's intent — right today, wrong the moment the two
+ * per-bridge key would be a guess about the project's intent — right today, wrong the moment the two
  * diverge. The fallback needs no guess, and the first write to the new key supersedes it.
  */
 import { PortfolioAccountsService } from './portfolio-accounts.service';
@@ -82,7 +82,7 @@ describe('PortfolioAccountsService — account identity (#1205)', () => {
 
   it('applies a PRE-RENAME toggle to the per-bridge key, so nothing silently goes inert', async () => {
     const store: Store = new Map();
-    // The owner excluded this login before the rename. One legacy row, no bridge in it.
+    // The requirement excluded this login before the rename. One legacy row, no bridge in it.
     store.set('accounts.mt5:10011309743', JSON.stringify({ enabled: false, removed: true }));
 
     const { service } = makeService(SAME_LOGIN_ON_TWO_BRIDGES, store);

@@ -68,7 +68,7 @@ const movePct = (side, entry, current) => {
  * ==========================================================================
  * Rendered INSIDE the table as a `<tr><td colSpan>` so every fact sits under the columns it belongs
  * to. The previous affordance was the symbol link's native `title`, which repeated the ticker and
- * floated wherever the pointer was — the owner's "same information, not even inline with columns".
+ * floated wherever the pointer was — the project's "same information, not even inline with columns".
  *
  * ⚠️ NOTHING IS INVENTED. Every field shown comes from the position payload; where a source does not
  * report something (a Trading212 holding has no stop and no broker, by measurement) the row says so
@@ -432,7 +432,7 @@ export default function T212PortfolioPage() {
    * `investActive` ('demo' when the demo key is connected) while the ROWS come from `/validate`, which
    * returns every `provider='trading212'` row regardless of account. Measured: the table showed 17
    * Invest (LIVE) holdings — verified directly against the broker — under the heading "Practice
-   * (Demo)". The owner reported it as *"symbols that I do not have in any of my accounts"*, which is
+   * (Demo)". It was reported it as *"symbols that I do not have in any of my accounts"*, which is
    * exactly what a mislabelled account looks like.
    *
    * So the label now comes from the rows' own `accountId` tag. `null` means the source did not say,
@@ -506,7 +506,7 @@ export default function T212PortfolioPage() {
    * ⚠️ A COOLDOWN PRODUCES NOTHING ON SCREEN — measured reconsideration, same session. The backend
    * answers `cooldown:true` for 60s after every successful import, and the page auto-imports on mount,
    * so a first draft rendered "Cooldown: 41s remaining" on nearly every visit. That is machine chatter
-   * dressed as a status line: it describes a mechanism working correctly, on a page the owner had just
+   * dressed as a status line: it describes a mechanism working correctly, on a page the requirement had just
    * asked to have LESS low-value text. The last-synced time already answers "how fresh is this".
    */
   const syncNotice = useMemo(() => {
@@ -522,7 +522,7 @@ export default function T212PortfolioPage() {
   const investTitle = investActive === 'demo' ? 'Practice (Demo)' : 'Invest (Live)';
 
   // ── MT5 positions (live broker rows, 2026-11-06) ──
-  // ⚠️ WHY THEY ARE HERE AT ALL. The owner asked for the hover to say "what broker the position is
+  // ⚠️ WHY THEY ARE HERE AT ALL. The requirement is for the hover to say "what broker the position is
   // opened on, SL, TP, and a clear indicator if a position is not only in profit but the profit is
   // locked in" — and NONE of those fields exist on an imported Trading212 holding (measured: the T212
   // position payload has avgPrice/pnl/peakProfitPct, no stop, no broker). Only the MT5 positions carry
@@ -717,7 +717,7 @@ export default function T212PortfolioPage() {
   return (
     <div className="t212p-page">
       {/* ── ONE summary block ──────────────────────────────────────────────────────────────────
-          ⚠️ THE TOP OF THIS PAGE WAS MOSTLY AIR (owner directive, 2026-11-06): the top area is low value
+          ⚠️ THE TOP OF THIS PAGE WAS MOSTLY AIR (requirement, 2026-11-06): the top area is low value
           right now … a space at the top that's too big). Four stacked full-width rows — a header
           whose only child is an `h1` the shell HIDES, the grand total, a hint paragraph and a
           LastUpdated line — each costing its own margin to say very little, and all of it leaving the
@@ -726,10 +726,10 @@ export default function T212PortfolioPage() {
 
           Now: no header (the breadcrumb already names the view, and `index.css` hides a page-level
           h1 anyway), the ℹ and the meta line live on the section heading row, and the grand total is
-          the FIRST TILE OF THE SAME GRID as the account figures — the owner's own suggestion. */}
+          the FIRST TILE OF THE SAME GRID as the account figures — the project's own suggestion. */}
       <section className="t212p-section">
         {/*
-          ⚠️ NO SECTION TITLE AND NO INLINE ℹ (owner direction, 2026-11-19: pages still carried titles
+          ⚠️ NO SECTION TITLE AND NO INLINE ℹ (requirement, 2026-11-19: pages still carried titles
           with the information icon beside them, so the ℹ landed in a different place on each page).
 
           The `h2` said "Practice (Demo) — Account Summary" — a title for a page the breadcrumb already
@@ -761,7 +761,7 @@ export default function T212PortfolioPage() {
           */}
           <div>{syncing ? 'Syncing…' : <LastUpdated at={lastUpdated} inline />}</div>
           {/*
-            ⚠️ ONE ℹ PER PAGE, SO THIS CARRIES EVERY SECTION'S EXPLANATION (owner, 2026-11-19). The
+            ⚠️ ONE ℹ PER PAGE, SO THIS CARRIES EVERY SECTION'S EXPLANATION (Requirement, 2026-11-19). The
             positions table used to have its own ℹ inside its heading, and the summary had another —
             two triggers on one page, each positioned by that section's own markup, which is exactly
             the inconsistency being removed. A page contributes its text here; the shell decides where
@@ -795,7 +795,7 @@ export default function T212PortfolioPage() {
 
           {investActive && (
             <>
-              {/* ⚠️ THE TILES DID NOT ADD UP, and the labels were the reason (owner directive, 2026-11-06): we have Invested and cash shows zero so not sure about the maths).
+              {/* ⚠️ THE TILES DID NOT ADD UP, and the labels were the reason (requirement, 2026-11-06): we have Invested and cash shows zero so not sure about the maths).
                   Measured against `/api/portfolio/trading212/validate`:
                     Σ(quantity × avgPrice)    = 11,835.92 = `invested`
                     Σ(quantity × currentPrice)=  8,675.38 = `total`
@@ -838,7 +838,7 @@ export default function T212PortfolioPage() {
                 </span>
               </div>
               {/*
-                ⚠️ THE "Positions" TILE IS GONE (owner, 2026-11-19). It counted the rows of the table
+                ⚠️ THE "Positions" TILE IS GONE (Requirement, 2026-11-19). It counted the rows of the table
                 directly below it, which already says "Positions (n)" in its own heading — the same
                 fact twice, and a tile spent on a number the reader is about to scroll past. Nothing
                 was lost: the count is in the section heading and in each account's own summary.
@@ -850,7 +850,7 @@ export default function T212PortfolioPage() {
       </section>
 
       {/* ── Combined positions (all enabled accounts + MT5) ─────────────────────────────────────
-          ⚠️ THE HOVER IS THE FEATURE, NOT THE ROW (owner directive, 2026-11-06): The tables hover over row
+          ⚠️ THE HOVER IS THE FEATURE, NOT THE ROW (requirement, 2026-11-06): The tables hover over row
           changes display the same information and its not even inline with columns … Expand on the
           hover over approach before we pack the initial rows of the table full of information which
           doesn't have a lot of room for that.
@@ -862,7 +862,7 @@ export default function T212PortfolioPage() {
           alone would close it while the reader is reaching for a control. */}
       <section className="t212p-section">
         {/*
-          ⚠️ THE SECTION TITLE IS GONE AND THE ℹ WITH IT (owner, 2026-11-19) — same rule as the summary
+          ⚠️ THE SECTION TITLE IS GONE AND THE ℹ WITH IT (Requirement, 2026-11-19) — same rule as the summary
           above: "titles with the information icon beside them … placed in different places across the
           app" is the inconsistency, and the table's own column headers already say what the section
           is. Everything the heading carried is either in the ONE shell popover (the explanation, and
@@ -952,7 +952,7 @@ export default function T212PortfolioPage() {
                           {p.ticker}
                         </a>
                         {/*
-                          The COMPANY, which the row never stated (owner, 2026-11-19). Drawn under the
+                          The COMPANY, which the row never stated (Requirement, 2026-11-19). Drawn under the
                           ticker rather than in its own column: it is the same fact at a second level
                           of detail, and a column of them would compete with the numbers either side.
                         */}

@@ -13,7 +13,7 @@
  *   /trading/ab-strategies?test=<id>           → an OFFICIAL test: control vs variant snapshots,
  *                                                the recorded change, and the measured configs.
  *
- * ⚠️ THE SYMBOL IS THE CONSTANT (owner directive, 2026-09-22): A/B testing of strategies is not meant to be
+ * ⚠️ THE SYMBOL IS THE CONSTANT (requirement, 2026-09-22): A/B testing of strategies is not meant to be
  * different symbols... The symbol is the one thing that isn't to change when we copy a strategy for
  * A/B testing. A pair must therefore trade the SAME market: what varies between a strategy and
  * its copy is the playbook (protocol / timeframe / execution policy), never the symbol. Two
@@ -31,7 +31,7 @@
  * shows the first 8 characters, so links should not need more). There is deliberately NO "last
  * pair" persistence: the index is the default view, so a stale pair must not hijack it.
  *
- * ⚠️ LIST | TABLE (owner, 2026-09-22). The index renders as the grouped LIST or as a TABLE of one
+ * ⚠️ LIST | TABLE (Requirement, 2026-09-22). The index renders as the grouped LIST or as a TABLE of one
  * pair = two rows (A shaded `--bg-elev-2`, B plain) carrying each side's REALISED P&L from #894's
  * bot-performance attribution, orderable by the profit difference (B − A) — *"to determine the
  * best B out of ALL B's"* — and the same numbers a dashboard widget can later read. A profit cell
@@ -264,7 +264,7 @@ function SideColumn({ side, strategy, reg, drift, peer }) {
           <span className={styles.source} title={reg?.source === 'auto'
             ? 'Auto-registered: this combination materialised (a live bot) and got a stable id.'
             : reg
-              ? 'Registered by the owner.'
+              ? 'Registered by the requirement.'
               : 'Not registered — no stable id yet.'}
           >
             {reg ? (reg.source === 'auto' ? 'auto id' : 'registered') : 'not registered'}
@@ -393,7 +393,7 @@ function PairSide({ side, strategy, name }) {
 
 /**
  * PairTable — the index as a TABLE: one pair = TWO rows (A shaded, B plain) carrying each side's
- * realised record, orderable by the profit difference (B − A). Owner directive, 2026-09-22: a table... all
+ * realised record, orderable by the profit difference (B − A). Requirement, 2026-09-22: a table... all
  * A and B rows together — two rows, slightly different shading + *"order by profit difference
  * between the A's and the B's in order to determine the best B out of ALL B's"*.
  *
@@ -624,7 +624,7 @@ export default function AbStrategiesPage() {
   const strategies = useMemo(() => data?.strategies ?? [], [data]);
 
   /**
-   * Every live comparison, with the ACTION to take — the owner's 2026-11-06 request:
+   * Every live comparison, with the ACTION to take — the project's 2026-11-06 request:
    * "agentic AI needs to be able to pick up A/B tests and decide how to proceed, else we will have
    * clutter and strategies that run for months needlessly."
    *
@@ -653,7 +653,7 @@ export default function AbStrategiesPage() {
     ?? key.slice(0, 8);
 
   // EVERY eligible pair, for the index. `?pair=` is a drill-down INTO this set, never a substitute
-  // for it — owner directive, 2026-09-22: the view is designed to list all pairs... not a comparison for
+  // for it — requirement, 2026-09-22: the view is designed to list all pairs... not a comparison for
   // one pair.
   const pairGroups = useMemo(() => buildPairs(strategies), [strategies]);
   const totalPairs = pairGroups.reduce((n, g) => n + g.pairs.length, 0);
@@ -682,13 +682,13 @@ export default function AbStrategiesPage() {
   }, [pairParam, strategies]);
 
   // ── View mode + realised performance. `list` is the index; `table` is the busy-mode view the
-  // owner asked for (2026-09-22): a pair's two rows together (A shaded, B plain), each side's
+  // the brief asked for (2026-09-22): a pair's two rows together (A shaded, B plain), each side's
   // realised P&L beside it, orderable by the profit difference (B − A) to rank the Bs.
   // The preference persists; the P&L fetch only runs while the table is open.
   const [view, setView] = usePersistentChoice('abstrategies:view', 'list', ['list', 'table']);
   const [deltaSort, setDeltaSort] = usePersistentChoice('abstrategies:sort', 'desc', ['desc', 'asc']);
   // ── List-view filter and ordering (owner request, 2026-10-08) ──
-  // The owner asked the pair row to "display the difference between A and B", with "the ability to
+  // The brief asked the pair row to "display the difference between A and B", with "the ability to
   // order by that value and search". The DIFFERENCE here is `p.diffs.length` — how many
   // configuration fields differ — which is what the row's `≠ n` chip counts. It is NOT the Table
   // view's delta, which is realised profit (B − A); the two are different questions and the
@@ -939,7 +939,7 @@ export default function AbStrategiesPage() {
                 </button>
               </div>
             </div>
-            {/* ⚠️ MOVED INTO THE ℹ POPOVER (2026-11-07). Owner directive: Move <p.listMeta>115 eligible pairs ·
+            {/* ⚠️ MOVED INTO THE ℹ POPOVER (2026-11-07). Requirement: Move <p.listMeta>115 eligible pairs ·
                 every pair trades ONE symbol… to an information popout like we have on many other
                 pages now. The count is still on screen in the group headings below and in the
                 pair list itself; this paragraph was three clauses of method (one-symbol rule, the
@@ -1118,7 +1118,7 @@ export default function AbStrategiesPage() {
 
       {/*
         EXPERIMENT DECISIONS — the answer to "what do I DO about these tests?" (#1201).
-        owner directive, 2026-11-06: agentic AI needs to be able to pick up A/B tests and decide how to
+        requirement, 2026-11-06: agentic AI needs to be able to pick up A/B tests and decide how to
         proceed, else we will have clutter and strategies that run for months needlessly.
 
         ⚠️ THREE STATES, NEVER TWO. "Nothing needs a decision", "the check failed" and "still

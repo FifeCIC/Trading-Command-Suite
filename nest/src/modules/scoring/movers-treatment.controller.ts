@@ -6,7 +6,7 @@
  *
  * ⚠️ NO STRATEGY GATE ON THIS ROUTE, DELIBERATELY. The strategy that motivated the page does not
  * exist yet, so gating the DATA on it would return nothing at all and the page could not show the
- * "inactive, and here is the reason" state the owner asked for. What is gated is the strategy's own
+ * "inactive, and here is the reason" state the requirement is for. What is gated is the strategy's own
  * tab, not the observation — an operator can always ask what the app is doing with a mover.
  */
 import { Controller, Get, Query } from '@nestjs/common';

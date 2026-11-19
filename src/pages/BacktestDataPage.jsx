@@ -271,7 +271,7 @@ export default function BacktestDataPage() {
       </div>
 
       {/* ── CAPTURED WINDOWS ──────────────────────────────────────────────────────────────────────
-          ⚠️ MOVED HERE FROM `/lab/backtest` (2026-10-22, owner direction: "It feels like something that
+          ⚠️ MOVED HERE FROM `/lab/backtest` (2026-10-22, requirement: "It feels like something that
           should be listed on Backtest Data"). The argument is structural, not cosmetic: a captured
           period is DATA — a named, noted, imported window of bars — and this page is the inventory of
           data. Leaving it on the Lab put a storage-management control in the middle of a measurement

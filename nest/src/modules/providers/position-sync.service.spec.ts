@@ -269,7 +269,7 @@ describe('PositionSyncService', () => {
    *
    * If the share cannot be computed with several rows involved, the reconciler writes NO P&L. The
    * two tempting alternatives are both wrong: the whole net is the overstatement, and `0` is a
-   * fabricated break-even in a ledger the owner reads. An honest "cannot compute" is the outcome.
+   * fabricated break-even in a ledger the requirement reads. An honest "cannot compute" is the outcome.
    */
   it('writes NO pnl rather than the whole net when the share is not computable (#1014)', async () => {
     position.findMany.mockResolvedValue([{

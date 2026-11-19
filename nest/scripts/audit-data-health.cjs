@@ -22,7 +22,7 @@
  *
  * WHY THIS EXISTS
  * ---------------
- * The project owner asked (2026-09-15): *"Clearly we need to question why any column in any
+ * The project the brief asked (2026-09-15): *"Clearly we need to question why any column in any
  * table is currently empty after all this time."*
  *
  * The answer is that **a missing value and a not-yet-populated value look identical in a

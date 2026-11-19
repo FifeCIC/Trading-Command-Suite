@@ -3,7 +3,7 @@
  * measure-period-sensitivity.cjs — does the period knob actually MATTER? (M1, #1166)
  * ==================================================================================
  * The directive depth audit (#1166) proved 161 directives hardcode 110 named constants plus 29 inline
- * literal periods. That answers "can it be tuned". It does NOT answer the owner's actual question:
+ * literal periods. That answers "can it be tuned". It does NOT answer the project's actual question:
  *
  *   "how likely is it for each directive to offer better score and signal opportunity when we can
  *    configure it on a deeper level on a per symbol basis?"

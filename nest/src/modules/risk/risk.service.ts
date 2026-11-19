@@ -197,7 +197,7 @@ export class RiskService {
   /**
    * canOpenPosition() — the per-SYMBOL allocation gate (#865, corrected for #899).
    *
-   * ⚠️ #899 (2026-09-19): `newCapital` alone measures ONE ORDER, not the SYMBOL. The owner's
+   * ⚠️ #899 (2026-09-19): `newCapital` alone measures ONE ORDER, not the SYMBOL. The project's
    * design is one protocol driving several bots on the same symbol (docs/trading-bot-model.md §4)
    * with the explicit constraint "…for the same symbol, but not increasing risk". Measured at
    * `risk.maxPerSymbol = 0.25`: Bot A opens BTC at 20% ✓, Bot B at 20% ✓, Bot C at 20% ✓ — 60%

@@ -21,7 +21,7 @@
     carries a real token, and prints the fix when a Projects call is refused.
 #>
 
-# ── 2026-11-07 — PROJECTS v2 NEEDS A SCOPED TOKEN, so load one if the owner has provided it ─────
+# ── 2026-11-07 — PROJECTS v2 NEEDS A SCOPED TOKEN, so load one if the requirement has provided it ─────
 # Agents authenticate as ONE gh login on this machine (keyring). Its scopes are fixed by the gh CLI
 # OAuth app and do NOT include `project`/`read:project`, so `gh project` and every GraphQL
 # projectsV2 query fail — measured 2026-11-07: "The 'projectsV2' field requires one of the following

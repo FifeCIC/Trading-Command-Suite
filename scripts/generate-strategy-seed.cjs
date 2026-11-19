@@ -8,7 +8,7 @@
  *
  * `strategy-seed-data.ts` declared THREE bots. The database held 75 (64 active). So a reinstall, a
  * `db push` accident, or moving to a second machine reduced the fleet to three — and the seed
- * endpoint reported `unchanged: 3`, which reads as success. The owner's own words: *"we do not want
+ * endpoint reported `unchanged: 3`, which reads as success. The project's own words: *"we do not want
  * to give my bots away."*
  *
  * ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ const ROOT = path.join(__dirname, '..');
 // ── DECISION (2026-11-13, owner) — write to a GITIGNORED local path, never the tracked one ──
 // WHAT:      The generator writes strategy-seed-generated.local.ts; the repo tracks nothing.
 // WHY:       The repository is PUBLIC and the fleet's numbers ARE the strategies. 24e70aeb published
-//            72 of them. Owner directive: avoid giving away all strategies.
+//            72 of them. Requirement: avoid giving away all strategies.
 // INSTEAD OF: strategy-seed-generated.ts (tracked).
 // REVERSE BY: Pointing this back at the tracked name — but do not, without making the repo private.
 // REGISTER:  docs/SETTLED-DECISIONS.md row 177

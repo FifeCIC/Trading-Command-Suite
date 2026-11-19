@@ -5,7 +5,7 @@
 # This file is what GitHub can render; that doc records where every link also appears (other repos,
 # the site, the wiki) and which ones are verified. Update both together.
 #
-# ⚠️ Every URL below was checked on 2026-11-04 and returned HTTP 200. The sweep of the owner's 23
+# ⚠️ Every URL below was checked on 2026-11-04 and returned HTTP 200. The sweep of the project's 23
 # repositories found the SAME options written two different ways (a `sponsors/LOLinDark` handle in two
 # repos, and Patreon as both `/ryanbayne` and `/sponsors/ryanbayne`). Anything not listed here should
 # be treated as stale until someone re-checks it.

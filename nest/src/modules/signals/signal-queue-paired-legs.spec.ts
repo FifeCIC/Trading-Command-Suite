@@ -2,7 +2,7 @@
  * ONE bot, TWO LEGS — a long protocol and a short protocol under a single strategy (2026-11-02).
  *
  * ── WHY THIS FILE EXISTS ──────────────────────────────────────────────────────────────────────
- * The owner asked whether a bot could pair a LONG protocol with a SHORT protocol and summarise both
+ * The brief asked whether a bot could pair a LONG protocol with a SHORT protocol and summarise both
  * under one strategy. The class docstring says the design already allows it — *"One queue per trading
  * bot listing signals from ALL its subscribed protocols … No symbol merging across protocols — the
  * same symbol may appear multiple times per bot from different protocols."* (design #714, locked

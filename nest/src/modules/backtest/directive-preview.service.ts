@@ -1,7 +1,7 @@
 /**
  * DirectivePreviewService — "what would this instrument look like to this directive?" without a run.
  *
- * ── WHY THIS EXISTS (owner direction, 2026-11-01) ────────────────────────────────────────────────
+ * ── WHY THIS EXISTS (requirement, 2026-11-01) ────────────────────────────────────────────────
  * *"I want RSIDivergence class and chart with the RSI divergence displayed … I want it so that when a
  * setting is changed the chart refreshes."*
  *

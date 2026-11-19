@@ -263,7 +263,7 @@ export default function ProtocolsPageB({ initialProtocolId }) {
     if (hideInactive) list = list.filter(p => p.active !== false);
     // Sort
     //
-    // ⚠️ `focus-first` is the DEFAULT (#1187). The owner directive, 2026-11-03: I want our focus ones to be
+    // ⚠️ `focus-first` is the DEFAULT (#1187). The requirement directive, 2026-11-03: I want our focus ones to be
     // more prominent in much of our other work and when I do manual testing. With every protocol
     // activated on the same day, `active-first` separates nothing — it leaves the list in whatever
     // order the API returned, and a manual test starts by scrolling past 45 protocols nobody is
@@ -539,7 +539,7 @@ export default function ProtocolsPageB({ initialProtocolId }) {
               </div>
 
               {/*
-                ── QUEUED CHANGES FOR THIS PROTOCOL (owner, 2026-11-18) ──────────────────────────────
+                ── QUEUED CHANGES FOR THIS PROTOCOL (Requirement, 2026-11-18) ──────────────────────────────
                 Placed directly under the header, not at the bottom, because it answers "what are we
                 about to try on this protocol?" — a question about the protocol's identity, not a
                 footnote. It also lists this protocol's SUBSCRIBING BOTS' suggestions (one call to

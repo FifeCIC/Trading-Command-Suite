@@ -43,7 +43,7 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..', '..');
 
-/** The owner of UTC↔zone conversion. */
+/** The requirement of UTC↔zone conversion. */
 const OWNER_FILE = 'nest/src/common/utils/session-time.ts';
 const OWNER_EXPORTS = ['zoneOffsetMs', 'minutesInZone', 'zonedWallClockInstant', 'minutesFromOpen'];
 
@@ -127,7 +127,7 @@ const ownerHits = [];
 
 for (const file of files) {
   const relPath = rel(file);
-  if (relPath === OWNER_FILE) continue; // the owner may do whatever it needs
+  if (relPath === OWNER_FILE) continue; // the requirement may do whatever it needs
 
   const demo = INTENTIONAL_DEMOS.find((d) => d.file === relPath);
   let text;
@@ -180,11 +180,11 @@ if (problems.length) {
     console.log(`     ${p.lineText}`);
     console.log(`     → ${p.why}\n`);
   }
-  console.log('\nFIX: import from the owner — typically `minutesInZone(instant, iana)`.');
+  console.log('\nFIX: import from the requirement — typically `minutesInZone(instant, iana)`.');
   console.log('⚠️  If TWO files carry the same rule, change BOTH in one commit: a partial fix');
   console.log('    leaves them disagreeing, which is worse than both being wrong.\n');
   process.exit(1);
 }
 
-console.log('✅ OK — no hand-rolled timezone conversions; DST is resolved by the owner.\n');
+console.log('✅ OK — no hand-rolled timezone conversions; DST is resolved by the requirement.\n');
 process.exit(0);

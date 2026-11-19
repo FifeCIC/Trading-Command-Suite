@@ -238,7 +238,7 @@ describe('key families', () => {
     //   • OPEN-ENDED SHAPE: one member per protocol scope, and protocol slugs grow with the library.
     //     It is not one key wearing a pattern.
     //   • NO DECLARED DEFAULTS, so `ensureDefaults()` cannot materialise one — which is exactly why
-    //     the owner asked for metadata rather than a column: *"it's a lot of extra data for
+    //     the requirement is for metadata rather than a column: *"it's a lot of extra data for
     //     something that won't be active for all users so a table column would be inherent for most
     //     installations."* An install that never publishes carries nothing.
     //   • It exists so the per-strategy Discord signal throttle has somewhere to live. The rejected

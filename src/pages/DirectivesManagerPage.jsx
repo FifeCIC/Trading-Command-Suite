@@ -477,7 +477,7 @@ export default function DirectivesManagerPage() {
               </header>
 
               {/* ⚠️ The description was only ever shown under the heading "Formula", mixed with formula
-                  text, and the rail never said what a "no direction" directive does. The owner asked
+                  text, and the rail never said what a "no direction" directive does. The brief asked
                   directly (2026-11-06) because the page that lists all 144 of them answered it
                   nowhere. The dilution it describes is #1122. */}
               {selected.description && (

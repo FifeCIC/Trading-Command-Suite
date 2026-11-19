@@ -4,7 +4,7 @@
  * WHERE THIS SITS: `/bots/trading-bots`, the page where the ceiling actually bites. It is not a
  * new page and not a new nav entry — a first-time reader meets it at the moment it matters.
  *
- * ⚠️ THE FRAMING IS THE FEATURE (#1193). The owner's words, and the panel must carry their intent:
+ * ⚠️ THE FRAMING IS THE FEATURE (#1193). The project's words, and the panel must carry their intent:
  * *a careful restriction while the app is still new, could be resource intensive, and to protect
  * users while testing safeguards are still outstanding.* So the copy says WHY the limit exists
  * before it says what it is, and it never reads as a paywall. Nothing here is for sale — that is

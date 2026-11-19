@@ -6,7 +6,7 @@
  *
  * WHY THIS EXISTS
  * ---------------
- * Owner directive, 2026-09-24: make decisions. With those decisions written into issues and doc comments.
+ * Requirement, 2026-09-24: make decisions. With those decisions written into issues and doc comments.
  * We can easily find them and change them if they aren't working out so well.
  *
  * "Easily find them" and "change them" are both **findability** properties, and findability is
@@ -197,13 +197,13 @@ function checkMarkers(files) {
  * RULE C — a SETTLED SUBJECT may be named only alongside the row that settled it.
  *
  * ⚠️ WHY THIS EXISTS (2026-09-28). An agent re-derived row 23's A/B netting finding as if it were
- * new (row 43), and asked the owner a question row 23 records as explicitly ended. Nothing caught
+ * new (row 43), and asked the requirement a question row 23 records as explicitly ended. Nothing caught
  * it: `detect-circular-work.cjs` reported "No topic reached the 3-touch threshold", because it
  * tracks ISSUE re-opens, not an agent re-deriving a REGISTER entry.
  *
  * The rule is deliberately MECHANICAL: citing is cheap, and requiring a citation turns "did you
  * read the register?" from a hope into a build failure. The declaration lives in the register
- * itself (`## 🔒 Settled subjects`), so the owner reads the same list the guard enforces.
+ * itself (`## 🔒 Settled subjects`), so the requirement reads the same list the guard enforces.
  *
  * Two things are checked, and BOTH can fail:
  *   1. a numbered row naming a settled subject without citing its settling row;

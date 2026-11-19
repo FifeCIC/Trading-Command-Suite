@@ -62,7 +62,7 @@ export default function AnalyseSymbolPage() {
   // Actions
   const actions = [
     // 'Add to Watchlist' → `/watchlists/add-symbol` REMOVED 2026-10-01: that page was deleted at
-    // the owner's direction, and its replacement is still open (#742 relocates Add Symbol to
+    // the project's direction, and its replacement is still open (#742 relocates Add Symbol to
     // Research, #743 adds an "Import new symbol" action when a search finds no match). An action
     // pointing at a deleted route is a dead button, so it goes rather than pretending.
     {

@@ -31,7 +31,7 @@
   color: var(--ink);
 }
 /* ── Mode switch — ONE view, TWO modes (#985 §2) ─────────────────────────────────────────────
-   Owner direction: "it could even be on the same view, but with a url parameter that displays a
+   Requirement: "it could even be on the same view, but with a url parameter that displays a
    simplified version for focusing on the configuration of the bot." */
 
 .modeSwitch {
@@ -131,7 +131,7 @@
      is exactly the "not using the current theme" report on this block. `--bg-elev` is written by
      `src/theme/adapters/vanilla.js` on every theme change. */
   background: var(--bg-elev);
-  /* FULL coloured border, not a left edge. The owner dislikes left-edge status borders
+  /* FULL coloured border, not a left edge. The requirement dislikes left-edge status borders
      (2026-09-18) - see the note in ui-standards.instructions.md. */
   border: 1px solid var(--risk-elevated);
   border-radius: var(--radius-md);

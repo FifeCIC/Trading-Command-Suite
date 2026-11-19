@@ -398,7 +398,7 @@ C:\wamp64\bin\mysql\mysql9.1.0\bin\mysql.exe -utradingcs -D tradingcs   # put yo
 | Rename `weightStrategy` values | ⚠️ | **inert** — never branched on; renaming was rejected (register row 31) |
 | Fix a directive returning a wrong `score` | ✅ | a bug fix that restores intent — cite the intent and the evidence |
 | Add a diagnostic field | ✅ | additive; keep the return shape in parity with the canonical path |
-| Skip persisting a state | 🛑 | #758's over-correction — the owner requires history to be kept |
+| Skip persisting a state | 🛑 | #758's over-correction — the requirement requires history to be kept |
 | Add a second denominator | 🛑 | ADR-011; guarded by `INV-STABLE-DENOMINATOR` |
 
 **Guard scripts that already exist for this area**

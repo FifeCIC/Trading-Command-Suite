@@ -109,7 +109,7 @@
   border: 1px solid var(--line);
   border-radius: 6px;
   /* ⚠️ WAS `#0f1117` — a hardcoded near-black that ignored the theme, which is the "fields are too
-     dark" the owner reported. An input inside a raised card should read as INSET, so it takes the
+     dark" it was reported. An input inside a raised card should read as INSET, so it takes the
      page background (`--bg`) against the card's `--bg-elev`, with the border doing the definition.
      Both tokens are themed (ui-standards "TOKENS: STATIC vs THEMED"), so this follows a theme change. */
   background: var(--bg);

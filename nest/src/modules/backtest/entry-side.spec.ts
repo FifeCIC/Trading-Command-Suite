@@ -81,7 +81,7 @@ describe('decideEntry', () => {
 });
 
 /**
- * ── 'both' IS REFUSED BY THE RUN PATH (owner direction, confirmed 2026-11-01) ─────────────────────
+ * ── 'both' IS REFUSED BY THE RUN PATH (requirement, confirmed 2026-11-01) ─────────────────────
  * *"there needs to be two active strategies"* — never one bot trading both ways, and never one
  * protocol scored both ways. `decideEntry` above stays correct (and tested) for `'both'`; it is the
  * RUN that must not accept it. Both directions are asserted so this cannot pass by never running.

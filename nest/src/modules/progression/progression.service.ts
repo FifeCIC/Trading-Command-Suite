@@ -123,7 +123,7 @@ export class ProgressionService {
   /**
    * How many bots a FRESH INSTALL should start with active (#1193).
    *
-   * The owner's requirement is that a new user cannot run more than one bot until they have earned
+   * The project's requirement is that a new user cannot run more than one bot until they have earned
    * the level — and the shipped seed carries several bots. So the first-run seeder asks this and
    * creates the rest INACTIVE. ⚠️ This is the only place the cap is applied to a seed, and it is
    * safe *because* `FirstRunSeedService` only runs when the bot table is empty: it cannot

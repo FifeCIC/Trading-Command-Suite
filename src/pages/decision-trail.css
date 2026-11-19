@@ -662,7 +662,7 @@
 }
 
 /* ── R12 — the observation-display VARIANT ------------------------------------------------
-   The notice is not decoration: the owner asked that any variant say what it is, so a reader
+   The notice is not decoration: the brief asked that any variant say what it is, so a reader
    never mistakes a design choice for a shipped default. */
 .dt-variant-notice {
   border: 1px dashed var(--line);

@@ -55,7 +55,7 @@ export const NAV_TREE = {
     label: 'Accounts',
     views: [
       { id: 't212-portfolio', label: 'Portfolio', icon: '🏦' },
-      // ── ADDED 2026-11-06 (owner direction) ──
+      // ── ADDED 2026-11-06 (requirement) ──
       // "Brokers" = the venues and the ACCOUNTS on them (money, connection, live/demo).
       // "Vendors" = every source of DATA, and that includes the brokers: "the aim will be to list
       // sources of data basically". They live in Accounts because both are about what the app is
@@ -74,7 +74,7 @@ export const NAV_TREE = {
     views: [
       { id: 'active-symbols', label: 'Active Symbols', icon: '★' },
       { id: 'user-watchlists', label: 'Watchlists', icon: '⊞' },
-      // #1297 — the movers question BOUNDED BY OUR OWN UNIVERSE. Owner directive, 2026-11-18: [Our registered
+      // #1297 — the movers question BOUNDED BY OUR OWN UNIVERSE. Requirement, 2026-11-18: [Our registered
       // symbols] can be moved to a new page in the Watchlists area … as they're two totally different
       // concepts. It belongs here because a symbol is "ours" by virtue of
       // `symbol_protocol_assignment`, which is a Watchlists concern; the unbounded, market-wide
@@ -156,7 +156,7 @@ export const NAV_TREE = {
       { id: 'signals-overview', label: 'Signals', icon: '🚩' },
     ],
   },
-  // ── STRATEGIES (owner direction, 2026-11-18) ────────────────────────────────────────────────
+  // ── STRATEGIES (requirement, 2026-11-18) ────────────────────────────────────────────────
   // *"I would like a Strategies area (again)! The area will list all strategies in a separate
   // category in its left hand menu for quick access… The goal here is that the new Strategy area
   // allows us to see the finished product of the META.Stack pipeline doing its thing. It is in the
@@ -177,7 +177,7 @@ export const NAV_TREE = {
     label: 'Strategies',
     views: [
       { id: 'strategy-library', label: 'Strategy Library', icon: '📚' },
-      // Custom (live) views — the optional half the owner described. Withheld from other users by
+      // Custom (live) views — the optional half the requirement described. Withheld from other users by
       // default (`DEFAULT_HIDDEN_ROUTES`) until released; the library card links to them.
       { id: 'day-top-winners', label: "Day's Top Winners", icon: '🏆' },
       { id: 'day-top-losers', label: "Day's Top Losers", icon: '🕳️' },
@@ -216,19 +216,19 @@ export const NAV_TREE = {
       // `trading-bots`, `bot-create`, `strategy-monitor` and `strategy-comparison` now live under
       // NAV_TREE.bots, which sits between Signals and Trading. Their comments went with them.
       // ── STRATEGIES (derived) ──
-      // The owner's definition (updated 2026-09-19, docs/trading-bot-model.md §1c): a strategy is
+      // The project's definition (updated 2026-09-19, docs/trading-bot-model.md §1c): a strategy is
       // a bot's WHOLE configuration (protocol + role + market + broker + execution policy). A
       // different market is a different strategy, so it is one strategy per bot — 27 cards from
       // 27 bots, never 18. (#876 removed the old "26 bots -> 18 strategies" merge across markets.)
       // Placed directly under Trading Bots so the pair reads as "the execution policy" vs
       // "the combinations". Names/ids for these live in the #875 registry, not in this tree.
       { id: 'strategies-derived', label: 'Strategies', icon: '🧩' },
-      // A/B view for the same strategies (owner, 2026-09-22): two configurations side by side
+      // A/B view for the same strategies (Requirement, 2026-09-22): two configurations side by side
       // with every differing value marked. The pair is data (?pair=keyA,keyB), not a control —
       // the same decision the A/B Ladder records.
       { id: 'ab-strategies', label: 'A/B Strategies', icon: '🆚' },
       { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
-      // MOVED here from Development/Prototypes 2026-09-24 (owner direction). This is the manual
+      // MOVED here from Development/Prototypes 2026-09-24 (requirement). This is the manual
       // trading surface and it is FREE — it was sitting in a premium-only area because it started
       // life as a prototype, and one free leaf kept the whole Development area alive in the free
       // build's nav. §9.2 called it "promoted to a first-class area"; this is that move. The
@@ -265,7 +265,7 @@ export const NAV_TREE = {
     ],
   },
   // ⚠️ THE AUTOMATION AREA WAS REMOVED 2026-10-02 (owner, Page Walkthrough) — this is the end of
-  // that programme. The owner's rule for it: *"Going forward anything that was automation or
+  // that programme. The project's rule for it: *"Going forward anything that was automation or
   // scheduled will be within the area of what it is scheduling i.e. scheduling a trade, belongs in
   // the Trading area."* Its five views went as follows:
   //   automation-dashboard  → loop controls on /dashboard; panels had existing homes (Portfolio
@@ -278,7 +278,7 @@ export const NAV_TREE = {
   //   alert-center          → the Trade Journal (Alerts)
   // "Automation" named a MECHANISM, not a subject — which is why nothing is left for it to own.
   /*
-   * ⚠️ THE WHOLE AREA IS HIDDEN (owner direction, 2026-11-07).
+   * ⚠️ THE WHOLE AREA IS HIDDEN (requirement, 2026-11-07).
    *
    * Owner, Status walkthrough: *"Hide the Education area - this will be a massive project in
    * itself."* Not one page — the area. Education is deferred wholesale rather than page by page,
@@ -306,7 +306,7 @@ export const NAV_TREE = {
       // — unhiding is one line.
       // ⚠️ Hiding does NOT remove them from the free edition: the free build reads view-meta tiers,
       // not the nav. Tier hardening for these two is deliberately a separate change.
-      // ⚠️ `backtest` MOVED to the Lab area (2026-09-23, owner direction). Backtesting is a
+      // ⚠️ `backtest` MOVED to the Lab area (2026-09-23, requirement). Backtesting is a
       // theory-and-data page — "what would have happened?" — which is what Lab is for, and the
       // owner's own instruction named backtesting as a Lab page. It sat in Education, where it
       // never fitted: Education teaches a person, Lab tests a hypothesis.
@@ -332,7 +332,7 @@ export const NAV_TREE = {
       // section of Pipeline Graph Lab, so the entry pointed at a route that no longer exists.
       { id: 'meta-stack-status', label: 'META.Stack Status', icon: '🎯' },
       // ⚠️ `file-inventory` MOVED to Development 2026-10-02. ⚠️ `architecture-framework` was NOT moved
-      // even though the owner asked for it: /builder/architecture-framework is declared as the route in
+      // even though the requirement is for it: /builder/architecture-framework is declared as the route in
       // an API manifest (architecture-manifest.controller.ts), in two instruction files and in the
       // update-architecture-framework skill. Moving it breaks a documented contract — that needs a
       // decision, not a rename.
@@ -345,12 +345,12 @@ export const NAV_TREE = {
   },
   // ── Lab — the theory & data playground ──
   //
-  // ⚠️ THE SPLIT RULE — owner direction, 2026-09-23:
+  // ⚠️ THE SPLIT RULE — requirement, 2026-09-23:
   //   "Move every page from Lab to Development area apart from backtesting or snapshot or replay
   //    related pages. The Lab area will be where we test theories, and data, and turn it all into
   //    a bit of a hobby."
   //
-  // Applied as the owner's INTENT rather than the three literal words, because the two halves of
+  // Applied as the project's INTENT rather than the three literal words, because the two halves of
   // that instruction disagree if read narrowly. The sentence that DEFINES the area is the second
   // one — Lab tests theories and data. `Speed Trading` and `Gold Speed` are exactly that, and
   // Development is engineering tooling, so moving them there would have contradicted the
@@ -376,15 +376,15 @@ export const NAV_TREE = {
     views: [
       // ── Backtesting & replay — "what would have happened?" ──
       { id: 'backtest', label: 'Backtesting Protocols', icon: '⬡' },
-      // ⚠️ ADDED 2026-10-26 (owner direction) — the strategies subject was a toggle on the page
+      // ⚠️ ADDED 2026-10-26 (requirement) — the strategies subject was a toggle on the page
       // above; it is now its own route so the two questions can be described and linked separately.
       { id: 'backtest-strategies', label: 'Backtest Strategies', icon: '⬢' },
-      // ⚠️ ADDED 2026-11-04 (owner direction). The A/B reference panels were a second rendering of
+      // ⚠️ ADDED 2026-11-04 (requirement). The A/B reference panels were a second rendering of
       // results on the strategies page — *"it has results displayed twice"* — so they moved here, to a
       // page about ONE strategy: the run you accepted (A), the latest run (B), side by side, and what
       // changed. It is also where the app-wide strategy FOCUS is chosen.
       { id: 'current-strategy', label: 'Current Strategy', icon: '◎' },
-      // ⚠️ `protocol-backtest` RETIRED 2026-10-22 (#1134, owner direction). It was a sibling view
+      // ⚠️ `protocol-backtest` RETIRED 2026-10-22 (#1134, requirement). It was a sibling view
       // from 2026-10-16 because scores and trades are different questions — that is still true, so
       // the question is now the page's SUBJECT TOGGLE (Protocols | Strategies) rather than a second
       // route. The reason is measured: `/api/replay/run` stored nothing, so a protocol backtest
@@ -394,9 +394,9 @@ export const NAV_TREE = {
       // was reachable only by typing the URL. Stage 1's own criterion: "a page nobody can find is
       // effectively absent". Surfaced rather than rebuilt.
       { id: 'backtest-data', label: 'Backtest Data', icon: '⛁' },
-  // ⚠️ ADDED 2026-10-31 (owner direction). "Completed runs" was a TAB on
+  // ⚠️ ADDED 2026-10-31 (requirement). "Completed runs" was a TAB on
   // `/lab/backtest-strategies`, a page that had reached eleven steps plus four reference tabs and was
-  // being described by the owner as *"very complex especially with the [Completed runs] added"*.
+  // being described by the requirement as *"very complex especially with the [Completed runs] added"*.
   // Stored runs are their own job — review what the engine kept, select 2–4, find what changed — so
   // they get their own page rather than a fifth tab on a measurement form.
   { id: 'backtest-runs', label: 'Completed Runs', icon: '⧉' },
@@ -462,7 +462,7 @@ export const NAV_TREE = {
       // ⚠️ `screen-assignment` also MOVED to the Appearance area on the same day. It was moved here
       // from Development on 2026-10-02 for a good reason — assigning a board to a monitor is a
       // per-machine preference, not engineering tooling. It has now moved again for a different good
-      // reason: it is a VISUAL option, and the owner is assembling the visual options in one area.
+      // reason: it is a VISUAL option, and the requirement is assembling the visual options in one area.
       // Two moves is not indecision; the area it belongs to was only created today.
       // ── Reference — the full lists, not the everyday surfaces ──
       { kind: 'section-header', id: 'settings-reference', label: 'Reference', icon: '' },
@@ -475,19 +475,19 @@ export const NAV_TREE = {
     ],
   },
   // ── Appearance area (/appearance/ prefix) — NEW 2026-10-13 (owner request) ──
-  // Purpose, in the owner's words: *"I'm using this project to establish a theme package that can be
+  // Purpose, in the project's words: *"I'm using this project to establish a theme package that can be
   // carried forward to other projects... a gallery of visual options for users to fine-tune their UI."*
   // It holds layout GUIDANCE (so an agent building a page can choose a structure that suits it) and
   // the colour schemes, which are deliberately separate concerns — see the note in App.jsx about the
   // deleted `ai-original` pack, which changed structure and colour together.
   //
-  // ⚠️ Sits immediately before `development` because the owner asked for it "beside Development".
+  // ⚠️ Sits immediately before `development` because the requirement is for it "beside Development".
   // ⚠️ PLACEMENT MATTERS HERE, AND I GOT IT WRONG ONCE: the first version of this block was inserted
   // directly above `development: {`, which put it BETWEEN Development's comments and its declaration —
   // so Development's explanatory notes appeared to describe Appearance. A comment block and the entry
   // it explains must stay adjacent.
   //
-  // ⚠️ SAMPLE VIEWS MUST USE THIS APP'S OWN REAL DATA. Owner directive, 2026-10-13: I sometimes mention using
+  // ⚠️ SAMPLE VIEWS MUST USE THIS APP'S OWN REAL DATA. Requirement, 2026-10-13: I sometimes mention using
   // dummy/demo data. I don't want that applied actually. Only use this apps own real data to create
   // examples but when we update React Stack Core (my boilerplate) we will convert them to a variety of
   // topics with demo data. So a gallery example renders a REAL view of this app — never a fixture.
@@ -500,7 +500,7 @@ export const NAV_TREE = {
     label: 'Appearance',
     views: [
       { id: 'layout-guide', label: 'Layout Guide', icon: '🎨' },
-      // The register of patterns the OWNER approved, read from the Page Walkthrough. It sits beside
+      // The register of patterns the requirement approved, read from the Page Walkthrough. It sits beside
       // Layout Guide because they answer the same question at different depths: Layout Guide is a
       // handful of decisions, this is the full evidence-backed list of what to build a sample from.
       { id: 'patterns', label: 'Pattern Library', icon: '🧩' },
@@ -524,7 +524,7 @@ export const NAV_TREE = {
   },
   // ── Development — engineering tooling and experimental prototypes ──
   //
-  // ⚠️ THIS AREA ABSORBED THE ENGINEERING HALF OF LAB (owner direction 2026-09-23).
+  // ⚠️ THIS AREA ABSORBED THE ENGINEERING HALF OF LAB (requirement 2026-09-23).
   // The split rule is stated in full in the `lab` block above. Short form: everything here
   // answers "does this part of the app work?" rather than "what does the market do?".
   //
@@ -541,14 +541,14 @@ export const NAV_TREE = {
       // tooling rather than with system health.
       { id: 'commands', label: 'Commands Reference', icon: '💻' },
       { id: 'file-inventory', label: 'File Inventory', icon: '📁' },
-      // ── Decisions — the sandbox's OUTPUT (owner direction 2026-09-24) ──
+      // ── Decisions — the sandbox's OUTPUT (requirement 2026-09-24) ──
       // The Development area is where an agent may build a competing approach, measure it, and produce
       // a decision. An experiment that does not end in a decision is a prototype, not an experiment —
       // so the registry sits here, near the top, rather than at the bottom of a list of tools.
       // Entries are enforced by scripts/validate-theories.cjs (a theory needs a falsification test).
       { kind: 'section-header', id: 'dev-decisions', label: 'Decisions', icon: '⚖' },
       { id: 'theory-registry', label: 'Theory Registry', icon: '🔬' },
-      // R21 / #990 — the owner chose a NEW REGISTER over a second section in the review queue, so
+      // R21 / #990 — the requirement chose a NEW REGISTER over a second section in the review queue, so
       // observations can accumulate BEFORE they become decisions. Sits beside the theory registry
       // because they are the same shape: a held position, written down so it can be judged.
       { id: 'design-observations', label: 'Design Observations', icon: '👁' },
@@ -570,11 +570,11 @@ export const NAV_TREE = {
       // is an EXPERIMENT first: does seeing the exit reasons help, or is it noise? Register row 36
       // constrains how it may be framed (a thin funnel is not a fault), not whether it exists.
       { id: 'blocked-signals', label: 'Blocked Signals', icon: '🚦' },
-      // #1190 — the trend READING experiment (owner directive, 2026-11-03): do this as an experimental feature).
+      // #1190 — the trend READING experiment (requirement, 2026-11-03): do this as an experimental feature).
       // Development because it is an experiment first: does seeing the fitted line and the invalidation
       // level help you judge a score, or is it noise? Observation only — nothing in scoring reads it.
       { id: 'trend-reading', label: 'Trend Reading', icon: '📐' },
-      // #1281 — the market-wide movers feed. Owner directive, 2026-11-15: I would like to see a list of all
+      // #1281 — the market-wide movers feed. Requirement, 2026-11-15: I would like to see a list of all
       // the winners and losers and how TCS is treating them…, narrowed 2026-11-18: *"can then focus
       // on being fed by a live market feed of the top winners and losers"*. The treatment half moved
       // to `/watchlists/registered-movers`; what is left here is the unbounded discovery question,

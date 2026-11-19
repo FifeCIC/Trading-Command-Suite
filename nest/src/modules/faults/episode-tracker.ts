@@ -27,7 +27,7 @@
  * WORKING when they fire. Only the other three named something broken.
  *
  * Without this line the registry becomes a second alert list with a permanent tail — the exact bloat
- * `docs/FAULT-TAXONOMY-GUARDRAILS.md` exists to prevent, and the thing the owner asked to be
+ * `docs/FAULT-TAXONOMY-GUARDRAILS.md` exists to prevent, and the thing the brief asked to be
  * protected from ("a huge amount of tests being built and how we'll keep coming back to them").
  *
  * THE TEST, and it is the only one that matters: **is there a path that should work and does not?**

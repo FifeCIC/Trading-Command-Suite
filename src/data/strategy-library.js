@@ -1214,7 +1214,7 @@ is a 3-standard-deviation setup that fires only 4-8 times per year.
   },
 
   // ══════════════════════════════════════════════════════════════════════════════════════════════
-  // THE MARKET-MOVERS PAIR (owner direction, 2026-11-18)
+  // THE MARKET-MOVERS PAIR (requirement, 2026-11-18)
   //
   //   *"I want you to split that strategy into Days Top Winners and Days Top Losers: we will have
   //    them entered onto [the Strategy Library] as two new strategies: one for shorting and one for
@@ -1227,7 +1227,7 @@ is a 3-standard-deviation setup that fires only 4-8 times per year.
   //   • Short: gain capped at 100%, loss unbounded, borrow cost accrues, and a squeeze arrives faster
   //            and larger than a long-side reversal. A collapsing stock may not be shortable at all.
   //
-  // ⚠️ `liveView` IS THE OPTIONAL HALF the owner described: the entry below is the THEORY, and the
+  // ⚠️ `liveView` IS THE OPTIONAL HALF the requirement described: the entry below is the THEORY, and the
   // route is the live page showing the feed this strategy would consume. It is a plain object rather
   // than a magic convention so the library page renders the link only when the page genuinely exists.
   //

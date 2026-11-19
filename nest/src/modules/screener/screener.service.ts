@@ -512,14 +512,14 @@ export class ScreenerService implements OnModuleInit {
     let inDbTickers = new Set<string>();
     let tickerMeta = new Map<string, { type: string; name: string; exchange: string; id: string }>();
     try {
-      // ⚠️ THE WHOLE SYMBOL TABLE — NOT `active: true`. Owner ruling 2026-10-06:
+      // ⚠️ THE WHOLE SYMBOL TABLE — NOT `active: true`. Requirement 2026-10-06:
       // *"Screen the whole symbol table — opportunity should not be hidden unless it is filtered out by
       // our strict filter process that aims to ignore the least likely opportunities based on the
       // available information we have."*
       //
       // Measured before the change: **260** symbols in the table, of which only **57** are `active` —
       // so the old denominator silently excluded **203**, which is exactly the population the screener
-      // exists to explore. The owner's stated purpose: *"screening is meant to process non-active
+      // exists to explore. The project's stated purpose: *"screening is meant to process non-active
       // symbols … a tool to offer insight into symbols that might offer potential."* `symbol.active` is
       // a DATA-COVERAGE flag (R37 — it bounds the bar refresh), not a judgement about tradeability, so
       // it was never the right denominator for a discovery tool.
@@ -539,7 +539,7 @@ export class ScreenerService implements OnModuleInit {
         tickerMeta.set(s.ticker.toUpperCase(), { type: s.type, name: s.name, exchange: s.exchange, id: s.id });
       }
 
-      // ── coverage stats the owner asked for (2026-10-06) ───────────────────────────────────────
+      // ── coverage stats the requirement is for (2026-10-06) ───────────────────────────────────────
       // *"add a stat for how many symbols have been scored out of the symbols registered and another
       // stat for how many have been traded out of the total symbols registered."* The denominator is now
       // the WHOLE symbol table, so these read as coverage of everything the app knows about.
@@ -553,7 +553,7 @@ export class ScreenerService implements OnModuleInit {
       // collapsing "could not ask" into "none scored" is how a broken query becomes a finding.
       const [scored, traded] = await Promise.all([
         this.prisma.scoreSnapshot.groupBy({ by: ['symbol'] }).then((r) => r.length).catch(() => null),
-        // Traded = a PAST trade OR a CURRENT position — the owner's definition, 2026-10-06. Both are
+        // Traded = a PAST trade OR a CURRENT position — the project's definition, 2026-10-06. Both are
         // `trade` rows: PositionSyncService creates a row for externally-opened positions too
         // (`origin=external`), so ONE distinct set covers both halves and there is no second source to
         // union in. If that stops being true, this comment is the thing that is wrong.

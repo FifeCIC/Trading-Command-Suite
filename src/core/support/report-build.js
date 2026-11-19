@@ -1,5 +1,5 @@
 /**
- * report-build.js — turns a capture snapshot into something the owner can ACT on (#1248).
+ * report-build.js — turns a capture snapshot into something the requirement can ACT on (#1248).
  *
  * PORTABLE: pure functions, no imports, no window. A host app supplies its own
  * `context` and `system` facts and gets back a Markdown report plus a JSON twin.
@@ -9,7 +9,7 @@
  * survives both without a translator. The JSON twin exists for a future sink and
  * for machine reading; it is never the thing a human is asked to look at.
  *
- * ── THE REVIEW RULE (owner decision, 2026-11-07, option B) ──────────────────
+ * ── THE REVIEW RULE (requirement, 2026-11-07, option B) ──────────────────
  * Response bodies ARE included — sometimes the numbers are the whole point — but
  * only when the caller asks for them (`includeBodies`). The UI must show the
  * finished report before anything is copied or sent. This module never sends,

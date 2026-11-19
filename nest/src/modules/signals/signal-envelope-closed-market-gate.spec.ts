@@ -10,7 +10,7 @@ import { join } from 'path';
  * had already happened, which is exactly the defect (a gate that exists but gates nothing is a
  * decoration). Nothing else in the repo can catch that, so the ordering itself is asserted.
  *
- * Owner directive, 2026-09-23: if the market is closed there is not meant to be new data for those symbols
+ * Requirement, 2026-09-23: if the market is closed there is not meant to be new data for those symbols
  * so why score? — ruled a development decision, so there is no A/B copy to compare against; the
  * measurement is the before/after count in the handoff.
  *

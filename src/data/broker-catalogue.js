@@ -13,7 +13,7 @@
  * which is the normal case for most of this list, and is shown as such rather than hidden.
  *
  * ── WHY THE SUPPORT LEVEL IS A SEPARATE FIELD ─────────────────────────────────
- * The owner's bar for "TCS supports broker X" is *reading the account and forming portfolio
+ * The project's bar for "TCS supports broker X" is *reading the account and forming portfolio
  * views*, NOT placing an order. So `tcsSupport` records the level reached, and the UI must
  * render the level rather than a yes/no. A brand-new integration that can read balances is a
  * real, publishable capability — calling it "not supported" because it cannot trade yet would

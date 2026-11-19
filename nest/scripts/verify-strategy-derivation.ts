@@ -42,7 +42,7 @@ async function main() {
   //       produced the raw rows had printed it (`EURGBP ... london`, `AUDUSD ... asian`). A gated
   //       bot and an ungated bot act at different hours, so it IS identity.
   //  #2 — the identity EXCLUDED `symbol`, on the reasoning that "symbols are scope, not identity".
-  //       That is backwards. The owner's rule: "Different markets. Is different configuration
+  //       That is backwards. The project's rule: "Different markets. Is different configuration
   //       therefore the end result is a unique strategy." Six FX bots on six markets are six
   //       strategies, not one.
   //
@@ -101,7 +101,7 @@ async function main() {
   check('unreachable bots found (#874)', res.orphans.length, 0);
   check('legacy-only bots flagged (#874)', res.strategies.flatMap((s) => s.unreachableBotNames).length, 1);
 
-  // Every gold/silver protocol is its own strategy — the owner's "4 protocols for gold" case.
+  // Every gold/silver protocol is its own strategy — the project's "4 protocols for gold" case.
   const gold = res.strategies.filter((s) => s.symbols.includes('XAUUSD') || s.protocolIds.some((p) => p.startsWith('xau-')));
   check('gold/silver strategies', gold.length, 5);
 
@@ -143,7 +143,7 @@ async function main() {
     keyOf({ maxHoldHours: null }) === keyOf({ maxHoldHours: 0 }),
     false,
   );
-  // The smallest difference must change the key — the owner's rule.
+  // The smallest difference must change the key — the project's rule.
   check(
     'smallest change (1% -> 1.01% SL) produces a different strategy',
     keyOf({ slPct: 1 }) === keyOf({ slPct: 1.01 }),
@@ -170,7 +170,7 @@ async function main() {
 
   // ── Why is the FX family 14 and not 1 or 13? ──
   // The old rating machinery treated one `scoring_strategy` row as one MetaStack, so all 13 FX bots
-  // sharing `auto-forex-session-v1` produced ONE blended rating. Under the owner's rule each market
+  // sharing `auto-forex-session-v1` produced ONE blended rating. Under the project's rule each market
   // is its own strategy. This dump shows what actually distinguishes them.
   console.log('\n=== forex-session-v1-long detail (all one bot, one market) ===');
   const fxAll = res.strategies.filter((s) => s.protocolIds.includes('forex-session-v1-long'));

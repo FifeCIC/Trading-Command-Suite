@@ -1,8 +1,8 @@
 /**
  * ProtocolQueuePage — /protocols/protocol-queue
  *
- * ⚠️ MOVED 2026-10-02 (owner direction). This was the "🏗 Protocol Queue" TAB of the Execution Queue
- * page at /automation/execution-queue. The owner deleted that page and said: *"Preserve them and put
+ * ⚠️ MOVED 2026-10-02 (requirement). This was the "🏗 Protocol Queue" TAB of the Execution Queue
+ * page at /automation/execution-queue. The requirement deleted that page and said: *"Preserve them and put
  * the Protocol Queue somewhere in the Protocol area and Schedule Jobs in the Status area."* So the
  * tab became a view in its own right, under Protocols, and nothing was lost.
  *
@@ -10,7 +10,7 @@
  * only way to drop a queued protocol run; deleting this page without preserving the tab would have
  * removed the capability silently.
  *
- * WHY PROTOCOLS RATHER THAN AUTOMATION — the owner's rule for the retirement:
+ * WHY PROTOCOLS RATHER THAN AUTOMATION — the project's rule for the retirement:
  *   "Going forward anything that was automation or scheduled will be within the area of what it is
  *    scheduling i.e. scheduling a trade, belongs in the Trading area."
  * A queued PROTOCOL RUN is scheduling a protocol, so it belongs with protocols. The section that

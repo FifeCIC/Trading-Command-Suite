@@ -4,7 +4,7 @@
   /* ⚠️ WAS a hardcoded 1000px while the app standard is `--page-max-width` (1400px) — measured
      2026-11-06: at a 1500px viewport the page sat at x=375..1375 and the summary grid ended at 1375,
      leaving the right third of the content area empty. That is the "empty space on the right" the
-     owner reported. `ui-standards.instructions.md` requires every view to sit inside the shared
+     the brief reported. `ui-standards.instructions.md` requires every view to sit inside the shared
      token, so this now follows it instead of inventing a narrower container. */
   max-width: var(--page-max-width, 1400px);
   margin: 0 auto;
@@ -50,7 +50,7 @@
    1. `repeat(auto-fill, minmax(140px, 1fr))` (original). Measured 1600 → 640px, tile width went
       **148 → 147 → 162 → 178 → 205 → 141**: it GREW as the window narrowed, then snapped smaller.
       A grid track cannot go below its `minmax()` floor, so narrowing drops a whole column and every
-      surviving column jumps wider. The owner reported exactly this: *"a lack of fluidity … there's
+      surviving column jumps wider. It was reported exactly this: *"a lack of fluidity … there's
       plenty room in some of the cards for them to shrink."*
    2. `display: flex` + `flex: 1 1 140px` + a growth filler. RE-MEASURED immediately after building
       it: **140 → 156 → 148 → 161 → 147 → 163 → 147 → 162 → 146 → 178 → 151 → 205 → 171 → 141** —
@@ -65,7 +65,7 @@
 .t212p-summary-wrap { container-type: inline-size; container-name: tiles; }
 
 /*
- * ⚠️ `auto-fit` REPLACED SEVEN CONTAINER-QUERY STEPS (owner direction, 2026-11-19: the tiles spilled
+ * ⚠️ `auto-fit` REPLACED SEVEN CONTAINER-QUERY STEPS (requirement, 2026-11-19: the tiles spilled
  * onto a second row sooner than they needed to).
  *
  * The old arrangement moved 2 → 3 → 4 → 5 → 6 → 7 → 8 columns at 400/540/700/860/1020/1180px, so the
@@ -119,13 +119,13 @@
 .t212p-hint { font-size: 0.78rem; color: var(--ink-soft, var(--color-muted)); }
 
 /* ⚠️ STALENESS ON AN IMPORTED HOLDING IS A WARNING, NOT A MUTED CAPTION (2026-11-18).
-   The owner reported symbols in this table that are not in any account. Those T212 rows are a stored
+   It was reported symbols in this table that are not in any account. Those T212 rows are a stored
    snapshot, and a snapshot older than a few hours can list positions the account has since closed —
    so it takes the warning tone rather than the same grey as the row count beside it. */
 .t212p-hint--stale { color: var(--color-warning); font-weight: 600; }
 
 /* ── Grand total — now the FIRST TILE of the summary grid ───────────────────────────────────────
-   ⚠️ WAS its own full-width row above the grid (owner directive, 2026-11-06): a lot of area for a small amount
+   ⚠️ WAS its own full-width row above the grid (requirement, 2026-11-06): a lot of area for a small amount
    of information). The dead `.t212p-grand-total` / `.t212p-grand-label` / `.t212p-grand-value` rules
    were removed with it. As a tile it reads with the figures it relates to instead of taking a whole
    line to itself.
@@ -138,7 +138,7 @@
 }
 .t212p-stat--grand .t212p-stat-value { font-size: 1.15rem; }
 
-/* The tile the other money tiles resolve to. ⚠️ USED TO CARRY A 3px ACCENT `border-left`; the owner
+/* The tile the other money tiles resolve to. ⚠️ USED TO CARRY A 3px ACCENT `border-left`; the requirement
    has asked repeatedly for the thick coloured left bar to be deleted everywhere (2026-11-06), so the
    emphasis is now a uniform 1px accent-tinted border on all four sides. Structurally identical to its
    neighbours, different only in tone — no edge is drawn thicker than another. */

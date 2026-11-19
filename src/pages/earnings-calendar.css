@@ -144,7 +144,7 @@
 .ec-time-badge { font-size: 0.62rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 999px; }
 
 /* ── Header stats (2026-11-06) ─────────────────────────────────────────────────────────────────────
-   The owner asked for the "5785 upcoming earnings reports from stored data …" sentence to go and the
+   The requirement is for the "5785 upcoming earnings reports from stored data …" sentence to go and the
    figures to be shown instead. Three facts, three chips: count, source, refresh cadence. */
 .ec-stats {
   display: flex;

@@ -3,7 +3,7 @@
  * ==========================================================================
  *
  * `lists` selects which of the feed's lists to render, so ONE panel serves four surfaces instead of
- * four near-copies (owner direction, 2026-11-18: the two side-split strategies and the Most Active
+ * four near-copies (requirement, 2026-11-18: the two side-split strategies and the Most Active
  * research page each show exactly one of these lists):
  *
  *   <MarketMoversPanel />                                  → all three + the exclusion audit (this page)
@@ -67,7 +67,7 @@ const fmtAge = (m) => {
 /**
  * The three feed lists, in render order. `key` is the field on the API response.
  *
- * ⚠️ `defaultSort` IS NOT COSMETIC (added 2026-11-18 after the owner reported the table "isn't wired
+ * ⚠️ `defaultSort` IS NOT COSMETIC (added 2026-11-18 after it was reported the table "isn't wired
  * to today's top winners"). The feed arrives ORDERED BY ITS PROVIDER'S SCREENER, NOT by the percentage
  * column — measured: 16.10, 10.31, 8.57, **12.38**, 8.20. Left unsorted, a reader sees a "top gainers"
  * table whose numbers do not descend and reasonably concludes the data is wrong. Each list therefore
@@ -113,7 +113,7 @@ function List({ title, rows, accent, defaultSort }) {
             {sort.sorted.map((r) => (
               <tr key={`${title}-${r.ticker}`}>
                 <td className="mm-sym">{r.ticker}</td>
-                {/* ⚠️ `num` ON THE CELL AS WELL AS THE HEADER — the bug the owner reported as "columns
+                {/* ⚠️ `num` ON THE CELL AS WELL AS THE HEADER — the bug it was reported as "columns
                     aren't under their headers". `th.num` right-aligns the heading (from tables.css)
                     while `td.mm-num` only set font and colour, so every numeric column had a
                     right-aligned header over left-aligned values. A column's alignment is ONE fact and

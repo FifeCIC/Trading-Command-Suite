@@ -2,7 +2,7 @@
 /**
  * validate-page-chrome.cjs — keeps page chrome OUT of pages.
  * =========================================================
- * Owner direction, 2026-11-18:
+ * Requirement, 2026-11-18:
  *   "I don't like headers at the top of pages because I'm designing the UI in a manner that reduces
  *    screen clutter… I also don't like the pages primary ℹ being in different places: please ensure
  *    it is on the same location for all pages."
@@ -66,7 +66,7 @@ const POPOVER_RE = /<PageInfoPopover\b/g;
 /**
  * R3 — a SECTION heading that carries its own ℹ.
  *
- * ⚠️ ADDED 2026-11-19, owner direction: *"We still have pages with titles and the information icon
+ * ⚠️ ADDED 2026-11-19, requirement: *"We still have pages with titles and the information icon
  * beside them which means it's placed in different places across the app."* R2 already forbids a page
  * rendering its own trigger, but it counts every trigger equally, so a `<h2>Title<PageInfoPopover/>`
  * looked the same as a legitimate card-level one. Measured on `/trading212/t212-portfolio` when this

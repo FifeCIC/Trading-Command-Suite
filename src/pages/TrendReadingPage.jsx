@@ -5,7 +5,7 @@
  * WHY THIS EXISTS
  * ============================================================================================
  *
- * Owner directive, 2026-11-03: explain to me how other bots and AI trading agents or algorithms determine
+ * Requirement, 2026-11-03: explain to me how other bots and AI trading agents or algorithms determine
  * trend, just like a trader might draw a predicted trend on a chart — is this app doing that and is
  * it even possible? … *"yes use the research you just explained to me and do this as an
  * experimental feature."*

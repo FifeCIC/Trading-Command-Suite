@@ -24,7 +24,7 @@
  *
  * ── WHY IT REPORTS BY DEFAULT AND DOES NOT FAIL A BUILD ──
  * A below-floor bar is a LIVE TRADING CONFIGURATION. Refusing the build over one would either block
- * unrelated work or force a bot to stop — both are decisions for the owner, not a script. So the
+ * unrelated work or force a bot to stop — both are decisions for the requirement, not a script. So the
  * default exit code is 0 with a loud report; `--strict` exits 1 for a deliberate gate.
  *
  * ⚠️ AND IT REFUSES TO PASS SILENTLY WHEN IT CANNOT JUDGE. No DATABASE_URL, an unreachable

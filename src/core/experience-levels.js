@@ -54,16 +54,16 @@ export const EXPERIENCE_LEVELS = ['beginner', 'experienced', 'expert'];
 
 export const EXPERIENCE_MATRIX = {
   // ── Navigation: entire sidebar pages ──────────────
-  // ⚠️ ADMISSION RULE FOR `beginner: false` (2026-11-03): a page earns it when the owner's own UI
+  // ⚠️ ADMISSION RULE FOR `beginner: false` (2026-11-03): a page earns it when the project's own UI
   // score is ≤3 out of 10 AND he did not mark it high-importance in the Page Walkthrough. A weak score
   // says "this page needs work"; an explicit IMPORTANCE OF H says "you still need it", and hiding one
   // of those is a fix avoided rather than a first impression protected. That is why `market-context`
   // (score 2, importance H), `dual-protocol-inspector` (3, H) and `trade-journal` (3, H) are NOT in
   // this list despite scoring low — they need improving, not hiding.
-  // ⚠️ These are LEVEL-scoped, never withheld: the owner's `hide: false` keeps stay intact, and an
+  // ⚠️ These are LEVEL-scoped, never withheld: the project's `hide: false` keeps stay intact, and an
   // Expert install still sees every one of them.
   nav: {
-    // ⚠️ ADDED 2026-11-03 from the owner's own Page Walkthrough scores — all four are pages he also
+    // ⚠️ ADDED 2026-11-03 from the project's own Page Walkthrough scores — all four are pages he also
     // marked `hide: false`, so withholding them outright would have overruled a decision he made
     // deliberately. Level-scoping is the compromise: a first-time reader does not meet them, and an
     // Expert install keeps every one.
@@ -87,7 +87,7 @@ export const EXPERIENCE_MATRIX = {
     // WHY:       It is the only entry in the Scoring rail that was gated — `ab-ladder`,
     //            `symbols-ladder` and `singles-monitor` are undeclared, and an undeclared id is
     //            visible at every level (`isNavVisible` returns true). So the one page that DEFINES
-    //            the area was the only one a non-expert could not reach: the owner reported it as
+    //            the area was the only one a non-expert could not reach: it was reported it as
     //            "the Scoring area is missing a page: the main ladder". A gate that hides the
     //            subject of its own menu is a defect, not curation.
     // INSTEAD OF: `{ beginner: false, experienced: false, expert: true }` — expert only, added
@@ -138,7 +138,7 @@ export const EXPERIENCE_MATRIX = {
     //            hidden behind an experience setting". The Data inventory is the third entry point of
     //            that same suite, so gating it expert-only made the Lab's own rule apply to two of
     //            three. `hidden-views.js` also names `/lab/backtest*` as deliberately NOT withheld.
-    //            The owner reported it as "the Backtesting Data page in the Lab area" missing.
+    //            It was reported it as "the Backtesting Data page in the Lab area" missing.
     // INSTEAD OF: `{ beginner: false, experienced: false, expert: true }`, added 2026-11-03.
     // REVERSE BY: Restoring the expert-only triple above.
     'backtest-data':         { beginner: true,  experienced: true,  expert: true },

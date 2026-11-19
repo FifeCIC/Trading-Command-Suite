@@ -421,7 +421,7 @@ describe('assessGlobalRiskLimits — drawdown baseline must be real (#848)', () 
   /**
    * REGRESSION GUARD — the per-symbol cap must measure the SYMBOL, not one order (#899, 2026-09-19).
    *
-   * The owner's design is one protocol driving several bots on the same symbol
+   * The project's design is one protocol driving several bots on the same symbol
    * (docs/trading-bot-model.md §4) with the stated constraint "…for the same symbol, but not
    * increasing risk". Before this fix that guarantee did not exist at the CALLER either: every
    * bot's order was measured in isolation, so three bots at 20% could put 60% on one instrument

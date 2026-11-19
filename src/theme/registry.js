@@ -115,7 +115,7 @@ export function createThemeRegistry({ packs = [], adapters = [], initialDiagnost
     }
 
     // ⚠️ SLATE, NOT CORE (2026-10-12). This is the pack used when the stored id is unknown or missing
-    // — the app's real default. It read `core` until the owner asked for slate to be the default and
+    // — the app's real default. It read `core` until the requirement is for slate to be the default and
     // `ai-original` to be removed: leaving it as `core` would have dropped every browser with
     // `ai-original` stored onto a DIFFERENT pack than the one asked for, and that would have looked
     // like "the default did not change" rather than like a bug. Packs are discovered by filename

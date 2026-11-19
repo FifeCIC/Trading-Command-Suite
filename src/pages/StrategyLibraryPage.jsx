@@ -247,7 +247,7 @@ export default function StrategyLibraryPage() {
   }, [directivesQuery.data]);
 
   /**
-   * Running bots with NO written theory — the other half of the owner's instruction:
+   * Running bots with NO written theory — the other half of the project's instruction:
    * *"all strategies will be listed there even if some of our running ones do not have much theory to
    * attach but maybe you can establish theory as you go based on the directives in the strategies
    * protocol and the symbols."*
@@ -287,7 +287,7 @@ export default function StrategyLibraryPage() {
       )}
 
       {/* ⚠️ THE GAP BAR EXISTS BECAUSE THE SECTION BELOW IS 2.3 SCREENS DOWN (measured 2026-11-18:
-          2,028px past 19 collapsed cards, viewport 889px). The owner reported the section as "not
+          2,028px past 19 collapsed cards, viewport 889px). It was reported the section as "not
           appearing" — it was rendering correctly and simply out of sight. A 49-row table above the
           library would bury the library instead, so the answer is a one-line pointer at the top and
           an anchor to the detail. */}
@@ -558,8 +558,8 @@ export default function StrategyLibraryPage() {
       </div>
 
       {/* ── RUNNING BOTS WITH NO WRITTEN THEORY ────────────────────────────────────────────────
-          The owner asked for ALL strategies to be listed here, including running ones with little
-          theory. They are listed as a GAP rather than given invented prose: a protocol's directive
+          ALL strategies are to be listed here, including running ones with little theory.
+          They are listed as a GAP rather than given invented prose: a protocol's directive
           ids do not contain a thesis, so "deriving" one would be a plausible paragraph nobody wrote.
           ⚠️ Rendered only when non-empty — an empty "0 bots" panel is chrome. */}
       {unwrittenBots.length > 0 && (

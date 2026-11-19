@@ -652,7 +652,7 @@ export class Mt5Controller {
     this.logger.warn(`DEPRECATED — POST /api/providers/mt5/close/${ticket} called. Redirect to DELETE /api/trading/mt5/close/${ticket}.`);
     try {
       // `origin=manual` — a person invoked this endpoint (#916, 2026-10-07). Every bridge close
-      // must stamp its closer now: an unstamped close is assumed to be the owner (R46 direction),
+      // must stamp its closer now: an unstamped close is assumed to be the requirement (R46 direction),
       // and this one is deliberate.
       const res = await fetch(`${this.BRIDGE_URL}/close/${ticket}?origin=manual`, {
         method: 'POST',

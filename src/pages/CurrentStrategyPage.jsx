@@ -2,7 +2,7 @@
  * CurrentStrategyPage — "/lab/current-strategy". The focused strategy, and how its latest run compares
  * with the one that was accepted.
  *
- * ── WHY THIS IS ITS OWN PAGE (owner direction, 2026-11-04) ──────────────────────────────────────
+ * ── WHY THIS IS ITS OWN PAGE (requirement, 2026-11-04) ──────────────────────────────────────
  * *"I wanted a 'Current Strategy' page added to the 'Lab' and everything I highlighted moved to that
  * new page. Simplifying the 'Backtest Strategies' page a little as right now it has results displayed
  * twice."*

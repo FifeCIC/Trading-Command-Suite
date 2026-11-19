@@ -217,7 +217,7 @@ export class SymbolsService implements OnApplicationBootstrap {
    *   `MetaQuotes`  1 — the MT5 PLATFORM, declared by hand on GRML
    *   `Unknown`     1 — an adapter fallback (`x || 'Unknown'` appears in five adapters)
    *
-   * The owner read the page and asked why a non-existent exchange appeared on most rows. That is
+   * The requirement read the page and asked why a non-existent exchange appeared on most rows. That is
    * the failure mode: a value that LOOKS like an answer is worse than a blank, because nobody
    * checks it. The seeder now writes NULL, and the 31 rows were reconciled.
    *
@@ -881,7 +881,7 @@ export class SymbolsService implements OnApplicationBootstrap {
 
     // ── #926 follow-on — per-protocol STATISTICS, so protocols can be COMPARED ──
     //
-    // The owner's question (2026-09-27): *"how much processing is happening, very hidden, and how
+    // The project's question (2026-09-27): *"how much processing is happening, very hidden, and how
     // much data is generated, for one symbol which in the end can only trade so much… something to
     // help investigate the strongest and weakest protocols."*
     //

@@ -1,7 +1,7 @@
 /**
  * momentum-and-macro directive CLAIMS — the number must not describe an instrument it never read.
  * =================================================================================================
- * Created 2026-11-02 (#1181, register row 129) after the owner's direction:
+ * Created 2026-11-02 (#1181, register row 129) after the project's direction:
  * *"we shouldn't mix up symbol names like sp500 and vix within a strategy — that will cause a lot of
  * confusion."*
  *

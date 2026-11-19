@@ -1,7 +1,7 @@
 /**
  * score-maths.ts — THE arithmetic of the backtest A/B comparison. One implementation, server-side.
  *
- * WHY IT MOVED HERE (owner direction, 2026-10-27)
+ * WHY IT MOVED HERE (requirement, 2026-10-27)
  * ----------------------------------------------
  * *"I see huge potential for agentic AI to use it … Agentic AI will be able to make adjustments.
  * Re-test, and keep doing that over and over again for a set period or target a significant level of
@@ -132,7 +132,7 @@ export function scoringTotals(series: ScoreBar[] | null | undefined): RunTotals 
 /**
  * tradeTotals — the money, answered once, for every surface.
  *
- * ⚠️ WHY THIS IS SERVER-SIDE. Owner direction 2026-10-29: the run panel *"needs to be more trade
+ * ⚠️ WHY THIS IS SERVER-SIDE. Requirement 2026-10-29: the run panel *"needs to be more trade
  * based and show us profit loss at least"*. The temptation is twenty lines of `reduce()` in the
  * component — and `src/core/backtest-totals.js` carries a standing instruction against exactly that,
  * because a panel that computes its own win rate will eventually disagree with the endpoint an agent
@@ -220,7 +220,7 @@ export interface ExcursionTotals {
   captureRatePct: number | null;
   /**
    * Σ currency P&L **if every trade had exited at its own best recorded price** — the theoretical
-   * outcome the owner asked for: *"money values telling me the theoretic trading outcome if we took
+   * outcome the requirement is for: *"money values telling me the theoretic trading outcome if we took
    * profit at the highest value of each position as recorded."*
    *
    * Per trade: `maxFavourablePct/100 × entryPrice × positionSize`, minus that trade's commission (one
@@ -269,7 +269,7 @@ export interface CostTotals {
 /**
  * Hold time, grouped by what ended the trade.
  *
- * ⚠️ WHY SPEED OF MOVEMENT IS A RESULT, NOT A CURIOSITY (owner direction, 2026-10-29): *"I want to
+ * ⚠️ WHY SPEED OF MOVEMENT IS A RESULT, NOT A CURIOSITY (requirement, 2026-10-29): *"I want to
  * establish an average time to SL trigger … and an average to TP … Where I'm going with this is to
  * consider the speed of movement."* A losing trade that takes LONGER to resolve than a winning one is
  * a different instrument problem from one that resolves faster: price is grinding to the target and
@@ -544,7 +544,7 @@ export function tradeTotals(
 /**
  * stopSweep — "is the stop too distant?", answered from stored excursions.
  *
- * Owner direction, 2026-10-29: *"if 70% of positions that dropped into the red by X amount then
+ * Requirement, 2026-10-29: *"if 70% of positions that dropped into the red by X amount then
  * triggered the SL, that would tell us that we're losing money because the SL is too distant. The
  * simulated-stop-loss could be stricter."* That is exactly the question below, made countable.
  *
@@ -721,7 +721,7 @@ export function barGapProfile(
 /**
  * periodHealth — THE STANDARD that decides whether a window may be measured at all.
  *
- * Owner direction, 2026-10-29: *"we should consider some standard requirements to deem a period
+ * Requirement, 2026-10-29: *"we should consider some standard requirements to deem a period
  * healthy/complete enough to use at all … until then we should be strict."*
  *
  * ⚠️ THE THRESHOLDS ARE SETTINGS, NOT CONSTANTS (`backtest.periodMinCoveragePct`,

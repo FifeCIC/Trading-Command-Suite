@@ -465,7 +465,7 @@ export default function CapabilityMapPage() {
       <motion.header className="cm-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <h1>
           🗺️ Capability Map
-          {/* ⚠️ MOVED INTO THE ℹ POPOVER (owner, 2026-11-07). The subtitle stated the inventory size
+          {/* ⚠️ MOVED INTO THE ℹ POPOVER (Requirement, 2026-11-07). The subtitle stated the inventory size
               and then explained the POST endpoint that adds to it — a method note above the thing it
               describes. The count stays on screen in the Summary strip immediately below, so nothing
               measurable was lost by hiding this. */}

@@ -2,7 +2,7 @@
  * pre-open-session.ts — the ADVISORY pre-open alert decision (#981).
  * =================================================================
  *
- * THE OWNER'S DECISION THIS IMPLEMENTS (2026-09-23):
+ * THE PROJECT'S DECISION THIS IMPLEMENTS (2026-09-23):
  *
  *     "I would like the app to use alert of market opening ahead, **no automatic effect**."
  *

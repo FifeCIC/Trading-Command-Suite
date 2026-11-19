@@ -19,11 +19,11 @@
  *   node scripts/check-handoff-staleness.cjs --dir <p>  # point at another folder (used to canary this)
  *   node scripts/check-handoff-staleness.cjs --self-test
  *
- * ⚠️ Exit 2 means "could not judge" — the docs store is not mounted. That is NOT a pass: the owner's
+ * ⚠️ Exit 2 means "could not judge" — the docs store is not mounted. That is NOT a pass: the project's
  * G: drive drops out, and a check that reports clean while reading nothing is worse than no check.
  *
  * ⚠️ `--prebuild` IS THE ONE TOLERANCE, AND IT IS NARROW: a stale handoff fails the build (the
- * owner asked for that), but an unmounted store returns 0 because a build must not go red for a
+ * the brief asked for that), but an unmounted store returns 0 because a build must not go red for a
  * network drive. The failure and the tolerance are stated separately on purpose — collapsing them
  * would make "stale" indistinguishable from "could not look".
  */

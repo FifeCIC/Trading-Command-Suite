@@ -80,7 +80,7 @@ function versionsAgree(a, b) {
 /**
  * stageBlocks(next, stage) — does moving to `next` contradict the DECLARED release stage?
  *
- * ⚠️ WHY THIS EXISTS. Owner directive, 2026-11-09: I've decided the project is still in alpha so lets not
+ * ⚠️ WHY THIS EXISTS. Requirement, 2026-11-09: I've decided the project is still in alpha so lets not
  * move onto 1.0.0 just yet. That is a decision, and a decision nobody can violate by running the
  * normal command is not recorded — it is a preference. `bump-version.cjs` was the exact command that
  * could undo it, silently, in one word (`major`).
@@ -100,7 +100,7 @@ function stageBlocks(next, stage) {
   return (
     `refusing to go to ${next}: the declared release stage is "${declared}" (package.json releaseStage), ` +
     'and 1.0.0 is the semver claim that the public API is stable. Set `"releaseStage": "stable"` in ' +
-    'package.json deliberately, with the owner, before crossing 1.0.0.'
+    'package.json deliberately, with the requirement, before crossing 1.0.0.'
   );
 }
 
@@ -165,7 +165,7 @@ function selfTest() {
   check('agree on equal', () => eq(versionsAgree('0.114.0', '0.114.0'), true));
   check('DISAGREE on different', () => eq(versionsAgree('0.114.0', '0.113.0'), false));
 
-  // ── The release-stage gate, canaried BOTH ways. The failing case is the owner's 2026-11-09
+  // ── The release-stage gate, canaried BOTH ways. The failing case is the project's 2026-11-09
   //    decision: the project is alpha, and `major` was one word away from crossing it.
   check('stage: alpha BLOCKS 1.0.0', () => eq(stageBlocks('1.0.0', 'alpha') !== null, true));
   check('stage: alpha BLOCKS an exact 2.0.0', () => eq(stageBlocks('2.0.0', 'alpha') !== null, true));

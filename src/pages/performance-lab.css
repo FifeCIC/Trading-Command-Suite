@@ -51,7 +51,7 @@
       because `.pl-` is a SHARED prefix across three stylesheets and this one loads later once its
       route has been visited. Measured 2026-10-13 on /appearance/data-display: the hover computed to
       `rgb(37, 40, 64)` — this hex — instead of `var(--line)` = `#334155`, so rows went DARKER on hover
-      rather than lighter. The owner spotted it unaided: *"as if the theme doesn't have the required
+      rather than lighter. The requirement spotted it unaided: *"as if the theme doesn't have the required
       styles and falls back to a default."*
    `var(--line)` is what the ladder already uses, so all three definitions of this rule now agree on a
    light, theme-aware hover whatever the load order happens to be. */

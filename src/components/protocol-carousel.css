@@ -32,7 +32,7 @@
 
 
 /* The viewport. A fixed height is what makes it a PANEL rather than a list.
-   ⚠️ OWNER DIRECTION 2026-10-30: *"These boxes could be half the height they are … and [the track]
+   ⚠️ REQUIREMENT 2026-10-30: *"These boxes could be half the height they are … and [the track]
    could also be a bit smaller in height too."* The card drops 132 → 84px and the viewport from
    2.6 cards to 1.6 — the resting card stays clearly centred with a sliver of each neighbour as the
    only affordance, which is enough to say "this scrolls" without spending 190px on it. */
@@ -130,7 +130,7 @@
  * The card's second line: meta and style side by side (2026-10-30).
  *
  * ⚠️ THIS IS WHAT MAKES THE CARD FIT AT ~HALF HEIGHT. Stacked, `meta`, `style` and `warn` needed ~150px;
- * the owner asked for roughly half, so the two quiet lines share one row and the description moves to a
+ * the requirement is for roughly half, so the two quiet lines share one row and the description moves to a
  * tooltip. Nothing is dropped — only re-flowed.
  */
 .pc-sub {

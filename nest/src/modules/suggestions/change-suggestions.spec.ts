@@ -1,7 +1,7 @@
 /**
  * change-suggestions.spec.ts — the canary for the queue of intended changes.
  *
- * ⚠️ Every case corresponds to a way this list could mislead the owner. It is a list of THINGS TO DO,
+ * ⚠️ Every case corresponds to a way this list could mislead the requirement. It is a list of THINGS TO DO,
  * read by the person deciding what to build next — so a wrong row is worse than a missing one.
  */
 import {

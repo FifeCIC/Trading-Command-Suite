@@ -14,7 +14,7 @@
  *   - A 55% hit rate with 1:0.5 reward:risk is a LOSING strategy.
  *   - A 45% hit rate with 1:2.5 reward:risk is a winning one.
  *
- * The owner's condition for continuing development is *"will it positively impact profitable
+ * The project's condition for continuing development is *"will it positively impact profitable
  * trade"* — which is a question about THIS file's output, not about hit rate. Reporting only
  * hit rate would answer a different, easier question and look like progress.
  *
@@ -118,7 +118,7 @@ export interface PnlReport {
    * Measured 2026-10-14: the A/B arms were **23 trades (7% of the count) and £−929.60 — 80% of
    * the whole book's loss** — while the 301 live-bot trades were **−£0.35 per trade**, i.e.
    * break-even. **`overall` therefore describes the measurement instrument as much as the
-   * strategy**, and the owner's own conclusion (*"we're losing money"*) was formed from a figure
+   * strategy**, and the project's own conclusion (*"we're losing money"*) was formed from a figure
    * that is 91% instrumentation.
    *
    * ⚠️ WHY THE SPLIT IS REPORTED RATHER THAN `overall` CHANGED: excluding the A/B rows from

@@ -1369,7 +1369,7 @@ export class Mt5Adapter implements IProviderAdapter {
    *
    * `origin` names the CLOSER and rides in the query (`/close` reads `q.get('origin')`) so the
    * closing deal is stamped `TCS:<origin>` (#916). Default 'manual': an unstamped close is now
-   * ASSUMED to be the owner (owner direction 2026-10-07, R46) — an app close must name itself
+   * ASSUMED to be the requirement (requirement 2026-10-07, R46) — an app close must name itself
    * deliberately. Enforced by `validate-bridge-order-choke-point.cjs` R5.
    */
   async closePosition(ticket: string, volume?: number, brokerId?: number, origin = 'manual'): Promise<BrokerOrderResult> {

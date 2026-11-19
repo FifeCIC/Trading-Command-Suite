@@ -140,7 +140,7 @@ const demos = [
 /**
  * MotionLabSection — the Motion Lab's examples, rendered INSIDE Theme Lab.
  *
- * ⚠️ This was `ThemeLabMotion`, a PAGE at /development/theme-lab-motion until 2026-10-01. The owner
+ * ⚠️ This was `ThemeLabMotion`, a PAGE at /development/theme-lab-motion until 2026-10-01. The requirement
  * deleted that view and said "add motion examples to the theme-lab page". So this exports a SECTION:
  * no `tl-page` wrapper and no `<h1>` — the host page owns the heading. The file is still imported by
  * ThemeLabPage.jsx, which is why scripts/delete-views.cjs kept it rather than deleting it with the view.

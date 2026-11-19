@@ -19,7 +19,7 @@ const PIVOT_WINDOW = 3; // Bars each side of a pivot
 const PROXIMITY_PCT = 2; // Within 2% of level = "near"
 
 /**
- * S/R is the charted indicator the owner named directly (2026-11-01): *"The one for resistance and
+ * S/R is the charted indicator the requirement named directly (2026-11-01): *"The one for resistance and
  * support would also be a good charted indicator."* All three knobs chart naturally — two bracket the
  * time axis (`window`) and one is a distance band around the price line (`proximity`), so the levels it
  * finds can be DRAWN, not just scored.

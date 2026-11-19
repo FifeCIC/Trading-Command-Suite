@@ -6,7 +6,7 @@
  *
  * WHY THIS EXISTS
  * ---------------
- * The project owner asked whether documentation or agent rules were leading to
+ * The project the brief asked whether documentation or agent rules were leading to
  * bad decisions. They were. Investigation on 2026-09-11 found three defects, each
  * of which caused a real, repeated mistake:
  *
@@ -77,7 +77,7 @@ const { agentPath } = require('./lib/agent-paths.cjs');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 /**
- * ⚠️ THE RULE CORPUS MOVED OUT OF THE REPOSITORY (owner, 2026-11-16).
+ * ⚠️ THE RULE CORPUS MOVED OUT OF THE REPOSITORY (requirement, 2026-11-16).
  *
  * *"please move all of those"* — all 19 instruction files now live in the docs store, because this
  * repository is public and internal agent process does not belong in a product repo. What is left

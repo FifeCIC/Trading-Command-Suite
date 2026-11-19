@@ -29,7 +29,7 @@ export type NotificationEvent =
   | 'entry-signal'
   /**
    * A SIGNAL SUGGESTION — the app recommending an entry, before any bot acts and with no bot
-   * required. Added 2026-11-06 at the owner's direction:
+   * required. Added 2026-11-06 at the project's direction:
    * *"my framing of signal is based on the Signals area which is suggestion to enter so any sharing
    * would happen before a bots action and without a bot attached to create a full strategy."*
    *
@@ -53,9 +53,9 @@ export type NotificationEvent =
 /**
  * HOW LOUD AN EVENT IS ALLOWED TO BE.
  *
- * ⚠️ Added 2026-09-27 at the owner's request: *"If there are priorities in our notifications then
+ * ⚠️ Added 2026-09-27 at the project's request: *"If there are priorities in our notifications then
  * offer those as a control too."* Until this existed the only control was per-event on/off, so the
- * unit of decision for the owner was "this exact event", and the real question they were asking was
+ * unit of decision for the requirement was "this exact event", and the real question they were asking was
  * "stop sending me routine bookkeeping".
  *
  *   critical — trading is IMPOSSIBLE, or money is at immediate risk. Never mutable.
@@ -93,7 +93,7 @@ export interface NotificationPreference {
   mandatory?: boolean;
   /**
    * The floor this event sits under, so the settings surface can explain the number rather than
-   * leaving the owner to guess why a muted event still arrives.
+   * leaving the requirement to guess why a muted event still arrives.
    */
   minPriority?: NotificationPriority;
 }
@@ -136,7 +136,7 @@ const DEFAULT_PREFERENCES: NotificationPreference[] = [
   { event: 'dxy-regime-change', channels: ['windows', 'telegram', 'discord'], enabled: true, priority: 'normal' },
   { event: 'position-opened', channels: ['windows', 'telegram', 'discord'], enabled: true, priority: 'normal' },
   { event: 'position-closed', channels: ['windows', 'telegram', 'discord'], enabled: true, priority: 'normal' },
-  // ⚠️ TURNED DOWN 2026-09-27, from the owner's report: *"So far I'm being updated on every stop
+  // ⚠️ TURNED DOWN 2026-09-27, from the project's report: *"So far I'm being updated on every stop
   // loss adjustment."* MEASURED the same day: the Stop Guardian was trailing stops on a CLOSED
   // market every ~30 seconds and the broker ACCEPTED every edit (#1011), so this event fired
   // continuously all weekend for a market that was not trading. `low` is the honest
@@ -167,7 +167,7 @@ export class NotificationService implements OnModuleInit {
    * THE GLOBAL FLOOR — nothing quieter than this is delivered, on any channel.
    *
    * ⚠️ Defaults to `'low'`, which suppresses NOTHING. That is deliberate: a control that starts
-   * active and silent would look identical to a broken notification system, and the owner asked for
+   * active and silent would look identical to a broken notification system, and the requirement is for
    * this to REDUCE noise they chose, not to have noise removed on their behalf. `'critical'` is what
    * mutes the routine traffic — and `trade-disabled` is exempt from the floor entirely.
    */
@@ -330,7 +330,7 @@ export class NotificationService implements OnModuleInit {
 
     // ── The priority floor ──
     // ⚠️ AND MANDATORY EVENTS ARE EXEMPT FROM IT. `minPriority: 'critical'` is a legitimate thing
-    // for the owner to choose and it must not take `trade-disabled` with it — the floor is a
+    // for the requirement to choose and it must not take `trade-disabled` with it — the floor is a
     // convenience control, and no convenience control is allowed to silence "you cannot trade".
     if (!prefs?.mandatory && prefs) {
       const floor = PRIORITY_RANK[this.minPriority];

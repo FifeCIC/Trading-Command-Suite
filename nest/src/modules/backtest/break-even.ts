@@ -35,7 +35,7 @@
  *     1bbf1860       88.0%        74.9%        +13.1pp
  *     568c5552       57.7%        48.8%         +8.9pp
  *
- * ⚠️ THE OWNER ASKED WHETHER THIS WAS *"just playing about with hardcoded maths"*. It was not
+ * ⚠️ IT WAS ASKED WHETHER THIS WAS *"just playing about with hardcoded maths"*. It was not
  * hardcoded — but it WAS an inference about costs layered on prices that already contained them,
  * and the only way to see that was to compute the same answer a second way and compare. Both numbers
  * are kept above so the next reader can check the arithmetic rather than trust the prose.

@@ -34,7 +34,7 @@
   line-height: 1.6;
   color: var(--ink-soft);
 }
-/* The strategy's OPTIONAL live view link (owner, 2026-11-18). Sits in the Overview section rather
+/* The strategy's OPTIONAL live view link (Requirement, 2026-11-18). Sits in the Overview section rather
    than the card header: the header is the accordion toggle, and a link inside a button is neither
    valid nor keyboard-operable. */
 .sl-live-link {

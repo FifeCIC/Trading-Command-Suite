@@ -3,7 +3,7 @@
  * audit-protocol-faults.cjs — every fault CLASS this project has found, checked across ALL
  * protocols and strategies at once.
  *
- * WHY THIS EXISTS (owner direction, 2026-11-02)
+ * WHY THIS EXISTS (requirement, 2026-11-02)
  * ---------------------------------------------
  * *"We should look for such faults in design and other faults we have found in the past in all
  * other protocols and strategies."*

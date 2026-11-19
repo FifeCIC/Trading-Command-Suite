@@ -6,7 +6,7 @@
  * counts and the "did it repeat" verdict now live in `nest/src/modules/backtest/score-maths.ts` and are
  * served by `POST /api/backtest/repeat-check` and the `totals` block on `GET /api/backtest/results/:id`.
  *
- * WHY THEY MOVED: the owner's stated goal is *"agentic AI being able to use it … make adjustments,
+ * WHY THEY MOVED: the project's stated goal is *"agentic AI being able to use it … make adjustments,
  * re-test, and keep doing that over and over"*. A tuning loop's DECISION has to be reachable without a
  * browser. Keeping a JavaScript copy here meant an agent either could not decide at all, or decided
  * with a second implementation that would drift from the UI's — and this page has already paid for one

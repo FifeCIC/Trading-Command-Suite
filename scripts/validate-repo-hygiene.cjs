@@ -3,7 +3,7 @@
  * validate-repo-hygiene.cjs — a tracked file must belong where it sits.
  *
  * ── WHY THIS EXISTS ─────────────────────────────────────────────────────────────
- * Owner directive, 2026-11-07: I'm a perfectionist and the easy visuals are the first thing that bothers
+ * Requirement, 2026-11-07: I'm a perfectionist and the easy visuals are the first thing that bothers
  * me. Look at nest/ … it contains a mix of completely different files … If that was another
  * developer's project it wouldn't give me confidence in their tidiness.
  *

@@ -5,7 +5,7 @@ import './strategy-live.css';
  * MostActivePage — the "Most active" list as RESEARCH, not as a strategy.
  *
  * --- WHY THIS IS RESEARCH AND NOT A STRATEGY PAGE -------------------------------------------------
- * The owner's own suspicion is correct, and it is worth writing down so nobody "promotes" this later
+ * The project's own suspicion is correct, and it is worth writing down so nobody "promotes" this later
  * without answering it: **volume is not direction.** "Top gainers" and "top losers" are ranked by a
  * SIGNED move, so each carries an implied side. "Most active" is ranked by an UNSIGNED quantity — a
  * name can top this list while closing flat, or while gapping both ways inside one session.

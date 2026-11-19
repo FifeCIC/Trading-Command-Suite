@@ -214,7 +214,7 @@ function HScroll({ children, label }) {
 }
 
 /* ── MT5 Portfolio Summary ──
-   Owner directive, 2026-11-06: Surely we can add more information … Lets hide some of that additional
+   Requirement, 2026-11-06: Surely we can add more information … Lets hide some of that additional
    information if the widget is too small for it. Rather than just relying on scroll bar lets add
    buttons for scrolling information sideways. Also position the information so it's always two
    rows. Right now it's one with a lot of empty space below each piece of data.
@@ -251,7 +251,7 @@ function Mt5PortfolioWidget() {
   return (
     <HScroll label="portfolio figures">
       {/* ⚠️ `minmax(96px, 1fr)`, NOT `minmax(0, 1fr)` — measured 2026-11-06: with `0` the tracks
-          simply shrink, so the row never overflows and the scroll buttons the owner asked for could
+          simply shrink, so the row never overflows and the scroll buttons the requirement is for could
           never appear. A 96px floor makes the row genuinely wider than a small tile, which is what
           the arrows are for; below that the optional figure drops out instead. */}
       <div className="dash-card-rows" style={{ gridTemplateColumns: `repeat(${columns}, minmax(96px, 1fr))` }}>
@@ -531,7 +531,7 @@ function WorstCaseWidget() {
   // ⚠️ BEFORE the no-losers branch (#782). This tile used to print
   // "No losing positions — nothing at risk." whenever the positions request failed, because an empty
   // array was indistinguishable from a failed one. That sentence, produced by an outage, is the single
-  // most dangerous claim in this app: it tells the owner the book is safe when nothing was read.
+  // most dangerous claim in this app: it tells the requirement the book is safe when nothing was read.
   if (unavailable.positions) {
     return (
       <p className="dash-hint">
@@ -566,7 +566,7 @@ function WorstCaseWidget() {
  *
  * WHY IT EXISTS (#943). `risk.maxPortfolioRisk` refused 522 entry attempts
  * across 13 symbols on 2026-10-12, and the number could only be read on
- * `/risk-controls` — a page nobody had open. The owner asked for it on the
+ * `/risk-controls` — a page nobody had open. The requirement is for it on the
  * dashboard, adjustable, so it stops being a value you have to go and look for.
  *
  * ⚠️ IT DELIBERATELY SHOWS NO "AT RISK" FIGURE. The neighbouring Worst-Case
@@ -622,7 +622,7 @@ function RiskCapsWidget() {
   }
 
   return (
-    /* ⚠️ A MAX WIDTH, on the owner's instruction (2026-11-06): *"force a maximum width on this one —
+    /* ⚠️ A MAX WIDTH, on the project's instruction (2026-11-06): *"force a maximum width on this one —
        it has no benefit to be wider than the content."* Two label/value/input rows do not become more
        readable at 500px; they just stretch and leave the value adrift from its label. */
     <div className="dash-card-stats dash-card-stats--capped">
@@ -855,7 +855,7 @@ function HotPicksWidget() {
             {/* Colour = the SERVER's classification (`pick.signal`), not a remembered 0-100 bar.
                 Measured 2026-09-20: ranked `score` is 29-57 — a display number with no owning bar,
                 and the client never re-derives a classification from a number (#847). */}
-            {/* ⚠️ THE NUMBER NEEDED A UNIT (owner directive, 2026-11-06): right now there's some very small
+            {/* ⚠️ THE NUMBER NEEDED A UNIT (requirement, 2026-11-06): right now there's some very small
                 numbers listed, not sure if its the SIGNAL score which is often low or it's a
                 percentage without the %). It is the SEES composite score out of 100 from
                 `/api/scoring/ranked` — not a percentage — and composites are compressed, which is why

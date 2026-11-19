@@ -496,7 +496,7 @@ const AB_ACCOUNT_REFUSAL_LOG_MS = 60 * 60_000;
  * so while the pair held XAUUSD all 8 gold bots were locked out of it, and the pair was locked
  * out while they held it.
  *
- * RULE (owner direction, 2026-10-07 — `external-systems-are-data.instructions.md`):
+ * RULE (requirement, 2026-10-07 — `external-systems-are-data.instructions.md`):
  *   > The pair must refuse to run when it cannot get two distinct, viable accounts — never fall
  *   > back to one.
  *
@@ -1751,7 +1751,7 @@ export class AutomationLoopService implements OnModuleInit {
 
         // ── The public SIGNAL feed (2026-11-06) ──
         // Shares ONE ranked ladder card as a "suggestion to enter" — generated from scoring with no
-        // bot attached, which is exactly the Signals area the owner described. Fire-and-forget: a
+        // bot attached, which is exactly the Signals area the requirement described. Fire-and-forget: a
         // public post must never delay or fail the scoring line it rides on.
         void this.publishSignalSuggestion(bestLadder).catch((err) =>
           this.logger.warn(`Signal suggestion not published: ${(err as Error).message}`),
@@ -1856,7 +1856,7 @@ export class AutomationLoopService implements OnModuleInit {
 
     // #875 — materialisation watcher. A derived combination that has a LIVE bot and no registered
     // row yet gets one (stable id, name null, source 'auto'). Successors of already-registered
-    // bots are skipped — those are the owner's drift/re-accept decisions, not new identities.
+    // bots are skipped — those are the project's drift/re-accept decisions, not new identities.
     // Failures never block the tick: registration is an identity ledger, not a trading gate.
     try {
       const sync = await this.strategyRegistry.syncAuto();
@@ -2215,7 +2215,7 @@ export class AutomationLoopService implements OnModuleInit {
   /**
    * checkPreOpenSessionAlert() — raise ONE collapsing alert ahead of the New York open (#981).
    *
-   * ⚠️ ADVISORY ONLY — the owner's words: "alert of market opening ahead, no automatic effect".
+   * ⚠️ ADVISORY ONLY — the project's words: "alert of market opening ahead, no automatic effect".
    * This method writes an alert row and a status block. It does not gate, pause, close or size
    * anything, and no caller may build on it as if it did (#928 measured the window; it did not
    * reach significance, so a gate is not justified — the alert is also how the sample is
@@ -3341,7 +3341,7 @@ export class AutomationLoopService implements OnModuleInit {
   /**
    * publishSignalSuggestion() — share ONE ranked ladder card as a suggestion to enter.
    *
-   * ── WHY THIS AND NOT `entry-signal` (owner direction, 2026-11-06) ────────────────────────────
+   * ── WHY THIS AND NOT `entry-signal` (requirement, 2026-11-06) ────────────────────────────
    * *"my framing of signal is based on the Signals area which is suggestion to enter so any sharing
    * would happen before a bots action and without a bot attached to create a full strategy."*
    *
@@ -3404,7 +3404,7 @@ export class AutomationLoopService implements OnModuleInit {
       score: signalPct,
       metadata: {
         protocolId: best.protocolId ?? 'any',
-        // The published message shows protocol AND bot (owner, 2026-11-12). `protocolName` is the
+        // The published message shows protocol AND bot (Requirement, 2026-11-12). `protocolName` is the
         // human-readable label the ladder already resolved; `botName` comes from the envelope.
         protocolName: (ladder as any)?.protocolName ?? null,
         strategyName: best.botName ?? null,

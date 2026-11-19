@@ -1100,7 +1100,7 @@ export const ROUTE_CONTRACTS = [
         method: 'GET',
         permission: 'Authenticated operator access',
         owner: 'ProvidersController / PositionSyncService',
-        contract: 'NEW (#1093). Reports closed trades missing exit data: the ticketed population (a `brokerTicket` the terminals may still serve) and the UNTICKETED one (no ticket at all, so no app-side call can price it), counted separately so the note on a recovery reconciles. `?provider=mt5` scopes it. Before this the only way to close the gaps was the manual MT5 terminal period ritual (R48) the owner rejected.',
+        contract: 'NEW (#1093). Reports closed trades missing exit data: the ticketed population (a `brokerTicket` the terminals may still serve) and the UNTICKETED one (no ticket at all, so no app-side call can price it), counted separately so the note on a recovery reconciles. `?provider=mt5` scopes it. Before this the only way to close the gaps was the manual MT5 terminal period ritual (R48) the requirement rejected.',
         status: 'active',
       },
       {

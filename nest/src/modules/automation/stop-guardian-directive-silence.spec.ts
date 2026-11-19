@@ -35,7 +35,7 @@
  *      the #890 blind spot restated as an executable assertion.
  *   6. Delete the `this.syslog?.warn(...)` line → `ALSO reaches the canonical log` FAILS. This one
  *      was NOT hypothetical: the first draft of this change had exactly that omission, and this
- *      file's own sibling (the owner-resolution warning) had already been measured silent for the
+ *      file's own sibling (the requirement-resolution warning) had already been measured silent for the
  *      same reason — 341 occurrences in the console log, zero in the canonical one.
  */
 import { StopGuardianService } from './stop-guardian.service';

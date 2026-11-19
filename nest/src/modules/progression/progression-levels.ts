@@ -5,7 +5,7 @@
  * WHAT:      A **progression level** (1–5) is EARNED from measured activity and gates how many bots
  *            may be ACTIVE at once. XP is DERIVED from counts the app already writes; nothing is
  *            stored, awarded or spendable. Level 1 allows one active bot; level 5 is uncapped.
- * WHY:       The repo is now open source, so people other than the owner will run it. Running many
+ * WHY:       The repo is now open source, so people other than the requirement will run it. Running many
  *            bots is resource-intensive and several trading safeguards are still outstanding, so a
  *            first-day install should not be able to run a crowd of bots — and a limit that lifts as
  *            the operator demonstrably uses the app is defensible and explainable, where a flat

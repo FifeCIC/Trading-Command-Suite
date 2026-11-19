@@ -55,7 +55,7 @@ import SupportReportPanel from './components/SupportReportPanel';
 /**
  * Nav filtering happens twice, and the split is deliberate.
  *
- * At module scope the tree is the BASE structure — no view removed. Inside `AppShell` the owner's
+ * At module scope the tree is the BASE structure — no view removed. Inside `AppShell` the project's
  * "hide now" verdicts from the Page Walkthrough are applied on top. Both call the same
  * `filterHiddenViews()` helper, so "is this view hidden?" has exactly one implementation.
  *
@@ -66,7 +66,7 @@ import SupportReportPanel from './components/SupportReportPanel';
  * 🛑 NO `BASE_NAV_STRUCTURE` / `BASE_NAV_TREE` SNAPSHOT IS TAKEN HERE ANY MORE (2026-11-19). The two
  * navigation surfaces used to read module-level constants captured once at load — the left rail from
  * `getNavStructure()` and the top bar from `NAV_TREE` — so anything that changed the tree without
- * re-evaluating those constants left the two surfaces describing DIFFERENT menus. The owner reported
+ * re-evaluating those constants left the two surfaces describing DIFFERENT menus. It was reported
  * exactly that: *"the new Strategies area sometimes hides/vanishes and I can also see the Strategy
  * Library page in the Trading area too … as if two versions of the menu exist."*
  *
@@ -190,7 +190,7 @@ function ContentCard({ title, children }) {
  */
 function AppShell({ directContent = null, directArea = null, directView = null }) {
   // ⚠️ MEMOISED, and it must stay that way. These filter the module-scope base constants down to
-  // what the owner has not hidden, so without a stable reference the NAV_STRUCTURE effect below
+  // what the requirement has not hidden, so without a stable reference the NAV_STRUCTURE effect below
   // (the one that redirects an area with no first view) would re-run on every render once it is
   // listed as a dependency — which it now must be, because the value is not module-constant.
   const hiddenRoutes = useHiddenRoutes();
@@ -704,7 +704,7 @@ function AppShell({ directContent = null, directArea = null, directView = null }
     // That failure mode is bad three times over: the user is told the app is broken AND asked for
     // money, the real cause stays invisible, and a missing page looks exactly like a deliberate one.
     //
-    // The support panel was DELETED 2026-09-17 (owner decision). It had no route of its own and was
+    // The support panel was DELETED 2026-09-17 (requirement). It had no route of its own and was
     // reachable only as this fallback, so it was never a page — it was a disguised error state.
     //
     // Reaching here means `VIEW_COMPONENTS[secondaryView]`, `PLUGIN_TAB_SKELETONS[secondaryView]` and
@@ -755,7 +755,7 @@ function AppShell({ directContent = null, directArea = null, directView = null }
   const isMt5Online = mt5Query.data?.connected === true || mt5Query.data?.status === 'online';
 
   // ── Loop heartbeat — moved here from the Bot Monitor header (2026-11-07) ──────────────────────
-  // Owner directive: Remove sm-loop-badge … and add the stat to the top right status menu. The loop tick
+  // Requirement: Remove sm-loop-badge … and add the stat to the top right status menu. The loop tick
   // is machine-wide state, not page state, so it belongs with API/DB/MT5 rather than inside one
   // page's heading. `staleTime` matches the other header pollers so a page transition does not
   // re-request it, and `.catch(() => null)` keeps a down API from blanking the badge — the popout
@@ -868,7 +868,7 @@ function AppShell({ directContent = null, directArea = null, directView = null }
               <span className="hamburger-line" />
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              {/* ⚠️ Placed to the LEFT of the calculator, as the owner asked: help is the one topbar
+              {/* ⚠️ Placed to the LEFT of the calculator, as the brief asked: help is the one topbar
                   control a stuck user needs, so it outranks a tool they only reach for once they
                   already know what they are doing. */}
               <div
@@ -1052,7 +1052,7 @@ function AppShell({ directContent = null, directArea = null, directView = null }
             <button
               key={item.id}
               type="button"
-              /* ⚠️ `rail-link--withheld` IS THE OWNER'S WORK QUEUE (2026-11-06): *"change the colour of
+              /* ⚠️ `rail-link--withheld` IS THE PROJECT'S WORK QUEUE (2026-11-06): *"change the colour of
                  the text in the menu for pages that will be hidden for other users so I know which ones
                  still need work done to them the most."* It marks entries `filterHiddenViews` kept but
                  tagged, so a coloured label means "everyone else cannot see this yet". */
@@ -1113,7 +1113,7 @@ function AppShell({ directContent = null, directArea = null, directView = null }
                 ⚠️ These were SHELL CHROME — they rendered whenever Screen Options was open, which is
                 why they appeared to live on /settings/trading-settings when they were not part of
                 that page at all. Theme pack selection moves to the new Appearance area.
-                ⚠️ "Background" is deliberately KEPT: the owner listed Theme Mode, Theme Pack and
+                ⚠️ "Background" is deliberately KEPT: the list Theme Mode, Theme Pack and
                 Preview, and not this. Do not "finish the job" by removing it. */}
             <AccordionBlock title="Background" defaultOpen={false}>
               <div className="inline-actions" style={{ padding: '0.5rem 0' }}>
@@ -1151,7 +1151,7 @@ function AppShell({ directContent = null, directArea = null, directView = null }
             </AccordionBlock>
 
             {/* ⚠️ The Preview cards rail-block was removed here too (2026-10-13) — it was the third of
-                the three the owner listed. Its pack chooser now lives in the Appearance area, so
+                the three the list. Its pack chooser now lives in the Appearance area, so
                 keeping it would have left two controls for one setting. */}
           </>
         )}
@@ -1291,7 +1291,7 @@ export default function App() {
               or a link in an older issue keeps working. */}
           <Route path="/lab/meta-stack-pipeline" element={<Navigate to="/development/pipeline-graph-lab" replace />} />
           {/* `/planner/allocator` → `/lab/allocator` REMOVED 2026-10-01. The allocator view was deleted
-              at the owner's direction in the Page Walkthrough ("delete unless you think there is
+              at the project's direction in the Page Walkthrough ("delete unless you think there is
               value" — read: it survives as the Portfolio Assistant). A redirect to a route that no
               longer exists is a 404 with extra steps. */}
           <Route path="/qa/:view" element={<Navigate to="/development/qa-testing" replace />} />

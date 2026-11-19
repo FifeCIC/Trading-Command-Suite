@@ -357,7 +357,7 @@ const CHECKS = [
     label: 'One shared list of what needs the human',
     required: false,
     why: 'Otherwise a human must read every handoff and session note to find the few things waiting on them, so they read none of them.',
-    next: 'Create .github/REVIEW-QUEUE.md — one row per decision that only the owner can make.',
+    next: 'Create .github/REVIEW-QUEUE.md — one row per decision that only the requirement can make.',
     run(ctx) {
       const candidates = [
         path.join(ctx.root, '.github', 'REVIEW-QUEUE.md'),
@@ -374,7 +374,7 @@ const CHECKS = [
     bucket: 'Layout',
     label: 'Scratch and logs are gitignored',
     required: true,
-    why: 'Measured: logs/ held 576 files and 435 were TRACKED in a public repo, one containing a note the owner did not want published.',
+    why: 'Measured: logs/ held 576 files and 435 were TRACKED in a public repo, one containing a note the requirement did not want published.',
     next: 'Add logs/, *.bak, tmp-* and session output to .gitignore.',
     run(ctx) {
       const body = readIf(path.join(ctx.root, '.gitignore'));
@@ -405,7 +405,7 @@ const CHECKS = [
     label: 'A licence is present',
     required: true,
     why: 'A public repo with no licence is "all rights reserved" by default, which contradicts any open-source claim.',
-    next: 'Owner decision, and the ONLY gap no scaffold will fill: choose a licence and add the file. AGPL-3.0 keeps a fork open; MIT/BSD permit a closed fork. Do not let an agent pick one.',
+    next: 'Requirement, and the ONLY gap no scaffold will fill: choose a licence and add the file. AGPL-3.0 keeps a fork open; MIT/BSD permit a closed fork. Do not let an agent pick one.',
     /** No scaffold exists on purpose — this is the one required item that must be a human act. */
     humanDecision: true,
     run(ctx) {
@@ -447,7 +447,7 @@ const CHECKS = [
 //   4. **EVERY TEMPLATE CARRIES ITS DOCTRINE.** The header says which measured defect the file
 //      prevents, because a rule with no reason gets deleted by the next reader.
 //
-// ⚠️ Deliberately NOT scaffolded: `LICENSE` (a licence choice is the owner's, not a template's),
+// ⚠️ Deliberately NOT scaffolded: `LICENSE` (a licence choice is the project's, not a template's),
 // `README` (project-specific), and any trading/business rule. Inventing those would be a guess
 // wearing a file's clothes.
 
@@ -892,7 +892,7 @@ function render(auditResult) {
     const ordered = [...actionable].sort((a, b) => Number(b.required) - Number(a.required));
     for (const r of ordered) {
       // A human-decision item is marked, because an agent that treats it like the others will either
-      // pick a licence on the owner's behalf or silently skip it. Both are wrong.
+      // pick a licence on the project's behalf or silently skip it. Both are wrong.
       const mark = r.humanDecision ? '🧑' : r.required ? '🛑' : '👉';
       console.log(`  ${mark} ${r.label}${r.humanDecision ? ' — YOUR DECISION, not an agent\'s' : ''}`);
       console.log(`     why it matters: ${r.why}`);

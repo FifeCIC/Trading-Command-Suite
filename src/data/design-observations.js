@@ -4,7 +4,7 @@
  *
  * WHY THIS EXISTS (review row R21, answered 2026-09-24; issue #990)
  * -----------------------------------------------------------------
- * Owner directive, 2026-09-24: Are we noting observations for review and consideration? This is important for
+ * Requirement, 2026-09-24: Are we noting observations for review and consideration? This is important for
  * re-considering designs.
  *
  * The honest answer at the time was **no**. Three homes existed and this observation was in none of
@@ -12,7 +12,7 @@
  *
  *   | home                        | for                              | this finding? |
  *   |-----------------------------|----------------------------------|---------------|
- *   | `.github/REVIEW-QUEUE.md`   | decisions the owner must make     | no            |
+ *   | `.github/REVIEW-QUEUE.md`   | decisions the requirement must make     | no            |
  *   | `.github/AGENT-ATTENTION.md`| blockers needing human attention  | no            |
  *   | GitHub issues               | work to be done                   | no            |
  *   | `/development/theory-registry` | falsifiable predictions        | no            |
@@ -60,7 +60,7 @@
  *            lost fact, it is a RE-OPENED decision, because the reasoning was never in front of
  *            anyone.
  * INSTEAD OF: A second section inside `.github/REVIEW-QUEUE.md` — the cheaper option, and the one
- *            the queue's own "one canonical location" rule argued for. Rejected because the owner
+ *            the queue's own "one canonical location" rule argued for. Rejected because the requirement
  *            wants observations to ACCUMULATE BEFORE they become decisions, and the queue's hard
  *            limits (one concern per row, question <= 40 words) are designed to prevent exactly that.
  * REVERSE BY: Delete this file and its four registration points (nav-tree.js, view-meta.js,
@@ -84,7 +84,7 @@ export const DESIGN_OBSERVATIONS = [
     observation:
       'The per-bot truth view renders every `trading_strategy` column with its enforcement status, and its EXIT stage is complete for those columns — but `StopGuardianService`, the only thing that manages a stop after entry, is not a column at all, so it appeared nowhere.',
     why:
-      'A reader could study a bot’s entire exit configuration and never learn that a trailing tighten will move its stop, on what evidence, how far, or how often. The layer that locks in profit was the one layer with no surface — and it is the layer the owner watches when profit gives back.',
+      'A reader could study a bot’s entire exit configuration and never learn that a trailing tighten will move its stop, on what evidence, how far, or how often. The layer that locks in profit was the one layer with no surface — and it is the layer the requirement watches when profit gives back.',
     evidence: {
       basis: 'measurement',
       n: 1,
@@ -95,7 +95,7 @@ export const DESIGN_OBSERVATIONS = [
     },
     status: 'decided',
     decision:
-      'Owner ruling 2026-09-28: the MECHANISM is the unit, and `scope` decides whether it is per-bot. CLOSED — and its trigger was SPENT BEFORE ANYONE NOTICED. The trigger was "a second exit mechanism is added", and the second one (the up-move exhaustion observer) had already been added; that is why it fired. It fired silently because the guardian declared NO mechanism for it: it was attributed to the guardian by `bot-rules.ts` and declared by the service NOWHERE. The surface now names, per column, the mechanism that reads it, and `validate-rule-enforcement.cjs` (prebuild) fails if the two registries disagree. PARTIAL BY DESIGN: the 11 `global` mechanisms are still shared, so this alone does not make a stop policy trial-able on one bot — that is `exit-management-is-global-not-per-bot`, now a decided constraint rather than an open question.',
+      'Requirement 2026-09-28: the MECHANISM is the unit, and `scope` decides whether it is per-bot. CLOSED — and its trigger was SPENT BEFORE ANYONE NOTICED. The trigger was "a second exit mechanism is added", and the second one (the up-move exhaustion observer) had already been added; that is why it fired. It fired silently because the guardian declared NO mechanism for it: it was attributed to the guardian by `bot-rules.ts` and declared by the service NOWHERE. The surface now names, per column, the mechanism that reads it, and `validate-rule-enforcement.cjs` (prebuild) fails if the two registries disagree. PARTIAL BY DESIGN: the 11 `global` mechanisms are still shared, so this alone does not make a stop policy trial-able on one bot — that is `exit-management-is-global-not-per-bot`, now a decided constraint rather than an open question.',
     reconsiderIf:
       'Reconsider if a mechanism can exist OUTSIDE both registries — the failure here was not that the guardian was invisible, but that one of its mechanisms was declared nowhere, and a guard now covers that. A second surface, or a mechanism configured somewhere other than a bot column, would re-open it.',
     issue: 990,
@@ -109,7 +109,7 @@ export const DESIGN_OBSERVATIONS = [
     observation:
       'Every declared exit rule is `global` — one `StopGuardianService` serves every position on every bot, and its four inputs are a hardcoded `new Set([...])` in the service file.',
     why:
-      'The owner’s stated long-term direction is a data approach. Here the behaviour is not merely authored in code — it is *shared* by every bot, so there is no way to trial a different stop policy on one bot without changing all of them. That is what makes the A/B route for stop changes awkward.',
+      'The requirement’s stated long-term direction is a data approach. Here the behaviour is not merely authored in code — it is *shared* by every bot, so there is no way to trial a different stop policy on one bot without changing all of them. That is what makes the A/B route for stop changes awkward.',
     evidence: {
       basis: 'code-read',
       n: null,
@@ -120,7 +120,7 @@ export const DESIGN_OBSERVATIONS = [
     },
     status: 'decided',
     decision:
-      'Owner ruling 2026-09-28: mechanism = the unit, `scope` decides per-bot. DECIDED AS A CONSTRAINT KEPT — not as a defect removed, and the distinction is the honest reading of the ruling. The 11 `global` mechanisms remain shared by every bot, so a stop policy still cannot be trialled on one bot without a copied configuration, which is the #929 route. What CHANGED is that this is now explicit and visible per mechanism instead of an unexamined default, and the 2 `per-bot` mechanisms (sim-TSL and the exhaustion observer) demonstrate that the shape supports both. Making all 11 per-bot was the REJECTED alternative: ~11 new columns, and one global change becoming 40 divergent ones. NOT the maths: no threshold, gate or size moved.',
+      'Requirement 2026-09-28: mechanism = the unit, `scope` decides per-bot. DECIDED AS A CONSTRAINT KEPT — not as a defect removed, and the distinction is the honest reading of the ruling. The 11 `global` mechanisms remain shared by every bot, so a stop policy still cannot be trialled on one bot without a copied configuration, which is the #929 route. What CHANGED is that this is now explicit and visible per mechanism instead of an unexamined default, and the 2 `per-bot` mechanisms (sim-TSL and the exhaustion observer) demonstrate that the shape supports both. Making all 11 per-bot was the REJECTED alternative: ~11 new columns, and one global change becoming 40 divergent ones. NOT the maths: no threshold, gate or size moved.',
     reconsiderIf:
       'Reconsider when a stop policy genuinely must differ on ONE bot — that is the moment the shared default becomes a blocker rather than a simplification. The cheapest route then is NOT 11 new columns but promoting `scope` for the single mechanism that needs it, because `fields` already exists to carry the columns.',
     issue: 990,
@@ -150,7 +150,7 @@ export const DESIGN_OBSERVATIONS = [
   {
     id: 'design-observations-have-no-home',
     raisedAt: '2026-09-24',
-    raisedBy: 'Copilot, answering the owner’s question about observations',
+    raisedBy: 'Copilot, answering the requirement’s question about observations',
     area: 'process',
     title: 'There was no home for a design observation',
     observation:
@@ -167,7 +167,7 @@ export const DESIGN_OBSERVATIONS = [
     },
     status: 'decided',
     decision:
-      'BUILT — this register. The owner answered review row R21 “new register” on 2026-09-24, choosing a dedicated register over a second section in the review queue, accepting that observations should be able to accumulate BEFORE they become decisions. ⚠️ The register is the decision; whether it stays depends on it being read, which is why every row carries `reconsiderIf` rather than just a description.',
+      'BUILT — this register. The requirement answered review row R21 “new register” on 2026-09-24, choosing a dedicated register over a second section in the review queue, accepting that observations should be able to accumulate BEFORE they become decisions. ⚠️ The register is the decision; whether it stays depends on it being read, which is why every row carries `reconsiderIf` rather than just a description.',
     reconsiderIf:
       'Reconsider if this register stops being read, or if it grows past a screenful of open rows — at that point the queue’s hard row limits are the better home and this should be collapsed into it rather than maintained alongside it.',
     issue: 990,

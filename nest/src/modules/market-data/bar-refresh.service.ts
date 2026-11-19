@@ -320,7 +320,7 @@ export class BarRefreshService {
    *
    * ── DECISION (2026-10-03, owner) — `symbol.active` is the core-set switch ─────────────────────
    * WHAT:  A symbol is ingested when it is `active`, OR when we hold a position or run a bot on it.
-   * WHY:   Owner direction: *"reduce the app down to 40… I think 40 right now allows us erase a lot
+   * WHY:   Requirement: *"reduce the app down to 40… I think 40 right now allows us erase a lot
    *        of redundant data."* MEASURED 2026-10-03: 128 symbols hold bars but only **39** have a bot,
    *        a protocol assignment or a route — so ~89 symbols were ingesting **because nothing said
    *        not to**. `symbol.active` existed and gated the NEWS path (`resolveAllActive`) and

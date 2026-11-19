@@ -158,7 +158,7 @@ function query(sql) {
  * The result was a report that said the opposite of the truth: `060ed261-…` and
  * `signals-workbench-long` were printed as `PROTOCOL-ONLY-IN-SEED` ("a re-seed would
  * create it") when BOTH already existed as `protocol` rows. That false report was
- * handed to the owner as a decision needing their input, and it did not exist.
+ * handed to the requirement as a decision needing their input, and it did not exist.
  *
  * A diagnostic that INVENTS a discrepancy is worse than no diagnostic: it spends a
  * human's attention on a non-problem and teaches them to distrust the tool. This is
@@ -335,7 +335,7 @@ for (const slug of slugs) {
   // ⚠️ A protocol present in BOTH but with ZERO groups in the seed is NOT "seed-only".
   // Its DB rows are not orphans either — the seed simply declares no placements, so a
   // re-seed would not touch them. Reporting this as PROTOCOL-ONLY-IN-SEED was WRONG and
-  // was handed to the owner as a decision that did not exist (`060ed261-…`, 2026-09-11).
+  // was handed to the requirement as a decision that did not exist (`060ed261-…`, 2026-09-11).
   // It is still worth surfacing — an empty shell protocol with live DB rows means the DB
   // holds config the seed does not describe — but it needs the correct label so the
   // reader can judge it. This is the ONLY case where "in both" can still be drift.

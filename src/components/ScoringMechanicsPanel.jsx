@@ -170,7 +170,7 @@ export default function ScoringMechanicsPanel({ strategies = [] }) {
                 <Ratio label="opportunity" raw={data.opportunityScore} max={data.opportunityMax} note="a separate additive screen — not part of the signal" />
               </div>
               {/* ⚠️ THE ZERO-MAX CASE IS ITS OWN STATE (measured 2026-10-08). Printing "0 out of a
-                  maximum of 0" states a ratio that does not exist — the failure the owner is here to
+                  maximum of 0" states a ratio that does not exist — the failure the requirement is here to
                   catch. When there is no maximum there is no maths to show, and the panel says so. */}
               {data.signalMax ? (
                 <p className="sm-verdict">

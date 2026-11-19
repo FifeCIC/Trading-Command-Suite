@@ -2,10 +2,10 @@
  * bot-rules.ts — WHAT A BOT IS, declared once.
  *
  * ═══════════════════════════════════════════════════════════════════════════════════════════════
- * 🧭 ROADMAP NOTE FOR WHICHEVER AGENT PICKS THIS UP NEXT (added 2026-11-19, owner direction)
+ * 🧭 ROADMAP NOTE FOR WHICHEVER AGENT PICKS THIS UP NEXT (added 2026-11-19, requirement)
  * ═══════════════════════════════════════════════════════════════════════════════════════════════
  *
- * The owner's sequencing for the movers strategy, so a future agent does not re-derive it or, worse,
+ * The project's sequencing for the movers strategy, so a future agent does not re-derive it or, worse,
  * work out of order:
  *
  *   1. ✅ Protocols + bots registered (movers-v1-long/short, two inactive manual bots).
@@ -276,7 +276,7 @@ export const BOT_RULES: BotRule[] = [
       'positive literal `\'all-hours\'`; the seed no longer permits null and the build gate ' +
       '`strategy-seed-session-declared.spec.ts` fails on an unfilled slot. GATE BEHAVIOUR IS ' +
       'UNCHANGED — every no-tag form still passes. ⚠️ The TWIN DISAGREEMENT ITSELF IS STILL OPEN: the ' +
-      'NULL twins kept all-hours (behaviour-preserving); which of a twin pair is right is the OWNER\'s ' +
+      'NULL twins kept all-hours (behaviour-preserving); which of a twin pair is right is the requirement\'s ' +
       'call on the name-vs-news reading — do NOT re-gate on a name alone.' },
   { field: 'maxPyramidTiers', label: 'Max pyramid tiers', stage: 'entry', enforcement: 'live',
     enforcedBy: 'nest/src/modules/trading/pyramid-policy.service.ts',

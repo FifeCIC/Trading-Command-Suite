@@ -439,7 +439,7 @@ function Test-PortListening {
 # cold terminal start the first init can fail with an IPC timeout and retry,
 # which can exceed the old fixed 30s window and produce a false "didn't start".
 # So the wait window is generous rather than fixed at 30s.
-# ⚠️ 2026-11-04 — THE NON-BRIDGE CUT-OFF WAS THE FALSE-FAILURE THE OWNER KEPT SEEING.
+# ⚠️ 2026-11-04 — THE NON-BRIDGE CUT-OFF WAS THE FALSE-FAILURE SEEN REPEATEDLY.
 # This loop used to stop waiting after 30s whenever a NON-bridge service was still down, and that
 # is what produced a window reading "Some services didn't start" while the API was booting, the
 # bridges were connected and the app then worked. MEASURED on this machine AT THE TIME: the API
@@ -590,7 +590,7 @@ if ($allUp) {
 } else {
     # ⚠️ RE-CHECK BEFORE BLAMING (2026-11-03). The wait loop stops early for a NON-bridge reason (a
     # slow API or Vite) and then reported EVERY still-down service — bridges included — as "didn't
-    # start". That is what the owner saw: a window full of "didn't start … check
+    # start". That is what the requirement saw: a window full of "didn't start … check
     # console-mt5-5000-err.log" naming two bridges that were listening and connected to live
     # accounts. The file it pointed at held entries from eleven hours earlier, so it read as a
     # crash. Now a service is only called failed if nothing accepts a connection NOW, and a bridge

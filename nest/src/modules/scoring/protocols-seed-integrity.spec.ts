@@ -156,7 +156,7 @@ describe('protocol seed — installation is supported by installed directive dat
 });
 
 /**
- * NAMING STANDARD (owner direction, 2026-11-05). A protocol's slug and name must SAY what direction
+ * NAMING STANDARD (requirement, 2026-11-05). A protocol's slug and name must SAY what direction
  * it trades, because a pair is two protocols that differ only in that — and before this, four
  * protocols could not be told apart from their names at all.
  *

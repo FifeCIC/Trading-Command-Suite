@@ -16,7 +16,7 @@ import type { DirectiveInput, DirectiveResult } from '../directives/interfaces/d
  * 🧭 ROADMAP NOTE (added 2026-11-19) — THIS SERVICE IS THE DESIGN, AND IT HAS NO ACTOR YET
  * ═══════════════════════════════════════════════════════════════════════════════════════════════
  *
- * Owner, 2026-11-19: the exit decision should be expressible by directives reading on their own — and
+ * Requirement, 2026-11-19: the exit decision should be expressible by directives reading on their own — and
  * the pyramid and exit services were challenged on whether they need indicator values the directives do
  * not expose. P2 below IS that design: the exit directives read as a VERDICT, not as points folded into
  * an entry composite.
@@ -60,7 +60,7 @@ import type { DirectiveInput, DirectiveResult } from '../directives/interfaces/d
  *     required — #1014's sibling, fixed), and reads the **Trading 212** book rather than the
  *     40 bot-managed MT5 positions.
  *
- * So a position had exactly one protective actor: the broker stop, plus the owner's hand.
+ * So a position had exactly one protective actor: the broker stop, plus the project's hand.
  * MEASURED consequence, 376 closed trades by `closeReason`: broker/terminal 58, system:time-stop
  * 36, broker:sl 27 — and **no score- or signal-driven close has ever been recorded**.
  *
@@ -293,7 +293,7 @@ export class ExitConsensusService {
 
   /**
    * Assess every OPEN broker position. Bot book only — Trading 212 holdings are a data-import
-   * concern and are deliberately excluded (owner direction, 2026-09-28).
+   * concern and are deliberately excluded (requirement, 2026-09-28).
    */
   async assessAll(): Promise<ExitAssessment[]> {
     return (await this.assessAllWithStatus()).assessments;
@@ -497,7 +497,7 @@ export class ExitConsensusService {
    * an unparseable value took the `: true` branch and INCLUDED the bar. That quietly widened the
    * window to every bar in the store: GOOGL (opened 25/09, entry 343.21) reported a peak of
    * 366.45 against a TRUE high-since-open of **345.56** — a 6.56% "give-back" that did not exist,
-   * which then fired `action = PROTECT` and reached the owner as a decision. Plausible number, no
+   * which then fired `action = PROTECT` and reached the requirement as a decision. Plausible number, no
    * error, wrong shape — the exact defect class this repo treats as the most expensive kind.
    *
    * The old comment called the `: true` branch a safety net ("must not silently drop data").
@@ -559,7 +559,7 @@ export class ExitConsensusService {
   /**
    * Run the 5 exit directives and reduce them to ONE conviction level.
    *
-   * ⚠️ This is the "segregated evaluation" the owner asked for: these directives produce a
+   * ⚠️ This is the "segregated evaluation" the requirement is for: these directives produce a
    * VERDICT here, not points in an entry composite. In the composite a bearish exit signal is
    * diluted against every entry directive and typically disappears into HOLD.
    *

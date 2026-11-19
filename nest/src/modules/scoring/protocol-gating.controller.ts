@@ -142,7 +142,7 @@ export class ProtocolGatingController {
     //
     // ⚠️ "threshold", NOT "bar". In a trading app "bar" means an OHLCV candle, which belongs to
     // the SYMBOL. This number belongs to the BOT (`trading_strategy.minComposite`). The two shared
-    // one word, and the owner read `barPct` as candle data — the field is now `thresholdPct`.
+    // one word, and the requirement read `barPct` as candle data — the field is now `thresholdPct`.
     //
     // Note the COLLATE: `score_snapshot.protocolId` is defined with a different collation from
     // `trading_strategy.protocolId`, and MySQL refuses the comparison without it.
@@ -696,7 +696,7 @@ export class ProtocolGatingController {
        * should: a rank that changed what a protocol SCORES would make the number depend on the
        * operator's attention. `1` is the first thing to look at.
        *
-       * ⚠️ NOT `active`. On 2026-11-03 the owner activated every protocol, so `active` no longer
+       * ⚠️ NOT `active`. On 2026-11-03 the requirement activated every protocol, so `active` no longer
        * separates "the ones we are shipping" from the rest — this does.
        */
       focusRank?: number | null;
@@ -949,7 +949,7 @@ export class ProtocolGatingController {
 
     // ── Focus first (#1187) ──
     //
-    // The owner's ask: *"I want our focus ones to be more prominent in much of our other work and
+    // The project's ask: *"I want our focus ones to be more prominent in much of our other work and
     // when I do manual testing."* Sorting here means every consumer of this list — the Ladder, the
     // protocol pickers, the create forms — gets the same order without each one re-implementing it.
     //

@@ -2,14 +2,14 @@
  * AppearanceDataDisplayPage — five table examples taken from across the app, each rendered with the
  * APP'S OWN class names and its OWN stylesheet.
  *
- * ⚠️ THAT IS THE WHOLE POINT OF THE PAGE. The owner asked for this page to be the thing that proves
+ * ⚠️ THAT IS THE WHOLE POINT OF THE PAGE. The requirement is for this page to be the thing that proves
  * the Appearance area shares the real styling: *"This is how I confirm and know that the Appearance
  * area shares the same styling used throughout the app."* So the tables below are not copies that
  * resemble the app's tables — they import `protocols-ladder.css`, `screener.css`,
  * `meta-stack-status.css`, `directive-viewer.css` and `directives-manager.css` and use those exact
  * class names. If this page looks right, the stylesheets are right.
  *
- * ⚠️ FIVE TABLES, FIVE DIFFERENT JOBS. Measured from the owner's Page Walkthrough, which named five
+ * ⚠️ FIVE TABLES, FIVE DIFFERENT JOBS. Measured from the project's Page Walkthrough, which named five
  * distinct table purposes rather than one preferred table style:
  *   1. stats-and-status ladder — /scoring/symbols-ladder (8/10)   "one of the strongest tables"
  *   2. fixed-count status      — /status/meta-stack-status (7/10) "for a set number of items"
@@ -17,11 +17,11 @@
  *   4. dense read              — /protocols/directive-viewer (4/10 page) "a simplistic solution"
  *   5. master–detail + rail    — /protocols/directives-registry (8/10) "a sidebar on the right…
  *                                                                    a mix of controls"
- * ⚠️ Examples 3 and 4 come from pages the owner rated LOW overall — the praise was for the TABLE, not
+ * ⚠️ Examples 3 and 4 come from pages the requirement rated LOW overall — the praise was for the TABLE, not
  * the page. Showing them beside the 8/10 rows is deliberate: a strong table on a weak page is exactly
  * what is worth lifting into a library.
  *
- * ⚠️ REAL DATA ONLY. Owner direction for this area: *"Only use this apps own real data to create
+ * ⚠️ REAL DATA ONLY. Requirement for this area: *"Only use this apps own real data to create
  * examples."* Every row is fetched live; there are no fixtures and no invented tickers or scores.
  *
  * ⚠️ NO NEW TABLE STYLES. The only class this page adds is `.dd-stage` (the plate each example sits
@@ -369,7 +369,7 @@ export default function AppearanceDataDisplayPage() {
       <Example
         n={5}
         title="Master–detail with a control rail"
-        ledger="Wide selectable rows on the left, and a right-hand rail that is a mix of quick controls and detail for whatever is selected — the owner's words were 'like quick settings for something that is selected'. Select a row."
+        ledger="Wide selectable rows on the left, and a right-hand rail that is a mix of quick controls and detail for whatever is selected — the project's words were 'like quick settings for something that is selected'. Select a row."
         source="/protocols/directives-registry"
         score="8/10"
       >

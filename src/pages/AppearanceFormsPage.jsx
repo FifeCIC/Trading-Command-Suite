@@ -1,11 +1,11 @@
 /**
  * AppearanceFormsPage — the Form System, in the Appearance area.
  * =============================================================
- * Owner direction, 2026-10-13: *"A dedicated page for Forms that includes this system would be good:
+ * Requirement, 2026-10-13: *"A dedicated page for Forms that includes this system would be good:
  * <section.tl-section> Form System — One canonical form standard. Import src/core/form…"*
  *
  * ⚠️ MOVED VERBATIM from `ThemeLabPage.jsx`, and the section was REMOVED there in the same change.
- * The owner's standing rule is that a second implementation is the most expensive kind of debt: two
+ * The project's standing rule is that a second implementation is the most expensive kind of debt: two
  * copies drift, and only one gets the next fix. So this is a MOVE, not a copy — if you are looking for
  * the Form System and find it in two places, one of them is a mistake.
  *
@@ -13,7 +13,7 @@
  * A page with a form imports that file and uses these classes; a new class invented here would be a
  * fourth form dialect.
  *
- * ⚠️ ON SAMPLE DATA — the owner's rule for this area is *"Only use this apps own real data to create
+ * ⚠️ ON SAMPLE DATA — the project's rule for this area is *"Only use this apps own real data to create
  * examples"* (2026-10-13). That rule is about VIEWS that demonstrate app content, where an invented
  * ticker or a fake P&L reads as a working feature. A FORM demo is different and is left as-is: the
  * strings below are field placeholders, not data claims — they show what a field looks like when it
@@ -221,9 +221,9 @@ export default function AppearanceFormsPage() {
         </details>
       </section>
 
-      {/* ── Add-items form — TWO ARRANGEMENTS, CHOSEN BY THE OWNER ──────────────────────────────
+      {/* ── Add-items form — TWO ARRANGEMENTS, BOTH APPROVED ──────────────────────────────
           Owner request, from /protocols/protocol-builder: *"add 2-3 examples of a similar 'add items'
-          form arrangement and I will choose one."* Three were offered on 2026-10-13; the owner chose
+          form arrangement and I will choose one."* Three were offered on 2026-10-13; the requirement chose
           **A and B**, and C (the compact add-bar variant) was DELETED on 2026-10-14. Do not re-add C
           without asking — it was rejected, not overlooked.
 
@@ -285,7 +285,7 @@ export default function AppearanceFormsPage() {
 
           {/* B — one card per item. Most comfortable; better for a few items with more detail.
 
-              ⚠️ THE OWNER'S REASON FOR KEEPING B (2026-10-14), recorded here so the choice is not
+              ⚠️ THE PROJECT'S REASON FOR KEEPING B (2026-10-14), recorded here so the choice is not
               re-opened by accident: B is the arrangement to reach for "when the values might need
               messages displayed underneath such as warnings or confirmation that the values are
               correct". Because each item is its own `<fieldset>`, it has somewhere natural to put a
@@ -341,7 +341,7 @@ export default function AppearanceFormsPage() {
       <section className="tl-section">
         <h3>Segmented filter — the two proven variants</h3>
         <p className="tl-hint">
-          Both come from <code>/research/earnings-calendar</code>, where the owner singled them out: *“The
+          Both come from <code>/research/earnings-calendar</code>, where the requirement singled them out: *“The
           screen options are good … they work especially good with icons.”* A segmented control is for a
           FEW fixed options; past about five, use a <code>.ff-select</code> instead.
         </p>
@@ -363,7 +363,7 @@ export default function AppearanceFormsPage() {
       <section className="tl-section">
         <h3>Inline trigger — the ℹ affordance</h3>
         <p className="tl-hint">
-          The owner asked for this in the library: *“This needs to be a part of all pages.”* It is
+          The requirement is for this in the library: *“This needs to be a part of all pages.”* It is
           <code>PageInfoPopover</code> — a small circular ℹ button opening a native popover. It is what sits
           on this page&apos;s own heading, and the shell renders it in the top row for any view with an
           explanation entry, so it is already app-wide. It is NOT a symbol opener.

@@ -4,7 +4,7 @@
 -- Prisma (including the trade execution queue), no migration history, and `db push` silently
 -- DROPs every unmodelled table. Run `npm --prefix nest run db:check` BEFORE and AFTER.
 --
--- R20 (owner decision, 2026-09-24): post-entry exit management becomes PER-BOT DATA. The
+-- R20 (requirement, 2026-09-24): post-entry exit management becomes PER-BOT DATA. The
 -- StopGuardianService was one hardcoded global mechanism shared by every bot, which is why the
 -- thing that actually locks in profit appeared nowhere on the bot page.
 --

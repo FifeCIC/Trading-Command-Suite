@@ -147,7 +147,7 @@ export const PAGE_DATA_STATUS = {
   // Element groups (2026-10-13) — these replaced View: Theme Lab. Status is `live` because each one
   // renders static examples against the ACTIVE theme tokens, so what you see is what the app uses;
   // nothing is fetched and nothing is a placeholder.
-  'patterns': { status: 'live', source: 'appsetting.uiReview — the owner\u2019s walkthrough verdicts (144 pages, measured 2026-10-13)' },
+  'patterns': { status: 'live', source: 'appsetting.uiReview — the requirement\u2019s walkthrough verdicts (144 pages, measured 2026-10-13)' },
   'colour': { status: 'live', source: 'Theme tokens (active pack)' },
   'surfaces': { status: 'live', source: 'Card/surface tokens (active pack)' },
   'data-display': { status: 'live', source: 'Theme tokens (active pack)' },

@@ -117,7 +117,7 @@ describe('planPreOpenSession (#981)', () => {
     expect(out.detail).toContain('6 bot(s)');                   // the bots (count)
     expect(out.detail).toContain('+2 more');                    // …and the overflow
     expect(out.detail).toContain('Open positions right now: 3'); // the positions
-    expect(out.detail).toContain('no automatic trade action');  // the owner's constraint, verbatim in spirit
+    expect(out.detail).toContain('no automatic trade action');  // the project's constraint, verbatim in spirit
     expect(out.title).toContain('2026-10-08');                  // day-scoped
   });
 

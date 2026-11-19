@@ -35,7 +35,7 @@ export interface AppSettings {
 }
 
 /**
- * UiReviewEntry — the owner's verdict on ONE page, captured while walking the whole app.
+ * UiReviewEntry — the project's verdict on ONE page, captured while walking the whole app.
  *
  * STEP IN THE PIPELINE: written by `/development/ui-review` on every interaction → stored here →
  * mirrored to `nest/app-settings.json`, which is the copy an agent reads to work from.
@@ -45,10 +45,10 @@ export interface AppSettings {
  * "cannot judge" into one value is the defect this repo keeps re-finding.
  */
 /**
- * UiScore — the owner's 1–10 verdict on how good a page's UI is (added 2026-10-06).
+ * UiScore — the project's 1–10 verdict on how good a page's UI is (added 2026-10-06).
  *
  * ⚠️ WHY THIS IS A NEW FIELD AND NOT A WIDER `keen`. The store already held 80 entries with
- * `keen ∈ {1,2,3}`, where 3 meant "very keen" — the owner's ENTHUSIASM FOR THE PAGE, not the quality
+ * `keen ∈ {1,2,3}`, where 3 meant "very keen" — the project's ENTHUSIASM FOR THE PAGE, not the quality
  * of its UI. Widening that key to 1–10 would have re-rendered 27 stored "Very keen (3)" verdicts as
  * **3/10**: a confident rating of a UI that nobody rated. Different question, different scale, so
  * different key — and the old values are left exactly as they were rather than migrated by guesswork.
@@ -61,14 +61,14 @@ export interface UiReviewEntry {
   /**
    * ⚠️ LEGACY — superseded by `uiScore` on 2026-10-06. No longer written and no longer rendered.
    * Kept in the type because the stored JSON still carries it, and an untyped dangling field is one
-   * somebody re-interprets later by guessing. Meaning: "how keen was the owner on this page", on a
+   * somebody re-interprets later by guessing. Meaning: "how keen was the requirement on this page", on a
    * **1–3** scale. It is NOT a UI score and must never be read as one.
    */
   keen: 1 | 2 | 3 | null;
   /** 1–10 UI-quality rating. `null` = not rated yet, which is NOT the same as a low score. */
   uiScore: UiScore | null;
   /**
-   * Free text — what the owner suggested changing about this page, from the FIRST review round.
+   * Free text — what the requirement suggested changing about this page, from the FIRST review round.
    * Rendered as **"Old Changes I suggest"** since 2026-10-07.
    *
    * ⚠️ THE FIELD IS STILL `note` AND MUST STAY `note`. The COLUMN HEADER changed; the meaning of the
@@ -78,9 +78,9 @@ export interface UiReviewEntry {
    */
   note: string;
   /**
-   * Free text — the owner's SECOND round of comments, added 2026-10-07.
+   * Free text — the project's SECOND round of comments, added 2026-10-07.
    *
-   * ⚠️ Deliberately a SEPARATE field, not a longer `note`. The owner keeps the two columns side by side
+   * ⚠️ Deliberately a SEPARATE field, not a longer `note`. The requirement keeps the two columns side by side
    * to judge whether the first round was actually followed: *"This is how I'm going to determine how
    * well agentic AI followed my instructions."* Overwriting `note` would destroy the very evidence the
    * comparison depends on.
@@ -250,7 +250,7 @@ export class SettingsService {
     // ⚠️ VALIDATED HERE BECAUSE A TYPE IS NOT ENFORCED AT RUNTIME. `UiScore` is a compile-time union;
     // the PUT body arrives as JSON. `unknown` forces these checks to be real rather than a formality
     // the compiler optimises away. Rejecting beats clamping: a clamp would record a rating nobody
-    // gave, and the owner would read it as their own verdict — the "plausible output, no error"
+    // gave, and the requirement would read it as their own verdict — the "plausible output, no error"
     // shape this repo keeps paying for.
     const rawUiScore: unknown = (patch as { uiScore?: unknown }).uiScore;
     if (rawUiScore !== undefined && rawUiScore !== null) {

@@ -14,14 +14,14 @@
  * backups/attribution should reference). #875's acceptance hinges on both existing separately:
  * "editing a part does not silently orphan the name" is impossible with a hash alone.
  *
- * AUTO-REGISTRATION (the owner's design: "if a generated card is new then it can also
+ * AUTO-REGISTRATION (the project's design: "if a generated card is new then it can also
  * automatically be registered and get an ID"). `syncAuto()` — called from the automation loop, NOT
  * from the derived GET (a read must not write, and registering on render would mint identities for
  * combinations that only ever appeared in a list) — registers a combination when it is
  * MATERIALISED: it has a live bot (`active`), is not a duplicate group, and none of its bots are
  * already covered by a registered row. That last condition is load-bearing: when a registered bot's
  * config is edited, the successor combination must NOT get a parallel identity — it is the SAME
- * strategy DRIFTED, and the owner resolves it with `reaccept()`.
+ * strategy DRIFTED, and the requirement resolves it with `reaccept()`.
  */
 
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
@@ -143,7 +143,7 @@ export class StrategyRegistryService {
   /**
    * Re-accept the CURRENT configuration as this strategy's definition (the drift resolution).
    * Updates the accepted key + parts to what the bots derive now, after reporting what changed.
-   * Refuses when the target key is already held by ANOTHER row — that is a merge the owner must
+   * Refuses when the target key is already held by ANOTHER row — that is a merge the requirement must
    * make deliberately, not something to guess at.
    */
   async reaccept(id: string) {

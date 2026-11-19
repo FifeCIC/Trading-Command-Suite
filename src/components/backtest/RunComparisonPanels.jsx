@@ -1,5 +1,5 @@
 /**
- * RunComparisonPanels — tabs A, B and the A-vs-B difference (owner direction, 2026-10-27).
+ * RunComparisonPanels — tabs A, B and the A-vs-B difference (requirement, 2026-10-27).
  * ==========================================================================================
  *
  * *"A and B should display the same type of information but they're currently very different, one is
@@ -30,7 +30,7 @@ import NoticeBlock from '../NoticeBlock';
 import PageInfoPopover from '../PageInfoPopover';
 import { noticeFromError } from '../../core/notices/from-error.js';
 /**
- * ⚠️ meta-stack-status.css IS IMPORTED FOR ITS .mss-stat-* TILES, not for its page (owner direction
+ * ⚠️ meta-stack-status.css IS IMPORTED FOR ITS .mss-stat-* TILES, not for its page (requirement
  * 2026-10-29: *"there are other pages with stats that display it better … use existing styling as
  * always"*). The Appearance area presents these as the app's stat library, so importing them here is
  * reuse rather than a second stat look.
@@ -200,7 +200,7 @@ function ScoringTotals({ totals }) {
 /**
  * ONE run, rendered. `role` is 'A' or 'B' — the only difference is the heading and accept controls.
  *
- * ⚠️ `showTrades` IS WHAT KEEPS THE PROTOCOLS VIEW ABOUT SCORES (owner direction, 2026-10-27:
+ * ⚠️ `showTrades` IS WHAT KEEPS THE PROTOCOLS VIEW ABOUT SCORES (requirement, 2026-10-27:
  * *"This view should not have anything relating to trades"*). A protocol run is `scoresOnly` — it
  * sends `slPct: 0 / tpPct: 0`, so the engine simulates NO fills and the trade cells can only ever
  * read `0` / `—`. Rendering them invited the reader to conclude the protocol "made no trades" as if
@@ -258,25 +258,25 @@ export function RunPanel({ role, runId, emptyHint, onAccept, onClear, accepted, 
   return (
     <div className="bt-panel bt-ab-panel">
       {/*
-        ⚠️ THE VISIBLE HEADING IS GONE (owner direction, 2026-10-31: *"Remove … as it is duplicate
+        ⚠️ THE VISIBLE HEADING IS GONE (requirement, 2026-10-31: *"Remove … as it is duplicate
         info"*). It read "A · 2fd56ab8 · accepted" directly beneath the `.bt-pair-bar` above, which
         already states the role, the run id and the ACCEPTED badge — the last of three statements of the
         same fact in 120 pixels (the removed one is the tab, the previous pass removed the role words).
 
         Kept as `sr-only` rather than deleted outright: the heading is what names this panel for a screen
         reader, and there is no visual context to read it from. It costs no pixels and removes the
-        duplication the owner can see.
+        duplication the requirement can see.
       */}
       <h3 className="bt-panel-head sr-only">
         {role} · <code>{String(run.id).slice(0, 8)}</code>
         {accepted ? ' accepted' : ''}
       </h3>
 
-      {/* ⚠️ THE ACCEPT BUTTON IS THE FIRST THING IN THE PANEL (owner direction, 2026-10-29: *"needs to be
+      {/* ⚠️ THE ACCEPT BUTTON IS THE FIRST THING IN THE PANEL (requirement, 2026-10-29: *"needs to be
           moved to the top … so it is more prominent"*). It sat between the facts table and the trades —
           i.e. below a screen of numbers — so the one ACTION on the panel was the last thing found. It is
           an `.bt-accept-bar` rather than a bare note so it reads as a control, not a footnote. */}
-      {/* ⚠️ THE ACCEPT BUTTON IS THE FIRST THING IN THE PANEL (owner direction, 2026-10-29: *"needs to be
+      {/* ⚠️ THE ACCEPT BUTTON IS THE FIRST THING IN THE PANEL (requirement, 2026-10-29: *"needs to be
           moved to the top … so it is more prominent"*). It is an `.bt-accept-bar` rather than a bare
           note so it reads as a control, not a footnote.
 
@@ -320,7 +320,7 @@ export function RunPanel({ role, runId, emptyHint, onAccept, onClear, accepted, 
         </div>
       )}
 
-      {/* ⚠️ ONE FACT PER ROW, WITH A HEADER (owner direction, 2026-10-29: *"needs styling based on a
+      {/* ⚠️ ONE FACT PER ROW, WITH A HEADER (requirement, 2026-10-29: *"needs styling based on a
           similar table in the Appearance area"*). It was a headerless 4-column label/value mash — the
           only table on the page with no `<thead>`, which is what made it look unlike every other table.
           `src/core/tables.css` already gives `.bt-table` the SAME arrangement as `.pl-table` and
@@ -384,7 +384,7 @@ export function RunPanel({ role, runId, emptyHint, onAccept, onClear, accepted, 
         </>
       )}
 
-      {/* ⚠️ EVERYTHING SCORE-SHAPED IS COLLAPSED INTO ONE DETAILS BLOCK (owner direction, 2026-10-29).
+      {/* ⚠️ EVERYTHING SCORE-SHAPED IS COLLAPSED INTO ONE DETAILS BLOCK (requirement, 2026-10-29).
           The results a run exists to give are the trades; a score-totals table and 2,000 scored bars
           sat ABOVE them and buried the answer under diagnostic numbers. Neither is deleted — the bar
           list is the only place a signal that never became a trade is visible, so it must remain — but
@@ -449,7 +449,7 @@ export function RunPanel({ role, runId, emptyHint, onAccept, onClear, accepted, 
 /**
  * RepeatCheck — does the SAME A→B change point the same way on MORE windows?
  *
- * Owner direction, 2026-10-27: *"a third would harden it … add 'repeats on N of M windows'"* — then
+ * Requirement, 2026-10-27: *"a third would harden it … add 'repeats on N of M windows'"* — then
  * *"Yes do that"*, and then the reason it matters: *"I see huge potential for agentic AI to use it …
  * Agentic AI will be able to make adjustments. Re-test, and keep doing that over and over again for a
  * set period or target a significant level of improvement."*
@@ -553,7 +553,7 @@ function RepeatCheck({ protocolId, excludeIds, window1, onMeasured }) {
   }[verdict ?? 'cannot-judge'];
 
   /**
-   * ⚠️ THE VERDICT IS AN OUTCOME, SO IT IS AN `InfoNote` WITH A TONE (owner direction, 2026-10-30).
+   * ⚠️ THE VERDICT IS AN OUTCOME, SO IT IS AN `InfoNote` WITH A TONE (requirement, 2026-10-30).
    * It was a `p.bt-panel-note` carrying its own emoji — the same statement in a fifth style, on the one
    * line of the panel that a reader actually needs to be stopped by. The tone map is the app's own
    * badminton: repeated = success, did not repeat = critical, anything the API could not judge = warning
@@ -742,7 +742,7 @@ function RepeatCheck({ protocolId, excludeIds, window1, onMeasured }) {
 }
 
 /**
- * A vs B — the DIFFERENCE, summarised (owner direction: *"so that the user doesn't need to examine
+ * A vs B — the DIFFERENCE, summarised (requirement: *"so that the user doesn't need to examine
  * every row of data"*).
  *
  * ⚠️ IT JOINS ON THE BAR INSTANT, and reports the unmatched counts. Two runs over different windows
@@ -991,7 +991,7 @@ export function RunDiffPanel({ aId, bId, showTrades = true }) {
                     <td>Trades A → B</td>
                     <td>{a.data?.stats?.totalTrades ?? 0} → {b.data?.stats?.totalTrades ?? 0}</td>
                     <td>Total P&amp;L A → B</td>
-                    {/* ⚠️ THE ONE CELL HERE WHERE "BETTER" IS TRUE AND MEASURABLE (owner direction,
+                    {/* ⚠️ THE ONE CELL HERE WHERE "BETTER" IS TRUE AND MEASURABLE (requirement,
                         2026-10-30: *"Using the same styling principles for highlighting positive or
                         negative change in the comparison process"*). More money is better; more trades
                         is not — so the treatment is applied here and nowhere near the score Δ cells,
@@ -1008,7 +1008,7 @@ export function RunDiffPanel({ aId, bId, showTrades = true }) {
           </div>
 
           {/*
-            ⚠️ THE HONEST LIMIT OF THIS PANEL, stated where the verdict is read. The owner asked whether
+            ⚠️ THE HONEST LIMIT OF THIS PANEL, stated where the verdict is read. The brief asked whether
             a change is a good long-term change or "just lucky for the dataset being tested" — this
             panel CANNOT answer that, and a bigger number in one window is not evidence of edge. What
             it does answer: how much moved, in which direction, on how many bars. Persistence across a
@@ -1097,7 +1097,7 @@ export function RunDiffPanel({ aId, bId, showTrades = true }) {
  * RunSettingsDiff — WHAT THE TWO RUNS WERE CONFIGURED WITH, so a P&L difference has a cause on screen.
  * ==================================================================================================
  *
- * ── WHY THIS EXISTS (owner direction, 2026-10-31) ──────────────────────────────────────────────────
+ * ── WHY THIS EXISTS (requirement, 2026-10-31) ──────────────────────────────────────────────────
  * Four VIX runs were listed at +76,617 … +141,219 with an identical protocol, symbol, timeframe, trade
  * count, win rate and profit factor, and NOTHING said why the money moved. The answer was that one
  * costed a 0.01% spread and another 0.93% — a setting nobody had written down.

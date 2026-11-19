@@ -54,7 +54,7 @@ export interface ScenarioAssessment {
   assessedAt: string;
 }
 
-/** The market-data window a scenario covers — the "period" in the owner's definition. */
+/** The market-data window a scenario covers — the "period" in the project's definition. */
 export interface ScenarioPeriod {
   from: string;
   to: string;

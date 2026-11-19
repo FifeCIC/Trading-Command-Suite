@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import './pipeline-graph-lab.css';
 import PIPELINE_POSITIONS from '../data/pipeline-graph-positions.json';
-// ⚠️ The META.Stack lane board was a PAGE and is now a SECTION of this one (owner direction,
+// ⚠️ The META.Stack lane board was a PAGE and is now a SECTION of this one (requirement,
 // 2026-10-08). The file still carries its original name; it is no longer a route. Its own CSS is
 // imported by that module, so nothing needs importing here.
 import MetaStackPipelineBoard from './MetaStackPipelinePage.jsx';
@@ -211,7 +211,7 @@ const SAMPLE_NODES = [
     },
   },
 
-  // ── ADDED 2026-10-06 at the owner's request ───────────────────────────────────────────────
+  // ── ADDED 2026-10-06 at the project's request ───────────────────────────────────────────────
   // They asked to "break down the engineering and allow clicking on other features" — Directives,
   // the protocol system, Bots at the trading end, and one node per bridge.
   //
@@ -1004,7 +1004,7 @@ export default function PipelineGraphLabPage() {
 
   const onMouseUp = useCallback(() => setDragging(false), []);
 
-  // Resize canvas to fit new nodes — widened 2026-10-06 for the five nodes added at the owner's
+  // Resize canvas to fit new nodes — widened 2026-10-06 for the five nodes added at the project's
   // request. Three continue the right-hand column; the two bridges sit under the provider network.
   const canvasW = 1620, canvasH = 900;
 
@@ -1050,8 +1050,8 @@ export default function PipelineGraphLabPage() {
         </div>
       </div>
 
-      {/* ── META.Stack lane board — MERGED IN (owner direction, 2026-10-08) ──
-          Owner directive: I want the nodes on this view factored into /development/pipeline-graph-lab and then
+      {/* ── META.Stack lane board — MERGED IN (requirement, 2026-10-08) ──
+          Requirement: I want the nodes on this view factored into /development/pipeline-graph-lab and then
           this page deleted. The board is the SAME component, rendered here rather than on its own
           route; that route, its nav entry and its view-meta row are removed, so the app has one
           pipeline surface instead of two that drift apart.

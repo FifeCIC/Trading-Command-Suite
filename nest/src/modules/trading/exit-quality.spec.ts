@@ -75,7 +75,7 @@ describe('computeExitQuality', () => {
     expect(r.overall.avgGiveBackPct).toBe(1);
   });
 
-  it('counts the owner question directly: peaked positive, closed at or below zero', () => {
+  it('counts the requirement question directly: peaked positive, closed at or below zero', () => {
     // ⚠️ MY FIRST VERSION OF THIS FIXTURE WAS WRONG, and it is worth keeping on the record: I wrote
     // `side: 'sell', exitPrice: 100.06` and called it "+0.06% still positive". For a SHORT a price
     // that RISES from 100 to 100.06 is a LOSS of 0.06%. The real VIX row carried `pnl = +0.06`,

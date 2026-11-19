@@ -91,7 +91,7 @@ test('an EMPTY list and a FULLY-filtered list do not look the same', () => {
 });
 
 test('an unknown mode falls back to the DEFAULT rather than rendering nothing', () => {
-  assert.equal(DEFAULT_OBSERVATION_MODE, 'C', 'the owner chose collapse');
+  assert.equal(DEFAULT_OBSERVATION_MODE, 'C', 'the requirement chose collapse');
   const unknown = applyObservationMode(trails, 'Z');
   // The default (C) shows everything: decisions as cards, observations folded.
   assert.equal(unknown.counts.total, 5);

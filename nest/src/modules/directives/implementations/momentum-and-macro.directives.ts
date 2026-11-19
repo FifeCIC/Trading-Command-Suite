@@ -610,7 +610,7 @@ export class SpyQqqRelativeStrengthDirective implements IDirective {
    *            `SPY/QQQ RS proxy: 5d …` — but this directive reads `input.bars`, i.e. the
    *            PROTOCOL'S OWN SYMBOL. It has never opened SPY or QQQ. Sitting in a VIX protocol
    *            it printed "SPY/QQQ" about VIX.
-   * WHY:       The owner's standing direction (2026-11-02): *"we shouldn't mix up symbol names
+   * WHY:       The project's standing direction (2026-11-02): *"we shouldn't mix up symbol names
    *            like sp500 and vix within a strategy — that will cause a lot of confusion."*
    *            A reason string naming another instrument is the same defect class as printing
    *            `RSI(14)` while computing `RSI(30)`: a claim about what the number means that the
@@ -1573,7 +1573,7 @@ export class Sp500RegimeDirective implements IDirective {
    * WHAT:      The reason now says `SPX context (index overlay, NOT the traded symbol): …`, and
    *            the display name carries `(index overlay)`.
    * WHY:       Sitting in `vix-spike-v1-long` / `vix-spike-v1-short`, a bare `SP500 regime:` reason read as
-   *            though the protocol traded SPX. The owner's direction (2026-11-02): protocols must
+   *            though the protocol traded SPX. The project's direction (2026-11-02): protocols must
    *            be obviously purpose-built for THEIR symbol. This directive still MEASURES the S&P
    *            500 — that is correct, VIX is derived from SPX options — but the number belongs to
    *            the index, not to the protocol's instrument, and the label now says so.

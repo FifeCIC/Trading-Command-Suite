@@ -37,7 +37,7 @@
  * it is a missed advisory alert.
  *
  * Anything the defaults cannot cover is `unclassified` — which is a QUESTION, not an answer. See
- * `needsDecision()`. The app asks; it does not guess silently. (Owner directive, 2026-09-18: if the app
+ * `needsDecision()`. The app asks; it does not guess silently. (Requirement, 2026-09-18: if the app
  * itself is missing values it should ask me … It could ask me if I'm happy to hold NVDA Leverage
  * x 3 at a loss and I will say yes.)
  */
@@ -50,7 +50,7 @@
  * - `swing`         — held over multiple days but NOT through a weekend gap by choice.
  * - `intraday`      — opened and closed within a session; holding one over a weekend is an
  *                     accident, not a strategy.
- * - `unclassified`  — the app cannot tell. This is a request for the owner's decision.
+ * - `unclassified`  — the app cannot tell. This is a request for the project's decision.
  */
 export type PositionIntent = 'long-term' | 'swing' | 'intraday' | 'unclassified';
 
@@ -75,7 +75,7 @@ export const GAP_EXPOSED_INTENTS: PositionIntent[] = ['intraday', 'swing'];
  * every day. An explicit override is how a genuine swing gets recorded.
  */
 export const PROVIDER_DEFAULT_INTENT: Record<string, PositionIntent> = {
-  // A stock brokerage. Positions here are investments; the owner holds through drawdowns.
+  // A stock brokerage. Positions here are investments; the requirement holds through drawdowns.
   // Measured 2026-09-18: 21 positions, oldest opened 25 Jul, aggregate −996 and accepted.
   trading212: 'long-term',
   // A CFD margin account. Positions are trades with a leverage cost, closed same-day or by
@@ -121,7 +121,7 @@ export function isGapExposed(intent: PositionIntent): boolean {
 }
 
 /**
- * True when the owner should be ASKED about this position rather than actioned on it.
+ * True when the requirement should be ASKED about this position rather than actioned on it.
  *
  * `unclassified` is the only case today: the app has no basis for a default and no override. It is
  * returned as a question so a surface can present it, rather than defaulting into either answer —

@@ -190,7 +190,7 @@
 
 /* ⚠️ Six states are distinguished by the BADGE TEXT and a subtle background tint, never by colour
  * alone (accessibility: state must survive a monochrome render). Thick coloured left bars are
- * banned repo-wide by `scripts/validate-no-notice-bar.cjs` — the owner asked for that chrome
+ * banned repo-wide by `scripts/validate-no-notice-bar.cjs` — the requirement is for that chrome
  * removed everywhere, so this uses uniform 1px rules and a tint instead. */
 .rm-t-traded   { background: color-mix(in srgb, var(--risk-normal) 7%, transparent); }
 .rm-t-queued   { background: color-mix(in srgb, var(--accent) 7%, transparent); }

@@ -4,7 +4,7 @@
  * ⚠️ THIN WRAPPER, DELIBERATELY. The examples live in ONE file (`ThemeLabSections`) and this page
  * selects a group from it. Copying the markup here would be a second implementation to keep in step.
  *
- * ⚠️ SAMPLE VALUES ARE TOKENS AND CONTROLS, NEVER INVENTED DATA. Owner direction for this area
+ * ⚠️ SAMPLE VALUES ARE TOKENS AND CONTROLS, NEVER INVENTED DATA. Requirement for this area
  * (2026-10-13): *"Only use this apps own real data to create examples"* — a demo that shows a made-up
  * ticker, price or P&L reads as a working feature. Colour swatches and form fields are not data
  * claims; anything that shows app CONTENT must render the real thing.
@@ -40,7 +40,7 @@ export default function AppearanceSurfacesPage() {
       <ThemeLabSections group="surfaces" />
 
       {/* ── High-impact notice banner ─────────────────────────────────────────────────────────────
-          From /status/meta-stack-explorer (rated 9/10), where the owner said: I like this large high
+          From /status/meta-stack-explorer (rated 9/10), where the brief said: I like this large high
           impact notice … create a list of samples like this with the purpose being to get the attention
           of the user or summarise. The class names are the source page's; the values are live.
 
@@ -88,7 +88,7 @@ export default function AppearanceSurfacesPage() {
       </section>
 
       {/* ── Status cards: the number is the answer, the detail is on demand ────────────────────────
-          Owner, 2026-11-18, reviewing /development/movers-treatment: *"I do not like screen clutter -
+          Requirement, 2026-11-18, reviewing /development/movers-treatment: *"I do not like screen clutter -
           large blocks of information need to be displayed through the users desire to see it … some of
           the values within it could be status cards … and hovering over tells us more information. This
           should be a standard approach presented in the Appearance area to encourage it. Maybe a small

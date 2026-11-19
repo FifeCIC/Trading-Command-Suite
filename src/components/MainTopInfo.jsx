@@ -5,7 +5,7 @@ import { usePageInfoContent } from '../core/top-row-slot';
  * MainTopInfo — the ONE ℹ on a page, rendered by the shell in `.main-top-row`.
  *
  * =============================================================================
- * WHY THIS EXISTS (owner direction, 2026-11-18)
+ * WHY THIS EXISTS (requirement, 2026-11-18)
  *
  *   "I also don't like the pages primary ℹ being in different places: please ensure it is in the
  *    same location for all pages… the top right of main, or in the top row so it is in line with

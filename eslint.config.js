@@ -51,7 +51,7 @@ export default [
       //   ReferenceError: Cannot access 'scored' before initialization
       //   ReferenceError: Cannot access 'allProtocolsData' before initialization
       // Both files COMPILED and BUILT cleanly — `tsc` and Vite accept a temporal-dead-zone read
-      // because it is an execution-order fault, not a type error. The owner found each one by
+      // because it is an execution-order fault, not a type error. The requirement found each one by
       // reloading the page.
       //
       // `variables: true` flags a `const`/`let` read before its declaration in the same scope,

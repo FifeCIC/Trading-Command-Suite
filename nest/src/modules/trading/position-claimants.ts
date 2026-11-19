@@ -108,7 +108,7 @@ export function buildClaimants(
  * ⚠️ `> 1`, and the boundary is the decision — not an implementation detail. ONE claimant is a
  * normal position that can be attributed and managed. TWO OR MORE means no single bot's rules can be
  * said to be managing it, which is a state the system must name rather than resolve by picking.
- * The owner's ruling, 2026-09-30 (R31): a contested position is **managed, by its strictest
+ * The project's ruling, 2026-09-30 (R31): a contested position is **managed, by its strictest
  * claimant** — so it is protected soonest rather than by whichever bot is looked at first.
  */
 export function isContested(claimants: readonly string[] | undefined | null): boolean {

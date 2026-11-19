@@ -183,7 +183,7 @@ function add(
   if (peak != null && realised != null) {
     a.nComparable += 1;
     a.giveBackSum += peak - realised;
-    // "Reached a profit and still closed at or below break-even" — the owner's question, verbatim.
+    // "Reached a profit and still closed at or below break-even" — the project's question, verbatim.
     if (peak > 0 && realised <= 0) a.peakedThenLost += 1;
     if (peak > 0 && realised < peak / 2) a.capturedUnderHalf += 1;
   }

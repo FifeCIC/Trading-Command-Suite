@@ -28,8 +28,8 @@ import { selectBaseTimeframe, everyCadenceStale, pickScoringCadence } from '../.
 import { NotificationService } from '../notifications/notifications.service';
 
 /**
- * How long a symbol may go without a fresh bar before the owner is told (#1264).
- * Owner directive: warn if an hour passes and there is a lack of data for a symbol.
+ * How long a symbol may go without a fresh bar before the requirement is told (#1264).
+ * Requirement: warn if an hour passes and there is a lack of data for a symbol.
  */
 const DATA_STARVATION_NOTICE_MS = 60 * 60_000;
 // ⚠️ SINGLE AUTHORITY for signal-class → direction/side. Do NOT reintroduce a prefix test here:
@@ -208,7 +208,7 @@ export interface SignalEnvelope {
 /**
  * BotGateVerdict — "will any ACTIVE bot take this signal?", computed ONCE server-side.
  *
- * WHY THE SERVER OWNS THIS (2026-10-12, owner directive). The sentence used to be generated
+ * WHY THE SERVER OWNS THIS (2026-10-12, requirement). The sentence used to be generated
  * client-side (`src/core/tradeability.js`, #911) from `GET /api/scoring/gated/thresholds` — whose
  * bot list comes from the DISPLAY-ONLY `trading_strategy.protocolId` column plus name-prefix
  * matching: the exact basis #759's correction rejected when the gate reconciliation moved onto
@@ -376,7 +376,7 @@ export class SignalEnvelopeService {
   /**
    * #R13 — the reason the LIVE ladder should not score this symbol, or `null` to go ahead.
    *
-   * Owner directive, 2026-09-23: if the market is closed there is not meant to be new data for those
+   * Requirement, 2026-09-23: if the market is closed there is not meant to be new data for those
    * symbols so why score? — ruled a **development decision**, not a policy or A/B change, so
    * there is deliberately no copied configuration behind it.
    *
@@ -429,7 +429,7 @@ export class SignalEnvelopeService {
       try {
         // ⚠️ #R13 — DO NOT SPEND SCORING ON A CLOSED MARKET.
         //
-        // The owner's own reasoning, and it is the whole argument: no new data can arrive for a
+        // The project's own reasoning, and it is the whole argument: no new data can arrive for a
         // symbol whose market is shut, so a score taken then can never become a trade. The only
         // value it has is planning (#640 — which uses the ON-DEMAND path, untouched here) and
         // diagnostics (#732 — `computeMarketStatus` itself is untouched, so "closed" and "stale
@@ -668,7 +668,7 @@ export class SignalEnvelopeService {
     //            Measured cost: 108 GER40 snapshots in two hours, EVERY ONE a composite of **89**,
     //            all from a base `1m` series frozen 7.6 hours earlier, feeding six `auto` bots whose
     //            entry threshold is 10. A frozen bar does not score low; it scores the same number
-    //            forever. Owner directive, 2026-11-13: Scoring old data is pointless … That's almost like
+    //            forever. Requirement, 2026-11-13: Scoring old data is pointless … That's almost like
     //            saying we've designed it to score for the sake of it.
     // INSTEAD OF: Skipping the symbol when its base cadence is stale — measured to remove 11 ALIVE
     //            instruments (#827), because a `1m` feed goes quiet outside cash hours.
@@ -701,7 +701,7 @@ export class SignalEnvelopeService {
 
     if (dead) {
       // Only reached when NOTHING is fresh. Warn once per symbol per hour rather than on every tick —
-      // the owner asked for a warning "if an hour passes and there is a lack of data for a symbol",
+      // the requirement is for a warning "if an hour passes and there is a lack of data for a symbol",
       // and a per-tick warning is a log storm nobody reads.
       await this.warnIfDataStarved(cleanTicker, newestAnyMs, protocolId);
       const newestOfTf = (tf: string) => {
@@ -829,12 +829,12 @@ export class SignalEnvelopeService {
   }
 
   /**
-   * dataStarvationWarning() — the owner's two warnings, in one place (#1264).
+   * dataStarvationWarning() — the project's two warnings, in one place (#1264).
    *
    * ── DECISION (2026-11-13, owner) ──
    * WHAT:      When a symbol cannot be scored on fresh data, SAY SO — and say it louder when we hold
    *            a position in it.
-   * WHY:       Owner directive, 2026-11-13: we should be refusing to score and maybe warn when a symbol we
+   * WHY:       Requirement, 2026-11-13: we should be refusing to score and maybe warn when a symbol we
    *            have a position for cannot get fresh data and warn if an hour passes and there is a
    *            lack of data for a symbol: in the form of a notification. The failure being guarded
    *            is silence: a starved symbol simply stops appearing, which reads as "no signal" rather
@@ -862,7 +862,7 @@ export class SignalEnvelopeService {
     const ageHours = ageMs / 3_600_000;
 
     // A symbol we hold is reported as soon as its data is gone; one we do not hold waits the hour
-    // the owner specified.
+    // the requirement specified.
     if (!held && ageMs < DATA_STARVATION_NOTICE_MS) return;
 
     const last = this.staleNoticeAt.get(ticker) ?? 0;
@@ -910,7 +910,7 @@ export class SignalEnvelopeService {
     await this.dataStarvationWarning(ticker, newestAnyMs, true, protocolId);
   }
 
-  /** Nothing fresh anywhere: the owner's "an hour passes with a lack of data" warning. */
+  /** Nothing fresh anywhere: the project's "an hour passes with a lack of data" warning. */
   private async warnIfDataStarved(
     ticker: string,
     newestAnyMs: number | null,
@@ -1527,12 +1527,12 @@ export class SignalEnvelopeService {
    * REGISTER:    docs/SETTLED-DECISIONS.md row 82
    * GUARD:       nest/src/modules/signals/signal-envelope-bot-verdict.spec.ts (canaried both ways)
    *
-   * WHY THE SERVER OWNS THIS SENTENCE (2026-10-12, owner directive). It was generated client-side
+   * WHY THE SERVER OWNS THIS SENTENCE (2026-10-12, requirement). It was generated client-side
    * (`src/core/tradeability.js`, #911) from `GET /api/scoring/gated/thresholds`, whose bot list
    * comes from the DISPLAY-ONLY `trading_strategy.protocolId` column plus name-prefix matching —
    * the exact basis #759's correction rejected when it moved the gate reconciliation onto
    * `strategy_protocol` subscriptions. Two views, one question, two bot lists: they agreed only by
-   * accident, and the owner asked for ONE service. Bots do not belong on the scoring ladder;
+   * accident, and the requirement is for ONE service. Bots do not belong on the scoring ladder;
    * the SIGNAL CARD shows this sentence.
    *
    * States (the retired client module's vocabulary, kept so old explanations still map):

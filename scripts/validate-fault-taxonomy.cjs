@@ -2,7 +2,7 @@
 /**
  * validate-fault-taxonomy.cjs — the anti-bloat guardrail for the fault registry.
  *
- * WHY THIS EXISTS (owner decision, 2026-11-19)
+ * WHY THIS EXISTS (requirement, 2026-11-19)
  * The proposal was a system that records persistent faults, visits them regularly, diagrams the
  * pathways they sit on, and links each to a GitHub issue. The reasoning that made it worthwhile is
  * the same reasoning that makes it dangerous: **a taxonomy is cheap to add to and expensive to
@@ -23,7 +23,7 @@
  * G2 — RETIRE, NEVER DELETE.
  *      Nothing may delete from the fault table. The whole value is recurrence: a code removed when
  *      its issue closes destroys the evidence that it ever happened, and the next occurrence looks
- *      brand new. Retirement is a `status` change, and the row stays. (The owner's own instinct —
+ *      brand new. Retirement is a `status` change, and the row stays. (The project's own instinct —
  *      "closing an issue could be a trigger" — is right about the TRIGGER and wrong about the verb.)
  *
  * G3 — A FAULT DIAGRAM IS GENERATED, OR IT IS DOCUMENTATION.

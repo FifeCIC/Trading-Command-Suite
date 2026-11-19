@@ -188,7 +188,7 @@ export class FaultsService {
    * registry with no record of being visited cannot report that it has been neglected.
    *
    * `issueUrl` is accepted here because the most useful output of a review is "this is owned by #N" —
-   * needing a second write to attach the owner would make linking an issue feel like extra work, and
+   * needing a second write to attach the requirement would make linking an issue feel like extra work, and
    * an unlinked fault is one nobody can act on.
    */
   async review(code: string, reviewedBy: string, note?: string, issueUrl?: string): Promise<FaultView> {

@@ -301,7 +301,7 @@ const PIPELINE = [
 
 /* ── PLANNED IN #1129 ──
  * MISSING:  a readability pass. Every stage now renders its measured values and reasons at ALL
- *           times (owner decision 2026-10-20 — the three-level switch was replaced by a single
+ *           times (requirement 2026-10-20 — the three-level switch was replaced by a single
  *           Pause/Play control). The page is therefore dense by design, and nothing has been done
  *           to make that density scannable.
  * TODAY:    each stage is a flat list of rows; label, value and reason compete for the eye, and a
@@ -324,7 +324,7 @@ export default function MetaStackExplorerPage() {
 
   // ── PAUSE / PLAY — the one control on this page ─────────────────────────────────────────────
   //
-  // Owner direction, 2026-10-20: *"rather than three levels I just want a toggle to Pause or Play.
+  // Requirement, 2026-10-20: *"rather than three levels I just want a toggle to Pause or Play.
   // Pause will allow me to view every step on the latest score. Play will automatically refresh the
   // page … instead of two levels of information on the UI I want it all displayed at all times."*
   //
@@ -639,7 +639,7 @@ export default function MetaStackExplorerPage() {
       {
         label: 'By type',
         value: Object.entries(symbolTech.byType).map(([k, v]) => `${k} ${v}`).join(' · ') || '—',
-        // Ticked when the value is PRESENT — the owner asked for that explicitly (2026-10-20):
+        // Ticked when the value is PRESENT — the requirement is for that explicitly (2026-10-20):
         // a row that reports real data confirms the mechanism works and should not read as a gap.
         status: symbolTech.total > 0 ? 'pass' : 'na',
         reason: 'symbol types present — the type decides the market calendar and the venue gate',
@@ -1459,7 +1459,7 @@ export default function MetaStackExplorerPage() {
                       <span className={`mse-live-val ${confirmed ? '' : 'mse-live-dim'}`}>{liveValues[stage.id] || '—'}</span>
                     )}
                     {/* ── MEASURED VALUES AND REASONS — always shown ─────────────────────────
-                        No level gates this any more: the owner asked for everything visible at
+                        No level gates this any more: the requirement is for everything visible at
                         all times, with Pause/Play as the only control. It reads the same fetched
                         snapshot as the rows above, so it can only ever describe the record that
                         is already on screen. */}

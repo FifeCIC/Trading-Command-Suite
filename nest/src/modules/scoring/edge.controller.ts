@@ -4,7 +4,7 @@
  *
  * WHY A SINGLE ENDPOINT (2026-09-12)
  * ----------------------------------
- * The owner's condition for continuing development is: *"I don't want to continue building
+ * The project's condition for continuing development is: *"I don't want to continue building
  * unless a change will have a positive impact on profitable trade."*
  *
  * Answering that required three separate things that did not previously exist in one place:
@@ -21,7 +21,7 @@
  * The verdict is deliberately reluctant. It will say `insufficient` far more often than it
  * says `edge`, because that is the honest answer at these sample sizes. A tool that reports
  * confidence it has not earned is worse than no tool — it would license exactly the kind of
- * unverifiable change the owner is trying to stop.
+ * unverifiable change the requirement is trying to stop.
  */
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
@@ -81,7 +81,7 @@ export class EdgeController {
   }
 
   /**
-   * The single call that answers the owner's question.
+   * The single call that answers the project's question.
    *
    * Combines directional edge (from `directiveoutcome`) with realised PnL (from `trade`) and
    * states plainly whether the evidence supports any conclusion yet.

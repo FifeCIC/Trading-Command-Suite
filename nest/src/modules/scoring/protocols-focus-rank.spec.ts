@@ -9,14 +9,14 @@ import { PROTOCOL_SEED_DATA } from './protocols-seed-data';
  *
  * ⚠️ WHAT COULD ACTUALLY GO WRONG, and therefore what is asserted:
  *   · a copy-pasted protocol block keeps its parent's `focusRank`, so two unrelated protocols both
- *     claim rank 1 and "show me my focus protocols" returns a set the owner did not choose;
+ *     claim rank 1 and "show me my focus protocols" returns a set the requirement did not choose;
  *   · a rank is removed from the middle and the sequence reads 1, 3, 4 — not fatal, but it makes the
  *     reading order meaningless the next time someone counts;
  *   · the derived SHORT leg loses its parent's rank, so a pair is half-rankable and the list splits a
  *     strategy across two positions.
  *
  * ⚠️ WHAT IT DELIBERATELY DOES NOT ASSERT: any particular protocol IS a focus protocol. Which ones
- * are under active work is the owner's decision and changes without a code change being wrong.
+ * are under active work is the project's decision and changes without a code change being wrong.
  */
 
 const seedEntries = Object.entries(PROTOCOL_SEED_DATA);

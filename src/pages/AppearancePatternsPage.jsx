@@ -1,16 +1,16 @@
 /**
- * AppearancePatternsPage — the owner's approved UI patterns, read back from the Page Walkthrough.
+ * AppearancePatternsPage — the project's approved UI patterns, read back from the Page Walkthrough.
  *
- * ⚠️ WHY THIS PAGE EXISTS. The owner asked to work out "what views I find most acceptable" from the
+ * ⚠️ WHY THIS PAGE EXISTS. The brief asked to work out "what views I find most acceptable" from the
  * walkthrough's Preferred Elements and UI/10 columns, and to use that to offer strong samples in the
  * Appearance area. This is that reading, on a page — not a chat message that scrolls away.
  *
- * ⚠️ EVERY ROW IS TRACEABLE. Each pattern names the view(s) it was proven on and the owner's score for
- * that view. Nothing here is an agent's taste dressed as a finding — the quotes are the owner's own
- * walkthrough text. A pattern sourced from a LOW-scoring page says so, because the owner sometimes
+ * ⚠️ EVERY ROW IS TRACEABLE. Each pattern names the view(s) it was proven on and the project's score for
+ * that view. Nothing here is an agent's taste dressed as a finding — the quotes are the project's own
+ * walkthrough text. A pattern sourced from a LOW-scoring page says so, because the requirement sometimes
  * names the one strong element on an otherwise weak page.
  *
- * ⚠️ `state: 'undecided'` MUST STAY VISIBLE. The status-pill entry records a question the owner
+ * ⚠️ `state: 'undecided'` MUST STAY VISIBLE. The status-pill entry records a question the requirement
  * deliberately left open (*"Please display these along side the rectangle shaped ones… so [I] can make
  * a decision"*). Building a sample that quietly picks one would answer a question they are holding.
  *
@@ -22,16 +22,16 @@ import { UI_PATTERNS, PATTERN_FAMILIES, PATTERN_SOURCE, REJECTED_PATTERNS } from
 import './appearance-area.css';
 
 const STATE = {
-  strong: { label: 'Proven', icon: '✅', hint: 'The owner scored the source page well and named this pattern.' },
-  requested: { label: 'Sample wanted', icon: '🎯', hint: 'The owner asked for a sample of this in the library. Not built yet.' },
-  undecided: { label: 'Undecided', icon: '⚠️', hint: 'The owner wants two approaches shown side by side before choosing.' },
+  strong: { label: 'Proven', icon: '✅', hint: 'The requirement scored the source page well and named this pattern.' },
+  requested: { label: 'Sample wanted', icon: '🎯', hint: 'The requirement is for a sample of this in the library. Not built yet.' },
+  undecided: { label: 'Undecided', icon: '⚠️', hint: 'The requirement is two approaches shown side by side before choosing.' },
 };
 
 export default function AppearancePatternsPage() {
   const byFamily = PATTERN_FAMILIES.map((f) => ({ ...f, rows: UI_PATTERNS.filter((p) => p.family === f.id) }));
   const counts = {
     strong: UI_PATTERNS.filter((p) => p.state === 'strong').length,
-    // ⚠️ `requested` EXCLUDES the ones with a `sampleAt`. "The owner asked for this" and "it does not
+    // ⚠️ `requested` EXCLUDES the ones with a `sampleAt`. "The requirement is for this" and "it does not
     // exist yet" are two different facts; a single counter would report the first as the second.
     requested: UI_PATTERNS.filter((p) => p.state === 'requested' && !p.sampleAt).length,
     built: UI_PATTERNS.filter((p) => p.sampleAt).length,
@@ -51,7 +51,7 @@ export default function AppearancePatternsPage() {
           {PATTERN_SOURCE.preferred} with Preferred Elements — measured {PATTERN_SOURCE.measuredAt}
         </p>
               <PageInfoPopover>
-            The UI patterns the owner approved, read from the Page Walkthrough on{' '}
+            The UI patterns the requirement approved, read from the Page Walkthrough on{' '}
             {PATTERN_SOURCE.measuredAt}: {PATTERN_SOURCE.entries} recorded pages, {PATTERN_SOURCE.scored}{' '}
             with a UI/10 score and {PATTERN_SOURCE.preferred} with Preferred Elements. Source:{' '}
             <code>{PATTERN_SOURCE.store}</code> in the database. Nothing here is an agent&apos;s
@@ -115,7 +115,7 @@ export default function AppearancePatternsPage() {
             </table>
           </div>
 
-          {/* The owner's own words, per family — the evidence, kept next to the claim. */}
+          {/* The project's own words, per family — the evidence, kept next to the claim. */}
           <details className="ap-quotes">
             <summary>Your notes behind these</summary>
             <ul>

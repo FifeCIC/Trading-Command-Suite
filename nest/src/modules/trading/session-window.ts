@@ -2,7 +2,7 @@
  * ⚠️ AXIS: this is the BOT-POLICY axis — "when may THIS BOT act?" (a strategy choice, declared
  * per bot in `trading_strategy.sessionWindow`). It is NOT the venue axis
  * (`calendar/market-calendar.service.ts`) and NOT the FX-session axis
- * (`calendar/market-sessions.service.ts`). A bot's window is a policy the owner sets; the other two
+ * (`calendar/market-sessions.service.ts`). A bot's window is a policy the requirement sets; the other two
  * are facts about the market. See #851.
  *
  * ⚠️ "SINGLE SOURCE OF TRUTH" below means *within this axis*.
@@ -218,7 +218,7 @@ export function auditNameVsWindow(name: unknown, raw: unknown): NameWindowAudit 
  * ⚠️ DST-CORRECT as of 2026-09-15. This previously approximated DST by MONTH
  * (`month >= 2 && month <= 10`) — which treats ALL of March and ALL of November as EDT.
  * Real US DST 2026 runs **8 Mar → 1 Nov**, so the ET clock was **an hour out for ~36 days a
- * year**, moving every session boundary. It now delegates to `minutesInZone()`, the owner,
+ * year**, moving every session boundary. It now delegates to `minutesInZone()`, the requirement,
  * which resolves the zone's actual offset at the actual instant via `Intl`.
  *
  * ⚠️ WHY THIS AND `market-context.service.ts` MUST CHANGE TOGETHER — the previous comment here

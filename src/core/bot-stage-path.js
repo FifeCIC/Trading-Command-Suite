@@ -213,12 +213,12 @@ export function buildBotStagePath(bot, rules) {
 
   // ── THE BRAKE LAYER — what stops a trade, and whether it needs the app to be running ─────
   //
-  // ⚠️ WHY THIS EXISTS (owner, 2026-09-30). Two facts were true, important, and named NOWHERE in
+  // ⚠️ WHY THIS EXISTS (Requirement, 2026-09-30). Two facts were true, important, and named NOWHERE in
   // this picture — and both were learned the hard way on the −322.67 position:
   //
   //   1. EVERY app-side brake needs the app to be RUNNING. The guardian, the time-stop, the
   //      exhaustion observer and the loop's own risk gate all live in this process. With the PC
-  //      off there is **no management of any open position at all**. The owner had not factored
+  //      off there is **no management of any open position at all**. The requirement had not factored
   //      this in, and nothing here said it.
   //   2. The brakes that DO survive come from somewhere this page never named — the **bridge's**
   //      own caps and the **broker's** SL/TP — and one of them, the daily-loss cap, **RESETS AT

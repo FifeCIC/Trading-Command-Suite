@@ -58,7 +58,7 @@ const REL_REGISTRY = 'nest/src/modules/risk/risk-profile-rules.ts';
 /**
  * Portfolio POLICY flags declared in the register that are NOT `PortfolioRisk` keys.
  *
- * ⚠️ Added 2026-09-19 (#900). `requireBrokerStopLoss` is a boolean policy — the owner's rule
+ * ⚠️ Added 2026-09-19 (#900). `requireBrokerStopLoss` is a boolean policy — the project's rule
  * "if the distant broker stop loss is missing, then it doesn't trade" — not a numeric risk cap,
  * so it does not belong in the `PortfolioRisk` object. It is declared in the same register so
  * this gate still proves it is real and operator-movable (checks 3–6 apply to it unchanged).

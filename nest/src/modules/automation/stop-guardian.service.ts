@@ -15,7 +15,7 @@
  *           `maths-change-requires-ab.instructions.md` applies; extraction and improvement are two
  *           landings, never one.
  * REGISTER:  docs/SETTLED-DECISIONS.md row 156
- * ISSUE:     #1242 (extraction project) — the owner's framing, 2026-11-07: *"it's like a service or
+ * ISSUE:     #1242 (extraction project) — the project's framing, 2026-11-07: *"it's like a service or
  *           library being built that can be shared with the open-source community on its own or at
  *           least assigned to a developer/agent as a project."*
  */
@@ -216,7 +216,7 @@ export interface GuardedPosition {
   wickFilterPassed: boolean;
   lastEvaluatedAt: string | null;
   /**
-   * ⚠️ #1018 — HOW the owner was established, so the resolution is CHECKABLE rather than assumed.
+   * ⚠️ #1018 — HOW the requirement was established, so the resolution is CHECKABLE rather than assumed.
    *
    * `'magic'` is the durable key. The two `comment:*` forms are the fallback, and the distinction
    * matters: a position resolved by `comment:unique-prefix` was matched on a TRUNCATED name, so it
@@ -257,7 +257,7 @@ export interface GuardedPosition {
    *
    * Present ⇒ the position was CONTESTED and is being managed by its STRICTEST claimant (the
    * tightest declared stop), so it is protected soonest rather than by whichever bot happened to be
-   * looked at first (owner ruling R31, 2026-09-30). Absent ⇒ an ordinary single-owner position, or
+   * looked at first (requirement R31, 2026-09-30). Absent ⇒ an ordinary single-owner position, or
    * one nobody claims (those are reported in `ownerAttribution.unresolved` instead).
    *
    * Served so the choice is VISIBLE: the guardian now acts on a position whose ownership it cannot
@@ -471,7 +471,7 @@ const BRIDGE_DEFAULT_MAGIC = 234000;
 /**
  * DEFAULT_TICK_INTERVAL_MS — how often the guardian re-derives every trailing stop.
  *
- * ⚠️ 10 s, raised from 30 s on 2026-11-06 at the owner's direction (#1199). The value is a
+ * ⚠️ 10 s, raised from 30 s on 2026-11-06 at the project's direction (#1199). The value is a
  * SETTING (`automation.guardianTickIntervalMs`) and `syncIntervalFromSettings()` re-reads it at the
  * top of every tick; this constant is the fallback for a spec or a boot before the first read.
  *
@@ -534,7 +534,7 @@ const TICK_INTERVAL_SETTING = 'automation.guardianTickIntervalMs';
 /**
  * pickStrictestClaimant() — WHICH bot's rules govern a CONTESTED position (#1041).
  *
- * Owner ruling, 2026-09-30 (R31): a position built from several bots' orders is **managed, by its
+ * Requirement, 2026-09-30 (R31): a position built from several bots' orders is **managed, by its
  * strictest claimant** — *"so it is protected soonest rather than by whichever bot happens to be
  * looked at first."*
  *
@@ -660,7 +660,7 @@ export function resolvePositionOwner(
  * Eleven entries are `global`: ONE `StopGuardianService` serves every position on every bot, and the
  * trailing logic itself remains shared. `per-bot` is reserved for genuinely per-bot controls.
  *
- * CHANGED 2026-09-24 (#936, R20=A). The owner ruled that post-entry exit management becomes PER-BOT
+ * CHANGED 2026-09-24 (#936, R20=A). Decided that post-entry exit management becomes PER-BOT
  * DATA, so `simulated-tsl` is now a real per-bot entry with columns on `trading_strategy` rather
  * than a declared absence. It is the FIRST per-bot exit control, not the whole of R20 — the shared
  * trailing rules above stay global until each is moved deliberately and separately. The paragraph
@@ -710,7 +710,7 @@ export interface GuardianRule {
    *
    * It also lets a surface render a mechanism ONCE with its columns nested — instead of the same
    * subject appearing as three loose rows in the exit list AND again as the mechanism that owns
-   * them (which is exactly what the owner saw on the bot page).
+   * them (which is exactly what the requirement saw on the bot page).
    *
    * Enforced by `nest/scripts/validate-rule-enforcement.cjs`.
    */
@@ -847,7 +847,7 @@ export class StopGuardianService {
 
   state: GuardianState = {
     enabled: false,
-    // ⚠️ 10 s since 2026-11-06 (owner decision, #1199). The pass cost is FIXED (~105–145 ms) and the
+    // ⚠️ 10 s since 2026-11-06 (requirement, #1199). The pass cost is FIXED (~105–145 ms) and the
     // loop is sequential, so a faster cadence costs bridge reads, not CPU — measured at 2 s it still
     // finishes in 105 ms. The DB setting `automation.guardianTickIntervalMs` overrides this and is
     // re-read at the top of every tick, so a change lands within one cycle without a restart.
@@ -974,7 +974,7 @@ export class StopGuardianService {
   //            10x range), so one shared trail distance cannot be right at both ends of it. The
   //            guardian also ALREADY read a per-bot value (`strat?.slPct ?? 1`), so this finishes
   //            a partial thing rather than starting a new direction.
-  // INSTEAD OF: keeping one hardcoded global mechanism (R20 option B), which the owner rejected.
+  // INSTEAD OF: keeping one hardcoded global mechanism (R20 option B), which the requirement rejected.
   //            Its cost is real and is NOT hidden: ~50 bots x knobs can drift, and
   //            `seedDefaults()` convergence already flipped 5 bots auto->semi-auto once (#833).
   //            Per-bot data is therefore bounded by declared defaults, never by hand-tuning.
@@ -1089,7 +1089,7 @@ export class StopGuardianService {
    * WHAT:  once a position's unrealised P&L reaches this bot's `takeProfitAmount` (ACCOUNT currency
    *        of the bridge holding it), CLOSE IT through that bridge, stamped `TCS:take-profit`.
    * WHY:   `tpPct` is a distance from entry, so the money it captures drifts with the price level —
-   *        0.23% on GER40 at 25,701 is GBP 4.93; at 30,000 the same 0.23% is GBP 5.75. The owner's
+   *        0.23% on GER40 at 25,701 is GBP 4.93; at 30,000 the same 0.23% is GBP 5.75. The project's
    *        "five pound strategy" needs the target to STAY five pounds, which a percentage cannot say.
    * WHERE: called BEFORE the bar load, on purpose. The decision needs a live P&L and nothing else,
    *        so it must still fire when bars are short — the condition under which the rest of the
@@ -1201,7 +1201,7 @@ export class StopGuardianService {
       body: `Closed #${pos.ticket} at ${pnl.toFixed(2)} — target ${target.toFixed(2)}`,
       symbol: pos.symbol,
       // ⚠️ `metadata.pnl` IS LOAD-BEARING (2026-11-06). The Discord feed decides WHICH channel a
-      // close goes to — wins or losses — from this number, and drops anything under the owner's
+      // close goes to — wins or losses — from this number, and drops anything under the project's
       // minimum. Without it a take-profit could only be published as "unknown outcome", which the
       // feed refuses. The value is already in scope here; omitting it would have made the feed
       // silently blind to every stop-guardian close.
@@ -1209,7 +1209,7 @@ export class StopGuardianService {
         pnl,
         exitPrice: target,
         closeReason: 'take-profit',
-        // The published message shows protocol AND bot (owner, 2026-11-12). `strat` is the resolved
+        // The published message shows protocol AND bot (Requirement, 2026-11-12). `strat` is the resolved
         // trading strategy for this position — the SAME row the guardian used to decide the target,
         // so these two fields cannot disagree with the decision that closed it.
         strategyName: strat?.name ?? null,
@@ -1691,7 +1691,7 @@ export class StopGuardianService {
         const alignedAvg = alignedCount > 0 ? alignedSum / alignedCount : 0;
         const opposingAvg = opposingCount > 0 ? opposingSum / opposingCount : 0;
         const stopConfidence = Math.max(0, Math.round(alignedAvg - opposingAvg));
-        // #1077 (owner ruling "B", 2026-10-09) — THE SHADOW RETIRED, because it would now be a
+        // #1077 (requirement "B", 2026-10-09) — THE SHADOW RETIRED, because it would now be a
         // duplicate: the incumbent `supertrend` computes the same canonical ratchet
         // (`utils/supertrend.ts`), so a `shadow=[supertrend:…]` field would repeat the incumbent's
         // own class. The comparison it existed for is complete — 475 gate-crosses, 9 real

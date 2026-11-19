@@ -43,7 +43,7 @@ never answer "how often".
 The whole value is **recurrence**: a code deleted when its issue closes destroys the evidence that it
 ever happened, so the next occurrence looks brand new.
 
-> **The owner's instinct was right about the trigger and wrong about the verb.** Closing an issue MAY
+> **The project's instinct was right about the trigger and wrong about the verb.** Closing an issue MAY
 > retire a fault code; it may not remove it. Retirement is a `status` change and the row stays, so
 > "this came back" remains answerable.
 

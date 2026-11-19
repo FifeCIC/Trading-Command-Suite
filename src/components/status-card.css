@@ -71,7 +71,7 @@
 }
 
 /* ── The disclosure cue: a CHEVRON, and why it is not an ⓘ ──────────────────────────────────
- * Owner, 2026-11-18, after seeing the first build: *"I don't like the little 'i' in the corner of the
+ * Requirement, 2026-11-18, after seeing the first build: *"I don't like the little 'i' in the corner of the
  * cards. Look for something that has been a standard approach in other designs online."* The ⓘ was
  * wrong on the convention, not just on taste: ⓘ means "information ABOUT this thing" (which is what
  * `PageInfoPopover` does, on a heading), whereas these cards *expand*. Every mainstream system uses a

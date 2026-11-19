@@ -134,14 +134,14 @@ const BtcSpeedTradingPage = lazy(() => import('../pages/BtcSpeedTradingPage.jsx'
 // not remove the import the other still needs. The script now checks whether any surviving map
 // entry still names the component before touching its import line.
 const Mt5TradingPage = lazy(() => import('../pages/Mt5TradingPage.jsx'));
-// Moved out of the deleted /automation/execution-queue page, 2026-10-02 — the owner asked for the
+// Moved out of the deleted /automation/execution-queue page, 2026-10-02 — the requirement is for the
 // Protocol Queue tab to live in Protocols and the Scheduled Jobs tab in Status.
 const ProtocolQueuePage = lazy(() => import('../pages/ProtocolQueuePage.jsx'));
 const ScheduledJobsPage = lazy(() => import('../pages/ScheduledJobsPage.jsx'));
 const Mt5StatusPage = lazy(() => import('../pages/Mt5StatusPage.jsx'));
 const T212PortfolioPage = lazy(() => import('../pages/T212PortfolioPage.jsx'));
 const T212ISAPage = lazy(() => import('../pages/T212ISAPage.jsx'));
-// Accounts area — added 2026-11-06 (owner direction): the venues/accounts, and the data vendors.
+// Accounts area — added 2026-11-06 (requirement): the venues/accounts, and the data vendors.
 const BrokersPage = lazy(() => import('../pages/BrokersPage.jsx'));
 const VendorsPage = lazy(() => import('../pages/VendorsPage.jsx'));
 
@@ -279,7 +279,7 @@ export const VIEW_COMPONENTS = {
   'strategy-detail': ViewStrategyPage,
   // #876 — the strategies themselves: one card per distinct (protocol x treatment).
   'strategies-derived': DerivedStrategiesPage,
-  // Two of those strategies side by side, diffs marked (owner, 2026-09-22).
+  // Two of those strategies side by side, diffs marked (Requirement, 2026-09-22).
   'ab-strategies': AbStrategiesPage,
   // Trading — Legacy strategy pages (under review)
   'strategy-comparison': StrategyComparisonPage,
@@ -384,11 +384,11 @@ export const VIEW_COMPONENTS = {
   'platform-comparisons': PlatformComparisonsPage,
 
   // Backtest / Strategies
-  // ⚠️ SPLIT 2026-10-26 (owner direction): one page per subject, so each is linkable and described
+  // ⚠️ SPLIT 2026-10-26 (requirement): one page per subject, so each is linkable and described
   // on its own. BacktestPage remains the shared implementation; these are its two routes.
   'backtest': BacktestProtocolsPage,
   'backtest-strategies': BacktestStrategiesPage,
-  // ⚠️ ADDED 2026-11-04 (owner direction). The A/B reference panels moved OFF the strategies page
+  // ⚠️ ADDED 2026-11-04 (requirement). The A/B reference panels moved OFF the strategies page
   // (*"results displayed twice"*) onto this one, which is about a single strategy and its accepted
   // reference. It reads stored runs only — it never runs a backtest.
   'current-strategy': CurrentStrategyPage,

@@ -8,7 +8,7 @@ import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import ProtocolCarousel from '../components/ProtocolCarousel';
 /**
- * The trade table — shared by the Run step and both A/B panels (owner direction, 2026-10-29: *"more
+ * The trade table — shared by the Run step and both A/B panels (requirement, 2026-10-29: *"more
  * trade based and show us profit loss"*). Imported STATICALLY, not lazily like its A/B siblings: it
  * is one small pure table, and the Run step renders it outside any Suspense boundary, so a lazy
  * import there would throw on first paint.
@@ -100,7 +100,7 @@ const ProtocolDirectiveSettings = lazy(() => import('../components/backtest/Prot
 const DirectiveSettingsPanel = lazy(() => import('../components/backtest/DirectiveSettingsPanel'));
 /**
  * ⚠️ `RunPanel`, `RunDiffPanel` and `RunSettingsDiff` were REMOVED FROM THIS PAGE 2026-11-04. They
- * render the A/B comparison, which moved to `/lab/current-strategy` (owner direction: the strategies
+ * render the A/B comparison, which moved to `/lab/current-strategy` (requirement: the strategies
  * page was *"displaying results twice"*). Only `ScoreTable` is still used here — the per-bar reading
  * of THIS run is part of its own result, not a comparison.
  *
@@ -116,12 +116,12 @@ const ScoreSeriesTable = lazy(() =>
   import('../components/backtest/RunComparisonPanels').then((m) => ({ default: m.ScoreTable })));
 
 /**
- * The Lab's steps (#1138, owner direction 2026-10-26).
+ * The Lab's steps (#1138, requirement 2026-10-26).
  *
  * `n` is the number shown in the rail and the ONLY ordering authority — the rail, the panel
  * heading and the "of 5" counter all read from this array, so they cannot disagree.
  *
- * ⚠️ Step 1 is the owner's definition (subject header + track). Steps 2-5 are the blocks that
+ * ⚠️ Step 1 is the project's definition (subject header + track). Steps 2-5 are the blocks that
  * already existed, grouped into the sequence they were already written in. Re-framing them is
  * expected; adding a step means adding a row here AND a `stepDone`/`stepUnlocked` entry, and the
  * `validate-*`-free nature of that pair is stated in the code rather than left to be discovered.
@@ -132,10 +132,10 @@ const STEPS = [
   { n: 3, id: 'info', label: 'Information sources' },
   { n: 4, id: 'execution', label: 'Costs & sizing', labelForProtocol: 'Scores only' },
   // ── The settings audits, one group per step ──────────────────────────────────────────────────────
-  // (owner direction, 2026-10-30: *"Strategy + Protocol + Directive Overrides + Global Settings should
+  // (requirement, 2026-10-30: *"Strategy + Protocol + Directive Overrides + Global Settings should
   // all be separate steps"* — they were four stacked tables and 39 rows under one heading.)
   //
-  // ⚠️ `set-strategy` IS STANDARD-ONLY (owner direction, 2026-11-01: *"there is no strategy within the
+  // ⚠️ `set-strategy` IS STANDARD-ONLY (requirement, 2026-11-01: *"there is no strategy within the
   // protocol process. This step should not be here and the steps do not need to mirror Backtest
   // Strategies"*). A protocol run scores bars; it has no position size, stop, mode or symbol of its own,
   // so a "what the strategy sets" audit on that route audits a thing that is not part of the process.
@@ -215,7 +215,7 @@ const buildSettingsSteps = (steps) => [
 /**
  * The result panels the reader can switch on, in the order they render.
  *
- * ⚠️ WHY THIS IS A STEP AND NOT A SET OF CHECKBOXES ON THE RESULT (owner direction, 2026-10-30:
+ * ⚠️ WHY THIS IS A STEP AND NOT A SET OF CHECKBOXES ON THE RESULT (requirement, 2026-10-30:
  * *"maybe add a new step for the user to select what outputs they want"*). Two reasons that are about
  * the reader rather than tidiness:
  *   1. Choosing outputs BEFORE running means the result is what was asked for, not a wall of panels
@@ -363,7 +363,7 @@ const COST_PROFILES = {
     //            it made a 1% target unwinnable (`tradeWinRate 0.0%` — every trade a loss).
     //            ⚠️ The old 1%+1% also predates #1146: costs were applied as ABSOLUTE price until then,
     //            so the "3%" was never actually charged — which is why this looked harmless for months.
-    // INSTEAD OF: waiting for the owner to name a figure. The broker reports its spread; asking a human
+    // INSTEAD OF: waiting for the requirement to name a figure. The broker reports its spread; asking a human
     //            to guess what the machine already knows is the wrong source.
     // REVERSE BY: restoring 0.01 / 0.01 here and in `backtest.service.ts`. Every run still records what
     //            it used, and `spread`/`slippage` remain per-request fields.
@@ -395,7 +395,7 @@ const COST_PROFILE_FOR_TYPE = {
 const TIMEFRAMES = ['5m', '15m', '1h', '4h', '1d'];
 
 /**
- * The Lab's default news-window mode (#1138, owner direction 2026-10-26: *"Make this the default
+ * The Lab's default news-window mode (#1138, requirement 2026-10-26: *"Make this the default
  * for this menu"*). `exclude` keeps the protocol's own reading pure by dropping bars dated on a news
  * release, so a run measures the protocol rather than the news.
  *
@@ -517,7 +517,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
   const queryClient = useQueryClient();
 
   /**
-   * THE APP-WIDE FOCUS (owner direction, 2026-11-04). `usePreferences` is the one preference store the
+   * THE APP-WIDE FOCUS (requirement, 2026-11-04). `usePreferences` is the one preference store the
    * whole app already reads (localStorage + `PUT /api/preferences`), so "which strategy am I working
    * on" lives there rather than in a second store. It is read SYNCHRONOUSLY for the initial selection
    * below, which is why the restore works on this browser without waiting for the server round trip.
@@ -532,7 +532,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
    */
   const subject = fixedSubject === 'strategy' ? 'strategy' : 'protocol';
   /**
-   * ⚠️ THE STEPS AND EVERY STEP NUMBER ARE NOW PER SUBJECT (owner direction, 2026-11-01: *"there is no
+   * ⚠️ THE STEPS AND EVERY STEP NUMBER ARE NOW PER SUBJECT (requirement, 2026-11-01: *"there is no
    * strategy within the protocol process … the steps do not need to mirror Backtest Strategies"*).
    *
    * The Protocols route has one step fewer and renumbers from 1, so it reads as its own process rather
@@ -564,7 +564,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
   const [runId, setRunId] = useState('');
   /**
    * ── OUTPUTS (2026-10-30) ──────────────────────────────────────────────────────────────────────
-   * Which result panels this page renders. Owner direction: *"Make this output an option … maybe add a
+   * Which result panels this page renders. Requirement: *"Make this output an option … maybe add a
    * new step for the user to select what outputs they want."*
    *
    * Persisted in `localStorage` rather than per-render, because a mode of working that resets on
@@ -763,13 +763,13 @@ export default function BacktestPage({ subject: fixedSubject }) {
   // ⚠️ These narrow the CAROUSEL, not the API call. Every protocol and bot is already in memory, so
   // filtering client-side keeps the scroll position and avoids a round trip per keystroke.
   //
-  // ⚠️ STYLE AND "HAS SYMBOLS" WERE REMOVED 2026-10-25 (owner direction). Style was a descriptive tag
+  // ⚠️ STYLE AND "HAS SYMBOLS" WERE REMOVED 2026-10-25 (requirement). Style was a descriptive tag
   // nothing branches on, and "has symbols" filtered for a BROKEN STATE rather than a property — the
   // right fix for a protocol with no symbols is to say so on its card, not to offer a checkbox that
   // hides it. ⚠️ Measured the same day: **14 of 47 protocols resolve zero symbols**, one of them
   // (`eurusd-macro-v1-long`) ACTIVE — so the state is real and is now shown on the card instead.
   /**
-   * ⚠️ THE SEARCH REMEMBERS ITSELF, PER SUBJECT (owner direction, 2026-10-30: *"Auto fill with the
+   * ⚠️ THE SEARCH REMEMBERS ITSELF, PER SUBJECT (requirement, 2026-10-30: *"Auto fill with the
    * previous search"*). A backtesting session is many runs in a row on the same handful of strategies,
    * so retyping the filter after every navigation is pure friction.
    *
@@ -875,7 +875,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
   })), [bots, directionOfProtocol]);
 
   /**
-   * The search applies to BOTH subjects (owner direction, 2026-10-25).
+   * The search applies to BOTH subjects (requirement, 2026-10-25).
    *
    * ⚠️ It filters bots on the same haystack principle as protocols — name, symbol, mode, timeframe,
    * protocol and id — and it is applied to the CAROUSEL, not to a query, because every bot is already
@@ -935,7 +935,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
   }, [filteredBots, botId, subject]);
 
   /**
-   * ── REMEMBER THE FOCUS (owner direction, 2026-11-04) ───────────────────────────────────────────
+   * ── REMEMBER THE FOCUS (requirement, 2026-11-04) ───────────────────────────────────────────
    * *"I think the current strategy can be held across the entire app to help the user focus."*
    *
    * ⚠️ IT RUNS AFTER THE TWO CORRECTION EFFECTS ABOVE, and that order is the point: those force the
@@ -985,7 +985,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
   const marketTimeframe = subject === 'strategy' ? (selectedBot?.timeframe ?? '') : timeframe;
 
   /**
-   * ⚠️ A PROTOCOL PRODUCES **SCORES**, NOT TRADES (owner direction, 2026-10-26: *"Lets make protocol
+   * ⚠️ A PROTOCOL PRODUCES **SCORES**, NOT TRADES (requirement, 2026-10-26: *"Lets make protocol
    * score only. Backtesting protocols will only generate scores. That means when we select a
    * protocol-only, the bot or financial fields are not required."*).
    *
@@ -999,7 +999,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
   /**
    * THE CHANGES BEING TESTED — every field where this run departs from the bot's own settings.
    *
-   * Owner direction, 2026-10-26: *"capture the changes that the user makes on this page and then
+   * Requirement, 2026-10-26: *"capture the changes that the user makes on this page and then
    * highlight those changes where applicable in the results so that the user has clarity on the
    * changes."* The engine already reports this (`drivenBy.overridden`), but only AFTER the run. This
    * is the same list BEFORE it, so the reader can see what they are about to test.
@@ -1173,7 +1173,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
     : { from: '', to: '' };
   /**
    * ── NEWS PREVIEW (2026-10-30) ────────────────────────────────────────────────────────────────
-   * Owner direction: *"the panel should tell us what records there actually are for the symbol and the
+   * Requirement: *"the panel should tell us what records there actually are for the symbol and the
    * selected period, what news actually applies and will be part of the backtest?"*
    *
    * ⚠️ WITHOUT THIS THE CONTROL IS UNFALSIFIABLE. "Skip news-day bars" is the default; when no news
@@ -1264,7 +1264,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
       autoAdvanced.current.delete(STEP_RUN);
     },
     mutationFn: () => {
-      // ⚠️ A PROTOCOL PRODUCES SCORES, NOT TRADES (owner direction, 2026-10-26: *"Lets make protocol
+      // ⚠️ A PROTOCOL PRODUCES SCORES, NOT TRADES (requirement, 2026-10-26: *"Lets make protocol
       // score only. Backtesting protocols will only generate scores."*).
       //
       // `slPct`/`tpPct` of 0 make `doBrackets` FALSE in `backtest.service.ts` (`slPct > 0 && tpPct >
@@ -1392,7 +1392,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
 
   // ── MODES (2026-10-30) ─────────────────────────────────────────────────────────────────────────
   /**
-   * Owner direction: *"Create modes. The first Modes will be Normal and Auto-Accept (if there is an
+   * Requirement: *"Create modes. The first Modes will be Normal and Auto-Accept (if there is an
    * improvement in the profit we auto apply Run B and that gets stored as Run A)."*
    *
    * Plus the caution, in the same message: *"I'm just a bit concerned that a small improvement is luck
@@ -1423,7 +1423,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
 
   /**
    * The two gates, read from the settings registry so the threshold a promotion had to clear is a
-   * number the owner can change — and one this panel can PRINT, because a gate whose value is not
+   * number the requirement can change — and one this panel can PRINT, because a gate whose value is not
    * shown cannot be checked.
    *
    * ⚠️ A failed read falls back to the DECLARED defaults and says so (`settingsSource`). Silently
@@ -1453,7 +1453,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
 
   /**
    * ── WHAT WE COMPARE AGAINST (2026-10-30) ──────────────────────────────────────────────────────
-   * Owner direction: *"style these boxes with a colour to indicate improvement or not: based on the
+   * Requirement: *"style these boxes with a colour to indicate improvement or not: based on the
    * previous test if one was done for that strategy."*
    *
    * ⚠️ THE ACCEPTED BASELINE WINS WHEN THERE IS ONE. In Auto-Accept mode A becomes the accumulated best,
@@ -1631,7 +1631,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
 
   /**
    * ── PAUSED-SUBJECT DISCIPLINE ────────────────────────────────────────────────────────────────
-   * ⚠️ The owner's reading — *"pausing probably/should already ensures no existing positions else it
+   * ⚠️ The project's reading — *"pausing probably/should already ensures no existing positions else it
    * wouldn't pause"* — is FALSE as measured 2026-10-22. `TradingStrategyService.toggle()` sets
    * `active = false` and nothing else (`trading-strategy.service.ts:1062-1075`); only ACTIVATION is
    * gated, by #905's ceiling check. So this guard must never claim a paused bot is flat.
@@ -1656,13 +1656,13 @@ export default function BacktestPage({ subject: fixedSubject }) {
     ? (selectedProtocol?.name ?? protocolId)
     : (selectedBot?.name ?? botId);
 
-  // ── STEPS (owner direction, 2026-10-26) ──────────────────────────────────────────────────
+  // ── STEPS (requirement, 2026-10-26) ──────────────────────────────────────────────────
   // The page is one ordered sequence: you cannot choose a window before you have chosen what
   // to test, and you cannot read a result before you have run one. It used to render every
   // block at once, so all of them were present and none was findable.
   //
-  // ⚠️ STEP 1 IS THE OWNER'S DEFINITION; the rest are the pre-existing blocks grouped into the
-  // order they already ran in. Step 3 was split out on the owner's direction (the news control and
+  // ⚠️ STEP 1 IS THE PROJECT'S DEFINITION; the rest are the pre-existing blocks grouped into the
+  // order they already ran in. Step 3 was split out on the project's direction (the news control and
   // every other outside information source live there now). Re-framing is still expected.
   //
   // ⚠️ ONE BLOCK RENDERS AT A TIME. A locked step is not greyed out — it is not mounted, so
@@ -1794,7 +1794,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
 
   // ── THE SESSION'S CHANGES ────────────────────────────────────────────────────────────────────
   /**
-   * Owner direction, 2026-10-30: *"explore a method of presenting the previous value before the most
+   * Requirement, 2026-10-30: *"explore a method of presenting the previous value before the most
    * recent change so the user can track the changes made during the backtesting session … we should
    * frame it as a session because users will probably test many times in a row"*, and for step 5:
    * *"remind us of our selections and maybe even list the changes made and show the two values, old
@@ -1977,7 +1977,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
    * How many session changes touch each step, for the rail badge.
    *
    * ⚠️ THIS IS THE ANSWER TO "did I change something?" FROM ANYWHERE ON THE PAGE, and it is why the
-   * previous value does NOT need to be printed under every field. The owner's complaint is density;
+   * previous value does NOT need to be printed under every field. The project's complaint is density;
    * a per-field "← was 2.00%" adds a line of text to every control the reader touches, while a badge
    * on the rail adds at most a few characters and points at the one table that holds them all.
    */
@@ -2114,7 +2114,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
                 ? (activeMeta.labelForProtocol ?? activeMeta.label)
                 : (activeMeta.labelForStrategy ?? activeMeta.label)}
             </h2>
-            {/* ⚠️ THE "STEP 6 OF 6" COUNTER IS GONE (owner direction, 2026-10-30: *"Remove these step
+            {/* ⚠️ THE "STEP 6 OF 6" COUNTER IS GONE (requirement, 2026-10-30: *"Remove these step
                 labels they're just extra we don't need cluttering the screen"*). The rail beside this
                 panel already shows every step, its number and its state — the counter restated one row
                 of it. The captured-period detail MOVED HERE as the header's ℹ, which is the space the
@@ -2151,7 +2151,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
           
 
           {/* ⚠️ THE SEARCH LIVES HERE, NOT IN THE FILTER BAR, AND IT SEARCHES BOTH SUBJECTS
-              (owner direction, 2026-10-25). It used to render only under Protocols, so switching
+              (requirement, 2026-10-25). It used to render only under Protocols, so switching
               subject made the control vanish — a field that disappears is worse than one that is
               absent, because the reader cannot tell whether the filter still applies.
 
@@ -2175,13 +2175,13 @@ export default function BacktestPage({ subject: fixedSubject }) {
             }
           />
 
-          {/* ⚠️ THE "40 of 40 strategies" COUNT WAS REMOVED (owner direction, 2026-10-30). The carousel's
+          {/* ⚠️ THE "40 of 40 strategies" COUNT WAS REMOVED (requirement, 2026-10-30). The carousel's
               own header already prints "n / total", so this repeated the same fact in a second place —
               and the number is not a result, it is a length. Kept out of the DOM entirely rather than
               hidden, because a `sr-only` copy would re-add the duplication for screen readers. */}
 
           {/* ⚠️ THE DIRECTION FILTER IS HERE, NOT IN A SEPARATE BAR, AND IT APPLIES TO BOTH SUBJECTS
-              (owner direction, 2026-10-25). For a strategy the value is DERIVED from its protocol
+              (requirement, 2026-10-25). For a strategy the value is DERIVED from its protocol
               (`directionOfProtocol`) because a bot has no direction column — measured: all 40 bots
               have `protocolId` set and `shortProtocolId` null. */}
           <select
@@ -2289,7 +2289,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
         {/* ── STEP 2 — instrument & window ──────────────────────────────────────────────────── */}
         {activeStep === 2 && (
         <div className="pb-fields">
-          {/* ⚠️ NO SYMBOL MENU HERE — AND NO SYMBOL FIELD FOR A PROTOCOL AT ALL (owner direction,
+          {/* ⚠️ NO SYMBOL MENU HERE — AND NO SYMBOL FIELD FOR A PROTOCOL AT ALL (requirement,
               2026-10-26). The market is a property of the subject: a bot declares its own symbol, and
               a protocol declares a set through its watchlist or symbol assignment. A menu implied the
               Lab could measure a market the protocol was never given, which is exactly the "plausible
@@ -2368,7 +2368,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
                       <option key={tf} value={tf} disabled={disabled}>
                         {tf}
                         {cov ? ` · ${cov.bars.toLocaleString()} bars` : ''}
-                        {/* ⚠️ "NOT ENOUGH" WAS AMBIGUOUS (owner direction, 2026-10-30: *"This seems
+                        {/* ⚠️ "NOT ENOUGH" WAS AMBIGUOUS (requirement, 2026-10-30: *"This seems
                             fixed to 5m … is that because nothing else is ready? It needs to be clear."*)
                             The reason is a BAR COUNT against a stated minimum, so the option says
                             exactly that instead of a judgement the reader has to guess at. */}
@@ -2388,7 +2388,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
                         const scope = usePeriod && selectedPeriod
                           ? 'in this period'
                           : 'in the stored history';
-                        // ⚠️ LEAD WITH THE ANSWER, NOT WITH A COUNT (owner direction, 2026-10-30).
+                        // ⚠️ LEAD WITH THE ANSWER, NOT WITH A COUNT (requirement, 2026-10-30).
                         // "1 of 5 timeframes hold 60+ bars" makes the reader work out WHY the control
                         // looks locked; when only one qualifies, the note says so and names what the
                         // others hold. Measured 2026-10-29: for `dev-window-v1` VIX 5m only the 5m
@@ -2489,7 +2489,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
         </div>
         )}
 
-        {/* ══ STEP 3 — INFORMATION SOURCES (owner direction, 2026-10-26) ═════════════════════════
+        {/* ══ STEP 3 — INFORMATION SOURCES (requirement, 2026-10-26) ═════════════════════════
             *"the News dropdown should be in a separate step. When creating that step we should
             consider other forms of information that has been setup in directives and make them each
             optional in that step."*
@@ -2512,7 +2512,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
           <>
             {/*
               ── WHICH SIDES THIS RUN MAY OPEN (#1155, 2026-10-31) ─────────────────────────────────
-              Owner direction: *"I read that it's easier to profit on VIX by shorting it but we can only
+              Requirement: *"I read that it's easier to profit on VIX by shorting it but we can only
               tell that when we can test the same period both SHORT and LONG."*
 
               It sits in "Information sources" alongside the news filter because that is the step that
@@ -2532,7 +2532,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
                 <option value="long">↗ Long only — every run before 2026-10-31 did this</option>
                 <option value="short">↘ Short only — the mirror on the same bars</option>
                 {/*
-                  ⚠️ 'both' IS NOT OFFERED (owner direction, confirmed 2026-11-01): *"there needs to be
+                  ⚠️ 'both' IS NOT OFFERED (requirement, confirmed 2026-11-01): *"there needs to be
                   two active strategies"* — one bot must not trade both ways, and one protocol must not be
                   scored both ways. The option is rendered ONLY when a stored run already used it, and it
                   is disabled, so the form can display such a run faithfully without letting anyone
@@ -2561,7 +2561,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
                 value={newsExclusion}
                 onChange={(e) => setNewsExclusion(e.target.value)}
               >
-                {/* ⚠️ THE DEFAULT IS FIRST, and it is the default on purpose (owner direction,
+                {/* ⚠️ THE DEFAULT IS FIRST, and it is the default on purpose (requirement,
                     2026-10-26). Ordering it second — where it sat while `none` was the default —
                     makes the selected value look like a correction rather than the normal case. */}
                 <option value="exclude">🚫 Skip news-day bars (protocol purity) — default</option>
@@ -2661,7 +2661,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
 
         {/* ── STEP 4 opens at the execution section below ──────────────────────────────────── */}
 
-        {/* ── STEP 5 — OUTPUTS (owner direction, 2026-10-30: *"maybe add a new step for the user to
+        {/* ── STEP 5 — OUTPUTS (requirement, 2026-10-30: *"maybe add a new step for the user to
             select what outputs they want"*) ────────────────────────────────────────────────────
             ⚠️ THIS STEP NEVER BLOCKS A RUN. It arrives with a defensible default set, so it is valid
             as soon as it is reachable — it exists because the choice is worth making deliberately, not
@@ -2692,7 +2692,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
                 ))}
             </ul>
 
-            {/* A panel that does not exist yet is declared, not silently absent — the owner asked for
+            {/* A panel that does not exist yet is declared, not silently absent — the requirement is for
                 this one twice, and an option that vanishes reads as an option that was refused. */}
             <InfoNote tone="info" label="A price chart of this run is not available yet">
               What is planned is one chart of the <em>run’s own</em> bars, coloured by the algorithm’s
@@ -2764,7 +2764,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
             </div>
 
             {/* ── WHAT CHANGED IN THIS VISIT ─────────────────────────────────────────────────────
-                Owner direction, 2026-10-30. It sits BELOW the strip on purpose: the strip is what the
+                Requirement, 2026-10-30. It sits BELOW the strip on purpose: the strip is what the
                 run will use, this is the history of how it got there. Two tables, two questions —
                 folding them into one would make "SL 2.00%" appear twice with no way to tell which one
                 the engine reads. */}
@@ -2831,7 +2831,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
           </div>
         )}
 
-            {/* ── MODES (owner direction, 2026-10-30) ─────────────────────────────────────────────
+            {/* ── MODES (requirement, 2026-10-30) ─────────────────────────────────────────────
                 *"Create modes. The first Modes will be Normal and Auto-Accept."* Placed here, on the
                 Run step, because it decides what happens AFTER the run this button starts — and
                 because the gates it will apply have to be readable before it applies them, not
@@ -2868,7 +2868,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
                 </label>
               </div>
               {mode === 'auto' && (
-                /* ⚠️ A CONTAINER, NOT A TRAILING PARAGRAPH (owner direction, 2026-10-30: *"Put this
+                /* ⚠️ A CONTAINER, NOT A TRAILING PARAGRAPH (requirement, 2026-10-30: *"Put this
                    text … into a container to frame it better"*). It is the same `InfoNote` the result
                    page uses, so the sentence that states a policy and the sentence that reports its
                    outcome are the same shape — and the gates, which are the whole substance of the
@@ -2930,7 +2930,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
           comparison panel reports that rather than averaging the two.
         </InfoNote>
 
-          {/* ⚠️ STEP 4 IS THE DIRECTIVE LIST (owner direction, 2026-10-27): *"a list of directives in
+          {/* ⚠️ STEP 4 IS THE DIRECTIVE LIST (requirement, 2026-10-27): *"a list of directives in
               the protocol and the settings for those directives offered in fields for editing …
               stored as a custom per-protocol value, not a global."*
               `DirectiveSettingsPanel` writes the store the SCORER reads (`protocol:<slug>` settings
@@ -2947,7 +2947,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
       )}
 
       {activeStep === 4 && !scoresOnly && (
-      /* ⚠️ NO ACCORDION (owner direction, 2026-10-30: *"There is no need for this accordion to hold the
+      /* ⚠️ NO ACCORDION (requirement, 2026-10-30: *"There is no need for this accordion to hold the
          content"*). The disclosure existed when this block sat under the whole page's other controls and
          needed a lid on it; it is now the entire content of its own step, so a toggle that collapses the
          only thing on screen buys nothing and costs a click. `showExecution` is gone with it. */
@@ -3027,7 +3027,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
             </div>
 
             <div className="bt-execution-grid">
-              {/* ⚠️ THE BOT'S OWN SETTINGS, INHERITED UNLESS EDITED (owner direction, 2026-10-26:
+              {/* ⚠️ THE BOT'S OWN SETTINGS, INHERITED UNLESS EDITED (requirement, 2026-10-26:
                   *"it should come from the strategies parts of data"*). Empty = use the bot's value,
                   which the engine applies server-side; typing a number is the CHANGE this run tests.
                   Before this, these three lived only in the Settings inventory tab, so the place a
@@ -3235,7 +3235,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
             {s.lede}
           </InfoNote>
           {/*
-            ⚠️ THE OVERRIDES STEP LISTS THE PROTOCOL'S DIRECTIVES (owner direction, 2026-11-01:
+            ⚠️ THE OVERRIDES STEP LISTS THE PROTOCOL'S DIRECTIVES (requirement, 2026-11-01:
             *"we should have a list of accordions for all the directives"*). It used to render a flat
             inventory of five override FIELDS, four of which a run does not read, with a counts strip and
             a filter toolbar on top — *"It's a bit much to cope with. I don't even think its needed."*
@@ -3296,7 +3296,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
         <>
       <div className="bt-results">
           {/*
-            ⚠️ BORDER = COMPARISON, VALUE COLOUR = PROFIT/LOSS (owner direction, 2026-10-30: *"the box
+            ⚠️ BORDER = COMPARISON, VALUE COLOUR = PROFIT/LOSS (requirement, 2026-10-30: *"the box
             borders are coloured based on comparison but the text for loss or profit is standard red and
             green"*). The two encodings answer different questions and neither overrides the other.
 
@@ -3357,7 +3357,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
               label="Sharpe (approx)"
               note="Mean return divided by its variability. Approximate, and only comparable between runs measured on the same window."
             />
-            {/* Bracket trade stats — STRATEGIES ONLY (owner direction, 2026-10-27: *"step … includes
+            {/* Bracket trade stats — STRATEGIES ONLY (requirement, 2026-10-27: *"step … includes
                 financial and trade related stats that need to be removed as they should only be shown
                 on the Backtest Strategies view"*). A protocol run is `scoresOnly`, so every one of
                 these cells would read 0 / $0.00 and invite the reader to treat "no trades" as a
@@ -3504,7 +3504,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
           </div>
 
           {/*
-            ── ACT ON THE RESULT, UNDER THE CARDS (owner direction, 2026-11-04) ──────────────────
+            ── ACT ON THE RESULT, UNDER THE CARDS (requirement, 2026-11-04) ──────────────────
             *"Add a row of controls starting with [Accept this run as the A baseline] positioned under
             [div.bt-stats-grid] so the user can quickly accept outcomes based on the cards."*
 
@@ -3688,13 +3688,13 @@ export default function BacktestPage({ subject: fixedSubject }) {
 
           {/*
             ⚠️ THE PRICE CHART AND THE TRADES TABLE USED TO RENDER HERE ON BOTH VIEWS, and both were
-            removed from the Protocols view on 2026-10-27 at the owner's direction.
+            removed from the Protocols view on 2026-10-27 at the project's direction.
 
-            ⚠️ THE PRICE CHART IS NOW GONE FROM BOTH VIEWS (owner direction, 2026-10-30: *"Remove this
+            ⚠️ THE PRICE CHART IS NOW GONE FROM BOTH VIEWS (requirement, 2026-10-30: *"Remove this
             chart as it is useless right now"*). It was never the run's chart — `BacktestChartPane`
             carries its own symbol menu, so it opened on whatever symbol was last picked rather than on
             the run under test, and it drew no scoring overlay. The chart that belongs here is the one
-            the owner has asked for repeatedly: the run's own bars, coloured by the algorithm's verdict,
+            the requirement has asked for repeatedly: the run's own bars, coloured by the algorithm's verdict,
             with support/resistance levels drawn from the directives. That needs level directives to
             RETURN geometry, which 5 of 6 currently discard into `reason` prose (#1150). Until then a
             chart would be a picture of something else, so there is no chart.
@@ -3711,7 +3711,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
               stored trades went unshown. The `caveats` block above states the gap; this shows the
               population that actually exists.
 
-              ⚠️ THE MARKUP IS NOW THE SHARED `<TradeTable>` (owner direction, 2026-10-29: the same
+              ⚠️ THE MARKUP IS NOW THE SHARED `<TradeTable>` (requirement, 2026-10-29: the same
               question — *"more trade based, show us profit loss"* — was being answered by TWO
               hand-written tables in different columns, one here and one in the A/B panels. This page
               keeps only the heading and the count; the columns, the sort, the P&L colour and the
@@ -3829,7 +3829,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
               ⚠️ MOVED OFF THE PAGE CHROME AND BEHIND THE OUTPUTS CHOICE. It used to render on EVERY
               step, below the panel, for any strategy route with a run id — so it appeared while the
               reader was still choosing a window, and it fetched its own payload whether or not anyone
-              watched it. Owner direction: *"Make this output an option."* */}
+              watched it. Requirement: *"Make this output an option."* */}
           {subject === 'strategy' && outputs.replay === true && result?.id && (
             <div className="bt-chart-section">
               <h3>Replay <span className="bt-measured-bars">· the run’s bars played forward with its trades marked</span></h3>
@@ -3854,7 +3854,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
         </section>
       </div>
       {/*
-        ── THE A/B REFERENCE PANELS MOVED TO THEIR OWN PAGE (owner direction, 2026-11-04) ────────
+        ── THE A/B REFERENCE PANELS MOVED TO THEIR OWN PAGE (requirement, 2026-11-04) ────────
         *"I wanted a Current Strategy page added to the Lab and everything I highlighted moved to that
         new page. Simplifying the Backtest Strategies page a little as right now it has results
         displayed twice."*
@@ -3872,7 +3872,7 @@ export default function BacktestPage({ subject: fixedSubject }) {
 
 
 
-      {/* #819 — the replay of THIS run. STRATEGIES ONLY (owner direction, 2026-10-27: *"We can remove
+      {/* #819 — the replay of THIS run. STRATEGIES ONLY (requirement, 2026-10-27: *"We can remove
           this panel for Backtesting Protocols … but we will be improving it on Backtest Strategies so
           that it shows where trades are executed and exited."*). A scores-only run has no trades to
           replay, so on the Protocols view this panel could only ever say so — and it is a different

@@ -118,7 +118,7 @@ const CEILING_PCT = 35;
  * ⚠️ A schema `@default` is a SECOND OWNER, and it is the sneakiest one: it applies to any INSERT
  * that omits the field, so it can create an unclearable bot even when every line of application
  * code is correct. It cannot import a TS constant, so it cannot be single-sourced — the best that
- * can be done is to VERIFY it equals the owner, which is what this does.
+ * can be done is to VERIFY it equals the requirement, which is what this does.
  *
  * Must equal `BOT_BAR_DEFAULT` in `nest/src/common/utils/style-thresholds.ts`.
  */
@@ -401,7 +401,7 @@ if (failed) {
     `     nest/src/common/utils/style-thresholds.ts  →  BOT_BAR_DEFAULT, SIGNALS_GATE_DEFAULT, STYLE_THRESHOLDS\n` +
     `     nest/src/modules/scoring/protocol-gating.service.ts  →  SIGNAL_THRESHOLDS\n` +
     `     frontend: READ a bar, do not remember one  →  fetchScoringThresholds() + thresholdGeometry()\n\n` +
-    `WHY: the 2026-09-15 rescale updated the owners and left literals on the old scale, producing\n` +
+    `WHY: the 2026-09-15 rescale updated the project's and left literals on the old scale, producing\n` +
     `     bots that appear active and silently never trade (#839), and a UI that classified every\n` +
     `     percent-of-capacity value as "low" (#847).\n`,
   );

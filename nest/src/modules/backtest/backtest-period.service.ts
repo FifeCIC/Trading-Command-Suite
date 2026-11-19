@@ -33,7 +33,7 @@ import { sessionAwareGapProfile, periodHealth, PeriodHealth, PeriodStandard, tim
  *             POST /api/backtest/periods/:id/import → fetch bars into MarketBar, idempotently
  *   measure:  POST /api/backtest/run { periodId }   → run() loads ONLY that window
  *   replay:   POST /api/replay/period/:id           → #819 replays the same window
- *   inspect:  GET  /api/backtest/periods            → the list the owner picks from
+ *   inspect:  GET  /api/backtest/periods            → the list the requirement picks from
  */
 
 /** Where a captured window's bars come from, in preference order. */
@@ -433,7 +433,7 @@ export class BacktestPeriodService {
     //   stored barCount: 0                      <- "this window holds nothing"
     //   coverage       : 289, providers=[mt5]   <- the window holds 289 bars
     //
-    // The LIST is what the owner picks from, so it would have offered a window labelled EMPTY that
+    // The LIST is what the requirement picks from, so it would have offered a window labelled EMPTY that
     // can be measured perfectly well. Two different questions had been given one answer:
     //   "did a provider supply bars?"      -> no        (this import's answer)
     //   "does the window hold bars?"       -> yes, 289  (the table's answer)
@@ -659,7 +659,7 @@ export class BacktestPeriodService {
    * previous import; this is what the table holds. When they disagree, that disagreement is the
    * finding — and it is surfaced rather than overwritten.
    *
-   * ⚠️ `health` (2026-10-29) IS THE POINT OF THE CALL, not a decoration. Owner direction: *"we should
+   * ⚠️ `health` (2026-10-29) IS THE POINT OF THE CALL, not a decoration. Requirement: *"we should
    * consider some standard requirements to deem a period healthy/complete enough to use at all …
    * until then we should be strict."* A bar count alone cannot say whether the window is measurable —
    * the VIX dev window held a plausible 7,662 bars while covering 63.9% of its span with a 111-hour

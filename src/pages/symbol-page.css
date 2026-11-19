@@ -21,7 +21,7 @@
 /* Responsive breakpoints for .sym-grid live in the ≤900px / ≤600px block at the end of this file. */
 
 /* Cards
-   ⚠️ FULL coloured borders, not left-hand stripes. The owner's words (2026-09-18): "which use left
+   ⚠️ FULL coloured borders, not left-hand stripes. The project's words (2026-09-18): "which use left
    hand coloured bordered cards which I very much dislike. I prefer ones we have in theme, full
    coloured borders." So the tone lives on the whole card edge, and never on the body text — the
    semantic tones do not meet WCAG AA as text on a panel. */
@@ -72,7 +72,7 @@
 .sym-group-score { font-weight: 800; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
 .sym-group-wt { font-size: 0.7rem; color: var(--ink-soft); }
 /* Directive rows.
-   ⚠️ Was a `border-left` stripe per signal class — the pattern the owner dislikes. The signal is
+   ⚠️ Was a `border-left` stripe per signal class — the pattern the requirement dislikes. The signal is
    now a leading dot, which carries the same information without the stripe. */
 .sym-dir { display: flex; align-items: center; gap: 0.35rem; padding: 0.12rem 0.25rem; border-radius: 3px; font-size: 0.75rem; }
 .sym-dir::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; background: var(--color-neutral); }

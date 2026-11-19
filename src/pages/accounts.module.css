@@ -24,7 +24,7 @@
   margin: 0 auto;
 }
 
-/* ⚠️ THE PAGE TITLE IS NOT RENDERED HERE (owner direction, 2026-11-18). The title is the breadcrumb
+/* ⚠️ THE PAGE TITLE IS NOT RENDERED HERE (requirement, 2026-11-18). The title is the breadcrumb
    in `.main-top-row`, and the one ℹ is rendered by the shell at the top right of that row.
    This file used to carry `.header h1 { display: flex; … }` under a comment claiming the title was
    "hidden app-wide" — the declaration did the opposite of the comment, and because it had the same

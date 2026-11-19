@@ -52,7 +52,7 @@ describe('RiskService.canOpenPosition — the per-symbol allocation gate', () =>
   /**
    * #899 (2026-09-19) — the cap measures the SYMBOL (existing exposure + this order), not one order.
    *
-   * The owner's design is one protocol driving several bots on the same symbol, with the explicit
+   * The project's design is one protocol driving several bots on the same symbol, with the explicit
    * constraint "…for the same symbol, but not increasing risk". Before this fix, that guarantee did
    * not exist: three bots at 20% each put 60% on one instrument while every check passed. Each call
    * was individually correct and the SUM was unguarded — `maxPositions` counts positions, not

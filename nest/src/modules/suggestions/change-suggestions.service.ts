@@ -2,7 +2,7 @@
  * change-suggestions.service.ts — THE QUEUE OF CHANGES WE INTEND TO TRY.
  * =======================================================================
  *
- * Decided 2026-11-18 at the owner's direction: a new procedure for suggested/queued changes to a
+ * Decided 2026-11-18 at the project's direction: a new procedure for suggested/queued changes to a
  * protocol, shown on the Protocols page AND in the Strategies area, so the combined protocol and bot
  * suggestions to try end up in one place — and a key step towards automating backtesting and A/B
  * comparison of those changes later.
@@ -38,7 +38,7 @@
  *             here — never a registered directive class.
  * WHY:        Prose cannot hold a lifecycle, so a list of intended changes in a document decays into a
  *             wish list nobody can act on, audit, or automate — and automating the trial of changes is
- *             the owner's stated next step. Registering an inert directive so it "shows up" would let a
+ *             the project's stated next step. Registering an inert directive so it "shows up" would let a
  *             protocol attach it and look healthy while scoring 0: the silent zero #1300 fixed.
  * INSTEAD OF: A markdown list of intended changes, and `register a stub directive` for the 9 unbuilt
  *             ones. Both were considered; both reproduce a failure this repo already paid for.
@@ -104,7 +104,7 @@ export interface SuggestionRow {
  * validateSuggestion() — the admission rules, as a PURE function so they can be asserted without a
  * database. Returns the field that is wrong, or null.
  *
- * ⚠️ Validated on WRITE, not on read. A bad row that reaches the table is displayed to the owner as a
+ * ⚠️ Validated on WRITE, not on read. A bad row that reaches the table is displayed to the requirement as a
  * requirement, which is worse than a refused request.
  */
 export function validateSuggestion(input: Partial<CreateSuggestionInput>): string | null {
@@ -172,7 +172,7 @@ export class ChangeSuggestionsService {
    * forProtocol() — everything queued against a protocol, PLUS everything queued against the bots
    * that subscribe to it.
    *
-   * ⚠️ THE BOT LEG IS WHY THIS IS A JOIN AND NOT A FILTER. The owner's requirement is that the
+   * ⚠️ THE BOT LEG IS WHY THIS IS A JOIN AND NOT A FILTER. The project's requirement is that the
    * combined protocol+bot suggestions appear in ONE place. A protocol-only filter would show half the
    * plan and read as the whole plan — the failure this repo calls "plausible output, no error".
    */

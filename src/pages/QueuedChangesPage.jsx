@@ -2,7 +2,7 @@
  * QueuedChangesPage — the combined queue of protocol + bot changes we intend to TRY.
  * ==================================================================================
  *
- * Owner direction, 2026-11-19: the queue was rendered ABOVE the bot table on `/bots/trading-bots`
+ * Requirement, 2026-11-19: the queue was rendered ABOVE the bot table on `/bots/trading-bots`
  * and *"is actually just becoming screen clutter and noise … it takes away focus on the bot table
  * itself"*. Moved to Development, where working-out-what-to-change belongs.
  *

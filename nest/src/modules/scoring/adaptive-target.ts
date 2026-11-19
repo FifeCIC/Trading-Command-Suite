@@ -52,7 +52,7 @@
  *            spell makes the machine trade MORE, in worse conditions, because the bar moved to meet
  *            it — the "plausible numbers, no error" failure class this file already cites three
  *            paragraphs above for the denominator, and it applies with more force to an order.
- *            The owner stated the same preference in #725: "bidirectional-but-surfaced, or
+ *            The requirement stated the same preference in #725: "bidirectional-but-surfaced, or
  *            loosening-only-by-explicit-action, over silent automatic loosening".
  * INSTEAD OF: Fully bidirectional adaptivity ("the ceiling can tighten and loosen"), which is what
  *            #725 originally asked for on its face.

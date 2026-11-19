@@ -18,7 +18,7 @@
  *   3. NOT THEME-AWARE, so it rendered dark-on-dark in light mode — the cyan/green it used were
  *      not any theme's tokens.
  *
- * The technical strings are NOT deleted. They moved behind `Show technical details`, so the owner
+ * The technical strings are NOT deleted. They moved behind `Show technical details`, so the requirement
  * keeps the diagnostic and a new user is never handed a shell command by default.
  *
  * ⚠️ NO TIMERS, AND NO FAKE PROGRESS. A step's state is DERIVED from its queries:
@@ -69,7 +69,7 @@ const STATE_WORD = {
 /**
  * A check carries TWO sentences on purpose:
  *   `plain`     — what a new user needs: what is wrong, with no shell command in sight.
- *   `technical` — the owner's diagnostic: the command or the raw value.
+ *   `technical` — the project's diagnostic: the command or the raw value.
  * `optional: true` means the app is usable without it, so it renders as a note and never blocks
  * the step. Collapsing "fine" into "failed" is the defect `development-philosophy` §7 names.
  */
@@ -151,7 +151,7 @@ export default function SetupWizardPage() {
   /**
    * Per-step checks. Every entry carries TWO sentences deliberately:
    *   `plain`     — for a new user: what is wrong, with no shell command in sight.
-   *   `technical` — for the owner: the command or the raw value, behind a disclosure.
+   *   `technical` — for the requirement: the command or the raw value, behind a disclosure.
    * `optional: true` means the app is usable without it, so it renders as a note and NEVER blocks
    * the step. Collapsing "fine" into "failed" is the defect `development-philosophy` §7 names.
    */

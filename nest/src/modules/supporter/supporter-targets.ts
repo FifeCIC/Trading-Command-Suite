@@ -6,7 +6,7 @@
  * A URL is an EXTERNAL system (`.github/instructions/external-systems-are-data.instructions.md`), so
  * it is data: one copy, in one place, that a different deployment can change without editing a React
  * component. The PRIMARY donate destination is deliberately NOT here — it is the declared setting
- * `supporter.donate.url`, because the owner may change provider and a rebuild should not be needed.
+ * `supporter.donate.url`, because the requirement may change provider and a rebuild should not be needed.
  *
  * ⚠️ THE ORDER IS THE ASK. DONATION-LINKS.md §4: four equal buttons is a menu, not an ask. So the
  * prompt renders `donate` first, and the rest are secondary links on one quiet line.

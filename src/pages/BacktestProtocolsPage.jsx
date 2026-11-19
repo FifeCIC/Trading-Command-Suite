@@ -1,7 +1,7 @@
 /**
- * BacktestProtocolsPage — `/lab/backtest` (owner direction, 2026-10-26).
+ * BacktestProtocolsPage — `/lab/backtest` (requirement, 2026-10-26).
  *
- * ⚠️ WHY A WRAPPER RATHER THAN A SECOND IMPLEMENTATION. The owner asked for the Lab to be split:
+ * ⚠️ WHY A WRAPPER RATHER THAN A SECOND IMPLEMENTATION. The requirement is for the Lab to be split:
  * *"I think I'm complicating things by merging protocol scoring backtesting with full strategy
  * backtesting. The code will be much more complex. Lets separate them."* The two subjects share
  * everything that makes a Lab run honest — the frozen window, the timeframe coverage gate, the

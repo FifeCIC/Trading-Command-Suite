@@ -4,13 +4,13 @@
  * validate-page-visibility.cjs — a NEW page is withheld from other users by default, and the build says so.
  * ======================================================================================================
  *
- * Owner directive, 2026-11-18: this new page should be set as hidden from other users among the other pages that
+ * Requirement, 2026-11-18: this new page should be set as hidden from other users among the other pages that
  * are only seen on my system. Can we set a rule for any new pages to default to that state.
  *
  * ⚠️ THE RULE EXISTED AS PROSE AND NOTHING CHECKED IT. `hidden-views.js` has said since 2026-11-01 that
  * *"moving an id OUT of this list IS the release"* — but nothing ever noticed a page added and never put
  * IN. The failure is silent in the worst direction: a half-built page becomes publicly visible the moment
- * its nav entry lands, and only the owner's memory can prevent it.
+ * its nav entry lands, and only the project's memory can prevent it.
  *
  * ── THE MECHANISM, AND WHY IT IS A RATCHET ────────────────────────────────────────────────────────
  * `scripts/page-visibility-baseline.json` records the nav routes that existed when the rule was

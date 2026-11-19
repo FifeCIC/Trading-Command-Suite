@@ -3,7 +3,7 @@ import PageInfoPopover from '../components/PageInfoPopover';
 /**
  * PopoverLabSection — the Popover API examples, rendered INSIDE Theme Lab.
  *
- * ⚠️ Was `ThemeLabPopover`, a PAGE at /development/theme-lab-popover until 2026-10-01; the owner
+ * ⚠️ Was `ThemeLabPopover`, a PAGE at /development/theme-lab-popover until 2026-10-01; the requirement
  * deleted the view and asked for its examples to move here. Exported as a SECTION: no `tl-page`
  * wrapper, no `<h1>`.
  */

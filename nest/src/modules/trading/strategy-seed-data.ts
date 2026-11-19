@@ -20,7 +20,7 @@ import { SessionTag, ALL_HOURS_VALUE } from './session-window';
  * WHAT:      The generated fleet is loaded from a LOCAL, GITIGNORED file (`strategy-seed-generated.
  *            local.ts`) and never committed. The repository ships only `HAND_AUTHORED_TRADING_
  *            STRATEGIES`.
- * WHY:       Owner directive, 2026-11-13: Our installation data needs to be strong but not all of my protocols
+ * WHY:       Requirement, 2026-11-13: Our installation data needs to be strong but not all of my protocols
  *            and all of my bots: avoid giving away all strategies. The repo is PUBLIC — verified
  *            `"visibility":"PUBLIC"` — and commit `24e70aeb` published **72 bot definitions** with every
  *            size, threshold, stop and session window in them. That was my landing for #1258, which
@@ -103,7 +103,7 @@ export interface SeedTradingStrategy {
    *
    * WHY IT IS ARMED WITH THE BOTS INACTIVE: the measurement is the thing that is missing, and it has
    * to exist BEFORE the exit rule can be changed. Arming changes no behaviour while `active = 0`, so
-   * the owner's activation decision stays theirs, and the day they switch a bot on the data starts.
+   * the project's activation decision stays theirs, and the day they switch a bot on the data starts.
    *
    * MEASURED 2026-11-03 — why this matters: 30-day system/broker exits show avg win **+4.50** against
    * avg loss **−15.27**, i.e. a break-even win rate of **77.2%** against a realised **29.5%**. Stops
@@ -343,7 +343,7 @@ const HAND_AUTHORED_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     // Observer only — see the `simTsl` docblock. activation ≈ ⅓ of tpPct, distance ≈ ⅓ of slPct.
     simTsl: { enabled: true, activationPct: 2.0, distancePct: 1.0 },
     // ── THEORY (2026-11-03) ──
-    // ⚠️ `control` — and this is the honest answer, not a placeholder. The owner's own words: *"I
+    // ⚠️ `control` — and this is the honest answer, not a placeholder. The project's own words: *"I
     // suspect maybe some don't really have a deep context."* Writing a plausible thesis for this one
     // would be the prose form of the repo's worst bug.
     theoryKind: 'control',

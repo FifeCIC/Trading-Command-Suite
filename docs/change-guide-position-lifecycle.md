@@ -18,7 +18,7 @@ This document does two things, and nothing else:
 
 1. turns that incident into **rules a change must satisfy**, usable as a review lens for bot activity
    and algorithms;
-2. specifies the **one interface** the owner needs to manage open positions instead of watching
+2. specifies the **one interface** the requirement needs to manage open positions instead of watching
    MetaTrader (both accounts), Pepperstone, and TCS side by side.
 
 It is **not a task list**. Every open piece of work is a GitHub issue, named inline and listed under
@@ -135,7 +135,7 @@ Written as questions rather than a checklist, because the answers are the point.
 - **Orphan behaviour.** If this component stops — crashes, is disabled, is rate-limited — which
   mechanism manages the positions it created? Name it. "None" is an acceptable answer only if it is
   stated.
-- **The machine.** ⚠️ Added 2026-09-30 at the owner's prompting, and it should have been obvious:
+- **The machine.** ⚠️ Added 2026-09-30 at the project's prompting, and it should have been obvious:
   **every app-side mechanism requires the PC to be on.** The guardian, the time-stop, the exhaustion
   observer and the loop's risk gate all live in one process on one machine. With it off there is
   **no management of any open position at all** — the broker's SL/TP, fixed at order time, is the
@@ -165,7 +165,7 @@ currently express a different rule-set from another bot — which is the thing t
 
 ## 4. The interface: one place to manage every open position
 
-The requirement, in the owner's words: *manage open positions instead of watching MT5 + Pepperstone +
+The requirement, in the project's words: *manage open positions instead of watching MT5 + Pepperstone +
 TCS.* Today there are **three systems and two accounts**, and the only surface that shows the real
 book is the broker terminal.
 
@@ -184,7 +184,7 @@ book is the broker terminal.
 |---|---|
 | **account / broker / server** | two accounts exist; a position without its account is not actionable |
 | **symbol, side, net size, VWAP, fill count** | *size* and *how it got there* — the incident was 10 fills |
-| **current price, P&L, P&L %** | the number the owner actually watches |
+| **current price, P&L, P&L %** | the number the requirement actually watches |
 | **owner: bot + protocol, or `UNOWNED`** | and `UNOWNED` must be loud, because it means nothing manages it |
 | **`managed by` — and if not, WHY** | the single highest-value addition: the app already computes *unresolved attribution*, *the single-bridge gap* and *market-closed backoff*. Surfacing the reason per position is what turns three systems into one |
 | **SL / TP, distance to each, and the loss remaining to the stop** | in **money**, not percent — "`−5.95 more`" is a decision; "0.19%" is not |
@@ -193,7 +193,7 @@ book is the broker terminal.
 | **peak and give-back** | it *was* +0.66% and gave it back — see **#978**, **#979** |
 | **last action taken on it, by what, and when** | including refusals |
 
-### What it must let the owner do
+### What it must let the requirement do
 
 Close · partial close · move the stop · and **adopt an owner** — the capability that does not exist
 and that the incident needed most, because a position with no resolvable owner is one no mechanism

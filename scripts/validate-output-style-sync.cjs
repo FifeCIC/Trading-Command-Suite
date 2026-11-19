@@ -4,7 +4,7 @@
  *
  * WHY THIS EXISTS
  * ---------------
- * The owner's reply-formatting rules live in a VS Code prompt file:
+ * The project's reply-formatting rules live in a VS Code prompt file:
  *
  *   %APPDATA%\Code\User\prompts\output-style-guide.instructions.md
  *
@@ -16,7 +16,7 @@
  * both get edited, only one gets the next fix. This script is the guard that makes the drift
  * visible instead of silent.
  *
- * ⚠️ ADVISORY IN THE BUILD, STRICT ON DEMAND — the owner's decision, 2026-09-23.
+ * ⚠️ ADVISORY IN THE BUILD, STRICT ON DEMAND — the project's decision, 2026-09-23.
  * Wired into `prebuild` as `--report`, where it PRINTS and always exits 0. A prose divergence
  * should be LOUD, not FATAL: a gate that reds the build for a reason unrelated to the work in
  * hand gets allowlisted or switched off, and `validate-agent-docs.cjs` already sets that
@@ -48,7 +48,7 @@ const path = require('path');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 /**
- * ⚠️ THE MIRROR MOVED OUT OF THE REPOSITORY (owner, 2026-11-16). The rule corpus now lives in the
+ * ⚠️ THE MIRROR MOVED OUT OF THE REPOSITORY (requirement, 2026-11-16). The rule corpus now lives in the
  * docs store, so the mirror is resolved from two candidates: the old in-repo path (so checking out
  * an older commit still checks what that commit contains) and the docs-store copy.
  * When neither exists the check reports UNVERIFIED — it must never claim the pair agrees.
@@ -195,12 +195,12 @@ function main() {
 
   // A check that cannot read its input must ERROR, never pass — and the WORDS must match the
   // state. A missing source prints UNVERIFIED, never OK: this repo may legitimately be built on a
-  // machine without the owner's prompt folder, but "nothing was compared" is not "matches".
+  // machine without the project's prompt folder, but "nothing was compared" is not "matches".
   if (sourceText === null) {
     stop(2, [
       '[style-sync] ⚠ UNVERIFIED — the portable source is not on this machine, so nothing was compared:',
       `[style-sync]     ${src}`,
-      '[style-sync]   This is NOT a pass. On the owner\'s machine, the likely cause is VS Code',
+      '[style-sync]   This is NOT a pass. On the requirement\'s machine, the likely cause is VS Code',
       '[style-sync]   having moved — update sourcePath() in this script.',
     ]);
   }

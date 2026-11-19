@@ -17,7 +17,7 @@ const FALLBACK_PAIR = { key: 'mt5-technical-core-v1', long: 'mt5-technical-core-
 /**
  * pairsFrom(protocols) — group protocols into LONG × SHORT pairs.
  *
- * ⚠️ THE PAIR IS THE THING BEING COMPARED, NOT THE SYMBOL (owner directive, 2026-11-07): change this menu to
+ * ⚠️ THE PAIR IS THE THING BEING COMPARED, NOT THE SYMBOL (requirement, 2026-11-07): change this menu to
  * contain protocol pairs). The ids follow `<base>-long` / `<base>-short`, so the base is the pair's
  * identity. A base with only one side is still offered — comparing a live protocol against the
  * fallback short is exactly what this page was doing before, and hiding it would remove a case that
@@ -111,7 +111,7 @@ export default function ScoringDebugLab() {
 
       {/* Controls */}
       <div className="sdl-controls">
-        {/* ⚠️ SEARCH + PAIR PICKER (owner directive, 2026-11-07): Add a search to this bar … and change this menu
+        {/* ⚠️ SEARCH + PAIR PICKER (requirement, 2026-11-07): Add a search to this bar … and change this menu
             to contain protocol pairs). The bar used to offer a SYMBOL list while the two protocols
             being compared were hardcoded in the fetch — so the one thing the page is named after was
             the one thing that could not be chosen. Symbol stays (a score is per symbol); the PAIR is

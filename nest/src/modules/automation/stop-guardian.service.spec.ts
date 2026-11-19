@@ -609,7 +609,7 @@ describe('#927 — a trail can never leave the stop inside the declared distance
       // a fall-through implementation WOULD guard the position, and a test that only checked
       // `guardedPositions` would pass it.
       // ⚠️ CANARY: replace the `continue` after `unresolved.push(...)` with a fall-through and this
-      // fails — 'Comment Bot' becomes the owner.
+      // fails — 'Comment Bot' becomes the requirement.
       const service = serviceWithPosition(rawPos({ magic: 999999 }));
       try {
         await service.tick();
@@ -953,7 +953,7 @@ describe('StopGuardianService — the per-position OUTCOME (#1056)', () => {
  * by **nothing**. Measured cost: a position built from three bots' orders sat unmanaged for
  * **2 h 20 m**, and ticket `152703882760` lost **−322.67**.
  *
- * Owner ruling, 2026-09-30 (R31): *"a position built from several bots' orders is CONTESTED and
+ * Requirement, 2026-09-30 (R31): *"a position built from several bots' orders is CONTESTED and
  * MANAGED, not refused"* — by its **strictest claimant**, so it is protected soonest rather than by
  * whichever bot happens to be looked at first.
  *
@@ -1059,7 +1059,7 @@ describe('StopGuardianService — contested positions (#1041)', () => {
  * ─────────────────────────────────────────────────────────────────────────────────────────────
  * WHY IT MOVED
  * ─────────────────────────────────────────────────────────────────────────────────────────────
- * The owner asked for sooner checks on open positions (*"a lot can happen in 30 seconds"*). Measured
+ * The requirement is for sooner checks on open positions (*"a lot can happen in 30 seconds"*). Measured
  * before changing anything: the guardian already ran on its own 30 s timer and a pass cost 105–145 ms,
  * so the rate was never the CPU risk it looked like — 2 s still finished in 105 ms. The direction was
  * therefore to go to 10 s, which buys ~20 s off the worst case for 0.7 bridge requests/second.
@@ -1119,7 +1119,7 @@ describe('StopGuardianService — cadence comes from automation.guardianTickInte
 /**
  * THE MONEY TAKE-PROFIT (2026-11-06) — `trading_strategy.takeProfitAmount`.
  *
- * The owner's ask: *"a five dollar strategy … taking small amounts of profit, frequently."*
+ * The project's ask: *"a five dollar strategy … taking small amounts of profit, frequently."*
  *
  * ⚠️ WHY MONEY AND NOT `tpPct`. A percentage target is a fixed DISTANCE, so the money it captures
  * drifts with the price level: 0.23% on GER40 at 25,701 is 59 points = GBP 4.93; at 30,000 the same

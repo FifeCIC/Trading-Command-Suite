@@ -1083,7 +1083,7 @@ export default function ArchitectureFrameworkPage() {
         <SectionBlock
           id="intake"
           title="Intake Template"
-          summary="Use this intake before architecture-sensitive work so the owner, data flow, contract, and verification path are explicit."
+          summary="Use this intake before architecture-sensitive work so the requirement, data flow, contract, and verification path are explicit."
           collapsed={collapsedSections.includes('intake')}
           onToggle={toggleSection}
         >

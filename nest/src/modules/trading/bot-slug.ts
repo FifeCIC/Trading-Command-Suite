@@ -1,7 +1,7 @@
 /**
  * bot-slug — the ONE place a bot's identifier and display name get their required shape.
  *
- * ── DECISION (2026-11-05, owner direction) ─────────────────────────────────────────────────────
+ * ── DECISION (2026-11-05, requirement) ─────────────────────────────────────────────────────
  * WHAT:      `trading_strategy.slug` exists, ends `-bot`, and `trading_strategy.name` ends `Bot`.
  * WHY:       *"Bot names need to end with Bot and their slug has to have bot. This will help bots
  *            stand out from protocols."* Before this, only `protocol` and `sources` had a `slug`

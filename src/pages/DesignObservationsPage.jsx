@@ -7,9 +7,9 @@ import './design-observations.css';
  *
  * WHY THIS PAGE EXISTS (review row R21, answered 2026-09-24; issue #990)
  * ----------------------------------------------------------------------
- * Owner directive: Are we noting observations for review and consideration? This is important for
+ * Requirement: Are we noting observations for review and consideration? This is important for
  * re-considering designs. The answer was no — the finding that prompted it went into a code
- * comment, which is durable but invisible to the person who reconsiders designs. The owner chose a
+ * comment, which is durable but invisible to the person who reconsiders designs. The requirement chose a
  * dedicated register over a second section in the review queue.
  *
  * WHAT MAKES THIS A REGISTER AND NOT A LIST OF GRIPES

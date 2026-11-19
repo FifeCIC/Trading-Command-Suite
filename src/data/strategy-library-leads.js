@@ -4,7 +4,7 @@
  *
  * WHY THIS FILE EXISTS SEPARATELY FROM `strategy-library.js`
  * ---------------------------------------------------------
- * The owner asked (2026-10-01) to clear the strategy issues out of GitHub and
+ * The brief asked (2026-10-01) to clear the strategy issues out of GitHub and
  * *"copy them to the apps own Strategy Library"*, so the repo becomes manageable and the
  * ideas live where they are actually used.
  *
@@ -24,7 +24,7 @@
  *   `docs/readiness-tiers.md`, `concept` means *documented, nothing wired*.
  *
  * ── requiresNewDirectives — the field that answers "what does the app need first?" ──────
- *   The owner asked which ideas *"need the app to have some work done i.e. new directives"*.
+ *   The brief asked which ideas *"need the app to have some work done i.e. new directives"*.
  *   That answer belongs ON the entry, not in a chat message nobody will find again. Each name here
  *   is a directive that does NOT exist yet; the idea cannot reach `'partial'` until it does.
  *   Check against `GET /api/directives` before treating any of them as missing.
@@ -47,7 +47,7 @@ export const STRATEGY_LIBRARY_LEADS = [
     requiresNewDirectives: [],
     overview: `
 A reaction trade rather than a trend trade. A fast, large move is detected, then WATCHED rather
-than chased. The question the idea is built on is the owner's own: *what goes up fast and high has
+than chased. The question the idea is built on is the project's own: *what goes up fast and high has
 to come back down* — but only if the spike fails to hold.`,
     theory: `
 Two regimes follow a spike, and the same setup must resolve into one of them:

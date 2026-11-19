@@ -2,7 +2,7 @@
  * SuggestionQueue — the queued changes we intend to TRY, shown wherever they are needed.
  *
  * ── ONE COMPONENT, TWO PAGES, ON PURPOSE ─────────────────────────────────────────────────────────
- * Decided 2026-11-18 at the owner's direction: the queued suggestions belong on the Protocols page
+ * Decided 2026-11-18 at the project's direction: the queued suggestions belong on the Protocols page
  * AND, unchanged, in the Strategies area, so that in the end the combined protocol and bot
  * suggestions to try sit in one place.
  *

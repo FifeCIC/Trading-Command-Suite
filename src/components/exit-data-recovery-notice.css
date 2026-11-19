@@ -1,7 +1,7 @@
 /**
  * ExitDataRecoveryNotice styles (#1093).
  *
- * ⚠️ FULL COLOURED BORDER, not a left-hand stripe — the owner rejected side-striped cards
+ * ⚠️ FULL COLOURED BORDER, not a left-hand stripe — the requirement rejected side-striped cards
  * (ui-standards.instructions.md, 2026-09-18): "I prefer ones we have in theme, full coloured
  * borders." The tone sits on the BORDER; body text stays ink tokens (semantic tones fail AA as
  * text on a panel).

@@ -98,15 +98,15 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
   {
     id: 'sentiment',
     name: 'Sentiment & Fundamentals',
-    // ── DECISION (2026-11-06, owner direction) ──
+    // ── DECISION (2026-11-06, requirement) ──
     // WHAT:      `social-buzz` is REMOVED from this group, from every protocol, from the seed and
     //            from the preset, and its directive class is DELETED. Social media is out of scoring.
     // WHY:       It could never score — `socialmention` has held 0 rows since the table was created —
     //            so it was pure denominator: 7 protocols carried it at maxScore 70-100 and their
     //            `maxPossibleScore` included that capacity while the numerator could not reach it.
-    //            Owner directive: downgrade the importance of social media activity being part of scoring
+    //            Requirement: downgrade the importance of social media activity being part of scoring
     //            process or any consideration. Repairing it would mean wiring a social provider
-    //            the owner does not want, so removal is the fix, not a repair.
+    //            the requirement does not want, so removal is the fix, not a repair.
     // INSTEAD OF: Fixing the feeder so the directive could score (what #912 asked for).
     // REVERSE BY: Restoring `social-buzz.directive.ts`, its registration in `directives.module.ts`,
     //            this group's list, and the 7 `protocol_directive_entry` rows. All four, or the

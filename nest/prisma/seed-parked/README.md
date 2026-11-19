@@ -9,7 +9,7 @@ cannot recover it from a database it does not have.
 | `protocols-*.json` | 44 protocol seed entries, byte-for-byte as they were |
 | `bots-*.json` | 35 bot seed entries, with `name` and `protocolId` recorded beside each body |
 
-⚠️ **A health-outbreak protocol was removed from this record on 2026-11-05** at the owner's
+⚠️ **A health-outbreak protocol was removed from this record on 2026-11-05** at the project's
 instruction (no health-outbreak protocols anywhere in the app). It was one of the 45 entries, so
 the protocols file now holds **44**. Nothing else in the file changed.
 

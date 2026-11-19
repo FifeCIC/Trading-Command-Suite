@@ -5,7 +5,7 @@ import { SupporterController } from './supporter.controller';
 import { SupporterService } from './supporter.service';
 
 /**
- * SupporterModule (#1147) — the in-app support prompt, named "Supporter Programme" by the owner on
+ * SupporterModule (#1147) — the in-app support prompt, named "Supporter Programme" by the requirement on
  * 2026-11-15 (SETTLED-DECISIONS row 182).
  *
  * ⚠️ `ProgressionModule` IS imported, and it is the only import that matters. The prompt's cooldown

@@ -13,7 +13,7 @@
  * console: an empty black `C:\WINDOWS\system32\cmd.exe` window that displays nothing and belongs to
  * nobody.
  *
- * The owner reported exactly that, repeatedly: *"I always have a system32\cmd window open as it is
+ * It was reported exactly that, repeatedly: *"I always have a system32\cmd window open as it is
  * right now but 2-3 times you've caused a new one to open but it never displays anything."* One
  * window per `build:api`. `scripts/tcs-launch.ps1` already passes `-WindowStyle Hidden` for the same
  * reason — `build-api.ps1` was the only launcher that did not.
@@ -24,7 +24,7 @@
  *
  * ⚠️ It is a SOURCE check, not a behaviour check: it cannot see whether a window actually appeared.
  * Its value is that a future edit which removes the flag fails the build instead of quietly
- * annoying the owner on the next run. The behaviour was verified once, by hand — the API's stderr
+ * annoying the requirement on the next run. The behaviour was verified once, by hand — the API's stderr
  * log went from `^C` (interrupted with its console) to 0 bytes.
  *
  * Usage:  node scripts/validate-hidden-launches.cjs [--self-test]

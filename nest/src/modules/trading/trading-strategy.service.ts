@@ -214,7 +214,7 @@ export interface StrategySummary {
   /**
    * THE MARKET SCOPE of this strategy — the watchlist(s) its protocol is bound to.
    *
-   * WHY THIS EXISTS: the owner defines a strategy as protocol + market + bot treatment, and the
+   * WHY THIS EXISTS: the requirement defines a strategy as protocol + market + bot treatment, and the
    * Trading Strategies table needs to show the market as "Watchlist / Symbol" — a genuine
    * watchlist when one is used, or a single symbol when a one-symbol treatment is deliberate
    * (*"we apply single symbol treatment when we do not want to form a watchlist for one symbol"*).
@@ -818,7 +818,7 @@ export class TradingStrategyService {
      * (2 = "risk at most 2% of equity on any one position"). Absent/NULL = inherit the global
      * `risk.maxPerTradeRisk` setting, so a bot that does not opt in still gets a real cap.
      *
-     * ⚠️ THE REASON THIS IS A COLUMN AND NOT A CONSTANT (owner direction, 2026-11-12): two
+     * ⚠️ THE REASON THIS IS A COLUMN AND NOT A CONSTANT (requirement, 2026-11-12): two
      * strategies may legitimately differ in how much they will lose on one idea, and that
      * difference IS the strategy. A hardcoded number would make every bot the same bot.
      * ⚠️ NOT `sizingRiskPct` — that is what a sized model aims AT; this is what NO order may exceed.
@@ -885,7 +885,7 @@ export class TradingStrategyService {
       );
     }
 
-    // ⚠️ THE NAME AND SLUG ARE DERIVED, NOT TRUSTED (owner direction, 2026-11-05). A caller that
+    // ⚠️ THE NAME AND SLUG ARE DERIVED, NOT TRUSTED (requirement, 2026-11-05). A caller that
     // sends `"gold scalp"` gets `"gold scalp Bot"` / `"gold-scalp-bot"`, so the rule cannot be
     // bypassed by the one write path that forgot it — the same class of defect as a mapping that
     // drops a column, one layer earlier.
@@ -1135,7 +1135,7 @@ export class TradingStrategyService {
   /**
    * duplicate() — copy a bot AND its protocol as the B of a new A/B pair (2026-09-22).
    *
-   * OWNER'S MODEL, verbatim: *"the ability to easily get the required records, correct and
+   * The project's MODEL, verbatim: *"the ability to easily get the required records, correct and
    * complete, insert fresh records using the correct endpoints, and doing so should result in not
    * only a new strategy but a connection maintained between A and B."* And on C/D: *"it really
    * just makes B, A for the additional pair rather than a C"* — so every duplicate starts its OWN
@@ -1422,7 +1422,7 @@ export class TradingStrategyService {
     // ⚠️ THIS WAS A REAL DEFECT. Checking `duplicatedFromId` FIRST made `getPair(B)` report the
     // STALE A & B pair, so `startPair(B)` would have started the wrong comparison and
     // `getPairStatus(B)` would have read the wrong `ab_pair` row — both silently, on exactly the
-    // workflow the owner described as needing no extra work.
+    // workflow the requirement described as needing no extra work.
     //
     // A bot WITH copies is therefore an INCUMBENT; only a bot with NO copies falls back to being
     // its parent's variant.
@@ -1783,7 +1783,7 @@ export class TradingStrategyService {
    * assertBotCapAllowsActivation() — refuse to activate a bot beyond the progression level's ceiling
    * (#1193).
    *
-   * ⚠️ THIS IS A GUARDRAIL, NOT A LICENCE CHECK. The owner's framing, verbatim in intent: the app is
+   * ⚠️ THIS IS A GUARDRAIL, NOT A LICENCE CHECK. The project's framing, verbatim in intent: the app is
    * new, running many bots is resource-intensive, and several trading safeguards are still
    * outstanding — so a fresh install should not be able to run a crowd of bots on day one, and the
    * ceiling should lift as the operator demonstrably uses the app. Nothing here is for sale. That
@@ -1862,7 +1862,7 @@ export class TradingStrategyService {
    * Why refuse rather than warn: a bot with a bar its protocol has never reached is not a risky
    * bot, it is a DECORATIVE one — it occupies a config slot, scores every tick, writes queue
    * entries, and "SKIPs" with a plausible reason, while being mathematically incapable of
-   * trading. The owner's trading-readiness bar (#910): *every active bot either can trade, or
+   * trading. The project's trading-readiness bar (#910): *every active bot either can trade, or
    * the reason it cannot is on a surface an operator reads*. A refused activation IS that
    * surface, delivered at the moment the mistake is made.
    *
@@ -2379,7 +2379,7 @@ export class TradingStrategyService {
       }
 
       // ── 2b. UNPROTECTED POSITIONS (#900, 2026-09-19) ──────────────────────────────────────
-      // The owner's rule: "if … the distant broker stop loss is missing … then it doesn't trade."
+      // The project's rule: "if … the distant broker stop loss is missing … then it doesn't trade."
       // docs/trading-bot-model.md §6b requires a broker-side protective stop on EVERY position so
       // an app failure never leaves one unprotected — that invariant was asserted at order-building
       // and NEVER verified afterwards (a dropped modify, a partial fill, a manual MT5 edit all
@@ -2421,7 +2421,7 @@ export class TradingStrategyService {
     //      the reason this cannot be read as a per-account figure.
     //   2. IT ASSUMES ONE CURRENCY. Summing raw `pnl` across accounts is only valid while those
     //      accounts share a currency, and nothing checks that. Both live accounts are GBP today, so
-    //      this is REACHABLE, not active — but the owner's stated direction is *"prepare for many
+    //      this is REACHABLE, not active — but the project's stated direction is *"prepare for many
     //      users that will input different accounts"* (`external-systems-are-data`), and the first
     //      account in a second currency makes this sum meaningless without a conversion. Not fixed
     //      here: it needs the conversion the margin estimator already has, and it is a money-path
@@ -2661,7 +2661,7 @@ export class TradingStrategyService {
           // ── #899: existing exposure on this symbol ──────────────────────────────────────
           // The cap's OTHER half. `marginEstimate` above measures THIS order; without this
           // sum, "maxPerSymbol = 25%" really meant "25% per order" and Bot A + Bot B + Bot C
-          // could pile 60% onto one instrument while every check passed. The owner's design is
+          // could pile 60% onto one instrument while every check passed. The project's design is
           // one protocol driving several bots on the same symbol, with the explicit constraint
           // "…not increasing risk" — this is that constraint, enforced.
           //
@@ -2760,7 +2760,7 @@ export class TradingStrategyService {
         // Every gate above asks a question about the INCOMING ORDER. This one asks whether the
         // book is currently safe to ADD to: Σ |entry − brokerSL| × volume × contractSize over all
         // open positions, converted to account currency. That is maxPortfolioRisk's definition —
-        // "X% is in red on current positions" from the owner's brief — and it is NOT the same
+        // "X% is in red on current positions" from the project's brief — and it is NOT the same
         // question as maxDrawdown (peak-to-current on realised+unrealised equity), which a book
         // of losing positions can sail under indefinitely having never breached the peak.
         //
@@ -3265,7 +3265,7 @@ export class TradingStrategyService {
           slPct: s.slPct,
           tpPct: s.tpPct,
           /**
-           * ⚠️ THE SLUG IS CONVERGED (owner direction, 2026-11-05) so a re-seed REPAIRS a bot whose
+           * ⚠️ THE SLUG IS CONVERGED (requirement, 2026-11-05) so a re-seed REPAIRS a bot whose
            * slug is missing or malformed — the same reasoning as `magic` below: an update that omits
            * a field cannot repair it, so the fleet would stay half-named forever.
            *
@@ -3402,7 +3402,7 @@ export class TradingStrategyService {
         //
         // Measured 2026-10-14: after disabling all 38 bots, `POST /seed?dryRun=true` reported
         // **13 bots** it would re-enable — every forex session bot, i.e. the only seed entries
-        // carrying an explicit `active: true`. The owner had just cleared the board for a
+        // carrying an explicit `active: true`. The requirement had just cleared the board for a
         // controlled experiment; a stray seed run would have put 13 bots back on with no error
         // and no log — the repo's signature failure (plausible output, no error). After this
         // change the same dry run reports **0** changes.
@@ -3554,7 +3554,7 @@ export class TradingStrategyService {
       try {
         const createdBot = await (this.prisma as any).tradingStrategy.create({
           data: {
-            // ⚠️ SEEDED BOTS GET THE SAME SHAPE AS API-CREATED ONES (owner direction, 2026-11-05):
+            // ⚠️ SEEDED BOTS GET THE SAME SHAPE AS API-CREATED ONES (requirement, 2026-11-05):
             // name ends "Bot", slug ends "-bot", derived by ONE helper so the two write paths cannot
             // disagree about what a bot is called.
             name: normaliseBotName(s.name),

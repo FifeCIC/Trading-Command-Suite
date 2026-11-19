@@ -47,7 +47,7 @@ const REPO_ROOT = path.resolve(NEST_ROOT, '..');
  * when neither is present. Added 2026-11-16, matching the resolver `validate-agent-docs.cjs` and
  * `validate-output-style-sync.cjs` adopted in commit `bdfde054`.
  *
- * Owner, 2026-11-16: the internal development process should not be published, so the 19 instruction
+ * Requirement, 2026-11-16: the internal development process should not be published, so the 19 instruction
  * files moved to the docs store under `agent-ops/instructions` and `.github/copilot-instructions.md`
  * became the published replacement. That commit updated TWO of the THREE consumers — this file still
  * read the old repo path and hard-failed with `no invariants found`, turning the whole backend build
@@ -55,7 +55,7 @@ const REPO_ROOT = path.resolve(NEST_ROOT, '..');
  *
  * ⚠️ SKIP, DO NOT FAIL, WHEN THE DOCS STORE IS ABSENT. `G:` is a Google Drive mount that is regularly
  * unmounted here. A gate that goes red because a network drive is offline teaches everyone to ignore
- * it, which is worse than not having it — that reasoning is the owner's and it applies verbatim here.
+ * it, which is worse than not having it — that reasoning is the project's and it applies verbatim here.
  * The skip is printed, never silent: "cannot judge" must not look like "checked and fine".
  */
 const DOCS_STORE_INSTRUCTIONS =
@@ -551,7 +551,7 @@ const CANARIES = [
     root: 'repo',
     file: 'scripts/validate-architecture-docs.cjs',
     markers: ['function checkReferenceIsDerived('],
-    hint: 'Every `export const` in architecture-reference.js must exist on the page — an orphan lets an agent read a capability the owner cannot see. The direction is one-way on purpose: page-only framing is permitted.',
+    hint: 'Every `export const` in architecture-reference.js must exist on the page — an orphan lets an agent read a capability the requirement cannot see. The direction is one-way on purpose: page-only framing is permitted.',
   },
 ];
 

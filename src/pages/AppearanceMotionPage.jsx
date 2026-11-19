@@ -1,7 +1,7 @@
 /**
  * AppearanceMotionPage — Motion, in the Appearance area.
  * =====================================================
- * Owner direction, 2026-10-13: *"We don't need View: Theme Lab as it is but the new area could offer
+ * Requirement, 2026-10-13: *"We don't need View: Theme Lab as it is but the new area could offer
  * views such as a 'Motion' page that includes features like: <section.tl-section> Motion Lab
  * (motion.dev — 3.5KB animation library. Fade, slide...)"*
  *

@@ -76,7 +76,7 @@ const FORBIDDEN = [
     file: 'nest/src/modules/scoring/outcome-tracker.service.ts',
     // A local function that parses a timeframe string into ms.
     test: /function\s+timeframeToMilliseconds\s*\(/,
-    why: 'Derived cadence parser. Case-INSENSITIVE, so "1M" -> 1 minute while the owner says 1 day (1440x); no `1w`, so it returns 1 HOUR instead of 1 week (168x).',
+    why: 'Derived cadence parser. Case-INSENSITIVE, so "1M" -> 1 minute while the requirement says 1 day (1440x); no `1w`, so it returns 1 HOUR instead of 1 week (168x).',
   },
 ];
 
@@ -163,13 +163,13 @@ function listFrontendTimeframeArrays() {
       });
       owner = require(srcPath);
     } catch (e2) {
-      console.log(`\n⚠️  cannot load the owner from dist OR source: ${String(e2.message).slice(0, 90)}`);
+      console.log(`\n⚠️  cannot load the requirement from dist OR source: ${String(e2.message).slice(0, 90)}`);
       console.log('    Refusing to report OK for an axis it could not check.\n');
       process.exit(1);
     }
   }
   if (typeof owner.barLengthMs !== 'function') {
-    console.log('\n⚠️  loaded the owner module but `barLengthMs` is not a function — shape changed.\n');
+    console.log('\n⚠️  loaded the requirement module but `barLengthMs` is not a function — shape changed.\n');
     process.exit(1);
   }
   const oracleSource = fs.existsSync(distPath) ? 'dist (compiled)' : 'src (ts-node)';
@@ -186,7 +186,7 @@ function listFrontendTimeframeArrays() {
     }
   }
 
-  // ── 2. Standalone copies: VERIFY their values agree with the owner. ───────────────────────
+  // ── 2. Standalone copies: VERIFY their values agree with the requirement. ───────────────────────
   const vouched = [];
   for (const a of ALLOWED_STANDALONE) {
     const p = path.join(ROOT, a.file);
@@ -205,7 +205,7 @@ function listFrontendTimeframeArrays() {
       diffs,
     });
     if (diffs.length) {
-      problems.push({ level: 'error', file: a.file, why: `standalone map disagrees with the owner: ${diffs.join(', ')}` });
+      problems.push({ level: 'error', file: a.file, why: `standalone map disagrees with the requirement: ${diffs.join(', ')}` });
     }
   }
 

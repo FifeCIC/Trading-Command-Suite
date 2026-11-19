@@ -54,7 +54,7 @@ export type SettingType = 'number' | 'boolean' | 'string';
 
 /**
  * ⚠️ SPLIT OUT 2026-11-16 (#1283). The market-wide movers filter policy lives in its own file and is
- * spread into `SETTINGS` below, because adding it inline pushed this register past the owner's
+ * spread into `SETTINGS` below, because adding it inline pushed this register past the project's
  * 1,500-line warning threshold (`scripts/audit-code-health.cjs`) — and the answer to that is the
  * SHAPE, never a re-baseline. `SETTINGS_BY_KEY`, the resolver and the seeder all see these rows
  * exactly as if they were declared inline; this file remains the ONE owner of the schema.
@@ -96,8 +96,8 @@ export interface SettingDefinition {
 export const SETTINGS: SettingDefinition[] = [
   // ── Backtest period health (2026-10-29) ────────────────────────────────────
   // ⚠️ THESE ARE THE ARGUMENTS THAT DECIDE WHETHER A WINDOW IS USABLE AT ALL, so they are settings
-  // rather than constants in the engine — the owner's standing requirement is that no decision lives
-  // only in code. Owner direction: *"we should consider some standard requirements to deem a period
+  // rather than constants in the engine — the project's standing requirement is that no decision lives
+  // only in code. Requirement: *"we should consider some standard requirements to deem a period
   // healthy/complete enough to use at all … until then we should be strict."*
   //
   // WHY THEY EXIST: measured on the `dev-window-v1` VIX 5m window on 2026-10-29, the bar series covered
@@ -169,7 +169,7 @@ export const SETTINGS: SettingDefinition[] = [
     max: 100,
   },
   // ── Auto-accept gates (2026-10-30) ─────────────────────────────────────────
-  // Owner directive: if there is an improvement in the profit we auto apply Run B and that gets stored as Run
+  // Requirement: if there is an improvement in the profit we auto apply Run B and that gets stored as Run
   // A — and, in the same message, the worry that decides the design: *"a small improvement is luck
   // and we might need some caution."*
   //
@@ -180,7 +180,7 @@ export const SETTINGS: SettingDefinition[] = [
   // ── DECISION (2026-10-30, primary) ──
   // WHAT:      Auto-Accept moves the ACCEPTED-BASELINE REFERENCE only, and only across these two
   //            declared numeric gates. It never writes to `trading_strategy`.
-  // WHY:       the owner asked for promotion without a click AND named the risk that makes an
+  // WHY:       the requirement is for promotion without a click AND named the risk that makes an
   //            unguarded promotion unsafe. A gate that is a setting can be read, printed and changed;
   //            a gate that is a constant in a component can only be discovered. The comparison is
   //            relative and sign-aware because an absolute threshold on a NEGATIVE P&L reads
@@ -328,12 +328,12 @@ export const SETTINGS: SettingDefinition[] = [
     // `riskMaxPerSymbol`, which is a whole-number percent in localStorage. Do not mix them.
     key: 'risk.maxPerSymbol',
     type: 'number',
-    // 0.25 → 0.2 on 2026-11-07 (owner decision, for the first LIVE account, £1,000 deposit).
+    // 0.25 → 0.2 on 2026-11-07 (requirement, for the first LIVE account, £1,000 deposit).
     // ⚠️ Counter-intuitive but deliberate: the PORTFOLIO cap went UP (0.2 → 0.4) while this went
     // DOWN. Measured that week: 1,299 per-symbol blocks against 1,564 portfolio blocks. Tightening
     // this stops one gold trade (a min-lot XAUUSD position risks 9.1% of a £1,000 account by itself)
     // consuming a third of the budget, so the SAME portfolio capacity is spent across more symbols —
-    // which is the "more trading" the owner asked for, rather than more of one trade.
+    // which is the "more trading" the requirement is for, rather than more of one trade.
     defaultValue: 0.2,
     class: 'runtime',
     owner: 'trading',
@@ -390,14 +390,14 @@ export const SETTINGS: SettingDefinition[] = [
     // wired: the fraction of the portfolio LOST if every open position's stop filled, summed
     // across the whole book and checked before any new order (assessGlobalRiskLimits).
     //
-    // Definition (the one the owner asked for): "X% is in red on current positions" →
+    // Definition (the one the requirement is for): "X% is in red on current positions" →
     // Σ |entry − brokerSL| × volume × contractSize, converted to account currency. NOT the same
     // question as maxDrawdown (peak-to-current on realised+unrealised equity).
     //
     // ── DECISION (2026-11-07, primary) ──
     // WHAT:      these caps are DEMO-TUNED (0.6 portfolio / 0.2 per-symbol) and no live account
     //            exists. Risk is set for DATA GENERATION, not for capital protection.
-    // WHY:       owner direction — "all trading going forward to be riskier on demo accounts also so
+    // WHY:       requirement — "all trading going forward to be riskier on demo accounts also so
     //            that we're generating more trading data for tweaking strategies". The demo book's
     //            product is TRADES TO MEASURE; a cap that refuses them costs data, not money.
     // INSTEAD OF: leaving the 0.4 that was raised on 2026-11-06 for a £1,000 LIVE account. That
@@ -411,12 +411,12 @@ export const SETTINGS: SettingDefinition[] = [
     //            lands, a real account would silently inherit demo-tuned caps.
     key: 'risk.maxPortfolioRisk',
     type: 'number',
-    // 0.15 → 0.20 on 2026-10-13 (owner decision, R47/R57). See `risk-profile-rules.ts` for the
+    // 0.15 → 0.20 on 2026-10-13 (requirement, R47/R57). See `risk-profile-rules.ts` for the
     // measurement: 601 refusals/day under 0.15, driven by one minimum-lot gold position that cannot
     // be sized smaller on a £718 account; 601 → 0 refusals after the raise. Changed here as well as
     // in the database so a reinstall keeps the decision (a DB-only change does not survive).
-    // 0.2 → 0.4 on 2026-11-07 (owner decision, first LIVE account, £1,000 deposit, "push harder").
-    // 0.4 → 0.6 on 2026-11-07 (owner decision): "all trading going forward to be riskier on demo
+    // 0.2 → 0.4 on 2026-11-07 (requirement, first LIVE account, £1,000 deposit, "push harder").
+    // 0.4 → 0.6 on 2026-11-07 (requirement): "all trading going forward to be riskier on demo
     // accounts also so that we're generating more trading data". The live account was abandoned the
     // same evening, so the demo book is the only venue and these are DEMO-TUNED caps.
     // Measured basis: the portfolio cap was the ONLY cap that has ever actually refused an order —
@@ -456,7 +456,7 @@ export const SETTINGS: SettingDefinition[] = [
   {
     // ── PER-TRADE MONEY-AT-RISK CEILING (#1257, 2026-11-12) ──────────────────────────────────
     //
-    // The rule the owner asked for: a ceiling that a bot can OVERRIDE, so two strategies can differ
+    // The rule the requirement is for: a ceiling that a bot can OVERRIDE, so two strategies can differ
     // in how much they will lose on one idea — *"maxPerTradeRisk has to be configurable — that is
     // what makes it possible to create different strategies."*
     //
@@ -489,7 +489,7 @@ export const SETTINGS: SettingDefinition[] = [
     max: 100,
   },
   {
-    // ⚠️ Added 2026-09-19 (#900). The owner's rule, verbatim: "if … the distant broker stop loss
+    // ⚠️ Added 2026-09-19 (#900). The project's rule, verbatim: "if … the distant broker stop loss
     // is missing … then it doesn't trade." docs/trading-bot-model.md §6b requires a broker-side
     // protective stop on EVERY position so an app failure never leaves one unprotected — that
     // invariant was asserted at order-building and never verified AFTERWARD. This checks it on
@@ -630,7 +630,7 @@ export const SETTINGS: SettingDefinition[] = [
     label: 'Pre-open session alert (minutes before)',
     description:
       'Raise ONE collapsing advisory alert this many minutes before the New York session opens ' +
-      '(#981). Advisory ONLY — it gates nothing: no pause, no entry block, no close (the owner: ' +
+      '(#981). Advisory ONLY — it gates nothing: no pause, no entry block, no close (the requirement: ' +
       '"alert of market opening ahead, no automatic effect"). 0 disables the alert. The alert title ' +
       'is day-scoped and carries no minute count, so the collapse key keeps a full window to one row.',
     userChangeable: true,
@@ -787,7 +787,7 @@ export const SETTINGS: SettingDefinition[] = [
   },
 
   // ── Discord publishing policy (2026-11-06) ─────────────────────────────────
-  // ⚠️ THE PUBLIC FEED IS A PUBLISHING DECISION, NOT A NOTIFICATION. The owner's instruction:
+  // ⚠️ THE PUBLIC FEED IS A PUBLISHING DECISION, NOT A NOTIFICATION. The project's instruction:
   // *"I do not want ALL signals to be shared. Only one per day for now to create the system and
   // keep it well tested"* and *"I don't think we should share trade wins and losses that are
   // within a dollar. That might reduce what is essentially noise."*
@@ -815,7 +815,7 @@ export const SETTINGS: SettingDefinition[] = [
     owner: 'notifications',
     label: 'Minimum minutes between Discord signals per strategy',
     description:
-      'One suggestion per strategy per window. 60 (hourly) at the owner\'s instruction 2026-11-06, ' +
+      'One suggestion per strategy per window. 60 (hourly) at the requirement\'s instruction 2026-11-06, ' +
       'replacing a global one-per-day allowance: a ration shared by every strategy meant the first ' +
       'signal of the day silenced all the others, so the feed reported the calendar instead of the ' +
       'market. 0 disables the throttle. The per-strategy last-post time is a FAMILY member (see ' +
@@ -866,7 +866,7 @@ export const SETTINGS: SettingDefinition[] = [
     label: 'Minimum |P&L| published for a closed trade',
     description:
       'A closed trade whose ABSOLUTE profit is below this is not published — it is noise in a feed ' +
-      'about outcomes. 1.00 (account currency) at the owner\'s instruction: wins and losses within a ' +
+      'about outcomes. 1.00 (account currency) at the requirement\'s instruction: wins and losses within a ' +
       'dollar say nothing. ⚠️ A trade with no recorded P&L is NOT published either: "cannot judge" ' +
       'must never render as a win.',
     userChangeable: true,
@@ -874,12 +874,12 @@ export const SETTINGS: SettingDefinition[] = [
     max: 100000,
   },
   // ── Supporter Programme (#1147 §2.2) ──────────────────────
-  // The in-app support prompts. Named by the owner on 2026-11-15 — "Supporter Programme",
+  // The in-app support prompts. Named by the requirement on 2026-11-15 — "Supporter Programme",
   // namespace `supporter` (SETTLED-DECISIONS row 182). That namespace was chosen by measurement:
   // `supporter` and `steward` appear in ZERO files, while `CSS` already appears 225 times across
   // 100 files and `sustain` already means trend persistence in the strategy library.
   //
-  // ⚠️ WHY THESE ARE SETTINGS AND NOT CONSTANTS: the owner's constraint is *"wouldn't want to
+  // ⚠️ WHY THESE ARE SETTINGS AND NOT CONSTANTS: the project's constraint is *"wouldn't want to
   // hassle users"*, and a prompt the user cannot turn off is a hassle. `enabled` is the off switch
   // the prompt itself offers, so it must be a stored, readable value rather than a build flag.
   {
@@ -904,7 +904,7 @@ export const SETTINGS: SettingDefinition[] = [
     label: 'Minimum days between support prompts',
     description:
       'How long after a prompt the next one may appear — and also how long a NEW installation ' +
-      'must be in use before the first ask. 90 days is the owner\'s stated cadence (2026-11-14: ' +
+      'must be in use before the first ask. 90 days is the requirement\'s stated cadence (2026-11-14: ' +
       '"once every three month in general"). ⚠️ Raising this is the safe direction; lowering it ' +
       'below 30 starts overriding the user\'s own snooze.',
     userChangeable: true,
@@ -1295,7 +1295,7 @@ export const SETTING_FAMILIES: SettingFamily[] = [
   {
     /**
      * ── ADDED 2026-10-27 ─────────────────────────────────────────────────────────────────────────
-     * WHICH STORED RUN IS THE ACCEPTED "A" (owner direction: *"'A' will also be the data from the
+     * WHICH STORED RUN IS THE ACCEPTED "A" (requirement: *"'A' will also be the data from the
      * backtest that the user indicates as an improvement … so that we can mark the accepted change
      * and then compare the following backtest to that new set of data."*)
      *
@@ -1349,7 +1349,7 @@ export const SETTING_FAMILIES: SettingFamily[] = [
     /**
      * discordSignalLastPost — the per-strategy Discord signal throttle (2026-11-06).
      *
-     * WHY A FAMILY AND NOT A COLUMN OR A SETTING: the owner's reasoning, verbatim —
+     * WHY A FAMILY AND NOT A COLUMN OR A SETTING: the project's reasoning, verbatim —
      * *"strategies will need what could probably be a meta data value that stores the last time of
      * discord posting of a signal. I say meta data because its a lot of extra data for something that
      * wont be active for all users so a table column would be inherent for most installations."*

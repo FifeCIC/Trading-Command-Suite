@@ -209,11 +209,11 @@
   opacity: 0.75;
 }
 
-/* Agent-reported applied-status. ⚠️ READ-ONLY by design — the owner asked for an indicator, not a
+/* Agent-reported applied-status. ⚠️ READ-ONLY by design — the requirement is for an indicator, not a
    control: *"I meant an indicator for agentic AI - not a menu for the user to select."* Agents set the
    value through the API; this only shows it.
    ⚠️ The three states are visually distinct on purpose. `—` (unassessed) must not be mistaken for
-   ❌ (assessed and outstanding) — the owner reads this column to find what is left to do, so quietly
+   ❌ (assessed and outstanding) — the requirement reads this column to find what is left to do, so quietly
    collapsing "nobody looked" into "not done" would make the list wrong in the direction that matters. */
 .uir-applied {
   font-size: 0.72rem;

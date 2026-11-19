@@ -279,7 +279,7 @@
 }
 
 /* ── The index (default view): every eligible pair + official tests ──
-   owner directive, 2026-09-22: the view is designed to list all pairs... It is not a comparison for one
+   requirement, 2026-09-22: the view is designed to list all pairs... It is not a comparison for one
    pair — so the list is the page, and ?pair= is the drill-down. Rows are compact on purpose:
    the index's job is WHICH pairs exist; the detail view shows everything. */
 .listSection {
@@ -364,7 +364,7 @@
   /*
    * ⚠️ THE THIRD COLUMN WAS `auto`, AND THAT IS WHAT PUSHED "B" AROUND (fixed 2026-11-07).
    *
-   * Owner directive: The pill is different for each row and it pushes the middle information B to the left
+   * Requirement: The pill is different for each row and it pushes the middle information B to the left
    * so all the status are not aligned for either A or B and it looks poor. Exactly right: the tail
    * holds `≠ 1 · pyramid` on one row and `≠ 3 · tradeThreshold, pyramid, timeframe` on the next, so
    * an `auto` column made columns 1 and 2 a different width on every row. The 1fr sides then had
@@ -465,7 +465,7 @@
   background: var(--bg-elev);
 }
 
-/* ── List | Table toggle + the table view (owner, 2026-09-22) ──
+/* ── List | Table toggle + the table view (Requirement, 2026-09-22) ──
    "A table... all A and B rows together — two rows, slightly different shading", orderable by the
    realised profit difference (B − A). A rows carry --bg-elev-2, B rows stay on the panel fill, so
    each pair reads as ONE unit without either row looking like an alert. */
@@ -689,7 +689,7 @@
 
 /* ── Experiment decisions (#1201) ──────────────────────────
  *
- * The panel that answers "what do I DO about these tests?". Owner, 2026-11-06: without it we get
+ * The panel that answers "what do I DO about these tests?". Requirement, 2026-11-06: without it we get
  * "clutter and strategies that run for months needlessly".
  *
  * ⚠️ The ACTION is carried by a GLYPH plus the action's own word, never by colour alone

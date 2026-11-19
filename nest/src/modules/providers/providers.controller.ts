@@ -68,7 +68,7 @@ export class ProvidersController {
 
   /**
    * POST /api/providers/exit-data/recover (#1093) — the optional in-app recovery attempt.
-   * The owner's direction, 2026-10-08: the app owns this, not a terminal ritual. The response is
+   * The project's direction, 2026-10-08: the app owns this, not a terminal ritual. The response is
    * honest about what could not be recovered — see `note`.
    */
   @Post('exit-data/recover')

@@ -3,7 +3,7 @@
  *
  * WHY THIS EXISTS (2026-11-06, owner request)
  * -------------------------------------------
- * The owner's words: *"I need to better understand each symbol's movement in terms of points within
+ * The project's words: *"I need to better understand each symbol's movement in terms of points within
  * a short period … it's what makes it likely I would make stop losses get triggered prematurely as I
  * would likely set them within a normal price flux rather than trade change."*
  *

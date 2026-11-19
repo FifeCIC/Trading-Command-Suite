@@ -1859,7 +1859,7 @@ const DIAGRAMS = [
 ];
 
 /* ── Diagram grouping and ORDER (owner request, 2026-10-08) ────────────────────────
-   Owner directive: I would like to group and order diagrams that can be chained. So many different groups for
+   Requirement: I would like to group and order diagrams that can be chained. So many different groups for
    selecting and flicking through the diagrams for that group, in order as they apply in code.
 
    ⚠️ THE ORDER LIVES HERE, NOT IN THE `DIAGRAMS` ARRAY. That array is ~1,700 lines of diagram source;

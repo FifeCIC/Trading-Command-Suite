@@ -7,7 +7,7 @@
  * setting — the classic drift setup where two of them get a fix and the third silently does not.
  * The rail copies were removed and the Theme Packs page is being retired; this is the survivor.
  *
- * ⚠️ CARD PRESENTATION IS THE OWNER'S CHOICE, and it is not decoration: *"I would like theme pack
+ * ⚠️ CARD PRESENTATION IS THE PROJECT'S CHOICE, and it is not decoration: *"I would like theme pack
  * selection to be like <article.theme-section-card.neon-lab-card> — Corner-only accents, full colored
  * outlines."* A pack is a COLOUR decision, so a swatch grid lets the choice be made by looking rather
  * than by reading a token name. It also makes an important limit visible at a glance: every card shows

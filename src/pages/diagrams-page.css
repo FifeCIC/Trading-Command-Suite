@@ -4,7 +4,7 @@
  * WHY THIS FILE EXISTS (2026-09-21)
  *
  * The claim-verification panel was built with INLINE styles using the `--notice-*-bg`
- * tokens, and the owner reported: "Diagram prototype styling is too dark - it would be
+ * tokens, and it was reported: "Diagram prototype styling is too dark - it would be
  * great if it could closely match the latest app pages, the modern notices."
  *
  * That is the SAME defect already fixed once, on /signals/signals-overview — see the

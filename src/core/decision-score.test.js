@@ -30,7 +30,7 @@ test('a queue-path (percentage) row renders as a percentage, with the gate unit 
 test('a ladder/A-B (raw) row renders as raw — never as a bare number', () => {
   const s = decisionScore({ compositeRaw: 178 });
 
-  // ⚠️ The unit WORD changed from "raw" to "pts" (owner directive, 2026-09-23): 'raw' whatever that
+  // ⚠️ The unit WORD changed from "raw" to "pts" (requirement, 2026-09-23): 'raw' whatever that
   // means — the explanation lived only in a tooltip). The invariant is unchanged, and it is the
   // reason this assertion exists: a raw row renders WITH a unit, never as a bare number that a
   // reader would take for a percentage.

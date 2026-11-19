@@ -16,7 +16,7 @@
 
 CREATE TABLE `backtest_period` (
   `id`         varchar(36)  COLLATE utf8mb4_unicode_ci NOT NULL,
-  -- The owner's requirement verbatim: "name the request and add a note reminder of what the period
+  -- The project's requirement verbatim: "name the request and add a note reminder of what the period
   -- involves i.e. the 300% surge of Greenland Mining when Trump signed a deal, over just 2 days."
   -- `name` is what a list shows; `note` is what makes the window memorable months later.
   `name`       varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,

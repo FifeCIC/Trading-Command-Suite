@@ -106,7 +106,7 @@ export default function MonitoringPage() {
  *
  * ⚠️ WHY THIS EXISTS (2026-10-05). The backend has had per-event preferences and a priority floor
  * since #972, reachable at `GET|PUT /api/notifications/preferences` — and NOTHING in the app called
- * them. Measured that day: no file under `src/` referenced those routes, so the owner asked for these
+ * them. Measured that day: no file under `src/` referenced those routes, so the requirement is for these
  * settings believing they already existed. They existed as an API with no surface — a buried ability.
  *
  * ⚠️ TWO WRITE PATHS, DELIBERATELY, and the difference is not cosmetic. The FLOOR goes through
@@ -118,7 +118,7 @@ export default function MonitoringPage() {
  * ⚠️ A `mandatory` EVENT IS RENDERED LOCKED, WITH THE REASON ON SCREEN. The backend refuses
  * `enabled: false` for these (`trade-disabled`) because muting it reproduces the outage it exists for:
  * AutoTrading off for days, 19 orders refused, every bridge reporting `connected`, nobody told.
- * Offering a control the server quietly ignores is worse than not offering one — it teaches the owner
+ * Offering a control the server quietly ignores is worse than not offering one — it teaches the requirement
  * to distrust every other control on the page.
  *
  * ⚠️ THE EVENT LIST CANNOT BE READ AS "NOTHING CONFIGURED". A failed request and an empty list are

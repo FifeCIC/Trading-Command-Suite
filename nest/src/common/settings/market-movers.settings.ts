@@ -2,7 +2,7 @@
  * market-movers.settings.ts — the filter policy for the market-wide movers feed (#1283).
  *
  * ⚠️ SPLIT OUT OF `settings-registry.ts` deliberately (2026-11-16). That file is a DECLARATION
- * register and had reached 1,384 lines; these five settings pushed it past the owner's 1,500-line
+ * register and had reached 1,384 lines; these five settings pushed it past the project's 1,500-line
  * warning threshold (`scripts/audit-code-health.cjs`). The fix is the SHAPE, not a re-baseline —
  * re-freezing a size audit to accommodate growth is how a budget becomes a decoration (register
  * row 184).
@@ -22,7 +22,7 @@ import type { SettingDefinition } from './settings-registry';
 
 export const MARKET_MOVERS_SETTINGS: SettingDefinition[] = [
 // ── Market-wide movers (#1283, 2026-11-16) ─────────────────────────────────────────────────
-// Owner directive: we would ideally use a ready made source of top movers: top winners and top losers.
+// Requirement: we would ideally use a ready made source of top movers: top winners and top losers.
 // It doesn't make sense to only process our registered symbols for the strategy I want the app to
 // support.
 //
@@ -30,7 +30,7 @@ export const MARKET_MOVERS_SETTINGS: SettingDefinition[] = [
 // The filter thresholds decide WHICH SYMBOLS THE APP WILL CONSIDER TRADING. Measured 2026-11-16,
 // 12 of 20 top gainers and 11 of 20 top losers on the raw feed were warrants/rights at $0.007–$0.83
 // with volume in the low thousands. Those numbers are a judgement about what is worth looking at,
-// not a fact about the market, so the owner must be able to move them from the UI — and each one
+// not a fact about the market, so the requirement must be able to move them from the UI — and each one
 // is echoed back in the API response under `filtersApplied` so a list can always be explained.
 {
   key: 'movers.minPrice',

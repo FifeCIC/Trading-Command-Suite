@@ -278,7 +278,7 @@
   color: var(--ink-soft, inherit);
 }
 
-/* The owner's diagnostic, behind a native disclosure — no state, keyboard-correct. */
+/* The project's diagnostic, behind a native disclosure — no state, keyboard-correct. */
 .sfr-check-tech {
   margin-top: 0.3rem;
 }

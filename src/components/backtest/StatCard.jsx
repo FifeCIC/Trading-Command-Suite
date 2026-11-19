@@ -1,6 +1,6 @@
 /**
  * StatCard — one tile in the backtest Result grid, with an explanation that appears on HOVER AFTER
- * TWO SECONDS (owner direction, 2026-11-04: *"we need a popover explaining them when mouse hovered over
+ * TWO SECONDS (requirement, 2026-11-04: *"we need a popover explaining them when mouse hovered over
  * for 2 seconds."*)
  *
  * ── WHY A TIMER, AND WHY 2s ────────────────────────────────────────────────────────────────────

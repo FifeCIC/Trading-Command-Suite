@@ -3,7 +3,7 @@
  *
  * ROUTE: `/protocols/protocols-registry`. The DESIGN lives in ProtocolsPageB.
  *
- * ⚠️ THE OLD DESIGN IS GONE (owner direction, 2026-10-08): *"Delete the old and accept the newer
+ * ⚠️ THE OLD DESIGN IS GONE (requirement, 2026-10-08): *"Delete the old and accept the newer
  * design."* It lived inline in this file behind `?variant=A`, so the registry existed TWICE — two
  * copies of one page that drift apart, where only one gets the next fix. `?variant=A` is no longer
  * honoured; the old JSX and its ~230 lines are deleted, not left behind a flag.

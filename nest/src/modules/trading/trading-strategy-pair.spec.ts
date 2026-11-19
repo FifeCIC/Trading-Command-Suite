@@ -7,12 +7,12 @@
  *
  *   • an operator holding two bots had no way to see that they were a pair, or which side was the
  *     incumbent they were supposed to be changing;
- *   • activation was per-row, so one side could be switched without the other — and the owner's
+ *   • activation was per-row, so one side could be switched without the other — and the project's
  *     rule is explicit: *"ensuring they are activate/deactivated together"*;
  *   • a GROUP (two or more copies of one bot) was indistinguishable from a pair, so any tool that
  *     picked "the other bot" would silently compare the wrong two things.
  *
- * ⚠️ THE OWNER'S ERROR I MADE HERE, AND CORRECTED. I first reported that `duplicatedFromId` having
+ * ⚠️ THE PROJECT'S ERROR I MADE HERE, AND CORRECTED. I first reported that `duplicatedFromId` having
  * **0 rows** meant the pairing half was MISSING. It is not missing — it has simply never been used.
  * A row count is evidence about USAGE, not about EXISTENCE. These tests assert the mechanism that
  * already existed, plus the lifecycle that did not.
@@ -248,7 +248,7 @@ describe('setPairActive — both sides move together (#963, decision 25)', () =>
     expect(updates.length).toBe(1);
   });
 
-  it('DEACTIVATES both sides together — the direction the owner named', async () => {
+  it('DEACTIVATES both sides together — the direction the requirement named', async () => {
     const both = {
       'bot-a': { ...INCUMBENT, active: true },
       'bot-b': { ...VARIANT, active: true },

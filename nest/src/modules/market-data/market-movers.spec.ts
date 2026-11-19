@@ -76,7 +76,7 @@ describe('applyFilters', () => {
   });
 
   it('records "instrument" ahead of "price" when a row fails both', () => {
-    // Order is the policy: a warrant can never be routed, whereas price is a preference the owner
+    // Order is the policy: a warrant can never be routed, whereas price is a preference the requirement
     // can change. Reporting "price" here would imply raising minPrice is what would let it in.
     const { excluded } = applyFilters([row('BZFDW', 0.02, 10)], f);
     expect(excluded[0].reason).toBe('instrument');
@@ -100,7 +100,7 @@ describe('applyFilters', () => {
     expect(excluded[1].detail).toMatch(/volume/);
   });
 
-  it('lets the warrants through when the owner turns the filter off — it is a POLICY, not a law', () => {
+  it('lets the warrants through when the requirement turns the filter off — it is a POLICY, not a law', () => {
     // minVolume is set to 0 as well, so this isolates the instrument policy. (My first version left
     // it at 100,000 and BZFDW's 77,115 shares failed the VOLUME floor — the test was wrong, not the
     // code, and it is worth saying so rather than quietly widening the assertion.)

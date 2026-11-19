@@ -128,7 +128,7 @@ export default function ActiveSymbolsPage() {
   // EMPTY LIST. The re-source described above chose the right SOURCE but never told the endpoint what
   // to read it FOR, so the server answered `{"counts":{},"unresolved":[],"sourcesQueried":[]}` with a
   // 200 and the table still rendered 0 for every symbol — including the symbols with open positions
-  // the owner reported. **Repairing the source did not repair the call**, and a live 200 is not
+  // it was reported. **Repairing the source did not repair the call**, and a live 200 is not
   // evidence that a value arrived.
   //
   // Measured 2026-10-06 against the running API BEFORE this fix:
@@ -368,7 +368,7 @@ export default function ActiveSymbolsPage() {
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter..." />
           </label>
           {/* ➕ Add Symbol → `/watchlists/add-symbol` REMOVED 2026-10-01: the page was deleted at
-              the owner's direction in the Page Walkthrough. The replacement is still open — #742
+              the project's direction in the Page Walkthrough. The replacement is still open — #742
               relocates symbol entry into Research, #743 adds an "Import new symbol" action when a
               symbol search finds no match. */}
           <button
@@ -459,7 +459,7 @@ export default function ActiveSymbolsPage() {
 
                   The column rendered `symbol.exchange`, which held `Yahoo`, `Trading212` and `Binance`
                   — those are PUBLISHERS, not venues. Calling it "Exchange" invited the reader to
-                  believe `Xtrend` was a venue, which is how the owner found this: 29 rows carried an
+                  believe `Xtrend` was a venue, which is how the requirement found this: 29 rows carried an
                   onboarding-seeder DEFAULT of `'Xtrend'`, and there is no Xtrend exchange at all.
 
                   The cell now prefers the AUTHORITATIVE source (`marketbar.provider` — what actually
@@ -502,7 +502,7 @@ export default function ActiveSymbolsPage() {
                           <span style={{ fontSize: '0.75rem', color: 'var(--ink-soft)', fontStyle: 'italic' }}>No company name</span>
                         )}
                         {/* 🔗 Trail → `/automation/decision-trail` REMOVED 2026-10-01: that view
-                            was deleted at the owner's direction in the Page Walkthrough. A link to
+                            was deleted at the project's direction in the Page Walkthrough. A link to
                             a deleted route is a dead button, so it goes rather than pretending. */}
                       </div>
                     </td>

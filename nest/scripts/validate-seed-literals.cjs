@@ -47,7 +47,7 @@
  *   node nest/scripts/validate-seed-literals.cjs              # scan, exit 1 on a finding
  *   node nest/scripts/validate-seed-literals.cjs --self-test  # canary BOTH directions + a real scan
  *
- * Wired into `prebuild`, so instance N+1 fails the build rather than reaching the owner's screen.
+ * Wired into `prebuild`, so instance N+1 fails the build rather than reaching the project's screen.
  */
 
 const fs = require('fs');

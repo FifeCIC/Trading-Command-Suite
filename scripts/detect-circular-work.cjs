@@ -6,7 +6,7 @@
  *
  * WHY THIS EXISTS
  * ---------------
- * The owner asked: *"I'm struggling to understand why there's so many issues
+ * The brief asked: *"I'm struggling to understand why there's so many issues
  * despite AI looking over and working on these areas many times over. I'm hoping
  * clear history in docs will help agents to alert me to any situation where we're
  * re-inventing many times over."*
@@ -94,7 +94,7 @@ const TARGET_TOPIC = argv.find((a) => !a.startsWith('--') && !/^\d+$/.test(a));
  *
  * `settledBy` records the issue/ADR that claims to have decided it. When a new
  * issue touches a topic that has a `settledBy`, the report says so loudly: that
- * is the "alert me to re-invention" behaviour the owner asked for.
+ * is the "alert me to re-invention" behaviour the requirement is for.
  */
 const TOPICS = [
   {

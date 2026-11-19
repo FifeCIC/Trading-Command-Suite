@@ -29,7 +29,7 @@ export interface PortfolioAccount {
   enabled: boolean;
   connected: boolean;
   /**
-   * Archived by the owner. A removed account is still CONFIGURED (its credentials are unchanged and
+   * Archived by the requirement. A removed account is still CONFIGURED (its credentials are unchanged and
    * the broker still holds it) — it is excluded from this app's lists and totals until restored.
    * Removal cannot reach into the broker, so the UI must say so rather than implying a deletion.
    */
@@ -117,7 +117,7 @@ export class PortfolioAccountsService {
    * (`mt5:<brokerId>:<login>`) because one login can be configured on TWO bridges — measured
    * 2026-11-19, `GET /api/portfolio/accounts` returned `mt5:10011309743` twice, once per bridge.
    * Those toggles are persisted rows keyed `accounts.<id>`, so renaming the id makes every existing
-   * toggle INERT without raising anything: the owner's "removed" flag stops removing and an
+   * toggle INERT without raising anything: the project's "removed" flag stops removing and an
    * excluded account silently reappears in the totals.
    *
    * A one-off rewrite would have to guess what a legacy row meant. It cannot: one legacy key

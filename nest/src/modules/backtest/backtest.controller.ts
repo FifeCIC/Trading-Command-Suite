@@ -70,7 +70,7 @@ export class BacktestController {
       // rendered nothing, while the API had answered correctly. Measured 2026-09-23: clicking “Run
       // Backtest” posted a valid request, received
       // `201 {"error":true,"message":"Backtest requires protocolId for canonical META.Stack scoring."}`
-      // and the page showed NO error, because there was no HTTP error to show. The owner reported it
+      // and the page showed NO error, because there was no HTTP error to show. It was reported it
       // as “the button does not work”, which is exactly what it looked like from outside.
       throw new BadRequestException(
         message || 'Backtest failed — check symbol, days range, or data availability',
@@ -105,7 +105,7 @@ export class BacktestController {
   /**
    * POST /api/backtest/repeat-check — "does this change repeat on other windows?"
    *
-   * WHY THIS ENDPOINT EXISTS (owner direction, 2026-10-27): *"I see huge potential for agentic AI to use
+   * WHY THIS ENDPOINT EXISTS (requirement, 2026-10-27): *"I see huge potential for agentic AI to use
    * it … Agentic AI will be able to make adjustments. Re-test, and keep doing that over and over again
    * for a set period or target a significant level of improvement."*
    *
@@ -178,7 +178,7 @@ export class BacktestController {
 
   /**
    * ── NEWS PREVIEW (2026-10-30) ──────────────────────────────────────────────────────────────────
-   * Owner direction: *"when we make selections in [the news control] the panel should tell us what
+   * Requirement: *"when we make selections in [the news control] the panel should tell us what
    * records there actually are for the symbol and the selected period, what news actually applies and
    * will be part of the backtest?"*
    *
@@ -514,7 +514,7 @@ export class BacktestController {
   // ══════════════════════════════════════════════════════════════════════════════════════════
   // Backtest EXPERIMENTS (#1144) — the record of a tuning loop, so a series of runs is auditable.
   //
-  // ⚠️ WHY THIS IS A ROUTE AND NOT A FRONTEND CONCEPT. The owner's goal is *"agentic AI will be able
+  // ⚠️ WHY THIS IS A ROUTE AND NOT A FRONTEND CONCEPT. The project's goal is *"agentic AI will be able
   // to make adjustments. Re-test, and keep doing that over and over"* — and an agent cannot group runs
   // it produced unless the grouping is server-side. `POST /run` with `experimentId` assigns the
   // iteration; these routes create, list and close the attempt.

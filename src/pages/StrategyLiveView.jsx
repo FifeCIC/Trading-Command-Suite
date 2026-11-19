@@ -74,7 +74,7 @@ export default function StrategyLiveView({
       </div>
 
       {/* Facts as field/value pairs, NOT sentences. The paragraph this replaces was four lines of prose
-          above a table, which the owner called out by name. */}
+          above a table, which the requirement called out by name. */}
       <dl className="slv-facts">
         {facts.map(([term, value]) => (
           <div className="slv-fact" key={term}>

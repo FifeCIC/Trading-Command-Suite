@@ -1,7 +1,7 @@
 /**
  * RsiDivergencePanel — the settings, the chart, and the honest line between them.
  *
- * ── TWO HOSTS, ONE COMPONENT (owner direction, 2026-11-01) ──────────────────────────────────────
+ * ── TWO HOSTS, ONE COMPONENT (requirement, 2026-11-01) ──────────────────────────────────────
  * *"The RSIDivergence class should support both clearly so the work done now shouldn't go to waste."*
  *
  *   • IN-STEP — pass `symbol` / `timeframe` and it inherits the Lab's selection, rendering no subject
@@ -39,7 +39,7 @@ import NoticeBlock from '../NoticeBlock';
 import { noticeFromError } from '../../core/notices/from-error.js';
 import RsiDivergenceChart from './RsiDivergenceChart.jsx';
 /**
- * ⚠️ THE ACCEPTED TABLE STYLE, IMPORTED RATHER THAN REINVENTED (owner directive, 2026-11-01): This table … needs
+ * ⚠️ THE ACCEPTED TABLE STYLE, IMPORTED RATHER THAN REINVENTED (requirement, 2026-11-01): This table … needs
  * styling from one of the accepted designs in the Appearance area).
  *
  * `dv-table` is the **dense-read** table the Appearance area lists as one of five accepted purposes —
@@ -49,7 +49,7 @@ import RsiDivergenceChart from './RsiDivergenceChart.jsx';
  *
  * ⚠️ Importing another page's stylesheet is deliberate and is the pattern the Appearance page itself
  * uses — *"These are not lookalikes. Each example imports the real stylesheet from the view it came
- * from."* A local copy would drift from the design the owner approved.
+ * from."* A local copy would drift from the design the requirement approved.
  */
 import '../../pages/directive-viewer.css';
 

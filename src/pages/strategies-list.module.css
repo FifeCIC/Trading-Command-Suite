@@ -165,7 +165,7 @@
   background: var(--line); color: var(--ink-soft);
 }
 /* ⚠️ THEMED tokens now, NOT hex. These were literal (#8b5cf6 / #06b6d4 / #d97706) which never
-   followed the theme - the same defect the owner reported on the per-bot truth view. The runtime
+   followed the theme - the same defect it was reported on the per-bot truth view. The runtime
    risk ramp gives three distinguishable, theme-aware tones. */
 .chipProto { border: 1px solid var(--risk-normal); background: color-mix(in srgb, var(--risk-normal) 14%, transparent); }
 
@@ -293,7 +293,7 @@
 /* ⚠️ THE PANE HAD NO EDGE AT ALL (fixed 2026-11-07). Measured live on /trading/trading-bots:
    `border-top-width: 0px`, `border-radius: 0px`, `background: rgba(0,0,0,0)` while the table inside
    computed **816px wide in a 664px pane**. So rows were clipped at both sides with nothing marking
-   the boundary, which is exactly what the owner saw as *"mainly the edges of the table"* missing.
+   the boundary, which is exactly what the requirement saw as *"mainly the edges of the table"* missing.
 
    The wrapper now carries the container edge — border, radius, raised surface — so the horizontal
    scroll is a deliberate region rather than a table running off the page. `border-radius` needs

@@ -24,7 +24,7 @@
  *
  *  2. `peak > 0` MADE A MONOTONIC LOSER REPORT EXACTLY ZERO.
  *     A run that never goes positive leaves `peak` at 0, the guard short-circuits to 0, and the
- *     panel printed "−0.00%" over a run that lost the whole account (the owner reported it from
+ *     panel printed "−0.00%" over a run that lost the whole account (it was reported it from
  *     screen). The currency amount is now always computed; only the PERCENTAGE can be absent.
  *
  *  3. THE PATH WAS IN THE WRONG ORDER.

@@ -30,7 +30,7 @@ const { execSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 /**
- * ⚠️ AGENT STATE LIVES IN THE DOCS STORE (owner, 2026-11-16). It used to sit in `.github/`, which is
+ * ⚠️ AGENT STATE LIVES IN THE DOCS STORE (requirement, 2026-11-16). It used to sit in `.github/`, which is
  * a tracked folder — so every claim, heartbeat and cached issue snapshot was published. Resolved
  * through the shared library index rather than a hard-coded path.
  *

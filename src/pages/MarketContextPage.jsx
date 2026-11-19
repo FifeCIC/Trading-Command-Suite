@@ -80,7 +80,7 @@ export default function MarketContextPage() {
   });
 
   // ── Market breadth (owner request, 2026-10-08) ──
-  // Owner directive: Isnt there more data and market status indicators online that can tell us what the
+  // Requirement: Isnt there more data and market status indicators online that can tell us what the
   // market is like compared to normal?
   //
   // ⚠️ "COMPARED TO NORMAL" IS NOT CLAIMED. This app has no historical-baseline endpoint to compare
@@ -393,7 +393,7 @@ export default function MarketContextPage() {
                 </div>
               </div>
               {/* ── Session P&L, share of book, and the extremes (2026-11-07) ────────────────
-                  Owner directive: even fancy statistics such as profit on trades done within that market.
+                  Requirement: even fancy statistics such as profit on trades done within that market.
                   Open P&L used to be a 0.6rem suffix tucked inside the Positions cell, where it was
                   effectively a footnote. It is the number the request was about, so it gets its own
                   labelled row, beside the extremes that explain it. `—` is used wherever there is no

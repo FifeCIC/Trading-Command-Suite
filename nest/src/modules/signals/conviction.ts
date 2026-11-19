@@ -10,7 +10,7 @@ import { normalizeScorePercent } from '../scoring/score-units';
  * directive, including the ones that read neutral this tick. It answers "how much of the WHOLE
  * protocol agrees?" Measured 2026-10-12: a median 46.5% of that capacity never records a
  * direction (worst case `gold-macro-v1-long` at 76.7%), so a protocol with one genuinely strong
- * directive still displays ~6-17%. The owner read that, correctly, as "a whole bunch of
+ * directive still displays ~6-17%. The requirement read that, correctly, as "a whole bunch of
  * directives score low, always, as if the market data never shows a good opportunity".
  *
  * This function answers the other question — of the directives that DID speak, how much did they
@@ -43,7 +43,7 @@ import { normalizeScorePercent } from '../scoring/score-units';
 // WHAT:      A signal carries TWO percentages and the envelope reports both: `signalPct` (share of
 //            the protocol's CONFIGURED directional capacity) and `convictionPct` (share of the
 //            capacity that actually READ). Conviction is DISPLAY ONLY.
-// WHY:       The owner read `11%` on a Signal card as "the market never shows a good opportunity"
+// WHY:       The requirement read `11%` on a Signal card as "the market never shows a good opportunity"
 //            (#915). The breadth figure divides by every direction-eligible directive, including
 //            the silent ones — a median 46.5% of that capacity never records a direction — so one
 //            strong directive among many silent ones still reads 6-17%. The second reading

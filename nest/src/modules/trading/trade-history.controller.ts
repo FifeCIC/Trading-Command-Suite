@@ -185,7 +185,7 @@ export class TradeHistoryController {
   }
 
   /**
-   * GET /api/trading/exit-quality — "did we leave profit on the table?" (#1149, the owner's question).
+   * GET /api/trading/exit-quality — "did we leave profit on the table?" (#1149, the project's question).
    *
    * Answers it from what the trades themselves recorded: `peakProfitPct` (the best the position ever
    * showed) against a realised percentage DERIVED from `entryPrice`/`exitPrice`.

@@ -1,13 +1,13 @@
 /**
  * AppearanceAreaPage — the landing page of the new **Appearance** area.
  * ======================================================================
- * Owner direction, 2026-10-13: *"I'm using this project to establish a theme package that can be
+ * Requirement, 2026-10-13: *"I'm using this project to establish a theme package that can be
  * carried forward to other projects."* The area is deliberately TEMPORARY-or-GALLERY: either it
  * becomes an advanced visual-options gallery, or it is the place the package is defined and then
  * adopted. Either way it is the one home for visual decisions.
  *
  * ⚠️ WHY THE LAYOUT GUIDANCE IS THE POINT OF THIS PAGE, NOT DECORATION.
- * The owner: *"add framing/context to especially the cards with a lot of details and page layouts with
+ * The requirement: *"add framing/context to especially the cards with a lot of details and page layouts with
  * advanced table + column layouts so that when agentic AI helps to build a page. It has guidance built
  * into the theme area that will help it choose layouts that best suit the new page."*
  *

@@ -192,7 +192,7 @@ export default function SignalsOverviewPage() {
   // Card B is the SHARED component (src/components/SignalCard.jsx), also mounted by
   // the META.Stack Cockpit. Card A stays here, reachable at `?variant=A` — removing a
   // live variant is a decision, not a refactor.
-  // ⚠️ THE LEGACY VARIANT IS NO LONGER HONOURED (2026-10-08). The owner's standing rule is *"if there
+  // ⚠️ THE LEGACY VARIANT IS NO LONGER HONOURED (2026-10-08). The project's standing rule is *"if there
   // is ever an A/B test involved when copying, go with B, it will usually be the approach I'm happier
   // with"* — and `?variant=A` was the ONLY way to reach card A, so card B is now the only card. This is
   // the same call that deleted the Protocols Registry's old design, where the two variants had started
@@ -239,7 +239,7 @@ export default function SignalsOverviewPage() {
   const envelopes = Array.isArray(data?.envelopes) ? data.envelopes : [];
 
   // ── Filters and an ordering OVERRIDE (owner request, 2026-10-08) ──
-  // Owner directive: Lets consider more filters and ordering that overrides the default ordering.
+  // Requirement: Lets consider more filters and ordering that overrides the default ordering.
   //
   // ⚠️ THE DEFAULT IS THE SERVER'S ORDER, and it is not arbitrary: `/api/signals/best` returns
   // envelopes sorted by `combinedStrength` desc (signal-envelope.service.ts:1554), which is

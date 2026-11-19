@@ -11,7 +11,7 @@
  *
  * The shadow ran for two measured days (876 declines): a corrected indicator would open the
  * guardian's ≥55 gate on 475 of them — but only **9** would move a stop (7 tickets), and later
- * price reached **none** of those levels. The OWNER CHOSE "B" (2026-10-09, review-queue R50):
+ * price reached **none** of those levels. Option "B" was chosen (2026-10-09, review-queue R50):
  * replace the incumbent with this computation. This file is now the ONE implementation — the
  * shadow module is deleted, and nothing computes SuperTrend anywhere else.
  *

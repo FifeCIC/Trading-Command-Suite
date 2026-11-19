@@ -6,7 +6,7 @@
  * PRECEDENCE — a comment that names the actor beats the deal-reason enum, and an absent value is
  * reported as an honest unknown, never as a guess that reads like knowledge.
  *
- * ⚠️ OWNER DIRECTION 2026-10-07 (R46) is pinned here: an unstamped CLIENT/MOBILE/WEB/EXPERT close
+ * ⚠️ REQUIREMENT 2026-10-07 (R46) is pinned here: an unstamped CLIENT/MOBILE/WEB/EXPERT close
  * maps to `user:manual` — *"The app should assume that it was me if there is no record of the bot
  * closing a position."* Reverting that grouping must fail this file.
  */
@@ -22,7 +22,7 @@ describe('closeReasonFromDealReason', () => {
   });
 
   it.each([0, 1, 2, 3])(
-    'maps %i (client/mobile/web/expert, no stamp of ours) to user:manual — owner direction 2026-10-07 (R46)',
+    'maps %i (client/mobile/web/expert, no stamp of ours) to user:manual — requirement 2026-10-07 (R46)',
     (n) => {
       expect(closeReasonFromDealReason(n)).toBe(CLOSE_REASONS.USER_MANUAL);
     },

@@ -16,7 +16,7 @@
  *   hide-mode the page renders it, because an empty-looking list and an empty list must never
  *   read the same (repo doctrine: absence of information ≠ a bad result).
  *
- * The three modes are the owner's own three options (review row R8, decided as R12):
+ * The three modes are the project's own three options (review row R8, decided as R12):
  *   **A · chip**     — show every row; an observation carries the "no consumer" chip. (What exists.)
  *   **B · hide**     — observations out of the way, with the hidden count stated.
  *   **C · collapse** — observations folded into ONE line per tick; decisions still get a full card.
@@ -33,7 +33,7 @@ export const OBSERVATION_MODES = ['A', 'B', 'C'];
 /**
  * The mode the page shows when the URL says nothing.
  *
- * ⚠️ Set to **C** from the owner's own reading, 2026-09-23: *"I like C · collapse — but only because
+ * ⚠️ Set to **C** from the project's own reading, 2026-09-23: *"I like C · collapse — but only because
  * A is highly repetitive, they all say OBSERVED"*.
  */
 export const DEFAULT_OBSERVATION_MODE = 'C';
@@ -103,7 +103,7 @@ export function applyObservationMode(trails = [], mode = DEFAULT_OBSERVATION_MOD
       group.observations.push(trail);
       byTick.set(key, group);    }
     counts.groups = byTick.size;
-    // ⚠️ The owner's reading of the first version, 2026-09-23: "this looks like a list of symbols
+    // ⚠️ The project's reading of the first version, 2026-09-23: "this looks like a list of symbols
     // that have X amount of scores" — a count and a symbol list is a tally, not information. So a
     // group also carries the STRONGEST score in it: the actionable half of the row is "your ladder
     // produced 59% BUY on EURUSD and no bot is watching", which a tally cannot say.

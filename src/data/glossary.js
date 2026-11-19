@@ -434,7 +434,7 @@ const GLOSSARY = [
   // Why these exist: "strategy" meant three different things across the codebase and none of
   // them was defined here, so a sentence like "five strategies with hardcoded win rates" was
   // unreadable. Each entry below states which layer it names, because that is the ambiguity.
-  // Authority: docs/trading-bot-model.md §1c (the owner's definition) and the
+  // Authority: docs/trading-bot-model.md §1c (the project's definition) and the
   // stack-performance.service.ts header (the META.Stack definition).
   {
     term: 'strategy',

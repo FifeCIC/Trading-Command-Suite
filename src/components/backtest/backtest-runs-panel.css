@@ -68,7 +68,7 @@
 
 .btr-row-selected td {
   /* ⚠️ WAS `background: var(--color-grid)` (#1e2030) — the GRID-LINE token used as a row FILL. On
-     a black panel a selected run was nearly indistinguishable from an unselected one; the owner
+     a black panel a selected run was nearly indistinguishable from an unselected one; the requirement
      reported "the table rows when selected" as too dark on 2026-10-16. An accent tint reads as
      "selected" under any theme and introduces no literal. */
   background: color-mix(in srgb, var(--accent) 16%, transparent);
@@ -204,7 +204,7 @@
   }
 }
 
-/* ── WHAT DIFFERS (owner direction, 2026-10-31) ─────────────────────────────────────────────────
+/* ── WHAT DIFFERS (requirement, 2026-10-31) ─────────────────────────────────────────────────
    Only the CHANGED settings are listed, so the table is short by construction — usually two or three
    rows. Everything identical is one sentence underneath, because a reader needs to know the comparison
    was controlled, not to read sixteen rows of "same".

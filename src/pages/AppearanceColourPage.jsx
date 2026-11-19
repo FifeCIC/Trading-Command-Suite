@@ -4,7 +4,7 @@
  * ⚠️ THIN WRAPPER, DELIBERATELY. The examples live in ONE file (`ThemeLabSections`) and this page
  * selects a group from it. Copying the markup here would be a second implementation to keep in step.
  *
- * ⚠️ SAMPLE VALUES ARE TOKENS AND CONTROLS, NEVER INVENTED DATA. Owner direction for this area
+ * ⚠️ SAMPLE VALUES ARE TOKENS AND CONTROLS, NEVER INVENTED DATA. Requirement for this area
  * (2026-10-13): *"Only use this apps own real data to create examples"* — a demo that shows a made-up
  * ticker, price or P&L reads as a working feature. Colour swatches and form fields are not data
  * claims; anything that shows app CONTENT must render the real thing.

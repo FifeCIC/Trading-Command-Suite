@@ -4,7 +4,7 @@
  *
  * WHY THIS EXISTS (issue #944, built 2026-09-24 under primary-agent authority)
  * ---------------------------------------------------------------------------
- * Owner directive, 2026-09-21: we might need to list our theories, potentially on the goals page, and use
+ * Requirement, 2026-09-21: we might need to list our theories, potentially on the goals page, and use
  * that to list the A/B testing goals.
  *
  * And, 2026-09-24: *"multiple levels of sanity checks or complex algorithms infused with
@@ -18,7 +18,7 @@
  * falsifiable statement."* That is the whole point — the A/B machinery is useless while the thing
  * being compared is a memory.
  *
- * ── THE SANDBOX RULE (owner direction, 2026-09-24) ──────────────────────────────────────────────
+ * ── THE SANDBOX RULE (requirement, 2026-09-24) ──────────────────────────────────────────────
  * The **Development** area is the sandbox: it is where an agent may build a competing approach,
  * measure it, and produce a DECISION. This registry is that sandbox's output. An experiment that
  * does not end in one of the four statuses below is a prototype, not an experiment.
@@ -184,7 +184,7 @@ export const THEORIES = [
     falsification:
       'Count, in one window, the score rows whose (symbol × protocol) is subscribed by an active bot AND whose market is open. If that share is high, the theory is dead.',
     decision:
-      'PARTIALLY ACTED. The market-closed half was gated (#956 / R13) on the owner’s ruling that removing untradeable work is a development decision, not an A/B maths change. The "no subscribed bot" half is NOT gated. ⚠️ Re-measure before quoting any single percentage — the 85% does not reproduce against `breakdown.signal`.',
+      'PARTIALLY ACTED. The market-closed half was gated (#956 / R13) on the requirement’s ruling that removing untradeable work is a development decision, not an A/B maths change. The "no subscribed bot" half is NOT gated. ⚠️ Re-measure before quoting any single percentage — the 85% does not reproduce against `breakdown.signal`.',
     area: 'data',
     issue: 956,
   },
@@ -210,7 +210,7 @@ export const THEORIES = [
     falsification:
       'Find a score row written while the market was closed that later became a queued signal or an order. One example refutes it.',
     decision:
-      'GATED. `signal-envelope.service.ts` now skips a symbol whose market is closed, before the envelope is built, and reports `ladder.skipped`. Guard: 4 tests asserting the gate’s PLACEMENT (gate index < buildEnvelope index), its fail-open behaviour, and CRLF-safe matching. Owner ruling: a development decision, NOT an A/B maths change — nothing with performance history is overwritten.',
+      'GATED. `signal-envelope.service.ts` now skips a symbol whose market is closed, before the envelope is built, and reports `ladder.skipped`. Guard: 4 tests asserting the gate’s PLACEMENT (gate index < buildEnvelope index), its fail-open behaviour, and CRLF-safe matching. Requirement: a development decision, NOT an A/B maths change — nothing with performance history is overwritten.',
     area: 'scoring',
     issue: 956,
   },
@@ -458,7 +458,7 @@ export const THEORIES = [
       issue: 995,
     },
 
-  // ── The owner's vision for what the scoring engine should be able to reach ─────────────────────
+  // ── The project's vision for what the scoring engine should be able to reach ─────────────────────
   {
     id: 'a-protocol-can-reach-80-percent-of-configured-capacity',
     raisedAt: '2026-10-14',
@@ -475,7 +475,7 @@ export const THEORIES = [
       basis: 'measurement',
       n: 16,
       result:
-        'REFUTED on the configured scale: the fleet ceiling is 6.2%–31.0% (`hourly-3dir-v1` 30.3, `momentum-stock-v1` 28.8, `spy-speed-v1` 28.8, `dow-speed-v1` 24.9, `forex-session-v1` 23.0, `xau-speed-4h` 6.2). **Nothing reaches 40%, let alone 80%.** ⚠️ But the SAME 16 protocols reach **93–100%** on the observed scale (`rawComposite / observedSignalMax`) — 10 of them at exactly 100%. The owner’s intent IS met; the DENOMINATOR is what hides it.',
+        'REFUTED on the configured scale: the fleet ceiling is 6.2%–31.0% (`hourly-3dir-v1` 30.3, `momentum-stock-v1` 28.8, `spy-speed-v1` 28.8, `dow-speed-v1` 24.9, `forex-session-v1` 23.0, `xau-speed-4h` 6.2). **Nothing reaches 40%, let alone 80%.** ⚠️ But the SAME 16 protocols reach **93–100%** on the observed scale (`rawComposite / observedSignalMax`) — 10 of them at exactly 100%. The requirement’s intent IS met; the DENOMINATOR is what hides it.',
       measuredAt: '2026-10-14',
       source:
         '`score.breakdown` — `SELECT strategyId, MAX(rawComposite/configuredSignalMax*100), MAX(rawComposite/observedSignalMax*100) … HAVING ticks > 100`',
@@ -483,7 +483,7 @@ export const THEORIES = [
     falsification:
       'Read both ceilings per protocol. A breadth ceiling ≥ 80% for any protocol refutes this — the ratio of the two ceilings IS the dilution, so the gap between them names the cause directly. ⚠️ Both numbers must be reported together: reporting only the configured one is what produced the belief in the first place.',
     decision:
-      'THE INTENT IS RIGHT AND THE SCALE IS THE QUESTION — do not weaken the target. Two consequences, neither of which is taken here: (1) **the 2026-09-15 ÷~6.3 rescale** (`ENTRY_THRESHOLD` 40 → 6, gate 65 → 13, style bars 45–80 → 7–13) exists to keep thresholds meaningful after ADR-011 moved the denominator to the configured capacity — it did NOT create the dilution, it followed it; (2) **choosing which scale drives the GATE is the open decision** (#915 option B). ⚠️ This refutes the *number*, not the design: a protocol CAN be judged on conviction, where 10 protocols already hit 100%. ⚠️ NOT a maths change made here — moving a gate admits trades and needs a copied config + monitored comparison. ⚠️ **A CEILING IS THE WRONG METRIC — measured the same day, the DISCRIMINATING statistic is the FREQUENCY of strong ticks** (`pct_of_ticks_at_80`): `spy-speed-v1` **31.2%**, `qqq-speed-v1` 23.9, `xau-speed-v1-copy` 19.1, `btc-speed-v1` 17.9, `vix-short-v1` 11.3, `btc-scalp-v1` 8.8, `momentum-stock-v1` 2.3, `xau-speed-v1` 2.0, `forex-session-v1` **0.6**, `gold-macro-v1` **0.0**, `xau-speed-4h` **0.0**. That answers the owner’s own worry — *"the system holds us back from identifying what might be a truly weak or over complex protocol"* — because a ceiling cannot rank protocols when most reach 100%, while the frequency separates them by a factor of 50. ⚠️ `forex-session-v1` is the instructive row: **86.6% of ticks at ≥60% but only 0.6% at ≥80%** — consistently moderate, never exceptional, which is a different finding from weak.',
+      'THE INTENT IS RIGHT AND THE SCALE IS THE QUESTION — do not weaken the target. Two consequences, neither of which is taken here: (1) **the 2026-09-15 ÷~6.3 rescale** (`ENTRY_THRESHOLD` 40 → 6, gate 65 → 13, style bars 45–80 → 7–13) exists to keep thresholds meaningful after ADR-011 moved the denominator to the configured capacity — it did NOT create the dilution, it followed it; (2) **choosing which scale drives the GATE is the open decision** (#915 option B). ⚠️ This refutes the *number*, not the design: a protocol CAN be judged on conviction, where 10 protocols already hit 100%. ⚠️ NOT a maths change made here — moving a gate admits trades and needs a copied config + monitored comparison. ⚠️ **A CEILING IS THE WRONG METRIC — measured the same day, the DISCRIMINATING statistic is the FREQUENCY of strong ticks** (`pct_of_ticks_at_80`): `spy-speed-v1` **31.2%**, `qqq-speed-v1` 23.9, `xau-speed-v1-copy` 19.1, `btc-speed-v1` 17.9, `vix-short-v1` 11.3, `btc-scalp-v1` 8.8, `momentum-stock-v1` 2.3, `xau-speed-v1` 2.0, `forex-session-v1` **0.6**, `gold-macro-v1` **0.0**, `xau-speed-4h` **0.0**. That answers the requirement’s own worry — *"the system holds us back from identifying what might be a truly weak or over complex protocol"* — because a ceiling cannot rank protocols when most reach 100%, while the frequency separates them by a factor of 50. ⚠️ `forex-session-v1` is the instructive row: **86.6% of ticks at ≥60% but only 0.6% at ≥80%** — consistently moderate, never exceptional, which is a different finding from weak.',
     area: 'scoring',
     issue: 915,
   },
@@ -516,7 +516,7 @@ export const THEORIES = [
     issue: 915,
   },
 
-  // ── The owner's 2026-10-14 reading of the P&L ──────────────────────────────────────────────────
+  // ── The project's 2026-10-14 reading of the P&L ──────────────────────────────────────────────────
   {
     id: 'the-loss-is-concentrated-in-gold-ex-gold-is-break-even',
     raisedAt: '2026-10-14',
@@ -539,7 +539,7 @@ export const THEORIES = [
     falsification:
       'Re-run the two-bucket split. If the ex-gold bucket is materially negative — say worse than −£5/trade — this is refuted and the loss is systemic rather than concentrated. ⚠️ Re-measure rather than carry the figure forward: it moves with every closed trade, and the sample is small.',
     decision:
-      'CONFIRMED as the owner’s reading, and it changes what "is it working?" means: **the honest test is ex-gold.** Gold must be judged separately — it is a position-sizing question (one lot is too big for this account), not a scoring question. ⚠️ NOT acted on here: reducing gold size or disabling gold bots is a RISK change, and it is the owner’s call. ⚠️ Do not delete the gold result to make the book look better — the concentration IS the finding.',
+      'CONFIRMED as the requirement’s reading, and it changes what "is it working?" means: **the honest test is ex-gold.** Gold must be judged separately — it is a position-sizing question (one lot is too big for this account), not a scoring question. ⚠️ NOT acted on here: reducing gold size or disabling gold bots is a RISK change, and it is the requirement’s call. ⚠️ Do not delete the gold result to make the book look better — the concentration IS the finding.',
     area: 'trading',
   },
   {
@@ -589,7 +589,7 @@ export const THEORIES = [
     falsification:
       'Re-split by `strategy`. If the `AB-%` rows are a small share of the loss, this is refuted and the live strategy is genuinely losing. ⚠️ Check the grouping before trusting it: a row whose `strategy` is NULL or renamed silently moves between buckets.',
     decision:
-      'REPORTING IS CONTAMINATED AND THE EXPERIMENT IS COMPROMISED — both are #1120. ⚠️ Consequences that were acted on: the owner’s own reading (*"if we take gold out of the equation I think we break even"*) is CORRECT but the cause is narrower than gold — it is the A/B accounts, and gold is where they were pointed. **Any "is the strategy working?" figure must state whether it includes `AB-%` rows**, or it measures the instrument. ⚠️ NOT fixed here: applying the risk gate to A/B arms changes what they do (owner call), and an exempt instrument is measuring a different game from the one the bots play.',
+      'REPORTING IS CONTAMINATED AND THE EXPERIMENT IS COMPROMISED — both are #1120. ⚠️ Consequences that were acted on: the requirement’s own reading (*"if we take gold out of the equation I think we break even"*) is CORRECT but the cause is narrower than gold — it is the A/B accounts, and gold is where they were pointed. **Any "is the strategy working?" figure must state whether it includes `AB-%` rows**, or it measures the instrument. ⚠️ NOT fixed here: applying the risk gate to A/B arms changes what they do (owner call), and an exempt instrument is measuring a different game from the one the bots play.',
     area: 'trading',
     issue: 1120,
   },
@@ -617,7 +617,7 @@ export const THEORIES = [
     falsification:
       'Re-run across a larger sample and, critically, compare each reading to the chart. It is refuted if (a) the verdicts cluster on `trending` — the tool then labels everything a trend and is worthless, or (b) a human consistently judges the opposite direction, or (c) `indeterminate` never appears, since that would mean the two families are not independent.',
     decision:
-      'BUILT AS AN OBSERVATION AND DELIBERATELY NOT WIRED INTO SCORING. `nest/src/modules/trend/**` is imported by nothing in the scoring, gating, sizing or execution paths, and that is a condition of the experiment rather than an accident: a reading that moved a score would be a maths change, which needs a copied configuration and a monitored A/B under the owner\'s rule. ⚠️ NEXT, and it is the owner\'s to judge: open `/development/trend-reading` on the focus symbols (★1 `forex-session-v1` USDJPY, ★2 `xau-speed-v1` XAGUSD, ★3 `momentum-stock-v1` NVDA) and say whether the line and the invalidation match how you would read the same chart. Until that happens the status stays `testing` — a classification distribution is not evidence that the classification is RIGHT.',
+      'BUILT AS AN OBSERVATION AND DELIBERATELY NOT WIRED INTO SCORING. `nest/src/modules/trend/**` is imported by nothing in the scoring, gating, sizing or execution paths, and that is a condition of the experiment rather than an accident: a reading that moved a score would be a maths change, which needs a copied configuration and a monitored A/B under the requirement\'s rule. ⚠️ NEXT, and it is the requirement\'s to judge: open `/development/trend-reading` on the focus symbols (★1 `forex-session-v1` USDJPY, ★2 `xau-speed-v1` XAGUSD, ★3 `momentum-stock-v1` NVDA) and say whether the line and the invalidation match how you would read the same chart. Until that happens the status stays `testing` — a classification distribution is not evidence that the classification is RIGHT.',
     area: 'scoring',
     issue: 1188,
   },
@@ -644,7 +644,7 @@ export const THEORIES = [
     falsification:
       'Re-run the contrast at `minComposite: 5` on a DIFFERENT window (the window is 42 days and one regime). It is refuted if the extra trades are unprofitable out of sample — a lower bar admitting more trades is only good if those trades carry an edge. ⚠️ Also check the live record before acting: the bot has only **5 live trades** (80% win, +40.18), so live agrees with the backtest but on a sample far too small to confirm a 7× claim.',
     decision:
-      'RECORDED, NOT APPLIED — this is a maths change and the owner\'s rule forbids an in-place edit of a value with performance history. `minComposite` stays at 10 on the live bot. ⚠️ The sanctioned path is a COPIED configuration (a variant bot or a `-v2` protocol) run alongside, which cannot be done for free here: two bots on one netting account can hold only one position per symbol, so the copy would compete with the baseline rather than run in parallel. ⚠️ What was applied instead: the three focus bots were ACTIVATED (owner instruction) so live sample accumulates, and the trailing-stop idea is now settled — do not re-propose it for this arm.',
+      'RECORDED, NOT APPLIED — this is a maths change and the requirement\'s rule forbids an in-place edit of a value with performance history. `minComposite` stays at 10 on the live bot. ⚠️ The sanctioned path is a COPIED configuration (a variant bot or a `-v2` protocol) run alongside, which cannot be done for free here: two bots on one netting account can hold only one position per symbol, so the copy would compete with the baseline rather than run in parallel. ⚠️ What was applied instead: the three focus bots were ACTIVATED (owner instruction) so live sample accumulates, and the trailing-stop idea is now settled — do not re-propose it for this arm.',
     area: 'trading',
     issue: 1188,
   },

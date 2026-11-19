@@ -1,7 +1,7 @@
 /**
  * © 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite
  *
- * hidden-views.js — the owner's "hide now" verdicts, applied to navigation.
+ * hidden-views.js — the project's "hide now" verdicts, applied to navigation.
  * ========================================================================
  * ⚠️ WHY THIS EXISTS. The Page Walkthrough (`/development/ui-review`) recorded `hide: true` on five
  * pages on 2026-10-02 and **nothing consumed it**. Traced every reader of
@@ -27,7 +27,7 @@ import { EXPERIENCE_LEVELS, isNavVisible } from './experience-levels.js';
 /**
  * Views withheld from navigation for everyone by default, unless someone explicitly un-hides them.
  *
- * ⚠️ WHAT THIS LIST IS FOR (owner direction, 2026-11-01): *"I think we can hide around 20 pages with
+ * ⚠️ WHAT THIS LIST IS FOR (requirement, 2026-11-01): *"I think we can hide around 20 pages with
  * the intention of creating exciting releases in future."* So these are **withheld features, not
  * rejects** — a curated set kept out of a new user's first view so the app they meet is small and
  * sharp, and each pack can be announced later as a release. Moving an id OUT of this list IS the
@@ -35,13 +35,13 @@ import { EXPERIENCE_LEVELS, isNavVisible } from './experience-levels.js';
  *
  * ⚠️ WHY IT HAS TO LIVE IN CODE (2026-11-01). The hide verdicts live in `appsetting` (mirrored to
  * `nest/app-settings.json`) and **nothing seeds them**, so a fresh install hid nothing at all: a new
- * user met 107 sidebar entries with no indication which were worth their time, and the owner's own
+ * user met 107 sidebar entries with no indication which were worth their time, and the project's own
  * curation existed only on his machine. `database-seed-discipline`: a setting that is not in a
  * seeder is lost on reinstall; a constant is not.
  *
  * ⚠️ ONLY NAVIGATION-VISIBLE VIEWS CAN GO IN THIS LIST. Navigation builds links as `/{area}/{id}`
  * (App.jsx:503) and `filterHiddenViews` matches on the view id — so a route that is not in
- * `NAV_TREE` has nothing to hide. Measured 2026-11-01: of the owner's nine `hide: true` verdicts,
+ * `NAV_TREE` has nothing to hide. Measured 2026-11-01: of the project's nine `hide: true` verdicts,
  * **eight** pointed at detail routes that are not in the nav (`/trading212/t212-cfd`,
  * `/research/analyse-symbol`, `/education/candle-patterns`, …), so only `calculators` ever acted.
  * A toggle that silently cannot act is worse than no toggle, which is why every id below is
@@ -50,7 +50,7 @@ import { EXPERIENCE_LEVELS, isNavVisible } from './experience-levels.js';
  * 🛑 A STORED VERDICT OUTRANKS A LOW UI SCORE — measured, and it shaped this list. An obvious first
  * draft hid `/planner/personal-finances`, `/research/stock-investigation` and
  * `/planner/trading-styles`: all scored 1–2 out of 10, so they looked like candidates. The store
- * said `hide: false` for all three — the owner had **already decided** to keep them. A poor score
+ * said `hide: false` for all three — the requirement had **already decided** to keep them. A poor score
  * says "this page needs work"; an explicit "keep it" says "not by hiding it". **59 other nav views
  * carry `hide: false` too**, so this list was drawn strictly from the pages with NO verdict —
  * overruling a decision already made is how curation stops being trustworthy.
@@ -96,19 +96,19 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   '/research/daily-briefing',    // restates a summary the pages below it already give
 
   // ── Pack 4: internal development views (4 pages) ──────────────────────────────────────────────
-  // Diagnostics we use to build the thing. Genuinely useful to the owner, meaningless to a first-run
+  // Diagnostics we use to build the thing. Genuinely useful to the requirement, meaningless to a first-run
   // user, and perfectly reversible — the Page Walkthrough still lists them and unhides in one click.
   '/development/identity-map',
   '/development/design-observations',
   '/development/performance-change',
   '/development/blocked-signals',
 
-  // ── Already decided by the owner (not part of the 20) ─────────────────────────────────────────
+  // ── Already decided by the requirement (not part of the 20) ─────────────────────────────────────────
   // `hide: true` in the walkthrough. Present here so a FRESH INSTALL matches his machine rather than
   // silently showing a page he has already withheld.
   '/trading/calculators',
 
-  // ── Pack 5: too weak to show, kept for the owner to finish (2026-11-06) ───────────────────────
+  // ── Pack 5: too weak to show, kept for the requirement to finish (2026-11-06) ───────────────────────
   // Owner, Research walkthrough: hide these *from other users* while they are still being worked on.
   // Earnings Whispers is also on the extensions list (Discord-style posting is the other one), so it
   // is withheld as a future release rather than a reject. Stock Investigation and Recently Analysed
@@ -119,7 +119,7 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
 
   // ── Pack 6: withheld for public release (2026-11-07) ──────────────────────────────────────────
   // Owner, Scoring walkthrough: *"A/B Ladder (/scoring/ab-ladder) will be hidden from public"*. Kept
-  // for the owner (amber in the rail) while the A/B comparison story is finished.
+  // for the requirement (amber in the rail) while the A/B comparison story is finished.
   '/scoring/ab-ladder',
 
   // ── Pack 7: withheld from the Trading walkthrough (2026-11-07) ───────────────────────────────
@@ -137,7 +137,7 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   '/trading/trading-plans',
 
   // ── Pack 8: the movers pair (2026-11-18) ──────────────────────────────────────────────────────
-  // Owner directive: this new page should be set as hidden from other users among the other pages that are
+  // Requirement: this new page should be set as hidden from other users among the other pages that are
   // only seen on my system. Can we set a rule for any new pages to default to that state.
   //
   // ⚠️ THE RULE IS NOW ENFORCED, NOT REMEMBERED. `scripts/validate-page-visibility.cjs` runs in
@@ -157,7 +157,7 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   '/development/queued-changes',
 
   // ── Pack 9: the Strategies area (2026-11-18) ───────────────────────────────────────────────────
-  // Owner directive: I would like a Strategies area (again)! … The area will list all strategies in a separate
+  // Requirement: I would like a Strategies area (again)! … The area will list all strategies in a separate
   // category in its left hand menu for quick access. The area itself is wanted; what is WITHHELD is
   // the two custom live views and the Research page, because their numbers describe strategies that
   // have no protocol yet — the same reason as the movers pair above.
@@ -178,12 +178,12 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
 /**
  * OWNER_SEES_WITHHELD — the curator switch for `filterHiddenViews`.
  *
- * Owner directive, 2026-11-06: Reminder that hiding pages is for other users only and I want to be able to
+ * Requirement, 2026-11-06: Reminder that hiding pages is for other users only and I want to be able to
  * see them. Before this constant, `DEFAULT_HIDDEN_ROUTES` removed the entry from HIS rail too, so
  * every "hide" also hid the page from the person deciding it needed work.
  *
  * ⚠️ IT IS `true` FOR EVERYONE RIGHT NOW, and that is a KNOWN, TEMPORARY gap rather than a design:
- * the app is pre-release with a single user, and there is no entitlement that can tell the owner
+ * the app is pre-release with a single user, and there is no entitlement that can tell the requirement
  * apart from a new user. Wiring this to `true` is what lets him see the unfinished pages; the price
  * is that a second user would see them as well. **This must become an entitlement check before the
  * app is offered to anyone else** — filed as an issue rather than left as a comment nobody reads.
@@ -195,7 +195,7 @@ export const OWNER_SEES_WITHHELD = true;
  *
  * ⚠️ KEYED BY ROUTE, NOT VIEW ID (changed 2026-11-01). An id is only the last path segment, so
  * `/settings/settings-education` and `/education/settings-education` share one. Hiding "the duplicate"
- * by id removed BOTH — a silent, wrong-scope change that the owner would only find by noticing a page
+ * by id removed BOTH — a silent, wrong-scope change that the requirement would only find by noticing a page
  * had gone missing. The store was already keyed by route; this makes the consumer agree with it.
  *
  * ⚠️ It FAILS OPEN. An absent or unreadable payload yields just the defaults — which are still the
@@ -217,7 +217,7 @@ export function hiddenRoutesFrom(reviewConfig) {
 // ────────────────────────────────────────────────────────────────────────────────────────────────
 // VISIBILITY — three states, not one bit.
 //
-// ⚠️ WHY THE BOOLEAN HAD TO GO (owner direction, 2026-11-02). "Should we delete this page?" and
+// ⚠️ WHY THE BOOLEAN HAD TO GO (requirement, 2026-11-02). "Should we delete this page?" and
 // "is this page a member perk?" are different questions, and `hide: true` answered both with one
 // bit. That is how an unfinished page gets shipped as a paid feature: the intent is recorded as
 // "hidden", the reason is lost, and later nobody can tell a broken page from a business decision.
@@ -226,7 +226,7 @@ export function hiddenRoutesFrom(reviewConfig) {
 //   member   — built, WORKING, and deliberately behind an entitlement.
 //   public   — visible to everyone (the default).
 //
-// ⚠️ `hide` IS STILL READ AS A FALLBACK, on purpose. The owner has 60-odd stored verdicts; silently
+// ⚠️ `hide` IS STILL READ AS A FALLBACK, on purpose. The requirement has 60-odd stored verdicts; silently
 // dropping them because the field moved would lose real curation, and "hide: true" maps cleanly
 // onto "withheld". New writes use `visibility` only.
 // ────────────────────────────────────────────────────────────────────────────────────────────────
@@ -311,7 +311,7 @@ function areaHasViews(views) {
  * Filter a nav tree by a predicate, preserving both shapes and never leaving a dangling header.
  *
  * ⚠️ ONE IMPLEMENTATION FOR EVERY "MAY THIS BE SHOWN?" RULE (2026-11-03). There are now three
- * reasons a view is absent from the sidebar — the owner withheld it, it is member-only and unentitled,
+ * reasons a view is absent from the sidebar — the requirement withheld it, it is member-only and unentitled,
  * or it is too advanced for the reader's experience level — and the first two already travelled
  * through this function. A second copy for the third would drift: the array/object shape handling
  * below was once wrong and every area vanished (measured 2026-10-02, 14 in / 0 out).
@@ -375,7 +375,7 @@ export function filterHiddenViews(tree, hiddenRoutes, { keepWithheld = false } =
      renders on every page) does not allocate for nothing. */
   const scoped = stripHiddenAreas(tree);
   if (!hiddenRoutes || hiddenRoutes.size === 0) return scoped;
-  /* ⚠️ CURATOR MODE (owner directive, 2026-11-06): hiding pages is for other users only and I want to be able
+  /* ⚠️ CURATOR MODE (requirement, 2026-11-06): hiding pages is for other users only and I want to be able
      to see them … *"change the colour of the text in the menu for pages that will be hidden for
      other users so I know which ones still need work done to them."*
      So a withheld view is KEPT and TAGGED (`withheld: true`) rather than removed; the rail colours
@@ -433,7 +433,7 @@ function tagWithheld(tree, hiddenRoutes) {
  * 2026-09-23 because "nothing imported it". So the setting was written in three places and honoured
  * in none: a self-identified beginner was shown all 87 visible pages, including the deepest
  * diagnostics. This is the third answer to "may this be shown?" and it is the ONLY one that can
- * respect the owner's 71 explicit `hide: false` keeps while still giving a new user a short list.
+ * respect the project's 71 explicit `hide: false` keeps while still giving a new user a short list.
  *
  * ⚠️ The matrix declares 39 of 108 views. Anything undeclared is VISIBLE at every level
  * (`isNavVisible` returns true) — so this cannot hide a page nobody classified.

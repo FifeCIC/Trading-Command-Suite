@@ -47,7 +47,7 @@ const TASK = {
 };
 
 describe('an answering port is RUNNING, and uncertainty is always named (#1238)', () => {
-  it('port answers, owned by another process → running true, issue names the owner', async () => {
+  it('port answers, owned by another process → running true, issue names the requirement', async () => {
     const s = makeService({ portOpen: true, ownerPid: 23540, ownerProcess: 'node.exe' });
     const status = await s.getTaskStatus(TASK as never);
     expect(status.running).toBe(true);
@@ -57,7 +57,7 @@ describe('an answering port is RUNNING, and uncertainty is always named (#1238)'
   });
 
   // ── the exact shape of the measured defect ────────────────────────────────────────────────────
-  it('port answers but the owner CANNOT be named → running true and issue is NOT empty', async () => {
+  it('port answers but the requirement CANNOT be named → running true and issue is NOT empty', async () => {
     const s = makeService({ portOpen: true, ownerPid: 0, ownerProcess: null });
     const status = await s.getTaskStatus(TASK as never);
     expect(status.running).toBe(true);
@@ -89,7 +89,7 @@ describe('an answering port is RUNNING, and uncertainty is always named (#1238)'
  * when the OS will not answer; asking about the task's own entry point does.
  */
 describe('the second source: command line, and what it may NOT do', () => {
-  it('attributes a single command-line match when the socket cannot name the owner', async () => {
+  it('attributes a single command-line match when the socket cannot name the requirement', async () => {
     const s = makeService({ portOpen: true, ownerPid: 0, cmdPids: [44568] });
     const status = await s.getTaskStatus(TASK as never);
     expect(status.running).toBe(true);

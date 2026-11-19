@@ -11,11 +11,11 @@ import { VISIBILITY, effectiveVisibility } from '../core/hidden-views.js';
 import './ui-review.css';
 
 /**
- * UiReviewPage — the owner walks EVERY page and records a verdict on each one.
+ * UiReviewPage — the requirement walks EVERY page and records a verdict on each one.
  *
  * STEP IN THE PIPELINE:
  *   BEFORE: the app's view list exists only as code (`view-meta.js` + `nav-tree.js`).
- *   THIS:   the owner records importance / hide-now / a 1–10 UI rating / two rounds of notes per page.
+ *   THIS:   the requirement records importance / hide-now / a 1–10 UI rating / two rounds of notes per page.
  *   AFTER:  every interaction PUTs to `/api/system/settings/ui-review`, which persists to the
  *           `appsetting` row AND mirrors to `nest/app-settings.json` — the file an agent reads to
  *           work from. No export step, no "remember to save".
@@ -42,7 +42,7 @@ const IMPORTANCE = [
 /**
  * The UI-quality rating — 1–10.
  *
- * ⚠️ REPLACED `KEEN` (1–3, "how keen are you on this page") on 2026-10-06 at the owner's request:
+ * ⚠️ REPLACED `KEEN` (1–3, "how keen are you on this page") on 2026-10-06 at the project's request:
  * *"replace `<th>Keen</th>` with a 1 to 10 rating on how good the UI is … I will use that column to
  * comment on which aspects of the page's UI is to be kept and make part of the core/default theme
  * structure and styling."*
@@ -244,7 +244,7 @@ export default function UiReviewPage() {
    *
    * ⚠️ Each count is over JUDGED rows, not all rows. "3 of 12 applied" and "3 of 200 applied" say
    * different things, and only the second invites the wrong conclusion. A row nobody has judged yet is
-   * counted in neither half, so the ratio cannot be diluted by rows the owner has not reached.
+   * counted in neither half, so the ratio cannot be diluted by rows the requirement has not reached.
    */
   const judged = (field) =>
     rows.filter((r) => {
@@ -336,7 +336,7 @@ export default function UiReviewPage() {
               UI /10
             </th>
             {/* ⚠️ TWO comment columns since 2026-10-07. The first is the pre-existing `note` field,
-                renamed IN THE UI ONLY — the stored values keep their meaning. The owner keeps both side
+                renamed IN THE UI ONLY — the stored values keep their meaning. The requirement keeps both side
                 by side to judge whether the first round was actually followed:
                 *"This is how I'm going to determine how well agentic AI followed my instructions."* */}
             <th
@@ -351,7 +351,7 @@ export default function UiReviewPage() {
             >
               Old Applied?
             </th>
-            {/* ⚠️ RENAMED 2026-10-10 at the owner's request — and the column's PURPOSE changed with the
+            {/* ⚠️ RENAMED 2026-10-10 at the project's request — and the column's PURPOSE changed with the
                 label, it is not a cosmetic rename: *"the field in the column will be used to note which
                 parts of the page I think are strong."* It previously held round-2 change suggestions.
                 ⚠️ The STORED FIELD is still `noteNew` and existing values are untouched — the header
@@ -422,7 +422,7 @@ export default function UiReviewPage() {
                     </select>
                   </td>
                   <td>
-                    {/* ⚠️ THREE STATES, NOT A YES/NO (owner direction, 2026-11-02). `hide` conflated
+                    {/* ⚠️ THREE STATES, NOT A YES/NO (requirement, 2026-11-02). `hide` conflated
                         "not ready" with "member perk", and the reason for a hidden page was lost the
                         moment it was recorded. Withheld = not ready for anyone; Member = finished but
                         behind an entitlement; Public = everyone.
@@ -467,12 +467,12 @@ export default function UiReviewPage() {
                     />
                   </td>
                   <td>
-                    {/* ⚠️ AN INDICATOR, NOT A CONTROL. Owner directive, 2026-10-08: I meant an indicator for
+                    {/* ⚠️ AN INDICATOR, NOT A CONTROL. Requirement, 2026-10-08: I meant an indicator for
                         agentic AI - not a menu for the user to select. Nothing here is clickable —
                         the value is written through the API by whichever agent did the work, and this
                         cell only reports it. ⚠️ The three states must stay visually distinct: `—`
                         (nobody has assessed this round yet) is NOT the same as ❌ (assessed, and the
-                        work is outstanding), and the owner is using exactly that difference to see what
+                        work is outstanding), and the requirement is using exactly that difference to see what
                         is left. */}
                     <span
                       className={`uir-applied uir-applied--${e.noteApplied === true ? 'done' : e.noteApplied === false ? 'outstanding' : 'unassessed'}`}

@@ -5,7 +5,7 @@
  * ── Why not a <select> ──
  * The flat menu listed 47 rows of `name · N directives · max 1395`, and none of it was readable
  * while choosing: a native dropdown shows one line per option, cannot show a description, and
- * cannot show which protocol is currently active. The owner asked for the arcade-style
+ * cannot show which protocol is currently active. The requirement is for the arcade-style
  * "slide, then lock" panel used in game menus.
  *
  * ── How the snap works ──
@@ -205,7 +205,7 @@ export default function ProtocolCarousel({ items, value, onChange, label = 'Prot
     <div className="pc-wrap">
       <div className="pc-head">
         <span className="pc-label">{label}</span>
-        {/* ⚠️ THE POSITION COUNTER IS GONE (owner direction, 2026-10-30: *"Remove 40 of 40
+        {/* ⚠️ THE POSITION COUNTER IS GONE (requirement, 2026-10-30: *"Remove 40 of 40
             strategies"*). It restated the length of a list the reader is already scrolling, and the
             selected card is the position — a number beside a visible one is volume, not information.
             The count is still announced where it MATTERS: the empty state names how many exist, and
@@ -265,7 +265,7 @@ export default function ProtocolCarousel({ items, value, onChange, label = 'Prot
                   reads as a broken protocol rather than as a bot. A field that is absent now renders
                   nothing, so one track serves both subjects without a second component. */}
               {/* ⚠️ ONE ROW FOR THE SECONDARY FACTS (2026-10-30). The card was cut to ~half its height
-                  on the owner's direction, and three stacked lines (meta, style, warning) do not fit —
+                  on the project's direction, and three stacked lines (meta, style, warning) do not fit —
                   they would have been clipped by `overflow: hidden` rather than shrinking. Side by side
                   they read in one line and nothing is lost. */}
               <div className="pc-sub">

@@ -4,7 +4,7 @@
  *
  * WHY THIS EXISTS (2026-09-12)
  * ----------------------------
- * The owner asked the only question that matters: *"is there a flaw in scoring, or does
+ * The brief asked the only question that matters: *"is there a flaw in scoring, or does
  * mixing directives together simply not work?"* and set a condition — **no more building
  * unless a change can be shown to affect profitable trading.**
  *

@@ -23,7 +23,7 @@ import {
  * The 26 were 5 MT5 CFD positions (opened within 30 hours) and 21 Trading212 equity holdings
  * (oldest opened 25 July, aggregate −996, held deliberately). "Consider flattening" applied to a
  * long-term holding is not a mild misfire — it is the opposite of correct, and because it repeats
- * every Friday it trains the owner to ignore the alert entirely.
+ * every Friday it trains the requirement to ignore the alert entirely.
  *
  * A one-word "fix" would be to add `long-term` to the gap-exposed list, which restores the defect
  * while looking green. `GAP_EXPOSED_INTENTS` therefore has its own test asserting it does NOT
@@ -70,7 +70,7 @@ describe('position-intent — what a position is FOR decides which risk applies'
     });
 
     it('a losing long-term holding is HELD, not flagged — the loss is the thesis, not the risk', () => {
-      // Measured aggregate for the 21 was −996 and accepted by the owner. Intent, not sign, is the
+      // Measured aggregate for the 21 was −996 and accepted by the requirement. Intent, not sign, is the
       // input: the same loss on an intraday position would be exactly what the alert is for.
       const losing = [{ symbol: 'MSTR', provider: 'trading212' }];
       expect(summariseExposure(losing).held).toHaveLength(1);
@@ -78,7 +78,7 @@ describe('position-intent — what a position is FOR decides which risk applies'
     });
   });
 
-  describe('inference is labelled, and the owner can overrule it', () => {
+  describe('inference is labelled, and the requirement can overrule it', () => {
     it('defaults a stock-brokerage position to held and a CFD position to intraday', () => {
       expect(resolveIntent({ symbol: 'MSTR', provider: 'trading212' }))
         .toEqual({ intent: 'long-term', source: 'provider-default' });
@@ -87,7 +87,7 @@ describe('position-intent — what a position is FOR decides which risk applies'
     });
 
     it('an explicit override beats the provider default, and says so', () => {
-      // A leveraged NVDA held on the brokerage is the owner's own example of a case the default
+      // A leveraged NVDA held on the brokerage is the project's own example of a case the default
       // gets wrong. The override is how that is recorded once instead of re-litigated per alert.
       const overrides = new Map<string, PositionIntent>([
         [overrideKey('trading212', '3NVD'), 'intraday'],

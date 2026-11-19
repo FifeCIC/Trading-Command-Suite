@@ -46,7 +46,7 @@ test('a fresh install withholds the curated set even with no stored verdicts', (
 });
 
 test('every withheld route is a REAL nav entry — an inert route is a silent no-op', () => {
-  // ⚠️ THE GUARD FOR THE ACTUAL 2026-11-01 DEFECT. Eight of the owner's nine stored `hide: true`
+  // ⚠️ THE GUARD FOR THE ACTUAL 2026-11-01 DEFECT. Eight of the project's nine stored `hide: true`
   // verdicts pointed at detail routes with no nav entry, so the filter could never match them and
   // the curation did nothing — with no error anywhere.
   const routes = navRoutes();
@@ -185,7 +185,7 @@ test('the areas an owner navigates by are never hidden by an experience level', 
   // ⚠️ REGRESSION, 2026-11-04. `live-ordering-stack` was the ONLY entry in the Scoring rail carrying a
   // gate — its three siblings are undeclared and therefore visible — so the page that defines the
   // area was the one non-experts could not reach. `backtest-data` was the same story in Lab, against
-  // its own two siblings' stated rule that an entry point to the results is never hidden. The owner
+  // its own two siblings' stated rule that an entry point to the results is never hidden. The requirement
   // reported both as "missing from menus". These two must be reachable at every level.
   const mustAlwaysShow = new Set(['live-ordering-stack', 'backtest-data']);
   const tree = getNavStructure();
@@ -234,7 +234,7 @@ test('the two filters compose: withheld AND too-advanced both disappear', () => 
 
 // ── VISIBILITY: three states, one filter ────────────────────────────────────────────────────────
 
-test('legacy hide verdicts still resolve — the owner has 60+ of them', () => {
+test('legacy hide verdicts still resolve — the requirement has 60+ of them', () => {
   // ⚠️ A FORMAT CHANGE MUST NOT DESTROY REAL CURATION. `hide: false` is an explicit KEEP.
   assert.equal(recordedVisibility({ entries: { '/a/b': { hide: true } } }, '/a/b'), VISIBILITY.WITHHELD);
   assert.equal(recordedVisibility({ entries: { '/a/b': { hide: false } } }, '/a/b'), VISIBILITY.PUBLIC);

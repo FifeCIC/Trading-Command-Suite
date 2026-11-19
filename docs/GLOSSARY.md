@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-03 · **Status:** active · **Category:** C (reference / contract)
 
-> ⚠️ **Why this file exists.** Owner directive, 2026-11-03: can we create a term/name for that form of testing.
+> ⚠️ **Why this file exists.** Requirement, 2026-11-03: can we create a term/name for that form of testing.
 > We have the longterm A/B testing approach that requires live market data but the comparison approach
 > as part of backtesting is different and I want to avoid confusion when discussing it.
 >
@@ -50,7 +50,7 @@ of splitting the vocabulary — one word tells the reader which of the two clock
 | Candidate | Verdict |
 |---|---|
 | 🟢 **Contrast** | **Chosen.** Names the *discipline* (compare against a fixed reference), carries no trading meaning to collide with, and yields "contrast run", "contrast it", "the contrast said". |
-| ❌ "Backtest A/B" | Rejected. It is exactly the confusion the owner asked to remove — the same two letters for two different clocks. |
+| ❌ "Backtest A/B" | Rejected. It is exactly the confusion the brief asked to remove — the same two letters for two different clocks. |
 | ❌ "Comparison" | Rejected as the *term*: it is already a UI verb ("compare these two runs") and says nothing about the one-difference rule. It survives as the plain-English word inside the definition. |
 | ❌ "Twin run" | Close second — accurate, but "twin" implies *identical*, and a contrast is deliberately **not** identical. |
 | ❌ "Delta run" | Rejected: "delta" already means the P&L delta in this app. |
@@ -75,7 +75,7 @@ exists to close. A contrast narrows the search; live trading confirms it.
 
 # Part 2 — Strategy words: Theory, Track record, Observation
 
-**Added 2026-11-03 (#1189).** The owner asked for a word for *"factual behaviour and evidence output
+**Added 2026-11-03 (#1189).** The requirement is for a word for *"factual behaviour and evidence output
 by a strategy"*, because "the theory behind them" and "what they actually did" were being described
 with the same vague nouns. Same reason as Part 1: two things that are not the same thing had one name.
 

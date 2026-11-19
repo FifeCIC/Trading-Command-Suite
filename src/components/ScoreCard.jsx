@@ -279,7 +279,7 @@ const ScoreCard = forwardRef(function ScoreCard({
         </div>
       </div>
       {/*
-        ⚠️ THE BOT VERDICT WAS REMOVED FROM THIS CARD 2026-10-12 (#1111, owner directive).
+        ⚠️ THE BOT VERDICT WAS REMOVED FROM THIS CARD 2026-10-12 (#1111, requirement).
         It rendered "NO BOT WILL TAKE IT / REFUSED by every subscribed bot — …", generated
         client-side from a bot list based on the DISPLAY-ONLY `trading_strategy.protocolId` column.
         Two reasons it left: bots do not come into play on a scoring view, and the sentence now has

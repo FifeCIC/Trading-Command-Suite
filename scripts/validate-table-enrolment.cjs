@@ -3,7 +3,7 @@
  * validate-table-enrolment.cjs — every table in the app uses the ONE arrangement.
  * ==============================================================================
  * `src/core/tables.css` opens with: *"ONE ARRANGEMENT, APPLIED TO EVERY TABLE CLASS IN THE APP."*
- * It lists 60+ family classes, and that file is the design standard the owner keeps pointing at:
+ * It lists 60+ family classes, and that file is the design standard the requirement keeps pointing at:
  *
  *   *"The table on the page … is terrible. Columns aren't under their headers, the styling doesn't
  *    match the tables we have already opted as suitable designs … There are lots of good styles

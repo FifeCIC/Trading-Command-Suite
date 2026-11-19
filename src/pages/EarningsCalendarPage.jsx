@@ -293,7 +293,7 @@ export default function EarningsCalendarPage() {
     <div className="ec-page">
       <header className="ec-header">
         <h1>Earnings Calendar</h1>
-        {/* ⚠️ THE SENTENCE BECAME THREE FACTS (owner directive, 2026-11-06): Remove this line … and display the
+        {/* ⚠️ THE SENTENCE BECAME THREE FACTS (requirement, 2026-11-06): Remove this line … and display the
             stats within). "5785 upcoming earnings reports from stored data (imported from Finnhub +
             Nasdaq). Data refreshes every 15 min." carried three separate numbers in one unreadable
             line; they are the same three facts as chips, so they can be scanned instead of parsed. */}

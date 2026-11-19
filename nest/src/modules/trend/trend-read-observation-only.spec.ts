@@ -4,7 +4,7 @@
  * ⚠️ WHY THIS IS A TEST AND NOT A COMMENT. The whole value of the experiment depends on one property:
  * the reading is allowed to be wrong because nothing acts on it. The moment a directive, a gate, a
  * sizing step or the automation loop imports it, the reading stops being an observation and becomes
- * a maths change — which under the owner's own rule needs a COPIED configuration and a monitored A/B
+ * a maths change — which under the project's own rule needs a COPIED configuration and a monitored A/B
  * against the incumbent. A docblock cannot prevent that; a failing build can.
  *
  * ⚠️ THE FIRST VERSION OF THIS FILE WAS BROKEN, AND PASSED. It joined `__dirname` with

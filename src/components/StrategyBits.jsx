@@ -14,7 +14,7 @@ import common from './strategy-common.module.css';
 
 /**
  * StrategyBots — the bots behind a strategy, with the `(bot)` type suffix.
- * A strategy is ONE bot per the owner's model, but duplicate configurations surface as several
+ * A strategy is ONE bot per the project's model, but duplicate configurations surface as several
  * names here, which is exactly why the suffix matters.
  */
 export function StrategyBots({ names }) {
@@ -29,7 +29,7 @@ export function StrategyBots({ names }) {
 /**
  * StrategyWarnings — the two config-level faults, with the SOURCE page's exact rules:
  *   - duplicates: MORE THAN ONE bot on an identical configuration (a single bot is not a
- *     duplicate of anything) — the owner's rule is that these should never exist.
+ *     duplicate of anything) — the project's rule is that these should never exist.
  *   - unreachable: bots with no `strategy_protocol` subscription, skipped silently by routing (#874).
  * Returns null when neither applies, so callers do not branch.
  */

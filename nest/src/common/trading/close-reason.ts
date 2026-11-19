@@ -41,10 +41,10 @@
  * strictly better than a guess, because a guess stops the next reader from looking — which is
  * exactly how the 2026-09-18 defect stayed invisible in the first place.
  *
- * ⚠️ OWNER DIRECTION, 2026-10-07 (review queue R46): **"The app should assume that it was me if
+ * ⚠️ REQUIREMENT, 2026-10-07 (review queue R46): **"The app should assume that it was me if
  * there is no record of the bot closing a position."** A close the app cannot attribute to one of
  * its own mechanisms is therefore reported as `user:manual`. This is not a guess in the dark: asked
- * who produced the unexplained batches, the owner answered *"Yes I think that was me bulk closing
+ * who produced the unexplained batches, the requirement answered *"Yes I think that was me bulk closing
  * the positions."* The mechanical details live in `closeReasonFromDealReason`; `broker:terminal`
  * remains for broker-DRIVEN reasons (rollover / vmargins / split) and for the 93 historic rows.
  * ⚠️ The precondition this rests on: **every close path of ours must stamp `TCS:<origin>`** — the
@@ -138,7 +138,7 @@ export const CLOSE_REASONS = {
    *
    * ⚠️⚠️ **RESOLVED 2026-10-07 — THE ACTOR WAS THE OWNER.** Asked directly (R46): *"Yes I think that
    * was me bulk closing the positions."* The batches were manual bulk closes from the MT5 side, and
-   * they **STOPPED 2026-10-02** (0 in the five days after; 2-13/day before). Per the owner's same-day
+   * they **STOPPED 2026-10-02** (0 in the five days after; 2-13/day before). Per the project's same-day
    * direction, the deal-reason fallback now reports a no-comment CLIENT/MOBILE/WEB/EXPERT close as
    * `user:manual` instead of parking it here — this value stays for broker-driven reasons
    * (7 rollover / 8 vmargins / 9 split) and for the 93 historic rows, so the 13-day record is not
@@ -164,14 +164,14 @@ export type CloseReason = (typeof CLOSE_REASONS)[keyof typeof CLOSE_REASONS];
  * ⚠️ PREFER `closeReasonFromComment()` when a comment is available: the enum cannot distinguish our
  * own bridge closes (reason 3 / 0) from anything else the terminal did.
  *
- * ⚠️ **CHANGED 2026-10-07 — OWNER DIRECTION, reversing the paragraph that used to sit here.**
+ * ⚠️ **CHANGED 2026-10-07 — REQUIREMENT, reversing the paragraph that used to sit here.**
  * The old text argued that mapping 0/1/2 (client/mobile/web) to `user:manual` "would claim
- * knowledge we do not have". The owner has since said the assumption IS wanted: *"The app should
+ * knowledge we do not have". The requirement has since said the assumption IS wanted: *"The app should
  * assume that it was me if there is no record of the bot closing a position."* And it is no longer
- * a guess in the dark — asked who produced the batches, the owner answered *"Yes I think that was
+ * a guess in the dark — asked who produced the batches, the requirement answered *"Yes I think that was
  * me bulk closing the positions."* So CLIENT / MOBILE / WEB / EXPERT **without one of our stamps** →
  * `user:manual`. ⚠️ EXPERT is included deliberately: an EA close WITHOUT `TCS:<origin>` is not our
- * bridge, so it is the owner's desktop automation. A close WITH our stamp never reaches here — a
+ * bridge, so it is the project's desktop automation. A close WITH our stamp never reaches here — a
  * parsed comment wins (precedence: row's own reason > our comment > this enum > unknown).
  * ⚠️ This is a DATED ASSUMPTION and it is reversible in one line — restore the `case 0 … case 3`
  * grouping to `BROKER_TERMINAL` below. `BROKER_UNKNOWN` is unchanged and still means "no closing
@@ -190,7 +190,7 @@ export function closeReasonFromDealReason(reason: number | null | undefined): Cl
     case 2:
     case 3:
       // client | mobile | web | expert — no stamp of ours on the closing deal, so per owner
-      // direction (2026-10-07) this is the owner's own action, not an unknown stranger.
+      // direction (2026-10-07) this is the project's own action, not an unknown stranger.
       return CLOSE_REASONS.USER_MANUAL;
     case 7:
     case 8:

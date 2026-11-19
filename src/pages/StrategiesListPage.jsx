@@ -416,7 +416,7 @@ export default function StrategiesListPage() {
         {/*
           ⚠️ THE COMBINED QUEUE MOVED OUT 2026-11-19 (owner). It used to sit here, above the table,
           because a queue that only appears once a row is selected is a queue most readers never see.
-          The owner's verdict after living with it: *"This is actually just becoming screen clutter and
+          The project's verdict after living with it: *"This is actually just becoming screen clutter and
           noise … and it takes way focus [away from] the bot table itself."* It now lives at
           `/development/queued-changes`, and this page keeps only the SELECTED bot's queue, further
           down — that one is about the row in front of you rather than a dump of everything.
@@ -473,7 +473,7 @@ export default function StrategiesListPage() {
 
           {/* ⚠️ MOVED TO THE SHELL'S ℹ (2026-11-18). This block used to be a `PageInfoPopover` inside a
               `styles.toolbarInfo` div, so the page's primary explanation sat in the filter toolbar
-              while every other page put it in a different place. Owner direction: one position, the
+              while every other page put it in a different place. Requirement: one position, the
               top row beside the breadcrumbs. `PageInfoSlotContent` renders NOTHING here — its children
               are lifted into the shell's popover — so the wrapping div and its `margin-left: auto`
               were removed with it. */}
@@ -573,7 +573,7 @@ export default function StrategiesListPage() {
 
       {/* ── ONE bot table, plus a sticky sidebar for the selected row ───────────────────────────────
           This replaced an accordion grid. Selecting a card expanded it IN PLACE, which pushed every
-          row below it down the page and made two bots impossible to compare — the shape the owner
+          row below it down the page and made two bots impossible to compare — the shape the requirement
           asked to change on 2026-09-23 ("lets change this view to a table").
 
           ⚠️ THE CLASSES ARE MODULE-SCOPED ON PURPOSE, and that is the point of this rewrite rather
@@ -727,7 +727,7 @@ export default function StrategiesListPage() {
                 </div>
 
                 {/*
-                  ── THIS BOT'S QUEUED CHANGES (owner, 2026-11-19) ────────────────────────────────
+                  ── THIS BOT'S QUEUED CHANGES (Requirement, 2026-11-19) ────────────────────────────────
                   *"register placeholder changes… I expect them to appear on the strategies own pages
                   in the Strategies area alongwith the outstanding changes to protocols."*
 
@@ -735,7 +735,7 @@ export default function StrategiesListPage() {
                     · this one is scoped to the selected bot (`botId`) — the rules that BLOCK *this*
                       strategy, shown where the strategy's own configuration is read;
                     · the page-level panel above the table is `mode="all"` — everything queued,
-                      protocol and bot together, which is the "one place" the owner asked for.
+                      protocol and bot together, which is the "one place" the requirement is for.
                   A single panel cannot do both without either duplicating rows or hiding which bot a
                   rule belongs to.
                 */}
@@ -772,7 +772,7 @@ export default function StrategiesListPage() {
         </aside>
       </div>
 
-      {/* ⚠️ MOUNTED BELOW THE TABLE ON PURPOSE. The owner's complaint began at the Score column and
+      {/* ⚠️ MOUNTED BELOW THE TABLE ON PURPOSE. The project's complaint began at the Score column and
           then said "this is about more than the column of this table" — so the panel sits under the
           table it explains, reading the same `strategies` list, rather than on a separate route the
           reader has to know about. */}

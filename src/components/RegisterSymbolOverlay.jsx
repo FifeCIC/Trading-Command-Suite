@@ -9,7 +9,7 @@
  *   <button onClick={() => setOverlayTicker('KEN')}>Register…</button>
  *   {overlayTicker && <RegisterSymbolOverlay ticker={overlayTicker} onClose={() => setOverlayTicker(null)} />}
  *
- * WHY IT EXISTS (owner direction, 2026-10-08): *"I want it to be an overlay that can be offered from
+ * WHY IT EXISTS (requirement, 2026-10-08): *"I want it to be an overlay that can be offered from
  * any view, and some of the functions should already exist."* The functions DID exist — `POST
  * /api/symbols` to register, and `GET /api/watchlists` to list — but adding one symbol to an EXISTING
  * watchlist had no safe endpoint: `POST /api/watchlists` derives the row id from the `name` it is
@@ -18,7 +18,7 @@
  * this overlay never has to do a read-modify-write of a whole watchlist.
  *
  * ⚠️ THE TWO ACTIONS ARE INDEPENDENT ON PURPOSE. Registering and adding to a watchlist are different
- * facts — a symbol can be registered and in no watchlist, and the owner's ask named both. Collapsing
+ * facts — a symbol can be registered and in no watchlist, and the project's ask named both. Collapsing
  * them into one "Add" button would make the second silently depend on the first.
  *
  * ⚠️ "ALREADY REGISTERED" IS NOT AN ERROR. It is reported as its own state, because a reader must be

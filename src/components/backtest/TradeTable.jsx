@@ -1,5 +1,5 @@
 /**
- * TradeTable — one row per CLOSED TRADE, with money on it (owner direction, 2026-10-29).
+ * TradeTable — one row per CLOSED TRADE, with money on it (requirement, 2026-10-29).
  *
  * *"This table needs to be more trade based and show us profit loss at least."* The table it replaced
  * answered "every bar this run scored", which is a question about the SCORER. A reader trying to find
@@ -39,13 +39,13 @@ const stamp = (iso) => (iso ? String(iso).slice(0, 16).replace('T', ' ') : '—'
 /**
  * useCycleColumn — a column that changes what it shows every 6 seconds (#1150).
  *
- * Owner direction, 2026-10-29: *"there's too many columns already so we're going to do something very
+ * Requirement, 2026-10-29: *"there's too many columns already so we're going to do something very
  * new and designate a column to be automatic changing every 3 seconds … This will allow me to see more
  * data when browsing."* The approach is named a **Cycle Column** — one grid slot that recycles itself
  * through a short series of related facts instead of widening the table. ("Carousel column" describes
  * the same thing; "cycle" was chosen because nothing slides and the order is fixed.)
  *
- * ⚠️ 6 SECONDS, NOT 3 (owner direction, 2026-10-31). At 3s the header and three cells changed faster
+ * ⚠️ 6 SECONDS, NOT 3 (requirement, 2026-10-31). At 3s the header and three cells changed faster
  * than a reader could finish one row — the column read as flicker rather than as information, and it
  * also made the whole table re-lay-out twice as often.
  *
@@ -133,7 +133,7 @@ const numTone = (v) => (v == null ? '' : Number(v) > 0 ? 'mss-stat--bullish' : N
 const pctTone = (v, mid) => (v == null ? '' : Number(v) >= mid ? 'mss-stat--bullish' : 'mss-stat--bearish');
 
 /**
- * The fastest and slowest EXIT REASON by mean hold — the two tiles the owner's speed-of-movement
+ * The fastest and slowest EXIT REASON by mean hold — the two tiles the project's speed-of-movement
  * question is actually about ("average time to SL … and to TP"). `SL` and `TP` are picked out by name
  * when both are present, so the pair is the one being asked about; otherwise the extremes are used and
  * the label says which reason they are, so a third reason is never silently presented as the stop.
@@ -163,7 +163,7 @@ function exitSpeedPair(byExitReason) {
 /**
  * The facts the CYCLE COLUMN rotates through — all about SPEED, none of which is a column of its own.
  *
- * ⚠️ THESE ARE THE OWNER'S QUESTION, NOT DECORATION. *"I want to establish an average time to SL trigger
+ * ⚠️ THESE ARE THE PROJECT'S QUESTION, NOT DECORATION. *"I want to establish an average time to SL trigger
  * … and an average to TP … Where I'm going with this is to consider the speed of movement."* The table
  * shows what a trade made; these show how fast it got there, which is the difference between "the stop
  * is too far" and "the entry is mistimed".
@@ -211,7 +211,7 @@ export default function TradeTable({ trades, totals, timeframe, limit = 100, com
   const cycle = useCycleColumn(CYCLE_FACTS);
 
   /**
-   * ── COMPARISON BORDERS (owner direction, 2026-10-30) ─────────────────────────────────────────
+   * ── COMPARISON BORDERS (requirement, 2026-10-30) ─────────────────────────────────────────
    * *"This set should be the same … it might be that the box borders are coloured based on
    * comparison but the text for loss or profit is standard red and green."*
    *
@@ -250,9 +250,9 @@ export default function TradeTable({ trades, totals, timeframe, limit = 100, com
     <>
       {totals ? (
         /**
-         * ⚠️ STAT TILES, NOT A SENTENCE (owner direction, 2026-10-29: *"there are other pages with stats
+         * ⚠️ STAT TILES, NOT A SENTENCE (requirement, 2026-10-29: *"there are other pages with stats
          * that display it better than this so use existing styling as always"*). The numbers were a
-         * `·`-separated run-on — seven figures in one line of prose, which is the density the owner has
+         * `·`-separated run-on — seven figures in one line of prose, which is the density the requirement has
          * objected to on this page before. These are `.mss-stat-*` from `meta-stack-status.css`, the same
          * tiles the Appearance area presents as the app's stat library — NOT a new look.
          */
@@ -331,7 +331,7 @@ export default function TradeTable({ trades, totals, timeframe, limit = 100, com
       <div className="bt-table-wrap">
         {/*
           ⚠️ `--bt-cycle-ch` IS THE WIDTH OF THE LONGEST CYCLE HEADER, IN `ch`, AND IT IS THE ONE THING
-          THAT STOPS THIS TABLE RE-LAYING OUT (owner direction, 2026-10-31: *"Give this column a fixed
+          THAT STOPS THIS TABLE RE-LAYING OUT (requirement, 2026-10-31: *"Give this column a fixed
           width … it will stop it moving the entire table. Base the width on the longest string for the
           header."*).
 
@@ -378,13 +378,13 @@ export default function TradeTable({ trades, totals, timeframe, limit = 100, com
                 label="Why"
                 title="What ended the trade: the stop, the target, or end of the window."
                 api={order}
-              />
+              />
               {/* ── THE CYCLE COLUMN (#1150) ───────────────────────────────────────────────────────
                   One slot, several facts, 3s apart. Its header carries the CURRENT fact's name plus a
                   pause control and a position dot — without that the numbers are unreadable, and WCAG
                   2.2.2 requires the reader to be able to stop it.
 
-                  ⚠️ IT IS THE LAST COLUMN ON PURPOSE (owner direction, 2026-10-30: *"Move this column
+                  ⚠️ IT IS THE LAST COLUMN ON PURPOSE (requirement, 2026-10-30: *"Move this column
                   to be the last column so that when it changes it doesn't have a knock on affect on all
                   the columns to the right of it."*). The slot recycles through "Held / % per h / Bars
                   held", which are different widths — sitting mid-row, every 3-second change re-laid out

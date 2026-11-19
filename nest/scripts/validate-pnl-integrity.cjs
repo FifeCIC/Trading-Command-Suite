@@ -139,7 +139,7 @@ function selfTest() {
  * kept here in plain JS so this script needs no build.
  *
  * ⚠️ A SECOND IMPLEMENTATION IS A COST, so it is deliberately minimal and the TS module is named
- * as the owner. It exists because the guard must run against the LIVE database with no build step.
+ * as the requirement. It exists because the guard must run against the LIVE database with no build step.
  * If the two ever disagree, the TS module wins and this follows — see the self-test below, which
  * pins the four states so a divergence fails loudly rather than quietly.
  *

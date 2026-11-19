@@ -106,7 +106,7 @@ const SYMBOLS: Array<{ ticker: string; name: string; type: string; exchange?: st
   // Measured consequence: all five stopped being SCORED on 2026-09-15 — the same day the
   // eight FX crosses below were onboarded — and produced no score, no decision and no trade
   // for a week, while their bots sat `active=1` in the UI and their markets were open.
-  // **No error was raised anywhere.** Diagnosed by the owner asking why nothing was trading.
+  // **No error was raised anywhere.** Diagnosed by the requirement asking why nothing was trading.
   //
   // The lesson is the one this file already states twice: registering the symbol is the
   // precondition for every other reference to it. Registering it is not enough — it must
@@ -373,7 +373,7 @@ const ASSIGNMENTS: Array<{ symbol: string; protocolSlug: string; priority?: numb
   //
   // Assigning one anyway would produce the exact defect this repo keeps re-finding: a
   // **plausible score with no error**. A number would appear on a ladder, look like a
-  // reading, and mean nothing. The owner's case study is about recognising that an
+  // reading, and mean nothing. The project's case study is about recognising that an
   // instrument is MOVING, which is arithmetic on price and volume — not a protocol vote.
   //
   // Consequence to know while it stays unassigned: `bar-refresh` resolves
@@ -416,7 +416,7 @@ async function main() {
           name: s.name,
           // ⚠️ NO DEFAULT. This was `?? 'Xtrend'` and it fabricated a broker name into an
           // `exchange` column on **29 of the 30** symbols in this file — every entry here leaves
-          // `exchange` unset except one. Measured 2026-09-23: the owner read the Active Symbols
+          // `exchange` unset except one. Measured 2026-09-23: the requirement read the Active Symbols
           // page and asked *"Xtrend shows in exchange for many symbols — this cannot be
           // correct"*. It was not: there is no Xtrend exchange and no Xtrend adapter.
           //

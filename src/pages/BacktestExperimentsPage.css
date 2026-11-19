@@ -108,7 +108,7 @@
 }
 
 /* ── state accents — a BADGE tint, never a coloured bar down the side ──────────────────────────
- * ⚠️ The owner has asked for thick coloured left bars to be removed everywhere, and
+ * ⚠️ The requirement has asked for thick coloured left bars to be removed everywhere, and
  * `validate-no-notice-bar.cjs` fails the build on one. So the state is carried by the small label
  * badge above the title, plus a whole-card background tint — both of which survive being read on a
  * narrow screen, unlike a 3px edge.

@@ -5,7 +5,7 @@ import { diffTradeFields } from './experiment-review.service';
  *
  * ⚠️ WHY THIS EXISTS. Two bots that differ in nothing trade identically, so their comparison can
  * never produce a difference however long it runs. Reporting that as "running" is exactly the
- * "strategies that run for months needlessly" the owner named on 2026-11-06. The check has to be
+ * "strategies that run for months needlessly" the requirement named on 2026-11-06. The check has to be
  * narrow in the OTHER direction too: a field that only describes a bot (name, magic, active) must
  * not count as a difference, or every pair looks measurable and the guard never fires.
  */

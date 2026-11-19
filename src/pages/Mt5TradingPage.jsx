@@ -16,7 +16,7 @@ export default function Mt5TradingPage() {
   const [platform, setPlatform] = useState('mt5');
 
   // ── Layout ──
-  // ⚠️ THE WIDTH CONTROL MOVED TO SCREEN OPTIONS (owner direction, 2026-10-08). It was an in-page
+  // ⚠️ THE WIDTH CONTROL MOVED TO SCREEN OPTIONS (requirement, 2026-10-08). It was an in-page
   // bar (`.mt5u-layout-bar`) — a page-layout preference sitting somewhere different from every other
   // page's settings. It now lives in the global Screen Options rail, under the key declared in
   // src/core/page-width.js, which the registry imports too so the two cannot disagree.
@@ -115,7 +115,7 @@ export default function Mt5TradingPage() {
   //
   // ⚠️ THE FLICKER WAS THIS LINE (fixed 2026-11-07). `refreshAll` ran on a 10s interval and began
   // with `setLoading(true)` — and `loading` gates a FULL-PAGE spinner (`if (loading) return
-  // <spinner>`), so every poll tore the whole view down and rebuilt it. Owner directive: the entire view
+  // <spinner>`), so every poll tore the whole view down and rebuilt it. Requirement: the entire view
   // flashes, I assume it's the refresh of information but the flicker is highly annoying. It was
   // the refresh, exactly.
   //
@@ -456,7 +456,7 @@ export default function Mt5TradingPage() {
 
               This used to call `accounts.map(...)` a SECOND time and render a `✕` button for every
               account — eight of them, in a row, with no label and no visible connection to the
-              dropdown above them. Owner directive: We have rows of X … there is about 8 and no clear
+              dropdown above them. Requirement: We have rows of X … there is about 8 and no clear
               purpose. The purpose existed; the affordance did not say which account it would
               remove, and a mis-click was silent.
 

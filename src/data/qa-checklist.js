@@ -476,7 +476,7 @@ const QA_CHECKLIST = [
     expected: 'With the route withheld: prebuild passes and prints "every route added since the rule is withheld". With it removed: **exit 1**, naming the exact route and telling you to add it to `DEFAULT_HIDDEN_ROUTES`. `--write` **refuses with exit 2** rather than adding the route to the baseline — the baseline may only shrink. `--report` prints every nav route marked WITHHELD or public, and pre-rule or NEW.',
     category: 'Guard',
     priority: 'high',
-    versionNote: '2026-11-18 — #1298. Owner directive: Can we set a rule for any new pages to default to that state. `hidden-views.js` had claimed since 2026-11-01 that moving an id out of the withheld list IS the release, and nothing noticed a page added and never put in — a half-built page went public the moment its nav entry landed. 9 self-test cases; the ratchet direction is enforced in code, not in prose.',
+    versionNote: '2026-11-18 — #1298. Requirement: Can we set a rule for any new pages to default to that state. `hidden-views.js` had claimed since 2026-11-01 that moving an id out of the withheld list IS the release, and nothing noticed a page added and never put in — a half-built page went public the moment its nav entry landed. 9 self-test cases; the ratchet direction is enforced in code, not in prose.',
   },
   {
     id: 'qa-movers-provider-001',
@@ -487,7 +487,7 @@ const QA_CHECKLIST = [
     expected: 'First call reports `created` > 0 with `provider=yahoo`; the second reports `created=0` with a matching `existing` count — the write is insert-only and idempotent. **`active` is identical before and after both calls** (measured: 78 → 78). The type query returns **0**, and a snapshot for a discovered ticker returns `profileStatus="ok"` with a named `profileAnsweredBy` and its `industry` — not `not-applicable`, which is what the uppercase spelling caused.',
     category: 'Data integrity',
     priority: 'high',
-    versionNote: '2026-11-19 — #1299. Owner directive: We cannot activate every symbol that appears in top losers or top winners. Two guarantees, both proven live: insert-only discovery (`created=120` then `created=0 existing=147`, `active` unchanged at 78), and a lowercase/mapped `type` vocabulary. ⚠️ The second guard exists because the first version wrote `STOCK` ×120 and nothing reported it — the column collates `utf8mb4_unicode_ci`, so SQL matched both spellings while `symbols.service.ts`\'s case-sensitive `isEquity` answered `false` and skipped the entire 5-adapter profile chain. Canaried by mutating the mapping (`3 failed → 26 passed`, restore byte-identical) and live by setting `BP.type = \'STOCK\'`, which still returned `profileStatus="ok"`.',
+    versionNote: '2026-11-19 — #1299. Requirement: We cannot activate every symbol that appears in top losers or top winners. Two guarantees, both proven live: insert-only discovery (`created=120` then `created=0 existing=147`, `active` unchanged at 78), and a lowercase/mapped `type` vocabulary. ⚠️ The second guard exists because the first version wrote `STOCK` ×120 and nothing reported it — the column collates `utf8mb4_unicode_ci`, so SQL matched both spellings while `symbols.service.ts`\'s case-sensitive `isEquity` answered `false` and skipped the entire 5-adapter profile chain. Canaried by mutating the mapping (`3 failed → 26 passed`, restore byte-identical) and live by setting `BP.type = \'STOCK\'`, which still returned `profileStatus="ok"`.',
   },
   {
     id: 'qa-backtest-direction-001',
@@ -3522,7 +3522,7 @@ const QA_CHECKLIST = [
     expected: 'The ranked protocols come first in rank order — `forex-session-v1` and `forex-session-v1-short` (★1), then `xau-speed-v1` / `xau-speed-v1-short` (★2), then `momentum-stock-v1` / `momentum-stock-v1-short` (★3) — each with a ★rank chip before its name, and everything else after them in name order. The API returns `focusRank: null` for an unranked protocol (never `undefined`). ⚠️ A long leg and its short leg share a rank on purpose: a pair is one strategy, so it must not straddle two list positions. ⚠️ `focusRank` must never appear in a scoring document — `grep -rn focusRank nest/src/modules/scoring/protocol-gating.service.ts` returns nothing, because a rank that changed what a protocol SCORES would make the number depend on the operator\'s attention.',
     category: 'Contract',
     priority: 'medium',
-    versionNote: '2026-11-03 — #1187 (owner asked for a priority status on the chosen focus protocols)',
+    versionNote: '2026-11-03 — #1187 (the brief asked for a priority status on the chosen focus protocols)',
   },
   {
     id: 'qa-contract-042',
@@ -6076,7 +6076,7 @@ const QA_CHECKLIST = [
         system: 'Stop Guardian',
         name: 'A contested position is guarded by its strictest claimant (#1041)',
         procedure: '`npm --prefix nest run test -- stop-guardian` — then, live, find a position whose comment names two bots and call `GET /api/automation/stop-guardian/status`.',
-        expected: '40/40 unit cases pass. Live: the ticket appears in `guardedPositions` with `ownerVia: "comment:contested"`, `claimants` populated, and the owner being the claimant with the smallest `slPct`. ⚠️ The live half is UNVERIFIED — no contested position has recurred.',
+        expected: '40/40 unit cases pass. Live: the ticket appears in `guardedPositions` with `ownerVia: "comment:contested"`, `claimants` populated, and the requirement being the claimant with the smallest `slPct`. ⚠️ The live half is UNVERIFIED — no contested position has recurred.',
         category: 'Guard',
         priority: 'critical',
         versionNote: '2026-10-05 - batch #26 (#1041) — a comment naming ≥2 bots is no longer indistinguishable from an unclaimed one; `pickStrictestClaimant()` picks the smallest `slPct` (unknown = Infinity, ties break on name) and the chosen bot rules apply unchanged.',
@@ -6535,7 +6535,7 @@ const QA_CHECKLIST = [
         expected: 'App closes carry `system:*`/`user:manual` with `TCS:<origin>` visible on the broker deal; a terminal-side manual close records `user:manual` (not `broker:terminal`); the validator exits 0 with self-test 17/17.',
         category: 'Data',
         priority: 'critical',
-        versionNote: '2026-10-07 - batch #28 (#916) — owner direction R46: reasons 0–3 (CLIENT/MOBILE/WEB/EXPERT) map to `user:manual`, 7–9 stay the non-attributing `broker:terminal`, missing stays `broker:unknown`; `TCS:session-exit` no longer lands in `broker:terminal`. R5 in `validate-bridge-order-choke-point.cjs` makes the stamping a build gate.',
+        versionNote: '2026-10-07 - batch #28 (#916) — requirement R46: reasons 0–3 (CLIENT/MOBILE/WEB/EXPERT) map to `user:manual`, 7–9 stay the non-attributing `broker:terminal`, missing stays `broker:unknown`; `TCS:session-exit` no longer lands in `broker:terminal`. R5 in `validate-bridge-order-choke-point.cjs` makes the stamping a build gate.',
       },
       {
         id: 'qa-trade-045',
@@ -6568,7 +6568,7 @@ const QA_CHECKLIST = [
         expected: 'The three values render as `✅ applied` / `❌ outstanding` / `—` and stay distinct; the store reports 27 / 22 of 49 assessed; a string body (`"yes"`) stores `null` (refused, not coerced).',
         category: 'UI',
         priority: 'high',
-        versionNote: '2026-10-07 - batch #28 (ui-review agent indicator) — owner correction: the indicator is for AGENTIC AI to report completion, not a user menu, so both `<select>` menus were replaced by read-only spans and the PUT whitelist accepts booleans or null only. ⚠️ The store is keyed by VIEW ROUTE: eight agent entries and five of the owner\'s original comments sat on keys no view renders and were migrated.',
+        versionNote: '2026-10-07 - batch #28 (ui-review agent indicator) — owner correction: the indicator is for AGENTIC AI to report completion, not a user menu, so both `<select>` menus were replaced by read-only spans and the PUT whitelist accepts booleans or null only. ⚠️ The store is keyed by VIEW ROUTE: eight agent entries and five of the requirement\'s original comments sat on keys no view renders and were migrated.',
       },
       {
         id: 'qa-ui-074',
@@ -6579,7 +6579,7 @@ const QA_CHECKLIST = [
         expected: 'The new text survives a reload; entering it does **not** alter the old comment. Verified 2026-10-07 — API round-trip only, because `PUT` of an unknown field would otherwise return 200 with nothing stored.',
         category: 'UI',
         priority: 'medium',
-        versionNote: '2026-10-07 - batch #28 (ui-review two comment columns) — a NEW field, not a wider `note`: the old comments are the baseline the owner judges the new ones against. ⚠️ The PUT whitelist dropped `noteNew` with a 200 until `settings.controller.ts` was updated; the note debounce is now keyed `${viewKey}::${field}` so a keystroke in one column cannot cancel a pending save in the other.',
+        versionNote: '2026-10-07 - batch #28 (ui-review two comment columns) — a NEW field, not a wider `note`: the old comments are the baseline the requirement judges the new ones against. ⚠️ The PUT whitelist dropped `noteNew` with a 200 until `settings.controller.ts` was updated; the note debounce is now keyed `${viewKey}::${field}` so a keystroke in one column cannot cancel a pending save in the other.',
       },
       {
         id: 'qa-trade-046',
@@ -6736,7 +6736,7 @@ const QA_CHECKLIST = [
         expected: 'Specs green; canaried — restoring the fraction divisor fails 5 of 10, flipping the pick comparator fails exactly 1 (overlap-pick), both restored SHA256-identical. Endpoint: XAUUSD **bearish 75** (*"close 2.29×ATR below short stop (overlap: larger gap wins)"*), EURUSD **bullish 60**, US30 **bullish 75** — all three returned neutral 30 before the change.',
         category: 'API',
         priority: 'high',
-        versionNote: '2026-10-09 - batch #29 (#1075, owner ruling B) — the gap was measured as a fraction of price and graded against 0.03/0.1, which needs ATR > 1% of price while real 5m ATR is 0.02–0.07%, so the directive gave directional evidence 0 times in 133 live evaluations. Gap is now `(close − stop) / ATR` graded at 2.0 ATR (75) / 0.5 ATR (60) / neutral (30); overlap resolved by the larger gap, exact tie to the long side. Sibling fraction sites (SAR) deliberately untouched.',
+        versionNote: '2026-10-09 - batch #29 (#1075, requirement B) — the gap was measured as a fraction of price and graded against 0.03/0.1, which needs ATR > 1% of price while real 5m ATR is 0.02–0.07%, so the directive gave directional evidence 0 times in 133 live evaluations. Gap is now `(close − stop) / ATR` graded at 2.0 ATR (75) / 0.5 ATR (60) / neutral (30); overlap resolved by the larger gap, exact tie to the long side. Sibling fraction sites (SAR) deliberately untouched.',
       },
       {
         id: 'qa-guardian-012',
@@ -6758,7 +6758,7 @@ const QA_CHECKLIST = [
         expected: '9/9 green; canaries fail as above; restore SHA256-identical. An unestablished trend returns a NAMED neutral (a third state the one-bar code never had), and no `shadow=[supertrend:…]` suffix appears anywhere in the log.',
         category: 'Guard',
         priority: 'high',
-        versionNote: '2026-10-09 - batch #29 (#1077, owner ruling B / review-queue R50) — bands came from the LAST BAR\'s own high/low, so the score-75 branches could not fire; `computeSuperTrend()` in `directives/utils/supertrend.ts` is now the ONE home (ATR(10)×3 ratchet, one seed midpoint, `null` when unestablished) and the class is a flat 55. The 75-grades were REMOVED rather than re-invented, and the shadow module + its guardian block are deleted. ⚠️ 475 evaluations would newly clear the gate, but 466 were no-ops (`rec == sl`) and later price reached none of the 9 real stop levels.',
+        versionNote: '2026-10-09 - batch #29 (#1077, requirement B / review-queue R50) — bands came from the LAST BAR\'s own high/low, so the score-75 branches could not fire; `computeSuperTrend()` in `directives/utils/supertrend.ts` is now the ONE home (ATR(10)×3 ratchet, one seed midpoint, `null` when unestablished) and the class is a flat 55. The 75-grades were REMOVED rather than re-invented, and the shadow module + its guardian block are deleted. ⚠️ 475 evaluations would newly clear the gate, but 466 were no-ops (`rec == sl`) and later price reached none of the 9 real stop levels.',
       },
       {
         id: 'qa-ab-011',
@@ -7370,7 +7370,7 @@ const QA_CHECKLIST = [
         expected: 'The gate exits 0 and its total is ≤ 286 occurrences. Error text on that page is `#f87171` by default and becomes `#fca5a5` at high contrast. ❌ Before the paydown it was the literal `#991b1b` — a very dark red on black — and did not change at all, because a literal cannot respond to a preference. 177 literals were converged by MEANING, not by colour: `#dc2626` at `.pf-mode-live` was deliberately KEPT, because a LIVE status badge is neither a loss nor an error.',
         category: 'UI',
         priority: 'medium',
-        versionNote: '2026-10-17 - batch #32 (literal paydown) — six batches, 463 → 286 occurrences / 283 → 193 keys / 72 → 62 files; the gate reports the running total so the register cannot drift from reality. Version not bumped; rides the owner\'s next batched commit.',
+        versionNote: '2026-10-17 - batch #32 (literal paydown) — six batches, 463 → 286 occurrences / 283 → 193 keys / 72 → 62 files; the gate reports the running total so the register cannot drift from reality. Version not bumped; rides the requirement\'s next batched commit.',
       },
       {
         id: 'qa-ui-090',
@@ -7715,7 +7715,7 @@ const QA_CHECKLIST = [
         expected: '`7f00cfb8` returns maxDrawdownAmount 161068.36, maxDrawdownPct 1610.68, maxDrawdownPctBasis `capital`, accountSize 10000, peakEquity 2105.58, troughEquity −158962.79. `e844b4cd` returns peakEquity 0, maxDrawdownAmount 12419.46, maxDrawdownPct 124.19 — a NON-zero drawdown on a run that never rose. A run stored without `accountSize` returns maxDrawdownPct `null` and basis `unavailable` with a non-zero amount. The chart tile reads "−$161,068.36" over "1,610.68% of $10,000.00", and "Worst Trade" reads −$296.19 while "Worst Return (10d)" reads −2.87%. See register row 102; the arithmetic is canaried in `nest/src/modules/backtest/equity-drawdown.spec.ts`.',
         category: 'Data',
         priority: 'critical',
-        versionNote: '2026-10-30 - #1149 follow-up — three defects in one expression, all served as numbers rather than errors: the denominator was the peak *cumulative P&L* (a transient high, so the figure grew without bound as losses grew), a `peak > 0` guard made a monotonic loser report exactly 0 (the "−0.00%" the owner reported from screen), and trades were ordered by `entryDate` while stamped with `exitDate` so 117 of 1,027 points were out of order. The arithmetic moved to `computeEquityPath()` in `nest/src/modules/backtest/equity-drawdown.ts`; the same pass stopped `backtestrun.maxDrawdown` (which holds `min(returns10d)`, a forward return) being served under two labels, and the tiles now read "Worst Return (10d)" and "Worst Trade".',
+        versionNote: '2026-10-30 - #1149 follow-up — three defects in one expression, all served as numbers rather than errors: the denominator was the peak *cumulative P&L* (a transient high, so the figure grew without bound as losses grew), a `peak > 0` guard made a monotonic loser report exactly 0 (the "−0.00%" it was reported from screen), and trades were ordered by `entryDate` while stamped with `exitDate` so 117 of 1,027 points were out of order. The arithmetic moved to `computeEquityPath()` in `nest/src/modules/backtest/equity-drawdown.ts`; the same pass stopped `backtestrun.maxDrawdown` (which holds `min(returns10d)`, a forward return) being served under two labels, and the tiles now read "Worst Return (10d)" and "Worst Trade".',
       },
 
       // ── handoff batch #41 (2026-10-27) ───────────────────────────────

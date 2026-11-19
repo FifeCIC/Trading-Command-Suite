@@ -71,14 +71,14 @@ export class RiskController {
    * GET /api/risk/position-intents
    *
    * The answer to "what kind of position is this, and does a weekend gap endanger it?" — one row
-   * per position, with the intent, WHERE that intent came from, and whether the owner is needed.
+   * per position, with the intent, WHERE that intent came from, and whether the requirement is needed.
    *
    * WHY IT EXISTS: the weekend-gap alert reported 26 positions to "consider flattening" when 21
    * were deliberate long-term holdings. The alert could not tell the difference because nothing
    * recorded it. This endpoint is the surface where the difference is VISIBLE and SETTABLE, so the
    * default is never the only answer.
    *
-   * `needsDecision` is the owner's own request: *"if the app itself is missing values it should ask
+   * `needsDecision` is the project's own request: *"if the app itself is missing values it should ask
    * me"*. A row appears there when neither an override nor a provider default can characterise it —
    * the app asks rather than guessing in either direction.
    */
@@ -134,7 +134,7 @@ export class RiskController {
   /**
    * PUT /api/risk/position-intents/:provider/:symbol
    *
-   * Records the owner's answer for one position. Body: `{ intent, note? }`.
+   * Records the project's answer for one position. Body: `{ intent, note? }`.
    *
    * This is the other half of the alert fix — the alert asks, this is where the answer is kept. Once
    * set, the position resolves by OVERRIDE (reported as `intentSource: 'override'`) rather than by
@@ -150,7 +150,7 @@ export class RiskController {
     const intent = parseIntent(body?.intent);
     if (!intent) {
       // Refuse rather than coerce. Defaulting an unrecognised intent to `long-term` would silence
-      // risk checks on a position the owner was trying to flag — the worst possible direction.
+      // risk checks on a position the requirement was trying to flag — the worst possible direction.
       return {
         ok: false,
         error: `unknown intent "${body?.intent}" — expected one of: ${POSITION_INTENTS.join(', ')}`,

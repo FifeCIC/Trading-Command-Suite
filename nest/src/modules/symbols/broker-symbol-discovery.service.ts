@@ -216,7 +216,7 @@ export class BrokerSymbolDiscoveryService implements OnModuleInit {
      * `contractSize`, `volumeMin/Max` and `tickSize` — but **no spread**, because a spread only exists
      * between a live bid and a live ask. Until 2026-10-28 nothing in the app read bids or asks into
      * storage at all, so the backtest priced every trade from a hardcoded per-asset-class guess
-     * (`1% spread + 1% slippage each way` — ~250x a real instrument). The owner asked whether the
+     * (`1% spread + 1% slippage each way` — ~250x a real instrument). The brief asked whether the
      * broker's own data reaches the app; this is the piece that did not.
      *
      * ⚠️ IT CANNOT FAIL THE CATALOGUE SYNC. Discovery's job is the list; a spread capture that cannot

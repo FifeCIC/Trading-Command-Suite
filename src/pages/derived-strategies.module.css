@@ -10,7 +10,7 @@
  * sets pass `scripts/validate-css-tokens.cjs`, so the validator will not catch this: pick from the
  * THEMED list in ui-standards.instructions.md.
  *
- * Borders are FULL, not left-edge. The owner's verbatim preference (ui-standards Pattern 1,
+ * Borders are FULL, not left-edge. The project's verbatim preference (ui-standards Pattern 1,
  * marked DISFAVOURED): "left hand coloured bordered cards which I very much dislike. I prefer ones
  * we have in theme, full coloured borders".
  */
@@ -117,7 +117,7 @@
   padding: 16px 18px;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-/* ⚠️ THE CARD SAYS IT IS INTERACTIVE (2026-11-07). Owner directive: it's not even obvious they can be clicked
+/* ⚠️ THE CARD SAYS IT IS INTERACTIVE (2026-11-07). Requirement: it's not even obvious they can be clicked
    on unless we hover the cursor over one bar. A shadow on hover plus a focus band on the header
    gives the card a hover state a reader can see before touching it. */
 .card:hover { box-shadow: var(--shadow-card); }

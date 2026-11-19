@@ -30,7 +30,7 @@ export type DirectionMode = 'long' | 'short' | 'both';
  *            with its own protocol, bot and record. `'both'` scores one protocol both ways and trades
  *            one run both ways in the same pass — the two things the architecture forbids.
  * INSTEAD OF: Treating direction as a run setting, which is how `directionMode: 'both'` reached a UI
- *            dropdown. ⚠️ The owner had decided this long before; a search of the register, `docs/`,
+ *            dropdown. ⚠️ The requirement had decided this long before; a search of the register, `docs/`,
  *            the roadmap and the open issue tracker on 2026-11-01 found the rule written down
  *            NOWHERE, so there was nothing for an agent to trip over. That is the real defect this
  *            decision fixes — an unrecorded rule is indistinguishable from no rule.
@@ -84,7 +84,7 @@ export function decideEntry(signal: string, directionMode: DirectionMode): Entry
  * `'both'` is not a configuration this app can run — refuse it, do not coerce it.
  *
  * ── WHY THIS IS A SEPARATE, PURE FUNCTION ────────────────────────────────────────────────────────
- * Owner direction, confirmed 2026-11-01: *"The decision to not try to score both ways within a single
+ * Requirement, confirmed 2026-11-01: *"The decision to not try to score both ways within a single
  * protocol or trade both ways within a single bot was made ages ago: there needs to be two active
  * strategies."* `'both'` does exactly those two forbidden things at once — one protocol's signal,
  * opened long on BUY and short on SELL, inside one run. A result from it describes a configuration

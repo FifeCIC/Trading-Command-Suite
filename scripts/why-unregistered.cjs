@@ -2,7 +2,7 @@
 /**
  * why-unregistered.cjs — is an unregistered directive a DUPLICATE, a RETIREMENT, or a FAULT? (#1169)
  * ================================================================================================
- * The owner asked the right question (2026-11-01): *"is that because many directives aren't deemed ready
+ * The brief asked the right question (2026-11-01): *"is that because many directives aren't deemed ready
  * to use or a fault?"* A count cannot answer that — 25 unreachable classes is one number describing
  * three different situations, and only one of them is harmless.
  *

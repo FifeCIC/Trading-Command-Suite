@@ -75,7 +75,7 @@ export interface T212OrderRequest {
    * ⚠️ Added 2026-11-12 (#1256). The adapter used to be a SINGLE-ACCOUNT object resolved once at
    * construction from `TRADING212_MODE`, and `POST /orders/sell` accepted an `accountType` that was
    * destructured and then dropped. So a request to sell ISA holdings went to whichever account the
-   * mode happened to name — the owner's real ISA had no order path at all.
+   * mode happened to name — the project's real ISA had no order path at all.
    *
    *   'demo' | 'live'  — the trading account the mode names (unchanged behaviour when omitted)
    *   'isa'            — the Stocks ISA, which is a SEPARATE account with its own credentials

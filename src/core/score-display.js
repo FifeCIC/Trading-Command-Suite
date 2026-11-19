@@ -110,7 +110,7 @@ export const SCORE_STATES = {
  * That was correct arithmetic and useless as a picture. ADR-011 (#758) changed the percentage
  * denominator from the OBSERVED directional sum (~130) to the CONFIGURED capacity (~725), which
  * divided every percentage by ~6.3. So the practical ceiling became ~15–33%, and a bar drawn
- * against an unreachable 100% can never look more than a fifth full. The owner's words:
+ * against an unreachable 100% can never look more than a fifth full. The project's words:
  *
  *     "it looks like nothing could ever be worth trading"
  *

@@ -1,15 +1,15 @@
 /**
  * ScheduledJobsPage — /status/scheduled-jobs
  *
- * ⚠️ MOVED 2026-10-02 (owner direction). This was the "🗓 Scheduled Jobs" TAB of the Execution Queue
- * page at /automation/execution-queue. The owner deleted that page and said: *"Preserve them and put
+ * ⚠️ MOVED 2026-10-02 (requirement). This was the "🗓 Scheduled Jobs" TAB of the Execution Queue
+ * page at /automation/execution-queue. The requirement deleted that page and said: *"Preserve them and put
  * the Protocol Queue somewhere in the Protocol area and Schedule Jobs in the Status area."*
  *
  * WHY STATUS RATHER THAN AUTOMATION — this is the `scheduled_job` table (the unified job queue, #614),
  * drained by the loop's step 0 "Job queue poll". It is machinery health: is anything due, did the last
  * run fail, how many attempts. That is what Status is for.
  *
- * ⚠️ NAMED `ScheduledJobsPage`, not `AutomationJobsPage`. The owner is retiring the Automation area
+ * ⚠️ NAMED `ScheduledJobsPage`, not `AutomationJobsPage`. The requirement is retiring the Automation area
  * precisely because "automation" named a mechanism rather than a subject — see the retirement note in
  * nav-tree.js. The file name should not reintroduce the word that was removed on purpose.
  *

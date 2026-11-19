@@ -5,7 +5,7 @@
  *
  * WHY THIS EXISTS (2026-10-31)
  * ---------------------------
- * The owner asked for `DISCLAIMER.md` to be on the public GitHub Pages site and the wiki. Measured, and
+ * The requirement is for `DISCLAIMER.md` to be on the public GitHub Pages site and the wiki. Measured, and
  * the short answer was **"there is nothing to publish to yet"**:
  *
  *   repo visibility   private
@@ -38,7 +38,7 @@
  * Exit: 0 = done (or dry run clean) · 1 = refused, with a named reason · 2 = cannot determine state
  *
  * ⚠️ IT NEVER FORCES ANYTHING. No `git push --force`, no branch rewrite, no visibility change. It
- * cannot make a repository public — that is the owner's decision and it is not reversible in the
+ * cannot make a repository public — that is the project's decision and it is not reversible in the
  * way the rest of this script is.
  *
  * ⚠️ DRY RUN IS THE DEFAULT, deliberately. Publishing is outward-facing: the difference between "I
@@ -87,7 +87,7 @@ function readAppVersion() {
 /**
  * The RELEASE STAGE printed beside the version — **read from `package.json`, never typed**.
  *
- * ⚠️ WHY THIS IS READ AND NOT PROSE. Owner directive, 2026-11-09: apply alpha to github pages and wiki.
+ * ⚠️ WHY THIS IS READ AND NOT PROSE. Requirement, 2026-11-09: apply alpha to github pages and wiki.
  * The word "alpha" already appeared on five public pages, typed by hand, and nothing connected it to
  * `package.json.releaseStage` — the field `bump-version.cjs` now checks before allowing 1.0.0. So the
  * public claim and the version gate were two separate statements of the same fact, which is the
@@ -461,7 +461,7 @@ function publishWiki(repo, disclaimerBody, apply) {
     // ⚠️ FALLBACK ONLY. Home is normally written from `wiki/Home.md` by the copy loop below, so this
     // branch runs only for a wiki with no Home page and no source file.
     //
-    // MEASURED 2026-10-31: the owner created Home by hand to bootstrap the wiki, and it stayed
+    // MEASURED 2026-10-31: the requirement created Home by hand to bootstrap the wiki, and it stayed
     // EMPTY — nothing owned it, and this script deliberately did not touch it. An empty front page
     // reads as an abandoned project, which is the worst first impression a documentation site can
     // give. `wiki/Home.md` now exists, so the page is published like every other one and cannot
@@ -494,10 +494,10 @@ function publishWiki(repo, disclaimerBody, apply) {
     `**🛑 [Financial Disclaimer](${WIKI_PAGE.replace(/\.md$/, '')})** — read before connecting an account.`,
     '',
     // ⚠️ The website link belongs HERE, not only in the generated footer: the sidebar is visible on
-    // every page without scrolling, and the owner reported on 2026-11-02 that the site was hard to
+    // every page without scrolling, and it was reported on 2026-11-02 that the site was hard to
     // find. A link at the bottom of a long page is not a link a first-time visitor meets.
     ...(siteUrl ? [`**🌐 [Website](${siteUrl})** · **[Screenshots](${siteUrl}showcase/)**`, ''] : []),
-    // Owner directive, 2026-11-14: README and key places on Wiki and Website should have a Support Me link.
+    // Requirement, 2026-11-14: README and key places on Wiki and Website should have a Support Me link.
     // The sidebar is the "key place" on the wiki — it is on every page, above the fold. It points at
     // the ONE support page rather than listing four donation options, because four equal buttons is a
     // menu, not an ask (DONATION-LINKS.md §4), and the support page already marks Sponsors preferred.
@@ -510,7 +510,7 @@ function publishWiki(repo, disclaimerBody, apply) {
       nav.push(`- [${item.label}](${item.page})`);
       // ⚠️ A sidebar link to a page that is never written is a 404 in navigation, which reads as
       // "the docs are broken" rather than "a page was renamed". Every link is checked against the
-      // pages this run will actually write — Home excepted, because it belongs to the owner.
+      // pages this run will actually write — Home excepted, because it belongs to the requirement.
       const willExist =
         item.page === WIKI_HOME.replace(/\.md$/, '') ||
         item.page === WIKI_PAGE.replace(/\.md$/, '') ||
@@ -667,7 +667,7 @@ function main(argv) {
 
   if (!verdict.ok) {
     console.log('\nREFUSED — nothing published. Neither surface is ready, and none of the blockers');
-    console.log('above can be cleared from this script: making a repository public is the owner\'s decision,');
+    console.log('above can be cleared from this script: making a repository public is the requirement\'s decision,');
     console.log('and an uncommitted file is fixed by committing it, not by changing a setting.');
     return 1;
   }

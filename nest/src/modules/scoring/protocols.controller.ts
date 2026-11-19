@@ -645,7 +645,7 @@ export class ProtocolsController {
 
           // NAMED instances (#1165). The body may declare them, and any that existed before are
           // re-created when their directive is still in the group — a group edit must not silently
-          // delete a comparison the owner configured unless they removed the directive itself.
+          // delete a comparison the requirement configured unless they removed the directive itself.
           const namedFromBody = new Map<string, any>();
           for (const inst of (g as any).directiveInstances ?? []) {
             if (inst?.directiveId && inst.label) {

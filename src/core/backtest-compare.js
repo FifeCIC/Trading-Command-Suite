@@ -2,7 +2,7 @@
  * backtest-compare — "is this number better or worse than the last run?" in ONE place.
  * ==========================================================================================
  *
- * Owner direction, 2026-10-30: *"Lets style these boxes with a colour to indicate improvement or not:
+ * Requirement, 2026-10-30: *"Lets style these boxes with a colour to indicate improvement or not:
  * based on the previous test if one was done for that strategy … it might be that the box borders are
  * coloured based on comparison but the text for loss or profit is standard red and green."*
  *

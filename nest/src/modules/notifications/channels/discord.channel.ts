@@ -21,7 +21,7 @@ export interface SignalSlot {
  *      throwing on failure so notification history records a failure.
  *
  *   2. THE PUBLIC FEED (`signals` / `wins` / `losses`) — published through the Intranet gateway by
- *      CHANNEL KEY, subject to the owner's publishing policy. Added 2026-11-06.
+ *      CHANNEL KEY, subject to the project's publishing policy. Added 2026-11-06.
  *
  * ── WHY A POLICY LIVES HERE AND NOT IN THE DISPATCHER ───────────────────────────────────────────
  * `notifications.service.ts` answers "who should be told about this event". That is a different
@@ -30,7 +30,7 @@ export interface SignalSlot {
  * prevent. So per-event preferences stay where they are, and these rules sit in the channel that
  * actually speaks in public.
  *
- * ── THE OWNER'S RULES ───────────────────────────────────────────────────────────────────────────
+ * ── THE PROJECT'S RULES ───────────────────────────────────────────────────────────────────────────
  *   "I do not want ALL signals to be shared. Only one per day for now to create the system and keep
  *    it well tested."                                            -> the RATION (see below)
  *   "I don't think we should share trade wins and losses that are within a dollar. That might reduce
@@ -44,7 +44,7 @@ export interface SignalSlot {
  * print a signal spent the whole day's allowance and every other strategy was silenced until
  * midnight. The feed ended up reporting the calendar rather than the market. The per-strategy
  * timestamp now lives in the `discordSignalLastPost` setting FAMILY, which is never seeded, so an
- * install that never publishes never carries the data (the owner's stated reason for wanting
+ * install that never publishes never carries the data (the project's stated reason for wanting
  * metadata rather than a column).
  *
  * Both numbers are SETTINGS, not constants. A published message cannot be un-published, so the
@@ -62,9 +62,9 @@ export interface SignalSlot {
  * WHY:       two different failures, so one number cannot fix both. A GLOBAL-only daily allowance let
  *            the first strategy to print consume the whole day. A PER-STRATEGY-only window then
  *            measured ~15 messages/hour in a public channel, because the ladder routinely carries
- *            13-19 actionable strategies. The owner chose "global cap plus per-strategy window" on
+ *            13-19 actionable strategies. The requirement chose "global cap plus per-strategy window" on
  *            2026-11-06. The family is the only home that costs an install which never publishes
- *            exactly nothing, which is the owner's stated reason for wanting metadata over a column.
+ *            exactly nothing, which is the project's stated reason for wanting metadata over a column.
  *            ⚠️ The channel key is deliberately NOT a family: it has one member, and a one-member
  *            family is an individual declaration wearing a pattern.
  * INSTEAD OF: (a) one signal per UTC day for the whole app — the original implementation;
@@ -152,7 +152,7 @@ export class DiscordChannel {
    * ⚠️ A ladder card has NO bot attached, so the closest stable identifier is `metadata.protocolId`,
    * written by `automation-loop.service.ts`. `any` is a REAL subject, not a null: it is what the
    * loop writes when a card names no protocol, and grouping those under one key is deliberate —
-   * the alternative is an unrationed channel, which is the one outcome the owner ruled out.
+   * the alternative is an unrationed channel, which is the one outcome decided out.
    */
   signalSubject(msg: { metadata?: Record<string, unknown> }): string {
     const raw = msg.metadata?.protocolId;
@@ -167,7 +167,7 @@ export class DiscordChannel {
    * Deliberately not `private` so the policy can be unit-tested without an HTTP call.
    */
   async feedChannelFor(msg: NotificationMessage): Promise<'signals' | 'wins' | 'losses' | null> {
-    // ⚠️ `signal-suggestion`, NOT `entry-signal` (changed 2026-11-06 at the owner's direction).
+    // ⚠️ `signal-suggestion`, NOT `entry-signal` (changed 2026-11-06 at the project's direction).
     // `entry-signal` fires only after a bot PLACES AN ORDER, so publishing it would have shared
     // executions while calling them suggestions. The Signals area is a suggestion to enter,
     // generated from scoring with no bot attached — and that is what the feed publishes.
@@ -207,7 +207,7 @@ export class DiscordChannel {
   /**
    * Claim this strategy's signal window, or `null` when it is still inside the interval.
    *
-   * ⚠️ TWO GATES, BOTH CLAIMED BEFORE THE POST (owner direction 2026-11-06):
+   * ⚠️ TWO GATES, BOTH CLAIMED BEFORE THE POST (requirement 2026-11-06):
    *   1. `signalMinGlobalIntervalMinutes` — the CHANNEL ceiling, shared by every strategy.
    *   2. `signalMinIntervalMinutes` — this STRATEGY's window.
    * They do different jobs. Without (1), 13–19 actionable strategies each taking their own hour
@@ -441,7 +441,7 @@ export class DiscordChannel {
   /**
    * buildFeedEmbed() — ONE layout for all three public message kinds.
    *
-   * Owner directive, 2026-11-12: The messages sent to Discord for signals, wins and losses aren't layed out
+   * Requirement, 2026-11-12: The messages sent to Discord for signals, wins and losses aren't layed out
    * the same… a uniformal approach should be applied and ensure that both protocol and bot is
    * included. Put the information on additional lines too and maybe we could use rocket emoji on a
    * $50 profit.

@@ -206,7 +206,7 @@ function BotQueueSection() {
         Inspect and cancel individual queued protocol runs on{' '}
         <a href="/protocols/protocol-queue">Protocol Queue</a> and scheduled jobs on{' '}
         <a href="/status/scheduled-jobs">Scheduled Jobs</a> — both moved out of the deleted
-        /automation/execution-queue page (2026-10-02, owner direction). Live loop activity is now on{' '}
+        /automation/execution-queue page (2026-10-02, requirement). Live loop activity is now on{' '}
         <a href="/trading/trade-journal">the Trade Journal</a>, and the global safety rules are in
         the section below.
       </MovedNote>

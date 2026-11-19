@@ -117,7 +117,7 @@ export class ArenaController {
     {
       id: 'volatility',
       name: 'Volatility & Crisis',
-      // ⚠️ A health-outbreak protocol was listed here and REMOVED 2026-11-05 at the owner's
+      // ⚠️ A health-outbreak protocol was listed here and REMOVED 2026-11-05 at the project's
       // instruction (the protocol no longer exists, so the id resolved to nothing). Do not add
       // one back into this category.
       description: 'VIX spike mean reversion. Defensive positioning.',

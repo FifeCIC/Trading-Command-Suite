@@ -150,7 +150,7 @@
   gap: 0.9rem;
 }
 
-/* The owner's requested card shape: a full coloured outline with corner-only accents. */
+/* The project's requested card shape: a full coloured outline with corner-only accents. */
 .theme-section-card {
   position: relative;
   display: flex;
@@ -242,10 +242,10 @@
 }
 
 /* ── Pattern Library (/appearance/patterns) ───────────────────────────────────────────────────
-   A register of the patterns the OWNER approved, read out of the Page Walkthrough. Tokens only,
+   A register of the patterns the requirement approved, read out of the Page Walkthrough. Tokens only,
    like everything else in this file.
 
-   ⚠️ `.ap-row--flag` IS NOT DECORATION. It marks a pattern the owner has deliberately NOT chosen
+   ⚠️ `.ap-row--flag` IS NOT DECORATION. It marks a pattern the requirement has deliberately NOT chosen
    (the status-pill text-vs-rectangle fork). On a page whose whole purpose is to record that choice,
    a flagged row that looks identical to a settled one invites someone to treat it as settled. */
 .ap-meta {

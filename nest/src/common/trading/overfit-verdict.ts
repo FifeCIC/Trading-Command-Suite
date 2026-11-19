@@ -6,7 +6,7 @@
  * and returns `outOfSampleWinRate`. So the hardest part exists. What did not exist anywhere was the
  * COMPARISON: a run scoring 61% in-sample and 12% out-of-sample rendered identically to one scoring
  * 40%/38%, because both are just two numbers. The repo's most repeated defect shape — **plausible
- * numbers, no error** — and the owner's own words: *"no surface says which strategies SURVIVED."*
+ * numbers, no error** — and the project's own words: *"no surface says which strategies SURVIVED."*
  *
  * ── THE RULE, STATED ONCE (and this is the only place it is stated) ──────────────────────────
  * Retention = out-of-sample win rate ÷ in-sample win rate.

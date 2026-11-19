@@ -8,7 +8,7 @@
  * --------------------------------
  * `bot-rules.ts` attributes every `trading_strategy` column to an enforcing file via `enforcedBy`.
  * `stop-guardian.service.ts` declares its own mechanisms in `GUARDIAN_RULES`. **Nothing compared
- * the two.** Measured on the bot page the owner was reading:
+ * the two.** Measured on the bot page the requirement was reading:
  *
  *   FIVE columns claimed `stop-guardian.service.ts` as their enforcer —
  *   `simTslEnabled`, `simTslActivationPct`, `simTslDistancePct`, `exhaustionObserveEnabled`,
@@ -221,7 +221,7 @@ function selfTest() {
       () => check(BOT_GOOD.replace("enforcedBy: 'nest/src/modules/automation/automation-loop.service.ts'", `enforcedBy: '${GUARDIAN_PATH}'`), GUARD_GOOD, always).errors, true],
 
     // (2b) the DUPLICATION — one column, two mechanisms
-    ['a column declared by TWO mechanisms (the duplication the owner saw)',
+    ['a column declared by TWO mechanisms (the duplication the requirement saw)',
       () => check(BOT_GOOD, GUARD_GOOD.replace("{ id: 'atr-trailing-stop', label: 'ATR', kind: 'input', scope: 'global',",
         "{ id: 'atr-trailing-stop', label: 'ATR', kind: 'input', scope: 'per-bot',\n    fields: ['simTslEnabled'],"), always).errors, true],
 

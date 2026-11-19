@@ -97,7 +97,7 @@ export interface ResolvedFamilySetting {
   family: string;
   subject: string;
   field: string;
-  /** Whether a row exists. `false` means the owner's own fallback is in force. */
+  /** Whether a row exists. `false` means the project's own fallback is in force. */
   present: boolean;
   value?: number | boolean | string;
   source: 'db' | 'absent' | 'invalid';
