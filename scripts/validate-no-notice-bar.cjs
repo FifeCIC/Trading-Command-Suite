@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * validate-no-notice-bar — the thick coloured left-hand bar has been rejected REPEATEDLY to be
- * removed from notice / callout / status surfaces (last: 2026-11-06, *"remove all existence of the
+ * validate-no-notice-bar — the thick coloured left-hand bar is to be removed from notice / callout /
+ * status surfaces; it has been rejected REPEATEDLY (last: 2026-11-06, *"remove all existence of the
  * notice styling that has the left side border thicker and coloured"*).
  *
  * Each time, one instance was fixed and the style came back somewhere else — because a rule that is

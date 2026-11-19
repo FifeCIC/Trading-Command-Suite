@@ -48,9 +48,9 @@
  * anyway** — including the agent that wrote the rule into this file. A rule with no mechanism does
  * not fire, so the two things that cost a reader the most time are now checked HERE:
  *
- *   1. **CADENCE** — WARN if the previous commit was under 4 hours ago. Every commit is read closely —
- *      commit; one every few minutes — 18 in 4.5 hours was measured on 2026-09-23 — trains them to
- *      skim, which is identical to having no evidence trail. Batch instead.
+ *   1. **CADENCE** — WARN if the previous commit was under 4 hours ago. Commits every few minutes
+ *      (18 in 4.5 hours, measured 2026-09-23) train a reader to skim, which is identical to having
+ *      no evidence trail. Batch instead.
  *   2. **BODY SIZE** — WARN on a message over 1,500 characters. The reasoning belongs in the
  *      HANDOFF or the ISSUE; the commit carries the what and the why in a few lines.
  *

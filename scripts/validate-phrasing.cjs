@@ -24,6 +24,20 @@
  * "(requirement, 2026-10-27)" are correct and pass. Banning the word would be a guard that fires for
  * the wrong reason, and an allowlisted guard is worse than none.
  *
+ * 🛑 AND THIS GUARD CANNOT CATCH THE MISTAKE ITS OWN REPAIR MADE — READ THIS BEFORE ANY SUBSTITUTION.
+ * The 225 replacements that preceded this file were scripted, and FOUR of them silently broke a
+ * sentence that spanned a line wrap:
+ *
+ *     "...no UI score was given for" + "the page a UI score, and inventing one..."   (duplicated phrase)
+ *     "Every commit is read closely —" + "commit; one every few minutes..."          (duplicated word)
+ *     "...has been rejected REPEATEDLY to be" + "removed from notice surfaces"       (no verb left)
+ *
+ * None has a mechanical signature: the words are all real, the sentence is simply no longer English.
+ * Every one was found by READING the replacement in context, after the fact. **A regex that fixes
+ * prose must be reviewed at the same width the prose was written**, so print the surrounding two
+ * lines for each replacement rather than the matched fragment — that is the check that worked, and it
+ * is a person's job, not this script's.
+ *
  * ⚠️ THE RULE CORPUS IS NOT SCANNED. `.github/instructions/` and `~/.copilot/instructions/` define
  * ROLES ("the owner must approve X") rather than narrating a person in a code comment, and they read
  * correctly. This file checks the repository's own prose: source comments, docs, and site text.
