@@ -13,6 +13,9 @@ function build(opts: {
   adapters?: Record<string, any>;
   degradation?: Array<{ providerId: string; status: string; reason?: string }>;
   throwOnCreate?: string[];
+  /** Live bridge healths, as Mt5ConnectionManager.getAllBrokerHealths() returns them. */
+  bridgeHealths?: any[];
+  bridgeThrows?: boolean;
 }) {
   const brokerConfig = { findAll: async () => opts.configs ?? [] } as any;
   const adapterFactory = {
@@ -24,8 +27,18 @@ function build(opts: {
     hasCredentials: () => true,
   } as any;
   const degradation = { getAll: () => opts.degradation ?? [] } as any;
+  // ⚠️ The 4th argument is OPTIONAL in the service (#1313). Omitting it must reproduce the
+  // pre-change behaviour exactly, which is what every pre-existing case above already proves.
+  const mt5 = opts.bridgeHealths || opts.bridgeThrows
+    ? ({
+        getAllBrokerHealths: async () => {
+          if (opts.bridgeThrows) throw new Error('bridge unreachable');
+          return opts.bridgeHealths ?? [];
+        },
+      } as any)
+    : undefined;
 
-  return new BrokerCapabilityService(brokerConfig, adapterFactory, degradation);
+  return new BrokerCapabilityService(brokerConfig, adapterFactory, degradation, mt5);
 }
 
 const ALL_METHODS = {
@@ -300,5 +313,101 @@ describe('BrokerCapabilityService.getBrokerStatus', () => {
     await svc.getBrokerStatus();
 
     expect(createCalls).toBe(1);
+  });
+});
+
+/**
+ * #1313 — CONNECTED IS NOT TRADEABLE.
+ *
+ * Measured 2026-11-19: bridge :5001 answered `/health` with `connected: true, tradeAllowed: false`
+ * and refused every order `retcode 10027`, while `runtime.canPlaceOrder` stayed `true` (it asks
+ * whether the ADAPTER has a placeOrder method) and `connection.status` stayed `unknown` (the
+ * degradation tracker had no `mt5` entry). Broker :5000 could trade, so the all-or-nothing
+ * `checkTradeDisabled()` alert never fired. Every surface was reassuring and none was true.
+ *
+ * The property pinned below: a bridge's own `tradeAllowed` must reach the response, and an
+ * UNREADABLE bridge must never be rendered as a capability in either direction.
+ */
+describe('BrokerCapabilityService — live bridge trading capability (#1313)', () => {
+  const MT5 = {
+    configs: [{ id: 'mt5', displayName: 'MetaTrader 5', tradingEnabled: true, isActive: true }],
+    registrations: [{ id: 'mt5', name: 'MT5', capabilities: ['quotes', 'trades'] }],
+    adapters: { mt5: ALL_METHODS },
+  };
+
+  it('reports the blocked bridge, names it, and refuses to call the connection healthy', async () => {
+    const svc = build({
+      ...MT5,
+      bridgeHealths: [
+        { brokerId: 2, health: { connected: true, tradeAllowed: true, account: '10011309743' } },
+        { brokerId: 3, health: { connected: true, tradeAllowed: false, account: '62148195' } },
+      ],
+    });
+
+    const row = (await svc.getBrokerStatus()).brokers[0];
+    // The row is observed, and it is NOT 'healthy' — one bridge refuses every order, and
+    // "healthy" is read as "nothing to do here".
+    expect(row.connection.observed).toBe(true);
+    expect(row.connection.status).toBe('degraded');
+    expect(row.connection.reason).toMatch(/refusing every order/i);
+
+    // Per-bridge detail, so a reader can see WHICH account is dead.
+    expect(row.trade?.brokers).toHaveLength(2);
+    expect(row.trade?.brokers.find((b) => b.brokerId === 3)?.canTrade).toBe(false);
+    expect(row.trade?.brokers.find((b) => b.brokerId === 2)?.canTrade).toBe(true);
+
+    // ONE broker can trade, so the broker-level answer is true — a broker is usable if any
+    // account is. The warning still names the dead bridge, because otherwise it disappears.
+    expect(row.trade?.canTrade).toBe(true);
+    expect(row.warnings.join(' ')).toMatch(/CONNECTED BUT CANNOT TRADE/);
+    expect(row.warnings.join(' ')).toMatch(/#3/);
+    expect(row.warnings.join(' ')).toMatch(/10027/);
+  });
+
+  it('reports healthy when every bridge can trade, with no warning', async () => {
+    const svc = build({
+      ...MT5,
+      bridgeHealths: [{ brokerId: 2, health: { connected: true, tradeAllowed: true } }],
+    });
+
+    const row = (await svc.getBrokerStatus()).brokers[0];
+    expect(row.connection).toMatchObject({ observed: true, status: 'healthy' });
+    expect(row.trade?.canTrade).toBe(true);
+    expect(row.warnings).toEqual([]);
+  });
+
+  it('a disconnected bridge is not judged tradeable, and not called blocked either', async () => {
+    const svc = build({
+      ...MT5,
+      bridgeHealths: [{ brokerId: 2, health: { connected: false, tradeAllowed: null } }],
+    });
+
+    const row = (await svc.getBrokerStatus()).brokers[0];
+    // cannot judge — `null`, never `false`. A dead bridge says nothing about AutoTrading.
+    expect(row.trade?.canTrade).toBeNull();
+    expect(row.trade?.brokers[0].canTrade).toBeNull();
+    expect(row.connection.status).toBe('unknown');
+    expect(row.warnings.join(' ')).not.toMatch(/CONNECTED BUT CANNOT TRADE/);
+  });
+
+  it('an unreadable bridge leaves the row EXACTLY as it was before this change', async () => {
+    const svc = build({ ...MT5, bridgeThrows: true });
+
+    const row = (await svc.getBrokerStatus()).brokers[0];
+    expect(row.trade).toBeNull();
+    // The pre-#1313 shape, unchanged: not observed, and no invented status.
+    expect(row.connection).toEqual({ observed: false, status: 'unknown', reason: null });
+    expect(row.warnings).toEqual([]);
+  });
+
+  it('treats an explicitly disabled API trade path as blocked too', async () => {
+    const svc = build({
+      ...MT5,
+      bridgeHealths: [{ brokerId: 2, health: { connected: true, tradeAllowed: true, tradeapiDisabled: true } }],
+    });
+
+    const row = (await svc.getBrokerStatus()).brokers[0];
+    expect(row.connection.status).toBe('trading-disabled');
+    expect(row.warnings.join(' ')).toMatch(/API trade path/i);
   });
 });

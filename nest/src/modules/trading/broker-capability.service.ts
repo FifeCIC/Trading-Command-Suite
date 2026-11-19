@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { ProviderDegradationService } from '../providers/provider-degradation.service';
+import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { BrokerConfigService } from './broker-config.service';
 
 /**
@@ -75,7 +76,67 @@ export class BrokerCapabilityService {
     private readonly brokerConfig: BrokerConfigService,
     private readonly adapterFactory: AdapterFactory,
     private readonly degradation: ProviderDegradationService,
+    /**
+     * ⚠️ OPTIONAL ON PURPOSE (#1313). Existing construction sites and specs pass three
+     * arguments; a fourth required one would break them for a capability they do not test.
+     * When it is absent, every row behaves exactly as before.
+     */
+    @Optional() private readonly mt5Connection?: Mt5ConnectionManager,
   ) {}
+
+  /**
+   * `liveTrade()` — what each MT5 BRIDGE currently says about trading, keyed by provider id.
+   *
+   * ⚠️ WHY THIS EXISTS (#1313, measured 2026-11-19). `connection.status` came only from the
+   * degradation tracker, which had no `mt5` entry, so it reported `unknown` — while both
+   * bridges were answering `/health` with the answer. Worse, `runtime.canPlaceOrder: true`
+   * read as "this broker can place orders" when `tradeAllowed: false` on :5001 meant EVERY
+   * order was refused `retcode 10027`. One broker kept trading, so nothing alerted: the
+   * all-or-nothing `checkTradeDisabled()` stayed silent and the surface said "canPlaceOrder".
+   *
+   * `canTrade` is a THREE-state value, and `null` is not `false`:
+   *   true  — a bridge reported `tradeAllowed: true` and the API trade path is not disabled
+   *   false — a bridge reported `tradeAllowed: false` or `tradeapiDisabled: true` (definite)
+   *   null  — no bridge answered, or the field was unreadable. "Cannot judge" is its own
+   *           answer and must never be rendered as a capability, in either direction.
+   */
+  private async liveTrade(): Promise<Map<string, LiveTrade>> {
+    const out = new Map<string, LiveTrade>();
+    if (!this.mt5Connection || typeof this.mt5Connection.getAllBrokerHealths !== 'function') return out;
+    let healths: any[] = [];
+    try {
+      healths = await this.mt5Connection.getAllBrokerHealths();
+    } catch (err) {
+      this.logger.warn(`[brokers] MT5 bridge health read failed; canTrade will read 'null': ${String(err)}`);
+      return out;
+    }
+    const perBridge = (Array.isArray(healths) ? healths : []).map((h: any) => {
+      const hh = h?.health ?? {};
+      const blocked = hh.tradeAllowed === false || hh.tradeapiDisabled === true;
+      return {
+        brokerId: h?.brokerId ?? null,
+        connected: hh.connected === true,
+        tradeAllowed: hh.tradeAllowed ?? null,
+        tradeapiDisabled: hh.tradeapiDisabled ?? null,
+        account: hh.account ?? null,
+        canTrade: hh.connected === true ? !blocked : null,
+      };
+    });
+    if (perBridge.length === 0) return out;
+    const anyReadable = perBridge.some((b) => b.canTrade !== null);
+    out.set('mt5', {
+      observed: true,
+      // TRUE when at least one bridge can trade — a broker is usable if any account is.
+      canTrade: anyReadable ? perBridge.some((b) => b.canTrade === true) : null,
+      connected: perBridge.some((b) => b.connected),
+      // ⚠️ PARTIAL IS ITS OWN STATE (#1313). A canary caught the first version reporting
+      // `healthy` while its own warning said one bridge was refusing every order. One working
+      // account beside one dead account is not "healthy" — that word is read as "nothing to do".
+      partiallyBlocked: perBridge.some((b) => b.canTrade === false) && perBridge.some((b) => b.canTrade === true),
+      brokers: perBridge,
+    });
+    return out;
+  }
 
   /** The joined view the Accounts page reads. One call, one cache lifetime. */
   async getBrokerStatus(): Promise<BrokerStatusResponse> {
@@ -101,6 +162,9 @@ export class BrokerCapabilityService {
       this.logger.warn(`[brokers] degradation read failed, connection state will read 'unknown': ${String(err)}`);
     }
 
+    // Live bridge truth, which the degradation tracker does not carry for `mt5` (#1313).
+    const liveById = await this.liveTrade();
+
     const allIds = new Set<string>([...configById.keys(), ...regById.keys()]);
     const brokers: BrokerStatusRow[] = [];
 
@@ -109,6 +173,8 @@ export class BrokerCapabilityService {
       const reg = regById.get(id);
       const runtime = reg ? this.probeRuntime(id) : null;
       const conn = connById.get(id) ?? null;
+      // Live bridge state for THIS provider, if one reported anything (#1313).
+      const live = liveById.get(id) ?? null;
 
       brokers.push({
         id,
@@ -140,13 +206,36 @@ export class BrokerCapabilityService {
         // ── proof (runtime probe) ──
         runtime,
         // ── connection ──
-        connection: {
-          observed: Boolean(conn),
-          status: conn?.status ?? 'unknown',
-          reason: conn?.reason ?? null,
-        },
+        // A live bridge reading beats the degradation tracker: it is the thing that actually
+        // answers. When neither has an entry, this stays `observed: false / unknown`, which is
+        // the honest answer and the one the existing spec pins.
+        connection: live
+          ? {
+              observed: true,
+              status:
+                live.canTrade === false
+                  ? 'trading-disabled'
+                  : live.partiallyBlocked
+                    ? 'degraded'
+                    : live.canTrade === true
+                      ? 'healthy'
+                      : 'unknown',
+              reason:
+                live.canTrade === false
+                  ? 'connected, but AutoTrading is OFF in the terminal (or the API trade path is disabled) — every order is refused'
+                  : live.partiallyBlocked
+                    ? 'at least one bridge is refusing every order while another can trade — see `trade.brokers`'
+                    : null,
+            }
+          : {
+              observed: Boolean(conn),
+              status: conn?.status ?? 'unknown',
+              reason: conn?.reason ?? null,
+            },
+        // ── can it actually TRADE, per bridge? ──
+        trade: live,
         // ── the two lists disagreeing is a FINDING, not a detail ──
-        warnings: this.buildWarnings(id, cfg, reg, runtime),
+        warnings: this.buildWarnings(id, cfg, reg, runtime, live),
       });
     }
 
@@ -240,8 +329,31 @@ export class BrokerCapabilityService {
     cfg: any,
     reg: any,
     runtime: RuntimeCapability | null,
+    live: LiveTrade | null = null,
   ): string[] {
     const w: string[] = [];
+
+    // ── #1313 — CONNECTED BUT CANNOT TRADE ────────────────────────────────────────────────
+    // Measured 2026-11-19: :5001 answered `/health` with `connected: true, tradeAllowed: false`
+    // and refused every order `retcode 10027`. `runtime.canPlaceOrder` was `true` throughout,
+    // because that field asks "does the adapter HAVE a placeOrder method", not "will the broker
+    // accept one". Both facts are true and only one of them matters to whoever is reading.
+    if (live && (live.canTrade === false || live.partiallyBlocked)) {
+      const dead = (live.brokers ?? []).filter((b) => b.canTrade === false);
+      const names = dead
+        .map((b) => `#${b.brokerId ?? '?'}${b.account ? ` (${b.account})` : ''}`)
+        .join(', ');
+      // ⚠️ The partial case is the one that hid for 10 hours: one account works, so no alert
+      // fired and every surface stayed green while the other account refused 100% of orders.
+      const scope = live.partiallyBlocked
+        ? '. Another account CAN trade, so NOTHING alerts about this one'
+        : ', so the broker cannot trade at all';
+      w.push(
+        `CONNECTED BUT CANNOT TRADE — ${names || 'a bridge'} reports AutoTrading OFF or the API trade path disabled: ` +
+        `EVERY order routed there is refused (retcode 10027)${scope}. ` +
+        '`runtime.canPlaceOrder` describes the adapter, not the broker.',
+      );
+    }
 
     if (cfg && !reg) {
       w.push(
@@ -299,6 +411,25 @@ export interface RuntimeCapability {
   probeError: string | null;
 }
 
+export interface LiveBridgeTrade {
+  brokerId: number | null;
+  connected: boolean;
+  tradeAllowed: boolean | null;
+  tradeapiDisabled: boolean | null;
+  account: string | null;
+  /** true = can trade now · false = definitely blocked · null = cannot judge. */
+  canTrade: boolean | null;
+}
+
+export interface LiveTrade {
+  observed: boolean;
+  canTrade: boolean | null;
+  connected: boolean;
+  /** Some bridges blocked and some not — never rendered as plain 'healthy'. */
+  partiallyBlocked: boolean;
+  brokers: LiveBridgeTrade[];
+}
+
 export interface BrokerStatusRow {
   id: string;
   displayName: string;
@@ -315,6 +446,8 @@ export interface BrokerStatusRow {
   credentialsConfigured: boolean | null;
   runtime: RuntimeCapability | null;
   connection: { observed: boolean; status: string; reason: string | null };
+  /** Live per-bridge trading capability, when a bridge reported anything (#1313). */
+  trade: LiveTrade | null;
   warnings: string[];
 }
 
