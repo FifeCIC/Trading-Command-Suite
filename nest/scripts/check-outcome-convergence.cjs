@@ -126,8 +126,15 @@ async function main() {
   const v = verdict(stats);
   if (v.diverging) {
     console.error(`\n✖ DIVERGING — ${v.reason}`);
-    console.error('Check the bridges FIRST: with no bars no horizon can fill, and the queue must grow.');
-    console.error('The bridges being down is not this check failing; it is the reason the queue cannot drain.');
+    // ⚠️ TWO different causes, and naming only one sends the reader to the wrong place.
+    // Bridges DOWN means no bar can fill any horizon, so the queue MUST grow — that is not a bug.
+    // Bridges UP with `filled: 0` in the tick log is the #1312 defect (the passes re-reading the
+    // same batch), which looks identical from this table alone. So both are named.
+    console.error('Rule out BOTH:');
+    console.error('  1. bridges DOWN → no bar can fill a horizon, so the queue must grow. Expected, not a bug.');
+    console.error('     curl -s -o NUL -w "%{http_code}" http://localhost:5000/health  (and :5001)');
+    console.error('  2. bridges UP but the tick log shows `filled 0` every pass → the passes are not advancing.');
+    console.error('     Look for the latest "Outcome maturation: visited 250, filled …" lines in nest/logs/console-*.log');
     return 1;
   }
   console.log(`\n✅ CONVERGING — ${v.reason}`);
