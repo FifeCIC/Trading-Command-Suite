@@ -1,4 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service';
+import { Trading212ReferenceService } from '../portfolio/t212-reference.service';
+import { cleanT212Ticker } from '../providers/t212-ticker-map';
 
 export type IsaTradeSide = 'buy' | 'sell';
 
@@ -70,6 +73,11 @@ export class IsaService {
   private readonly apiSecret = process.env.TRADING212_ISA_API_SECRET || '';
   private readonly baseUrl = process.env.TRADING212_ISA_BASE_URL || DEFAULT_BASE_URL;
 
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly reference: Trading212ReferenceService,
+  ) {}
+
   /**
    * authHeaders() — HTTP BASIC (key:secret), because that is what Trading212 accepts.
    *
@@ -97,6 +105,61 @@ export class IsaService {
 
     const account = accountOutcome.ok ? (accountOutcome.data ?? null) : null;
     const positions = positionsOutcome.ok ? (positionsOutcome.data ?? []) : [];
+
+    // Company names come from OUR symbol table (one indexed read), and pie membership from the
+    // reference service's cached map — neither adds a network call to this request.
+    const heldTickers = [...new Set(positions.map((p) => this.stripTicker(p.ticker || '')).filter(Boolean))];
+    let nameByTicker = new Map<string, string>();
+    if (heldTickers.length > 0 && this.prisma?.isAvailable) {
+      try {
+        const rows = await this.prisma.symbol.findMany({
+          where: { ticker: { in: heldTickers } },
+          select: { ticker: true, name: true },
+        });
+        nameByTicker = new Map(rows.filter((r) => r.name && r.name !== r.ticker).map((r) => [r.ticker, r.name]));
+      } catch {
+        // A name is a label: absent renders as the ticker, which is what the page showed before.
+      }
+    }
+    // ⚠️ A MISSING COLLABORATOR IS "CANNOT JUDGE", NOT A CRASH (2026-11-19, primary).
+    // `pieNames()` returns `{ names, ready }` and `ready: false` is this service's own documented
+    // way of saying "nobody has asked yet" — the column must then render "unknown" rather than
+    // "no pie". So an absent reference service has a correct answer available: return that same
+    // shape. This line was a bare call, and `new IsaService()` (how the committed spec builds it —
+    // deliberately, so field-level behaviour is tested without a container) then threw
+    // `Cannot read properties of undefined (reading 'pieNames')` for all 7 cases.
+    //
+    // ⚠️ It also protects the PAGE: this is a dashboard render, and a collaborator that has not been
+    // wired must not blank the account summary. The wiring itself is asserted elsewhere
+    // (`isa.module.ts` imports `T212ReferenceModule`), so nothing is hidden by degrading here.
+    const pieResult = this.reference?.pieNames
+      ? this.reference.pieNames({
+          baseUrl: this.baseUrl,
+          key: this.apiKey,
+          secret: this.apiSecret,
+          label: 'isa',
+        })
+      : { names: new Map<string, string>(), ready: false };
+    const pieNames = pieResult.names;
+
+    /**
+     * Company names: our `symbol` table first (instant, and the import keeps it fresh), then the
+     * cached Trading212 instrument metadata for anything the table has never seen — this account's
+     * holdings are not all imported symbols. `instrumentNamesIfReady` never fetches on this path; it
+     * warms the cache in the background, so the first load after a restart shows some names and the
+     * one after shows all of them.
+     */
+    // ⚠️ SAME RULE AS `pieNames` ABOVE — an absent collaborator degrades to "no names yet", which
+    // renders the ticker. A dashboard render must not throw because a dependency was not supplied.
+    // `.map` is the field, so the fallback supplies the same shape rather than an empty object.
+    const metaNames = (this.reference?.instrumentNamesIfReady
+      ? this.reference.instrumentNamesIfReady({
+          baseUrl: this.baseUrl,
+          key: this.apiKey,
+          secret: this.apiSecret,
+          label: 'isa',
+        })
+      : { map: new Map<string, string>() }).map;
 
     // ⚠️ The status is derived from the FETCHES, not from whether a key exists. A present key that
     // T212 rejects is `unauthorised`, not `connected` — see FetchOutcome above.
@@ -148,9 +211,26 @@ export class IsaService {
         rationale: 'London/New York overlap is the baseline high-liquidity window until historical FX pattern analysis is available.',
       },
       warnings: this.buildDashboardWarnings(allowanceUsed, foreignPositions.length, failure),
+      /** false = the pie map has never loaded; a row's `pieName: null` is then UNKNOWN, not "no pie". */
+      pieReady: pieResult.ready,
       positions: positions.map((position) => ({
         symbol: this.stripTicker(position.ticker || ''),
         ticker: position.ticker || '',
+        /**
+         * ⚠️ THE PIE AND THE COMPANY, WHICH THE ROW DOES NOT CARRY (added 2026-11-19).
+         *
+         * `/equity/portfolio` returns a ticker and figures — no pie, no name. Measured on this
+         * account: one pie, **"AI Giants"**, holding 15 instruments. `pieName: null` means the symbol
+         * is in NO pie; `pieReady: false` (per dashboard) means the pie map has not been looked up
+         * yet and the answer is UNKNOWN. Those must not render the same.
+         *
+         * The company name comes from our `symbol` table, which the T212 import fills from the
+         * instrument metadata — so this adds no network call to a page load.
+         */
+        name: nameByTicker.get(this.stripTicker(position.ticker || ''))
+          ?? metaNames.get(this.stripTicker(position.ticker || ''))
+          ?? null,
+        pieName: pieNames.get(this.stripTicker(position.ticker || '')) ?? null,
         quantity: position.quantity ?? null,
         currentPriceGbp: position.currentPrice ?? null,
         valueGbp: position.currentPrice != null && position.quantity != null
@@ -296,7 +376,19 @@ export class IsaService {
   }
 
   private stripTicker(ticker: string): string {
-    return ticker.split('_')[0] || ticker;
+    /*
+     * ⚠️ THIS USED TO BE `ticker.split('_')[0]`, WHICH IS NOT THE APP'S TICKER (fixed 2026-11-19).
+     *
+     * Measured: `/equity/portfolio` returns `ASMLa_EQ` for ASML. `split('_')[0]` yields **`ASMLa`** —
+     * the Trading212 *modifier* (`a`) kept on the end — while every other path in this app, including
+     * the T212 import and the research links, stores `ASML` via `cleanT212Ticker()`. So the ISA
+     * dashboard displayed a symbol that exists nowhere else, and its company-name lookup missed for
+     * exactly the tickers that carry a modifier.
+     *
+     * Two resolutions of one fact is the defect; this now delegates to the ONE cleaner, so the ISA
+     * page and the rest of the app cannot disagree about what a symbol is called.
+     */
+    return cleanT212Ticker(ticker);
   }
 
   private isForeignListed(ticker: string): boolean {
