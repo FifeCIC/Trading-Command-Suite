@@ -12,6 +12,40 @@ import type { DirectiveInput, DirectiveResult } from '../directives/interfaces/d
  * ExitConsensusService — evaluate an OPEN position FOR EXIT, separately from entry scoring.
  * ==========================================================================================
  *
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════
+ * 🧭 ROADMAP NOTE (added 2026-11-19) — THIS SERVICE IS THE DESIGN, AND IT HAS NO ACTOR YET
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════
+ *
+ * Owner, 2026-11-19: the exit decision should be expressible by directives reading on their own — and
+ * the pyramid and exit services were challenged on whether they need indicator values the directives do
+ * not expose. P2 below IS that design: the exit directives read as a VERDICT, not as points folded into
+ * an entry composite.
+ *
+ * ⚠️ (Attribution without quotation, per `validate-owner-quotes.cjs`: the reasoning is kept, the
+ * conversation is not republished — this repository is public.)
+ *
+ * ⚠️ **MEASURED 2026-11-19: the only consumer of this service is `ExitConsensusController`** — i.e.
+ * `GET /api/scoring/exit-consensus`, a READ endpoint. Nothing on the trading path acts on the verdict.
+ * So the mechanism the strategy needs on its exit side exists, is tested, and closes nothing. Wiring it
+ * to an actor is queued, not forgotten.
+ *
+ * ── THE PATTERN TO EXTEND, AND THE ONE THING THAT BLOCKS IT ───────────────────────────────────────
+ * A directive currently returns a SCORE. Anything outside scoring (this service, the Stop Guardian, the
+ * Pyramid Policy) therefore cannot ask a directive for a MEASUREMENT and has to recompute it. The Stop
+ * Guardian's `observeExhaustion()` documents exactly that: it recomputes deceleration because
+ * `momentum-exhaustion` declares `minBars {1d: 19}` / `minTimeframe M15` while the guardian evaluates 5m
+ * bars with limit 30 — the directive cannot run in that window.
+ *
+ * ⇒ The direction agreed 2026-11-19: make a directive expose `{ score, value, window }` with its window
+ * PARAMETERISED, so a decision service calls it instead of re-deriving the same number. ⚠️ That is a
+ * money-path change across ~144 classes and needs an A/B — so the cheap proof is ONE directive
+ * (`momentum-exhaustion`) before the other 143.
+ *
+ * ⚠️ **DO NOT FOLD EXIT LOGIC INTO THE ENTRY COMPOSITE** to avoid this refactor. `entry-side.ts` already
+ * refuses the conflation of "how good is this setup" with "should I leave", and a composite that
+ * contains exit points cannot be attributed to either.
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════
+ *
  * ⚠️ WHY THIS EXISTS, AND WHY IT IS SEPARATE.
  *
  * Every mechanism that could have protected an open position was measured to be inert or

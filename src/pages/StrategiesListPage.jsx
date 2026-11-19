@@ -709,6 +709,21 @@ export default function StrategiesListPage() {
                   <span>Last Score: <strong>{sel.lastComposite ?? '—'}</strong></span>
                 </div>
 
+                {/*
+                  ── THIS BOT'S QUEUED CHANGES (owner, 2026-11-19) ────────────────────────────────
+                  *"register placeholder changes… I expect them to appear on the strategies own pages
+                  in the Strategies area alongwith the outstanding changes to protocols."*
+
+                  ⚠️ Both requirements are met by TWO panels, deliberately:
+                    · this one is scoped to the selected bot (`botId`) — the rules that BLOCK *this*
+                      strategy, shown where the strategy's own configuration is read;
+                    · the page-level panel above the table is `mode="all"` — everything queued,
+                      protocol and bot together, which is the "one place" the owner asked for.
+                  A single panel cannot do both without either duplicating rows or hiding which bot a
+                  rule belongs to.
+                */}
+                <SuggestionQueue botId={sel.id} title="Queued changes — this bot's rules" />
+
                 <label className={styles.toggleRow}>
                   <span>Active</span>
                   <ToggleSwitch checked={isActiveStrategy(sel)} onChange={() => handleToggle(sel.id)} />

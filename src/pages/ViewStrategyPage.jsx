@@ -113,6 +113,7 @@ import { noticeFromError } from '../core/notices/from-error.js';
 import NoticeBlock from '../components/NoticeBlock';
 import styles from './view-strategy.module.css';
 import './strategy-decision-path.css';
+import SuggestionQueue from '../components/SuggestionQueue';
 
 // ⚠️ Mermaid is configured by `core/mermaid-theme`, NOT here — `mermaid.initialize()` sets a
 // GLOBAL singleton, so a second call on another page silently overrides this one.
@@ -1064,6 +1065,22 @@ export default function ViewStrategyPage() {
           {bot.symbol} · broker {bot.brokerId} · tf {bot.timeframe} · v{bot.version}
           {bot.description ? ` · ${bot.description}` : ''}
         </p>
+
+        {/*
+          ── THIS STRATEGY'S QUEUED CHANGES (owner, 2026-11-19) ──────────────────────────────────
+          This is the strategy's OWN page, so the rules blocking it belong here and not only on the
+          list page: a reader who arrives to inspect one bot should see what we intend to change about
+          THAT bot without going back.
+
+          ⚠️ `botId` scoping is what makes that true. Without it the panel falls into `mode="all"` and
+          shows every queued row in the app — which reads as "this strategy's changes" while being
+          someone else's. That exact mistake shipped once and was caught only in the browser (see
+          `SuggestionQueue`'s docblock).
+
+          ⚠️ Placed AFTER the header, not inside the chip row: the chips are a flex line of short
+          labels, and a block element dropped among them breaks the alignment.
+        */}
+        <SuggestionQueue botId={bot.id} title="Queued changes — this strategy" />
 
         {/* The switch lives IN the view, and both sides are real links rather than a toggle, so
             the URL is always the truth of what is on screen and either mode can be shared.

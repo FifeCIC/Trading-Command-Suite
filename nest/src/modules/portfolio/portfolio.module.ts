@@ -15,9 +15,10 @@ import { Trading212HistoryController } from './trading212-history.controller';
 import { PortfolioAccountsController } from './portfolio-accounts.controller';
 import { CorrelationService } from './correlation.service';
 import { ExitSignalService } from './exit-signal.service';
+import { T212ReferenceModule } from './t212-reference.module';
 
 @Module({
-  imports: [ProvidersModule, EarningsModule, IsaModule, forwardRef(() => ScoringModule), forwardRef(() => TradingModule)],
+  imports: [ProvidersModule, EarningsModule, IsaModule, T212ReferenceModule, forwardRef(() => ScoringModule), forwardRef(() => TradingModule)],
   controllers: [PortfolioController, Trading212PortfolioController, Trading212HistoryController, PortfolioAccountsController],
   providers: [PortfolioService, PortfolioPriceService, Trading212Adapter, Trading212ImportService, PortfolioAccountsService, CorrelationService, ExitSignalService],
   exports: [PortfolioService, PortfolioPriceService, ExitSignalService],

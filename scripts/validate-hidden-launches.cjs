@@ -41,18 +41,42 @@ const READ_ONLY_CALLS = /-ClassName\s+Win32_Process\s+-Filter|Get-CimInstance\s+
 /**
  * Pure: given a script's text, return the problems found.
  *
+ * ⚠️ COMMENTS ARE STRIPPED FIRST (fixed 2026-11-19). The gate is about what a script DOES, and a
+ * documentation example is not a launch. Measured: `scripts/tcs-launch.ps1` carries a docblock that
+ * shows the recovery one-liner — `Invoke-CimMethod … Win32_Process -MethodName Create …` with no
+ * startup blob, because it is an example a human pastes by hand — and that **failed the build**.
+ * The fix belongs here, not in the comment: telling the next person to write a worse example would
+ * leave the same trap for every future docblock. This is the same defect `validate-page-chrome.cjs`
+ * had with `<h1>` inside a docblock.
+ *
  * A `Win32_Process.Create` call is "safe" when the text between its `Arguments @{` and the closing
  * `}` names `ProcessStartupInformation` AND the file sets `ShowWindow = 0` somewhere. Both halves are
  * required: passing a startup blob without the show flag still allocates a visible console.
  */
+function stripComments(text) {
+  // A PowerShell comment runs from a line-leading `#` to end of line. Only line-leading, so a `#`
+  // inside a string or a command argument is untouched.
+  return text
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*#/.test(line))
+    .join('\n');
+}
+
 function inspectScript(relPath, text) {
   const problems = [];
-  const creates = [...text.matchAll(/Invoke-CimMethod[\s\S]{0,200}?Win32_Process[\s\S]{0,80}?Create/gi)];
+  const code = stripComments(text);
+  const creates = [...code.matchAll(/Invoke-CimMethod[\s\S]{0,200}?Win32_Process[\s\S]{0,80}?Create/gi)];
   if (creates.length === 0) return problems;
 
-  const hidesWindow = /ShowWindow\s*=\s*0\b/.test(text);
+  // ⚠️ THE `[uint16]` CAST IS PART OF THE CORRECT FORM, NOT A VARIATION OF IT (fixed 2026-11-19).
+  // `Win32_ProcessStartup.ShowWindow` is a CIM `uint16`, and `build-api.ps1` documents at the call
+  // site that the cast is REQUIRED — without it the assignment is rejected at runtime. The matcher
+  // used to demand a bare `0`, so it flagged the one spelling that works and would have accepted a
+  // `1` that shows the window. A guard that fires on the correct code is the defect it exists to
+  // catch, so the cast is optional in the pattern and required to still be `0`.
+  const hidesWindow = /ShowWindow\s*=\s*(\[[A-Za-z0-9]+\]\s*)?0\b/.test(code);
   for (const m of creates) {
-    const after = text.slice(m.index, m.index + 1200);
+    const after = code.slice(m.index, m.index + 1200);
     // The argument block that follows the call.
     const block = after.slice(after.indexOf('Arguments'), after.indexOf('Arguments') + 700);
     const passesBlob = /ProcessStartupInformation\s*=/.test(block);
@@ -137,6 +161,28 @@ Invoke-CimMethod -ClassName Win32_Process -MethodName Create \`
     inspectScript('c', good)[0] ?? '',
   ]);
   check('matcher gives each shape its own diagnosis', 3, messages.size);
+
+  // 6. A DOCBLOCK is not a launch (added 2026-11-19). `tcs-launch.ps1` documents the recovery
+  //    one-liner in a comment — without a startup blob, because a human pastes it by hand — and the
+  //    unfiltered matcher failed the build on it. Both directions are checked: the comment must be
+  //    ignored, and the SAME text uncommented must still be caught. Without the second half, a
+  //    "fix" that stopped matching anything would pass this case.
+  const commented = bad
+    .split('\n')
+    .map((line) => '#     ' + line)
+    .join('\n');
+  check('a commented example is not a launch', 0, inspectScript('doc.ps1', commented).length);
+  check('…but the same text as CODE is still a launch', 1, inspectScript('doc.ps1', bad).length);
+
+  // 7. The `[uint16]` cast is the CORRECT form (see the note beside `hidesWindow`). Both directions:
+  //    the cast hides the window, and a visible window is still a problem whatever the spelling.
+  const castHidden = `$s = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = [uint16]0 }
+Invoke-CimMethod -ClassName Win32_Process -MethodName Create \`
+  -Arguments @{ CommandLine = "cmd.exe /c node x.js"; ProcessStartupInformation = $s }`;
+  check('ShowWindow = [uint16]0 counts as hidden', 0, inspectScript('cast.ps1', castHidden).length);
+
+  const castVisible = castHidden.replace('[uint16]0', '[uint16]1');
+  check('ShowWindow = [uint16]1 is still a problem', 1, inspectScript('cast1.ps1', castVisible).length);
 
   console.log(failed === 0 ? '\n✅ self-test passed' : `\n🛑 self-test FAILED (${failed})`);
   process.exit(failed === 0 ? 0 : 1);

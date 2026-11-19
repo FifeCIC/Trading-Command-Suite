@@ -63,9 +63,36 @@ function stripComments(src) {
 /** R2 — the page-owned info trigger. */
 const POPOVER_RE = /<PageInfoPopover\b/g;
 
+/**
+ * R3 — a SECTION heading that carries its own ℹ.
+ *
+ * ⚠️ ADDED 2026-11-19, owner direction: *"We still have pages with titles and the information icon
+ * beside them which means it's placed in different places across the app."* R2 already forbids a page
+ * rendering its own trigger, but it counts every trigger equally, so a `<h2>Title<PageInfoPopover/>`
+ * looked the same as a legitimate card-level one. Measured on `/trading212/t212-portfolio` when this
+ * was written: two sections had one each — "Account Summary" and "Positions (n)" — and both went.
+ *
+ * The distinction the rule encodes: the ℹ explains the VIEW, and the wrong place for it is inside a
+ * heading, because then its position is decided by that section's markup and its stylesheet.
+ */
+const HEADING_SPAN_RE = /<h[23]\b[^>]*>[\s\S]*?<\/h[23]>/g;
+
+/**
+ * R4 — more than one `PageInfoSlotContent` on a page.
+ *
+ * ⚠️ ADDED 2026-11-19 because this slot is SINGLE-WINNER: `top-row-slot.jsx` keeps the last children
+ * registered, so a second slot does not merge — it silently replaces the first, and the text that
+ * disappeared leaves no trace anywhere. A page that needs to say two things puts both in ONE slot.
+ * (Deliberately a threshold rather than a count: one is the correct number.)
+ */
+const SLOT_RE = /<PageInfoSlotContent\b/g;
+const MAX_INFO_SLOTS = 1;
+
 const RULES = [
   { id: 'page-h1', what: 'renders its own <h1> — the title is the breadcrumb', match: countH1 },
   { id: 'page-info-popover', what: 'renders its own <PageInfoPopover> — the shell owns the ℹ', match: countPopover },
+  { id: 'section-title-info', what: 'puts an ℹ inside a section heading — the ℹ explains the VIEW', match: countHeadingInfo },
+  { id: 'multi-info-slot', what: 'renders more than one PageInfoSlotContent — only the last survives', match: countExcessSlots },
 ];
 
 function countMatches(src, re) {
@@ -82,6 +109,19 @@ function countH1(src) {
 
 function countPopover(src) {
   return countMatches(stripComments(src), POPOVER_RE);
+}
+
+/** R3 — popovers nested inside an `<h2>`/`<h3>` span. */
+function countHeadingInfo(src) {
+  const code = stripComments(src);
+  let total = 0;
+  for (const heading of code.match(HEADING_SPAN_RE) || []) total += countMatches(heading, POPOVER_RE);
+  return total;
+}
+
+/** R4 — slots beyond the first, which the single-winner slot would discard. */
+function countExcessSlots(src) {
+  return Math.max(0, countMatches(stripComments(src), SLOT_RE) - MAX_INFO_SLOTS);
 }
 
 /** Counts every rule for one file's source. */
@@ -264,6 +304,28 @@ function selfTest() {
   check('R1 skips is-subject data heading', scan['GoodPage.jsx'], undefined);
   check('R1 counts a classed page title', scan['ClassedPage.jsx'], { 'page-h1': 1 });
   check('R1 skips sr-only landmark and ignores comment mentions', scan['DocumentedPage.jsx'], undefined);
+
+  // Fixture E — a SECTION heading carrying its own ℹ (R3). The same popover is counted by R2 as well,
+  // deliberately: "a page renders a trigger" and "the trigger is inside a heading" are different facts.
+  fs.writeFileSync(
+    path.join(dir, 'SectionInfoPage.jsx'),
+    'export default function E() { return (<div><section><h2>Positions<PageInfoPopover>x</PageInfoPopover></h2></section></div>); }\n',
+  );
+  // Fixture F — a card-level popover NOT in a heading is R2 only, so R3 must stay 0.
+  fs.writeFileSync(
+    path.join(dir, 'CardInfoPage.jsx'),
+    'export default function F() { return (<div><h2>Positions</h2><PageInfoPopover>x</PageInfoPopover></div>); }\n',
+  );
+  // Fixture G — two slots, only one of which survives.
+  fs.writeFileSync(
+    path.join(dir, 'TwoSlotsPage.jsx'),
+    'export default function G() { return (<div><PageInfoSlotContent>a</PageInfoSlotContent><PageInfoSlotContent>b</PageInfoSlotContent></div>); }\n',
+  );
+
+  const scan2 = scanDir(dir);
+  check('R3 counts an ℹ inside a section heading', scan2['SectionInfoPage.jsx']?.['section-title-info'], 1);
+  check('R3 ignores an ℹ beside a heading', scan2['CardInfoPage.jsx']?.['section-title-info'], undefined);
+  check('R4 counts the excess slot', scan2['TwoSlotsPage.jsx']?.['multi-info-slot'], 1);
 
   // Baseline behaviour: an allowed count passes, one above it fails.
   const baseline = {

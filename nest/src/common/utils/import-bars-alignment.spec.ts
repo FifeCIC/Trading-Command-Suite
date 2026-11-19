@@ -35,8 +35,28 @@ jest.retryTimes(2, { logErrorsBeforeRetry: false });
  *
  * 30 s is chosen to be comfortably above the observed query time while still failing a genuine hang.
  * It is a TIMEOUT, not a tolerance: the assertions themselves are unchanged.
+ *
+ * ⚠️ RE-DERIVED 2026-11-19 — the value above no longer had headroom, and the suite went RED on a
+ * correct database. `marketbar` has grown **601,239 → 1,981,356 rows**, and the 1d boundary query
+ * (`COUNT(DISTINCT HOUR(timestamp)*60+MINUTE(timestamp)) … GROUP BY symbolId, provider`, filtered by
+ * `timeframe = '1d' AND importedAt > '2026-09-11'`) now measures **28,928 ms on its own**, with
+ * nothing else running. A budget 1.07× the work is a coin toss: it passed alone and failed inside
+ * the full parallel suite, three builds running.
+ *
+ * So the expensive queries get their OWN budget (`{ timeout }` on the test), and this file-level
+ * default stays where it is for the cheap ones. Measured for the record: the 1h/4h query in the same
+ * file takes **1,247 ms** — 23× cheaper, and unaffected.
+ *
+ * ⚠️ Why not add an index instead: `importedAt > '2026-09-11'` excludes almost nothing today (the
+ * table tripled since that date), so the scan is inherent to the QUESTION — "has any series drifted"
+ * must look at the whole cohort. Indexing to speed up a spec would add a fifth index to a 2M-row
+ * table for a predicate no production query uses. 120 s is comfortably above 28.9 s and still fails
+ * a genuine hang.
  */
 jest.setTimeout(30_000);
+
+/** Budget for the assertions that scan the whole `marketbar` cohort. See the note above. */
+const HEAVY_DB_TIMEOUT_MS = 120_000;
 
 import { PrismaService } from '../../database/prisma.service';
 import { alignBarTimestamp, barLengthMs } from './timeframe';
@@ -225,7 +245,7 @@ describe('#783 — import alignment (acceptance criteria 2, 3, 4)', () => {
     // Every new 1h/4h bar must sit on the hour. A second offset means a writer is still
     // stamping unaligned timestamps (the #783/#785 class of defect).
     expect(offsets).toEqual([0]);
-  });
+  }, HEAVY_DB_TIMEOUT_MS);
 
   it('no NEW 1d row introduces a second boundary into a series (criterion 4)', async () => {
     if (!dbUp) return;
@@ -241,7 +261,7 @@ describe('#783 — import alignment (acceptance criteria 2, 3, 4)', () => {
        GROUP BY symbolId, provider HAVING offsets > 1 LIMIT 1
     `, SINCE)) as Array<{ offsets: bigint }>;
     expect(multi).toHaveLength(0);
-  });
+  }, HEAVY_DB_TIMEOUT_MS);
 
   it('no :45 phantom rows remain for 1h/4h/1d (recorded after the #785 purge)', async () => {
     if (!dbUp) return;

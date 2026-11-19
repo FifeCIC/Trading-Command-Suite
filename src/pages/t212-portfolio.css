@@ -20,28 +20,16 @@
 
 /* Section heading row: title on the left, the small facts (updated / import state / where the
    toggles live) on the right. One row instead of three stacked full-width paragraphs. */
-.t212p-section-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
-  margin-bottom: 0.6rem;
-}
-.t212p-section-head h2 {
-  margin: 0;
-  font-size: 1rem;
-  color: var(--accent, #22d3ee);
+.t212p-section-tools
+{
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
-}
-.t212p-section-meta {
-  display: inline-flex;
-  align-items: baseline;
+  justify-content: flex-end;
   gap: var(--space-md);
   flex-wrap: wrap;
+  margin-bottom: 0.5rem;
 }
+.t212p-section-tools:empty { display: none; }
 
 .t212p-mode { font-weight: 700; }
 .t212p-mode--live { color: var(--color-profit); }
@@ -76,17 +64,30 @@
    grid behaves correctly inside a narrow pane, a Dev Tools split or a future dashboard widget. */
 .t212p-summary-wrap { container-type: inline-size; container-name: tiles; }
 
+/*
+ * ⚠️ `auto-fit` REPLACED SEVEN CONTAINER-QUERY STEPS (owner direction, 2026-11-19: the tiles spilled
+ * onto a second row sooner than they needed to).
+ *
+ * The old arrangement moved 2 → 3 → 4 → 5 → 6 → 7 → 8 columns at 400/540/700/860/1020/1180px, so the
+ * breakpoints — not the available width — decided when a row filled. Measured: there are 7 tiles, and
+ * the 8-column step only arrived at 1180px, so between roughly 700 and 1180px a 7-tile row wrapped
+ * with space to spare. A threshold can only ever be approximately right.
+ *
+ * `auto-fit` + a small minimum lets the grid place as many tiles per row as the width allows, at any
+ * width, with no steps to get wrong. 118px is the floor at which a label like "Result (incl.
+ * realised)" still wraps to two lines rather than clipping; the tiles then share the leftover space
+ * equally. `auto-fit` (not `auto-fill`) collapses unused tracks, so a short row still stretches to
+ * the full width instead of leaving a gap at the end.
+ *
+ * ⚠️ It is still TWO ROWS at a ~676px container: 7 × 118 plus six 9.6px gaps needs ~884px, and there
+ * is no lower minimum that keeps those labels legible. The change buys "fills as soon as there is
+ * room", not "always one row".
+ */
 .t212p-summary-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
   gap: 0.6rem;
 }
-@container tiles (min-width: 400px) { .t212p-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@container tiles (min-width: 540px) { .t212p-summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-@container tiles (min-width: 700px) { .t212p-summary-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
-@container tiles (min-width: 860px) { .t212p-summary-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
-@container tiles (min-width: 1020px) { .t212p-summary-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
-@container tiles (min-width: 1180px) { .t212p-summary-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
 
 .t212p-stat {
   min-width: 0;
@@ -328,6 +329,41 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--ink-soft);
+}
+
+/* ── Company name, under the ticker (2026-11-19) ───────────────────────────────────────────────
+   The row used to state the ticker twice and the company never: `symbol.name` was written as the
+   ticker by the T212 import, so "ASML" was all a reader got. Secondary line, muted and NOT mono —
+   the ticker is the identifier, the company is the label. `display: block` keeps the side chip on
+   its own line only when a name is present, which is why the chip stays inline. */
+.t212p-company {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--text-dim);
+  margin-top: 0.1rem;
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Pie column (2026-11-19) ────────────────────────────────────────────────────────────────────
+   Three states that must not look alike: a NAME (held in that pie), an em dash (not in a pie — a
+   fact), and "?" (not looked up yet — cannot judge). Only the first is coloured, so a page of
+   dashes stays quiet and the few real pies read as the exception they are. */
+.t212p-pie {
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.t212p-pie--set {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* Demo vs LIVE. The WORD carries the meaning; the tone only reinforces it, and "demo" is the quieter

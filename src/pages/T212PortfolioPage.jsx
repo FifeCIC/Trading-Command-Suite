@@ -14,7 +14,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiDelete } from '../core/api/client';
 import { feedUnavailable } from '../core/api/feed-state.js';
 import LastUpdated from '../components/LastUpdated';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { PageInfoSlotContent } from '../core/top-row-slot';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import { notice } from '../core/notices/registry.js';
@@ -564,6 +564,12 @@ export default function T212PortfolioPage() {
           key: 'inv-' + (p.id || p.ticker || list.length),
           source: 't212',
           ticker: p.ticker || p.symbol,
+          // Company + pie come from the API (see T212ReferenceService). `name: null` renders the
+          // ticker alone; `pieName: null` means NOT IN A PIE, and `pieReady === false` means the pie
+          // lookup has not run yet — the column prints "?" for that, never an implied "no pie".
+          name: p.name ?? null,
+          pieName: p.pieName ?? null,
+          pieReady: account.data?.account?.pieReady !== false,
           account: accountLabelFor(p.accountId) || investTitle,
           isDemo: demoFlag(p.accountId, p.provider),
           side: p.side || null,
@@ -584,7 +590,17 @@ export default function T212PortfolioPage() {
         list.push({
           key: 'isa-' + (p.ticker || list.length),
           source: 'isa',
-          ticker: p.ticker,
+          /**
+           * ⚠️ THE CLEANED SYMBOL, NOT T212's RAW TICKER (fixed 2026-11-19).
+           *
+           * `p.ticker` is `ASMLa_EQ`; `p.symbol` is `ASML` (cleaned by the API). This cell used the
+           * raw ticker, so the ISA rows were the one place in the app showing `_EQ` suffixes — and
+           * the ticker LINK pointed at `/research/symbol/ASMLa_EQ`, which resolves to nothing.
+           */
+          ticker: p.symbol || p.ticker,
+          name: p.name ?? null,
+          pieName: p.pieName ?? null,
+          pieReady: isaData.pieReady !== false,
           account: 'Stocks ISA',
           isDemo: demoFlag(null, 'isa'),
           side: p.side || null,
@@ -619,6 +635,15 @@ export default function T212PortfolioPage() {
         source: 'mt5',
         ticket: p.ticket,
         ticker: p.symbol,
+        /**
+         * ⚠️ AN MT5 POSITION CANNOT BE IN A TRADING212 PIE, AND THAT IS A FACT, NOT "UNKNOWN"
+         * (2026-11-19). Leaving `pieReady` unset made the Pie column render "?" on all 11 MT5 rows —
+         * "nobody has looked this up yet" — when the answer is simply no. Setting both fields means
+         * the column shows an em dash there and "?" is reserved for a T212 lookup that has not run.
+         */
+        pieName: null,
+        pieReady: true,
+        name: null,
         account: p.account || `broker ${p.brokerId}`,
         isDemo: demoFlag(null, p.account),
         side,
@@ -703,24 +728,58 @@ export default function T212PortfolioPage() {
           h1 anyway), the ℹ and the meta line live on the section heading row, and the grand total is
           the FIRST TILE OF THE SAME GRID as the account figures — the owner's own suggestion. */}
       <section className="t212p-section">
-        <div className="t212p-section-head">
-          <h2>
-            {positions.length > 0 ? `${importedTitle} — Account Summary` : 'Account Summary'}
-            <PageInfoPopover>
-              Unified account overview — enable or disable each account (and each Live / Demo
-              category) in ⚙ Screen Options → Accounts &amp; Totals to control exactly what is
-              totalled together.
-              <br /><br />
-              The first tile totals <strong>every enabled account</strong>. The tiles after it are the
-              Trading212 investment account alone, ordered as a sum: what you put in, what is left as
-              cash, and the value those two add up to.
-            </PageInfoPopover>
-          </h2>
-          <span className="t212p-section-meta">
-            {syncing ? <span className="t212p-hint">Syncing…</span> : <LastUpdated at={lastUpdated} inline />}
-            <span className="t212p-hint">⚙ Screen Options → Accounts &amp; Totals sets what is totalled</span>
-          </span>
-        </div>
+        {/*
+          ⚠️ NO SECTION TITLE AND NO INLINE ℹ (owner direction, 2026-11-19: pages still carried titles
+          with the information icon beside them, so the ℹ landed in a different place on each page).
+
+          The `h2` said "Practice (Demo) — Account Summary" — a title for a page the breadcrumb already
+          names — and carried its own `PageInfoPopover`, so the ℹ sat wherever this page's stylesheet
+          happened to put it. Both are gone: everything that heading said now lives in the ONE shell
+          popover, via `PageInfoSlotContent`, which renders nothing here and lifts its children into
+          `.main-top-row`. The account identity (`importedTitle`) and the freshness line moved with it
+          rather than being deleted: they are facts about the figures, not decoration.
+
+          ⚠️ This is also why the heading row's wrapper is gone. A `div` whose only remaining child
+          renders null still keeps a `margin-bottom`, which is how a "removed" header reappears as a
+          6px gap nobody can explain.
+        */}
+        <PageInfoSlotContent>
+          <p>
+            <strong>{importedTitle}</strong> — unified account overview. Enable or disable each account
+            (and each Live / Demo category) in ⚙ Screen Options → Accounts &amp; Totals to control
+            exactly what is totalled together.
+          </p>
+          <p>
+            The first tile totals <strong>every enabled account</strong>. The tiles after it are the
+            Trading212 investment account alone, ordered as a sum: what you put in, what is left as
+            cash, and the value those two add up to.
+          </p>
+          {/*
+            ⚠️ A `<div>`, NOT A `<p>` (fixed 2026-11-19). `LastUpdated` renders a `<div>`, and a div
+            inside a `<p>` is invalid nesting — React logged `validateDOMNesting` on every render of
+            this page. The same defect `appearance-area.css` records against a `<p>`.
+          */}
+          <div>{syncing ? 'Syncing…' : <LastUpdated at={lastUpdated} inline />}</div>
+          {/*
+            ⚠️ ONE ℹ PER PAGE, SO THIS CARRIES EVERY SECTION'S EXPLANATION (owner, 2026-11-19). The
+            positions table used to have its own ℹ inside its heading, and the summary had another —
+            two triggers on one page, each positioned by that section's own markup, which is exactly
+            the inconsistency being removed. A page contributes its text here; the shell decides where
+            it appears.
+          */}
+          <p>
+            <strong>Positions ({combinedPositions.length})</strong> — every open position this app knows
+            about: imported Trading212/ISA holdings ({combinedPositions.length - mt5Rows.length}) plus the
+            live MT5 positions on each broker ({mt5Rows.length}). Point at a row, or tab to it, for the
+            full detail.
+          </p>
+          <p>
+            <strong>Why only some rows have trade controls.</strong> An MT5 position can be closed or
+            re-stopped from here. An imported Trading212 holding is a READ-ONLY copy of what the broker
+            reported — this app has no route to trade it, so a control on that row would be a promise it
+            cannot keep.
+          </p>
+        </PageInfoSlotContent>
 
         {syncNotice && <NoticeBlock notice={syncNotice} compact />}
 
@@ -778,10 +837,12 @@ export default function T212PortfolioPage() {
                   {summary?.result != null ? fmt(summary.result) : '—'}
                 </span>
               </div>
-              <div className="t212p-stat">
-                <span className="t212p-stat-label">Positions</span>
-                <span className="t212p-stat-value">{positions.length}</span>
-              </div>
+              {/*
+                ⚠️ THE "Positions" TILE IS GONE (owner, 2026-11-19). It counted the rows of the table
+                directly below it, which already says "Positions (n)" in its own heading — the same
+                fact twice, and a tile spent on a number the reader is about to scroll past. Nothing
+                was lost: the count is in the section heading and in each account's own summary.
+              */}
             </>
           )}
           </div>
@@ -800,47 +861,25 @@ export default function T212PortfolioPage() {
           to the row as well and why the panel stays until Escape or another row — a mouse-leave timer
           alone would close it while the reader is reaching for a control. */}
       <section className="t212p-section">
-        <div className="t212p-section-head">
-          <h2>
-            Positions ({combinedPositions.length})
-            <PageInfoPopover label="About the positions table">
-              Every open position this app knows about: imported Trading212/ISA holdings plus the live
-              MT5 positions on each broker. Point at a row (or tab to it) for the full detail.
-              <br /><br />
-              <strong>Why only some rows have trade controls.</strong> An MT5 position can be closed or
-              re-stopped from here. An imported Trading212 holding is a READ-ONLY copy of what the
-              broker reported — this app has no route to trade it, so a control on that row would be a
-              promise it cannot keep.
-            </PageInfoPopover>
-          </h2>
-          <span className="t212p-section-meta">
-            <span className="t212p-hint">
-              {mt5Rows.length} on MT5 · {combinedPositions.length - mt5Rows.length} imported
+        {/*
+          ⚠️ THE SECTION TITLE IS GONE AND THE ℹ WITH IT (owner, 2026-11-19) — same rule as the summary
+          above: "titles with the information icon beside them … placed in different places across the
+          app" is the inconsistency, and the table's own column headers already say what the section
+          is. Everything the heading carried is either in the ONE shell popover (the explanation, and
+          the MT5-vs-imported split) or, where it is a WARNING rather than a title, kept on the page
+          below — a staleness warning must be seen, so it is not hidden inside an ℹ.
+        */}
+        <div className="t212p-section-tools">
+          {importedAgeLabel && (
+            <span
+              className={`t212p-hint${importedAgeStale ? ' t212p-hint--stale' : ''}`}
+              title={`Trading212 holdings are a stored snapshot of the account, not a live read. Captured ${importedAgeLabel}${importedCachedFrom ? ` from account ${importedCachedFrom}` : ''}. Re-import to refresh; until then these rows may list positions the account no longer holds.`}
+            >
+              T212 snapshot: {importedAgeLabel}
+              {importedAgeStale ? ' — may be out of date, re-import' : ''}
             </span>
-            {/*
-              ⚠️ A STALE SNAPSHOT MUST NOT READ AS CURRENT HOLDINGS (2026-11-18).
-
-              Owner directive: The table has numerous symbols that I do not have in any of my accounts.
-              They were right that the rows did not match the account, and the reason was not demo
-              data: the Trading212 rows are a DB SNAPSHOT written by an import, and nothing on this
-              page said WHEN it was taken or that it is not a live read. A 3-month-old snapshot and a
-              request made 2 seconds ago rendered identically.
-
-              `dataAgeSec` is computed server-side from `Position.updatedAt` — the true age of the
-              rows — because `refreshedSec` comes from an in-memory Map that resets whenever the API
-              restarts. `null` means the age could not be determined, which is stated as
-              "age unknown" rather than shown as fresh.
-            */}
-            {importedAgeLabel && (
-              <span
-                className={`t212p-hint${importedAgeStale ? ' t212p-hint--stale' : ''}`}
-                title={`Trading212 holdings are a stored snapshot of the account, not a live read. Captured ${importedAgeLabel}${importedCachedFrom ? ` from account ${importedCachedFrom}` : ''}. Re-import to refresh; until then these rows may list positions the account no longer holds.`}
-              >
-                T212 snapshot: {importedAgeLabel}
-                {importedAgeStale ? ' — may be out of date, re-import' : ''}
-              </span>
-            )}
-            {mt5Rows.some((p) => p.pnl > 0) && (
+          )}
+          {mt5Rows.some((p) => p.pnl > 0) && (
               <button
                 type="button"
                 className={`t212p-action ${closeAll.armed ? 't212p-action--armed' : 't212p-action--danger'}`}
@@ -870,7 +909,6 @@ export default function T212PortfolioPage() {
                 {closeAll.busy ? 'Closing…' : closeAll.armed ? 'Confirm close all profitable' : 'Close all profitable'}
               </button>
             )}
-          </span>
         </div>
 
         {closeAll.notice && <NoticeBlock notice={closeAll.notice} compact />}
@@ -883,6 +921,7 @@ export default function T212PortfolioPage() {
               <thead>
                 <tr>
                   <th>Symbol</th>
+                  <th>Pie</th>
                   <th>Account</th>
                   <th>Qty</th>
                   <th>Current</th>
@@ -912,7 +951,29 @@ export default function T212PortfolioPage() {
                         >
                           {p.ticker}
                         </a>
+                        {/*
+                          The COMPANY, which the row never stated (owner, 2026-11-19). Drawn under the
+                          ticker rather than in its own column: it is the same fact at a second level
+                          of detail, and a column of them would compete with the numbers either side.
+                        */}
+                        {p.name && <span className="t212p-company">{p.name}</span>}
                         {p.side && <span className="t212p-side">{p.side === 'sell' ? 'SHORT' : 'LONG'}</span>}
+                      </td>
+                      {/*
+                        PIE. Three states, and they must not look alike:
+                          a name  → the symbol is held inside that pie
+                          —       → it is in no pie (a fact)
+                          ?       → the pie lookup has not succeeded yet (cannot judge)
+                      */}
+                      <td
+                        className={`t212p-pie${p.pieName ? ' t212p-pie--set' : ''}`}
+                        title={p.pieName
+                          ? `Held inside the "${p.pieName}" pie`
+                          : p.pieReady
+                            ? 'Not held inside a pie'
+                            : 'Pie membership has not been looked up yet'}
+                      >
+                        {p.pieName ?? (p.pieReady ? '—' : '?')}
                       </td>
                       <td className="t212p-account-cell">
                         {p.account}

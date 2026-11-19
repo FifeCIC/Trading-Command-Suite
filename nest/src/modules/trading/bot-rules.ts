@@ -1,6 +1,33 @@
 /**
  * bot-rules.ts — WHAT A BOT IS, declared once.
  *
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════
+ * 🧭 ROADMAP NOTE FOR WHICHEVER AGENT PICKS THIS UP NEXT (added 2026-11-19, owner direction)
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════
+ *
+ * The owner's sequencing for the movers strategy, so a future agent does not re-derive it or, worse,
+ * work out of order:
+ *
+ *   1. ✅ Protocols + bots registered (movers-v1-long/short, two inactive manual bots).
+ *   2. ✅ Every rule that BLOCKS the strategy is a `protocol_change_suggestion` row with
+ *         `scope='bot'`, `kind='bot-rule'`, `targetKey=<a column declared below>` — visible on the
+ *         strategy's own panel and on the Strategies page together with the protocol changes.
+ *   3. ⏭ **Non-fixed symbol scope** — a bot defined by a DAILY LIST rather than `trading_strategy.symbol`.
+ *         Issue #1314. `symbol` below is `live` at the `scope` stage and pins exactly one instrument,
+ *         so the two movers bots currently carry a PLACEHOLDER ticker and are inactive on purpose.
+ *   4. ⏭ Backtesting a daily-list strategy — impossible before 3, because a backtest must know which
+ *         symbols the strategy would have chosen on each day.
+ *
+ * ⚠️ **THE QUEUE IS THE SPEC.** If a rule below is `display-only` and the strategy needs it, the
+ * correct move is NOT to quietly implement it here — it is to accept the queued row, make the field
+ * live, and record the A/B. That is what keeps an agent's work auditable and reversible.
+ *
+ * ⚠️ **AND DO NOT MAKE A BLOCKED RULE `live` BY TICKING A BOX.** Changing `enforcement` here is a
+ * claim that the value can now change a trade; `validate-bot-rules.cjs` can prove the declaration
+ * exists and that `enforcedBy` references the field, but only the live path proves the claim.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════
+ *
  * ─────────────────────────────────────────────────────────────────────────────────────────────
  * WHY THIS FILE EXISTS (2026-09-17)
  * ─────────────────────────────────────────────────────────────────────────────────────────────

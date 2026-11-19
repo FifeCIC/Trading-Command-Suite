@@ -384,3 +384,28 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     (g) => !HAND_AUTHORED_TRADING_STRATEGIES.some((h) => h.name === g.name),
   ),
 ];
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════
+ * 🧭 WHERE THE MOVERS BOTS LIVE, AND WHY THEY ARE NOT IN THE ARRAY ABOVE (added 2026-11-19)
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════
+ *
+ * `Movers V1 Long Bot` and `Movers V1 Short Bot` were registered 2026-11-19 (issue #1311's successor
+ * work) and they are **deliberately absent from this file**.
+ *
+ * ⚠️ **DO NOT ADD THEM HERE.** Row 177 above is the reason and it is not about tidiness: "a bot's
+ * numbers ARE the strategy", the repository is PUBLIC, and a bot's sizes, thresholds, stops and session
+ * windows are the strategy itself. They were created by `logs/register-movers-bots.cjs` (a local script)
+ * and are captured into the GITIGNORED `strategy-seed-generated.local.ts` by
+ * `node scripts/generate-strategy-seed.cjs`, exactly like the rest of the fleet.
+ *
+ * ⚠️ **THE HAND-AUTHORED ARRAY IS FOR BOTS WITH REASONING WORTH PUBLISHING**, not for every bot. Its
+ * three entries carry `theory` prose written from measurements. If a future bot needs prose, that is a
+ * decision to publish its numbers too — make it knowingly.
+ *
+ * ⚠️ **BOTH MOVERS BOTS ARE INACTIVE AND MANUAL ON PURPOSE.** They carry a PLACEHOLDER symbol (`AAPL`)
+ * because `trading_strategy.symbol` is NOT NULL and the strategy is defined by a DAILY LIST — see issue
+ * #1314. Their own `theory` says so. Do not activate them until the non-fixed-symbol pathway exists, or
+ * the strategy will appear live while trading a ticker nobody chose.
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════
+ */

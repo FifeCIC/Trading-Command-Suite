@@ -116,7 +116,8 @@
     "page-h1": 1
   },
   "DirectiveViewerPage.jsx": {
-    "page-h1": 3
+    "page-h1": 3,
+    "multi-info-slot": 1
   },
   "EarningsCalendarPage.jsx": {
     "page-h1": 3
@@ -170,7 +171,8 @@
     "page-h1": 1
   },
   "MetaStackPipelinePage.jsx": {
-    "page-info-popover": 1
+    "page-info-popover": 1,
+    "section-title-info": 1
   },
   "MetaStackStatusPage.jsx": {
     "page-h1": 1
@@ -325,6 +327,9 @@
   "StockInvestigationPage.jsx": {
     "page-h1": 1
   },
+  "StopGuardianStatsPage.jsx": {
+    "multi-info-slot": 1
+  },
   "StrategiesListPage.jsx": {
     "page-h1": 1
   },
@@ -339,7 +344,8 @@
   },
   "StrategyMonitorPage.jsx": {
     "page-h1": 1,
-    "page-info-popover": 2
+    "page-info-popover": 2,
+    "section-title-info": 1
   },
   "SupportResistancePage.jsx": {
     "page-h1": 1
@@ -359,17 +365,16 @@
   "T212ISAPage.jsx": {
     "page-h1": 2
   },
-  "T212PortfolioPage.jsx": {
-    "page-info-popover": 2
-  },
   "TechnicalIndicatorsPage.jsx": {
     "page-h1": 1
   },
   "ThemeLabMotion.jsx": {
-    "page-info-popover": 1
+    "page-info-popover": 1,
+    "section-title-info": 1
   },
   "ThemeLabPopover.jsx": {
-    "page-info-popover": 1
+    "page-info-popover": 1,
+    "section-title-info": 1
   },
   "TheoryRegistryPage.jsx": {
     "page-h1": 1

@@ -5,6 +5,7 @@ import { ProviderCacheService } from '../providers/provider-cache.service';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { SystemLogService } from '../system/log.service';
 import { cleanT212Ticker } from '../providers/t212-ticker-map';
+import { Trading212ReferenceService } from './t212-reference.service';
 
 interface T212Position {
   ticker: string;
@@ -98,6 +99,7 @@ export class Trading212ImportService {
     private readonly cache: ProviderCacheService,
     private readonly tradeRecorder: TradeRecorderService,
     private readonly syslog: SystemLogService,
+    private readonly reference: Trading212ReferenceService,
   ) {
     this.cache.setCooldown('trading212', 60_000);
   }
@@ -146,6 +148,24 @@ export class Trading212ImportService {
       return 'Basic ' + Buffer.from(`${key}:${secret}`).toString('base64');
     }
     return key; // Fallback to key-only auth
+  }
+
+  /**
+   * Credentials for `Trading212ReferenceService`, tagged with a SHORT cache key.
+   *
+   * ⚠️ The cache key is `demo`/`live`, not `resolveEndpoint().label` ("Practice (Demo)"): the cache
+   * is per ACCOUNT, and a human-facing label is a presentation string that would silently partition
+   * the cache if it were ever reworded.
+   */
+  private referenceCreds(): { baseUrl: string; key: string; secret: string; label: string } | null {
+    const resolved = this.resolveEndpoint();
+    if (!resolved) return null;
+    return {
+      baseUrl: resolved.baseUrl,
+      key: resolved.key,
+      secret: resolved.secret,
+      label: (process.env.TRADING212_MODE || '').toLowerCase() === 'demo' ? 'demo' : 'live',
+    };
   }
 
   /**
@@ -201,6 +221,35 @@ export class Trading212ImportService {
         ? (positions[0] as { accountId?: string | null }).accountId ?? null
         : null;
 
+      /**
+       * The reader's two questions about a position row, answered from what is already local:
+       *
+       *   `name`     — the company. Taken from OUR `symbol` table (one indexed read by ticker), which
+       *                `importPortfolio` now fills from Trading212's instrument metadata. Doing it
+       *                here rather than in the browser keeps one source of truth, and it costs one
+       *                query instead of a 4.67 MB download per page load.
+       *   `pieName`  — which pie the symbol sits in, from the reference service's CACHED map.
+       *                `null` means "not in a pie"; `pieReady:false` means "not looked up yet", which
+       *                the page must not render as "no pie".
+       */
+      let nameByTicker = new Map<string, string>();
+      if (positions.length > 0 && this.prisma.isAvailable) {
+        try {
+          const tickers = [...new Set(positions.map((p) => p.symbol))];
+          const rows = await this.prisma.symbol.findMany({
+            where: { ticker: { in: tickers } },
+            select: { ticker: true, name: true },
+          });
+          nameByTicker = new Map(
+            rows.filter((r) => r.name && r.name !== r.ticker).map((r) => [r.ticker, r.name]),
+          );
+        } catch {
+          // A name is a label: a failed lookup leaves it absent, and absent renders as the ticker.
+        }
+      }
+      const creds = this.referenceCreds();
+      const pies = creds ? this.reference.pieNames(creds) : { names: new Map<string, string>(), ready: false };
+
       return {
         valid: true,
         account: {
@@ -213,8 +262,13 @@ export class Trading212ImportService {
           refreshedSec,
           dataAgeSec,
           cachedFrom,
+          pieReady: pies.ready,
         } as any,
-        positions,
+        positions: positions.map((p) => ({
+          ...p,
+          name: nameByTicker.get(p.symbol) ?? null,
+          pieName: pies.names.get(p.symbol) ?? null,
+        })),
       };
     } catch (err) {
       return { valid: false, error: (err as Error).message };
@@ -265,15 +319,36 @@ export class Trading212ImportService {
       this.logger.log(`Trading212 [${endpoint.label}]: fetched ${positions.length} positions, account balance: ${account?.total}`);
 
       let symbolsCreated = 0;
+      /** Rows whose `name` was still the ticker placeholder and now carry the real company. */
+      let symbolsRenamed = 0;
       // ⚠️ `side` IS IN THE RESULT SO THE WRITE IS VISIBLE. A sync that assigns a direction and
       // reports only the quantity leaves the interesting half of the write unobservable — and the
       // whole of #1069 began as a field that nothing wrote and nothing showed.
       const imported: Array<{ ticker: string; quantity: number; ppl: number; currentPrice: number; side: 'buy' | 'sell' | null }> = [];
       const currentTickers = new Set<string>();
 
+      /**
+       * ⚠️ COMPANY NAMES COME FROM ONE CALL, NOT ONE PER SYMBOL (measured 2026-11-19).
+       *
+       * `/equity/metadata/instruments` returns all 18,579 instruments — `name: "ASML"`,
+       * `shortName: "ASML"` — in **one 4.67 MB response, 824 ms**. That is affordable during an
+       * import (already an explicit multi-second action) and unaffordable on a page.
+       *
+       * Before this, `symbol.name` was written as the TICKER (`name: cleanTicker`), so every reader
+       * saw "ASML" twice and the portfolio table never stated the company. Rows already written that
+       * way are REPAIRED below, but only when the stored name still equals the ticker — that is the
+       * fingerprint of the placeholder, and it means a real name set by another path is never
+       * overwritten.
+       */
+      const creds = this.referenceCreds();
+      const instrumentNames = creds
+        ? await this.reference.instrumentNames(creds).catch(() => new Map<string, string>())
+        : new Map<string, string>();
+
       for (const pos of positions) {
         const cleanTicker = cleanT212Ticker(pos.ticker);
         currentTickers.add(cleanTicker);
+        const realName = instrumentNames.get(cleanTicker) || null;
 
         // ⚠️ THE SIDE IS WRITTEN HERE, AND IT WAS NEVER WRITTEN BEFORE (#1069). See
         // `sideFromQuantity()`. `side` is spread in ONLY when it could be established, so a sync
@@ -282,14 +357,17 @@ export class Trading212ImportService {
         const side = sideFromQuantity(pos.quantity);
         const sideData = side ? { side } : {};
 
-        // Ensure symbol exists in our DB
+        // Ensure symbol exists in our DB, and repair a ticker-as-name placeholder
         try {
           const existing = await this.prisma.symbol.findUnique({ where: { ticker: cleanTicker } });
           if (!existing && this.prisma.isAvailable) {
             await this.prisma.symbol.create({
-              data: { ticker: cleanTicker, name: cleanTicker, exchange: 'Trading212', type: 'stock' },
+              data: { ticker: cleanTicker, name: realName ?? cleanTicker, exchange: 'Trading212', type: 'stock' },
             });
             symbolsCreated++;
+          } else if (existing && realName && existing.name === existing.ticker && this.prisma.isAvailable) {
+            await this.prisma.symbol.update({ where: { id: existing.id }, data: { name: realName } });
+            symbolsRenamed++;
           }
         } catch { /* DB may not be available */ }
 
@@ -350,7 +428,7 @@ export class Trading212ImportService {
       }
 
       this.cache.touch('trading212');
-      this.logger.log(`Trading212: imported ${imported.length} positions, ${symbolsCreated} symbols created`);
+      this.logger.log(`Trading212: imported ${imported.length} positions, ${symbolsCreated} symbols created, ${symbolsRenamed} renamed from a ticker placeholder`);
 
       return {
         success: true,

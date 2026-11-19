@@ -533,6 +533,17 @@ const QA_CHECKLIST = [
     priority: 'high',
     versionNote: '2026-11-19 — #1311. Four of eleven entries had gone neutral since the list was measured on 2026-11-02, so every derived short protocol was losing `earnings-proximity`, `panic-exhaustion-absorption`, `momentum-exhaustion` and `target-achieved` — silently, because `validate-protocol-directions.cjs` only checks the opposite direction. Fixed as a bug fix restoring intent, not a maths change.',
   },
+  {
+    id: 'qa-movers-bots-001',
+    area: 'Trading',
+    system: 'trading_strategy rows (Movers V1 Long/Short Bot) + protocol_change_suggestion (scope=bot) + SuggestionQueue',
+    name: 'The movers bots are registered inactive with a stated placeholder symbol, and each blocking rule is queued naming its enforcement',
+    procedure: 'Open `/trading/trading-bots`, select **Movers V1 Long Bot** and read the "Queued changes — this bot\'s rules" panel. Then `GET /api/suggestions?botId=<that bot id>` and check `coverage.total`. Then `git status -- nest/src/modules/trading/strategy-seed-generated.local.ts`.',
+    expected: 'The bot shows `active=0`, `mode=manual`, `symbol=AAPL`, and its `theory` states the symbol is a placeholder for a daily-list strategy. The panel lists **7** rules — `symbol`, `shortProtocolId`, `maxPositions`, `simTslEnabled`, `exhaustionObserveEnabled`, `hotStockEnabled`, `exitBeforeUtc` — each showing the **enforcement** (e.g. "display-only (cannot affect a trade)") rather than a value. `coverage.total` = 7. The local seed file stays **untracked** (gitignored) even though it now contains both bots.',
+    category: 'Data integrity',
+    priority: 'high',
+    versionNote: '2026-11-19 — #1315. ⚠️ `currentValue` holds the ENFORCEMENT rather than the value on purpose: every blocked column has a value, and what blocks the strategy is that it cannot change a trade. ⚠️ Two bots not one, because `shortProtocolId` is display-only. ⚠️ The numbers are not in the repo (register row 177). Register row 225, 🟡 partial — nothing fails if a future agent activates these bots before #1314 exists.',
+  },
 
   // ═══════════════════════════════════════════════════
   // DUPLICATE PREVENTION
