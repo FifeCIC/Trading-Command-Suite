@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 205,
+  "count": 206,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -387,6 +387,16 @@
       "selfTest": false,
       "reaches": [
         "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "generate-fault-map.cjs",
+      "where": "nest",
+      "category": "generator",
+      "purpose": "the fault diagram, DERIVED from the `fault` table.",
+      "selfTest": true,
+      "reaches": [
         "npm"
       ]
     },

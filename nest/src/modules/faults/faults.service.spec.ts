@@ -46,6 +46,11 @@ function fakePrisma() {
       rows.set(where.code, next);
       return { ...next };
     },
+    async updateMany({ where, data }: { where?: Row; data: Row }) {
+      const hits = [...rows.entries()].filter(([, r]) => Object.entries(where ?? {}).every(([k, v]) => r[k] === v));
+      for (const [k, r] of hits) rows.set(k, { ...r, ...data });
+      return { count: hits.length };
+    },
     async findMany({ where }: { where?: Row } = {}) {
       const all = [...rows.values()];
       if (!where) return all.map((r) => ({ ...r }));
@@ -169,6 +174,52 @@ describe('FaultsService', () => {
     expect(stale.map((r) => r.code).sort()).toEqual(['TCS-BRIDGE-UNREACHABLE', 'TCS-DATA-STALE']);
     expect(stale.find((r) => r.code === 'TCS-BRIDGE-UNREACHABLE')!.neverReviewed).toBe(true);
     expect(stale.find((r) => r.code === 'TCS-DATA-STALE')!.neverReviewed).toBe(false);
+  });
+
+  it('touch moves lastSeen WITHOUT counting — a still-happening fault must not age into looking stale', async () => {
+    const { prisma, rows } = fakePrisma();
+    const service = new FaultsService(prisma);
+
+    await service.record(base);
+    const firstSeen = rows.get(base.code)!.firstSeen;
+    rows.get(base.code)!.lastSeen = new Date(Date.now() - 120_000);
+    const before = rows.get(base.code)!.lastSeen;
+
+    const touched = await service.touch(base.code, { still: 'failing' });
+
+    expect(touched).toBe(1);
+    expect(rows.get(base.code)!.count).toBe(1); // NOT incremented
+    expect(rows.get(base.code)!.lastSeen.getTime()).toBeGreaterThan(before.getTime());
+    expect(rows.get(base.code)!.firstSeen).toEqual(firstSeen);
+    expect(rows.get(base.code)!.evidence).toEqual({ still: 'failing' });
+  });
+
+  it('touch reports 0 when the tracker and the table disagree, rather than pretending it wrote', async () => {
+    const { prisma } = fakePrisma();
+    const service = new FaultsService(prisma);
+
+    expect(await service.touch('TCS-QUEUE-GHOST')).toBe(0);
+  });
+
+  it('openCodesSince adopts an OPEN, recently-seen fault — and excludes stale, retired, and wrong-prefix rows', async () => {
+    const { prisma, rows } = fakePrisma();
+    const service = new FaultsService(prisma);
+    const now = Date.now();
+
+    await service.record({ ...base, code: 'TCS-ALERT-DATA-STALENESS', area: 'data' }); // fresh, open → ADOPT
+    await service.record({ ...base, code: 'TCS-ALERT-SYMBOL-SILENT', area: 'data' }); // stale → no
+    await service.record({ ...base, code: 'TCS-ALERT-POSITION-PNL', area: 'trading' }); // retired → no
+    await service.record(base); // open + fresh but the wrong prefix → no
+
+    rows.get('TCS-ALERT-SYMBOL-SILENT')!.lastSeen = new Date(now - 3 * 3_600_000);
+    await service.retire('TCS-ALERT-POSITION-PNL', 'owner');
+
+    const adopted = await service.openCodesSince('TCS-ALERT-', new Date(now - 10 * 60_000));
+
+    // ⚠️ Both directions: the positive proves the filter is not simply returning nothing, and the
+    // exclusions are what stop a deploy from swallowing a real recurrence (stale) or inflating it
+    // (retired).
+    expect(adopted).toEqual(['TCS-ALERT-DATA-STALENESS']);
   });
 
   it('summary reports counts of rows plus the threshold they were measured against', async () => {

@@ -17,7 +17,9 @@
  *  - bridge-clock-skew — MT5 bridge clock-offset telemetry missing or implausible (#750)
  */
 
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, Optional, OnModuleInit } from '@nestjs/common';
+import { FaultsService } from '../faults/faults.service';
+import { EpisodeTracker } from '../faults/episode-tracker';
 import { AlertsService, type AlertSeverity } from './alerts.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { PrismaService } from '../../database/prisma.service';
@@ -82,6 +84,35 @@ export class AlertTriggerService implements OnModuleInit {
   private lastFired = new Map<string, number>(); // triggerKey → timestamp
   private lastHousekeepingAt = 0; // → autoDismissStale(), at most hourly
   private readonly POLL_INTERVAL_MS = 60_000; // 60 seconds
+
+  /**
+   * Decides "new episode" vs "same episode" for the fault registry. See `faults/episode-tracker.ts`:
+   * without it, `count` would measure how often this loop ran (15 conditions × 1/min) rather than
+   * how often a condition actually happened — a number that rises fastest while the app is healthy.
+   */
+  private readonly episodes = new EpisodeTracker();
+
+  /**
+   * Which PATHWAY each trigger sits on, so the registry can be read per subsystem. Explicit rather
+   * than derived from the key: `mt5-disconnected` is a bridge fault, not a trading one, and a guess
+   * from the name would put it in the wrong column of the screen.
+   */
+  private static readonly FAULT_AREA: Record<string, 'bridge' | 'provider' | 'data' | 'trading' | 'api'> = {
+    'mt5-disconnected': 'bridge',
+    'bridge-clock-skew': 'bridge',
+    'provider-degraded': 'provider',
+    'data-staleness': 'data',
+    'symbol-silent': 'data',
+    'market-close': 'data',
+    'weekend-gap-risk': 'data',
+    'earnings-proximity': 'api',
+    'position-pnl': 'trading',
+    'swap-accrual': 'trading',
+    'margin-utilization': 'trading',
+    'trade-disabled': 'trading',
+    'risk-daily-loss': 'trading',
+    'risk-portfolio-risk': 'trading',
+  };
 
   // Default trigger configs
   private readonly configs: Record<string, TriggerConfig> = {
@@ -154,6 +185,12 @@ export class AlertTriggerService implements OnModuleInit {
     private readonly calendar: MarketCalendarService,
     private readonly mt5Connection: Mt5ConnectionManager,
     private readonly notifications: NotificationService,
+    /**
+     * ⚠️ `@Optional()` because specs construct this service with the five real collaborators and no
+     * registry; an absent registry degrades to "not recorded", never to a throw. A diagnostic must
+     * never be able to break the alert path it observes.
+     */
+    @Optional() private readonly faults?: FaultsService,
   ) {}
 
   onModuleInit() {
@@ -163,9 +200,37 @@ export class AlertTriggerService implements OnModuleInit {
   start() {
     if (this.timer) return;
     this.logger.log('AlertTriggerService started — polling every 60s');
+    // ⚠️ BEFORE the first evaluation: episode state is in memory, so without this every restart
+    // counts each still-active fault as a NEW occurrence and `count` becomes a count of deploys.
+    // Measured 2026-11-19: a rebuild took all four TCS-ALERT-* faults from ×1 to ×2.
+    void this.adoptRunningEpisodes();
     this.timer = setInterval(() => this.evaluateAll(), this.POLL_INTERVAL_MS);
     // Run first evaluation after 10s delay
     setTimeout(() => this.evaluateAll(), 10_000);
+  }
+
+  /**
+   * How long a fault may have been unobserved and still be adopted as "probably running during the
+   * restart". Ten minutes is ~10 poll cycles: long enough to cover a build, short enough that a
+   * genuine recurrence an hour later is still counted as one.
+   */
+  private static readonly ADOPT_WINDOW_MS = 10 * 60_000;
+
+  private async adoptRunningEpisodes(): Promise<void> {
+    if (!this.faults) return;
+    try {
+      const since = new Date(Date.now() - AlertTriggerService.ADOPT_WINDOW_MS);
+      const codes = await this.faults.openCodesSince('TCS-ALERT-', since);
+      if (codes.length) {
+        this.episodes.adopt(codes);
+        this.logger.log(
+          `Adopted ${codes.length} fault episode(s) still open from before this boot — they will not be counted again: ${codes.join(', ')}`,
+        );
+      }
+    } catch (err) {
+      // A registry that cannot be read must not stop the alert poller; the cost is one extra count.
+      this.logger.debug(`Could not adopt running fault episodes: ${(err as Error).message}`);
+    }
   }
 
   stop() {
@@ -214,12 +279,75 @@ export class AlertTriggerService implements OnModuleInit {
         case 'risk-portfolio-risk':condition = await this.checkRiskCapBreach('risk-portfolio-risk', cfg); break;
       }
 
+      // ⚠️ The tracker is keyed by the FAULT CODE, not the trigger key, so a restarted process can
+      // adopt the codes it reads back from the table (`adoptRunningEpisodes`) without a mapping.
+      const faultCode = this.conditionFaultCode(key);
       if (condition?.triggered) {
+        // ONE fault observation per EPISODE, not per poll. This loop runs 15 conditions every 60 s;
+        // recording each poll would make a single stuck symbol read as ~500 occurrences a day.
+        const event = this.episodes.observe(faultCode, true);
+        if (event === 'started') this.recordConditionFault(key, condition);
+        // ⚠️ An ongoing episode still moves `lastSeen` (count untouched) — otherwise a fault that is
+        // failing RIGHT NOW keeps the timestamp from when it started and ages into looking stale.
+        else if (event === 'ongoing') this.touchConditionFault(key, condition);
         this.fireAlert(key, cfg, condition.title, condition.message, condition.severity || cfg.severity);
+      } else {
+        // Clears the episode so a returning condition is counted again — see EpisodeTracker.
+        this.episodes.observe(faultCode, false);
       }
     } catch (err) {
       this.logger.warn(`Trigger "${key}" evaluation failed: ${(err as Error).message}`);
     }
+  }
+
+  /**
+   * Record a firing condition as a persistent fault — ONCE per episode (see `episodes` above).
+   *
+   * ⚠️ This is the second writer in the system (the first is `ProviderDegradationService`) and it
+   * exists because a condition alert is already the app TELLING us something is wrong; until now that
+   * knowledge lived only as an alert row that auto-dismisses after 3 days, so a fault that recurs
+   * every week left no trace except a badge count. `TCS-ALERT-*` codes are stable across restarts,
+   * so "this has happened 9 times" becomes answerable.
+   *
+   * Fire-and-forget: the alert path must not fail because the registry did, and the failure is
+   * logged rather than swallowed.
+   */
+  /**
+   * The fault code for a trigger key. ⚠️ ONE owner: `record` and `touch` must produce the SAME string
+   * or a fault's history splits in two — the recurrence count would then be split across codes and
+   * neither would be the truth.
+   */
+  private conditionFaultCode(key: string): string {
+    return `TCS-ALERT-${key.toUpperCase().replace(/[^A-Z0-9]+/g, '-')}`;
+  }
+
+  /**
+   * Move `lastSeen` for an episode that is still happening, without counting it again. Without this a
+   * fault that is failing right now would keep the timestamp from when it began and read as stale.
+   */
+  private touchConditionFault(key: string, condition: { message: string }): void {
+    if (!this.faults) return;
+    void this.faults
+      .touch(this.conditionFaultCode(key), { trigger: key, message: condition.message, at: new Date().toISOString() })
+      .catch((err) => this.logger.debug(`Could not touch alert fault ${key}: ${(err as Error).message}`));
+  }
+
+  private recordConditionFault(
+    key: string,
+    condition: { title: string; message: string; severity?: AlertSeverity },
+  ): void {
+    if (!this.faults) return;
+    const isAttention = this.ATTENTION_KEYS.has(key) || String(condition.severity) === 'critical';
+    void this.faults
+      .record({
+        code: this.conditionFaultCode(key),
+        // `fault.title` is varchar(200) and a trigger title carries the symbol and the numbers.
+        title: String(condition.title).slice(0, 200),
+        area: AlertTriggerService.FAULT_AREA[key] ?? 'api',
+        severity: isAttention ? 'critical' : 'warning',
+        evidence: { trigger: key, message: condition.message, severity: condition.severity, at: new Date().toISOString() },
+      })
+      .catch((err) => this.logger.debug(`Could not record alert fault ${key}: ${(err as Error).message}`));
   }
 
   // ── Trigger checks ──────────────────────────────────

@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **594** backend source files (specs excluded). Two access paths, because one
+Scanned **596** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**594** source files · **3326** declarations · **397** ratio sites · **1754** nodes · **181** unreferenced
+**596** source files · **3338** declarations · **397** ratio sites · **1758** nodes · **181** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -116,7 +116,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 27 sites — `(V1/V2)*100`
 
-- `nest/src/modules/alerts/alert-trigger.service.ts:619` — `checkMarginUtilization()` → `utilPct`
+- `nest/src/modules/alerts/alert-trigger.service.ts:747` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
 - `nest/src/modules/automation/automation-loop.service.ts:3093` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
@@ -443,7 +443,7 @@ Identical after normalisation: variable names differ, the computation does not.
 
 ### 27 sites — `(V1/V2)*100`
 
-- `nest/src/modules/alerts/alert-trigger.service.ts:619` — `checkMarginUtilization()` → `utilPct`
+- `nest/src/modules/alerts/alert-trigger.service.ts:747` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
 - `nest/src/modules/automation/automation-loop.service.ts:3093` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
@@ -686,7 +686,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 ### 27 sites — `(VN/VN)*N`
 
-- `nest/src/modules/alerts/alert-trigger.service.ts:619` — `checkMarginUtilization()` → `utilPct`
+- `nest/src/modules/alerts/alert-trigger.service.ts:747` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
 - `nest/src/modules/automation/automation-loop.service.ts:3093` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
@@ -911,11 +911,11 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/common/cache/cache.service.ts:58 set`
 - `nest/src/common/cache/cache.service.ts:69 del`
 - `nest/src/common/trading/overfit-verdict.ts:65 pct`
-- `nest/src/modules/alerts/alert-trigger.service.ts:171 stop`
-- `nest/src/modules/alerts/alert-trigger.service.ts:247 label`
-- `nest/src/modules/alerts/alert-trigger.service.ts:382 canTrade`
-- `nest/src/modules/alerts/alert-trigger.service.ts:390 definitelyBlocked`
-- `nest/src/modules/alerts/alert-trigger.service.ts:911 toMap`
+- `nest/src/modules/alerts/alert-trigger.service.ts:1039 toMap`
+- `nest/src/modules/alerts/alert-trigger.service.ts:236 stop`
+- `nest/src/modules/alerts/alert-trigger.service.ts:375 label`
+- `nest/src/modules/alerts/alert-trigger.service.ts:510 canTrade`
+- `nest/src/modules/alerts/alert-trigger.service.ts:518 definitelyBlocked`
 - `nest/src/modules/automation/ab-test.service.ts:316 getActiveTest`
 - `nest/src/modules/automation/ab-test.service.ts:375 isActive`
 - `nest/src/modules/automation/ab-test.service.ts:606 summarize`
@@ -1037,17 +1037,17 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/score-velocity.service.ts:112 flatten`
 - `nest/src/modules/scoring/scoring.service.ts:832 debug`
 - `nest/src/modules/scoring/signal-threshold-basis.ts:143 label`
-- `nest/src/modules/scoring/strategy-derivation.service.ts:545 canonicalise`
-- `nest/src/modules/scoring/strategy-derivation.service.ts:687 num`
-- `nest/src/modules/scoring/strategy-derivation.service.ts:688 text`
-- `nest/src/modules/scoring/strategy-derivation.service.ts:689 flag`
+- `nest/src/modules/scoring/strategy-derivation.service.ts:562 canonicalise`
+- `nest/src/modules/scoring/strategy-derivation.service.ts:710 num`
+- `nest/src/modules/scoring/strategy-derivation.service.ts:711 text`
+- `nest/src/modules/scoring/strategy-derivation.service.ts:712 flag`
 - `nest/src/modules/screener/screener.service.ts:183 bump`
 - `nest/src/modules/signals/signal-envelope.service.ts:2115 isRouteable`
 - `nest/src/modules/signals/signal-envelope.service.ts:2300 q`
 - `nest/src/modules/signals/signal-envelope.service.ts:2308 first`
 - `nest/src/modules/signals/signal-envelope.service.ts:327 has`
 - `nest/src/modules/signals/signal-envelope.service.ts:707 newestOfTf`
-- `nest/src/modules/signals/signal-queue.service.ts:264 getQueue`
+- `nest/src/modules/signals/signal-queue.service.ts:331 getQueue`
 - `nest/src/modules/strategies/strategies.service.ts:56 calculateScore`
 - `nest/src/modules/supporter/supporter.service.ts:131 unavailable`
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:166 note`
@@ -1076,9 +1076,9 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/trading/trade-history.controller.ts:933 median`
 - `nest/src/modules/trading/trade-history.controller.ts:939 r2`
 - `nest/src/modules/trading/trade-recorder.service.ts:195 reject`
-- `nest/src/modules/trading/trading-strategy.service.ts:1391 shape`
-- `nest/src/modules/trading/trading-strategy.service.ts:3025 evaluateAllActive`
-- `nest/src/modules/trading/trading-strategy.service.ts:355 num`
+- `nest/src/modules/trading/trading-strategy.service.ts:1407 shape`
+- `nest/src/modules/trading/trading-strategy.service.ts:3041 evaluateAllActive`
+- `nest/src/modules/trading/trading-strategy.service.ts:365 num`
 - `nest/src/modules/trend/trend-read.math.ts:173 round1`
 - `nest/src/modules/trend/trend-read.math.ts:174 round3`
 - `nest/src/modules/trend/trend-read.math.ts:175 round5`

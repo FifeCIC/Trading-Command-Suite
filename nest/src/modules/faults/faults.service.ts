@@ -262,6 +262,47 @@ export class FaultsService {
     };
   }
 
+  /**
+   * Move `lastSeen` WITHOUT incrementing `count` — for an episode that is still happening.
+   *
+   * ⚠️ WITHOUT THIS, A LIVE FAULT AGES. `record()` is called once per episode, so a fault that has
+   * been failing continuously would keep a `lastSeen` frozen at the moment it started, and every
+   * reader that ages a fault by `lastSeen` would render a currently-broken system as a stale one.
+   * Measured 2026-11-19: the four `TCS-ALERT-*` rows all carried `lastSeen` equal to their first
+   * observation while the conditions were still firing.
+   *
+   * Returns the number of rows touched. `0` means the episode was known to the caller but has no row
+   * — reported rather than swallowed, because that is a disagreement worth seeing (a tracker that
+   * outlived its table, e.g. after a reset).
+   */
+  async touch(code: string, evidence?: Record<string, unknown>): Promise<number> {
+    const result = await this.prisma.fault.updateMany({
+      where: { code },
+      data: {
+        lastSeen: new Date(),
+        ...(evidence ? { evidence: evidence as never } : {}),
+      },
+    });
+    if (result.count === 0) {
+      this.logger.warn(`${code} was observed as ongoing but has no row — the tracker and the table disagree`);
+    }
+    return result.count;
+  }
+
+  /**
+   * The open fault codes a booting process should ADOPT rather than count as new.
+   *
+   * ⚠️ Filtered in JS on purpose (the registry holds tens-to-hundreds of rows): a SQL prefix + range
+   * predicate is the kind of thing that reads correct and quietly matches nothing — this way the
+   * caller gets the same answer as `list()` and the two cannot disagree.
+   */
+  async openCodesSince(prefix: string, since: Date): Promise<string[]> {
+    const rows = (await this.prisma.fault.findMany({ where: { status: 'open' } })) as FaultRow[];
+    return rows
+      .filter((r) => r.code.startsWith(prefix) && new Date(r.lastSeen).getTime() >= since.getTime())
+      .map((r) => r.code);
+  }
+
   private async updateReviewed(
     code: string,
     input: { reviewedBy: string; note?: string },
