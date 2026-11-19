@@ -416,8 +416,8 @@ async function main() {
           name: s.name,
           // ⚠️ NO DEFAULT. This was `?? 'Xtrend'` and it fabricated a broker name into an
           // `exchange` column on **29 of the 30** symbols in this file — every entry here leaves
-          // `exchange` unset except one. Measured 2026-09-23: the requirement read the Active Symbols
-          // page and asked *"Xtrend shows in exchange for many symbols — this cannot be
+          // `exchange` unset except one. Measured 2026-09-23: the Active Symbols
+          // page showed Xtrend as the exchange for many symbols — *"this cannot be
           // correct"*. It was not: there is no Xtrend exchange and no Xtrend adapter.
           //
           // These are MT5 CFDs (FX pairs, indices, metals, energy, vol). A CFD has no exchange —

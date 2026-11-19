@@ -39,6 +39,17 @@
  * ⚠️ AND THE WEDGED CASE IS NOW VISIBLE. If a controller survives an eviction attempt the page says so
  * instead of running a stale build in silence — "cannot judge" rendered as "fine" is the defect §7 of
  * `development-philosophy` names.
+ *
+ * ── ⚠️ THIS MODULE IS THE SECOND LINE OF DEFENCE, NOT THE FIRST (2026-11-19) ──────────────────────
+ * Everything above runs INSIDE the app bundle, and a controlling worker answers the navigation with the
+ * OLD bundle — so this code is only ever loaded by a page that has already escaped the worker. **The fix
+ * lives in the thing that is broken.** The primary cure is therefore outside the bundle: `vite.config.js`
+ * serves a self-destructing worker at `/sw.js` in dev (`devSwKillSwitch`), which a stale worker fetches
+ * on its own automatic update check because a worker's script request bypasses the worker itself. That
+ * makes a NORMAL refresh enough, which is what the owner actually asked for.
+ *
+ * Keep this module anyway: a tab can be controlled by a worker whose script no longer exists (so the
+ * kill switch is never picked up), and then the in-page evictor plus the notice is the only signal.
  */
 
 /** Session stamp of the last eviction attempt — a timestamp, deliberately not a boolean. */

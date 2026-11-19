@@ -277,7 +277,7 @@ export default function ScreenerPage() {
         </div>
         {/* ⚠️ Coverage stats added 2026-10-06, from the project's note. `null` renders an em-dash rather
             than 0: a failed read must not read as "none scored". Both read against the WHOLE symbol
-            table, which is the denominator the requirement chose — screening must not hide opportunity. */}
+            table, which is the denominator the requirement settled on — screening must not hide opportunity. */}
         <div className="screener-trans-item">
           <strong>{universe.scoredSymbols ?? '—'}</strong>
           <span>scored of {universe.totalSymbols ?? '—'} registered</span>

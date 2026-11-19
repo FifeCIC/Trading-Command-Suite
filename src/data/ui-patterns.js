@@ -256,7 +256,7 @@ export const UI_PATTERNS = [
   },
   {
     id: 'add-items-form',
-    // Sample BUILT 2026-10-13, TRIMMED 2026-10-14 — the requirement chose A (inline rows) and B (one card per
+    // Sample BUILT 2026-10-13, TRIMMED 2026-10-14 — the requirement settled on A (inline rows) and B (one card per
     // item) from three offered, and C was deleted. B is the one kept for items that need a warning or a
     // confirmation underneath their values; that reason is recorded at the code site.
     sampleAt: '/appearance/forms',

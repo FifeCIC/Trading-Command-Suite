@@ -12,7 +12,7 @@
  * minutes across two sessions that is thousands of distinct tickers a week, most of them penny stocks
  * having one bad day. `symbol.active` is what the scoring and monitoring paths read, so activating on
  * sight converts a discovery feed into an unbounded workload — and, worse, into a universe that is
- * indistinguishable from one the requirement chose.
+ * indistinguishable from one the requirement settled on.
  *
  * ── THE THREE-WAY RULE ──
  *
@@ -105,7 +105,7 @@ export function symbolType(quoteType?: string | null): string {
  *             winners else by the end of a month we'll have hundreds of active symbols being
  *             monitored. ~95 gainers + ~174 losers per fetch, and `symbol.active` is what scoring
  *             and monitoring read — so activating on sight is unbounded, and produces a universe
- *             indistinguishable from one the requirement chose. The vocabulary half is not cosmetic
+ *             indistinguishable from one the requirement settled on. The vocabulary half is not cosmetic
  *             either: the column collates `utf8mb4_unicode_ci`, so SQL matches both spellings and
  *             only case-sensitive JavaScript disagrees — which is exactly how 120 `STOCK` rows
  *             silently skipped the profile chain (see symbolType()).

@@ -62,7 +62,7 @@ export interface SignalSlot {
  * WHY:       two different failures, so one number cannot fix both. A GLOBAL-only daily allowance let
  *            the first strategy to print consume the whole day. A PER-STRATEGY-only window then
  *            measured ~15 messages/hour in a public channel, because the ladder routinely carries
- *            13-19 actionable strategies. The requirement chose "global cap plus per-strategy window" on
+ *            13-19 actionable strategies. The requirement settled on "global cap plus per-strategy window" on
  *            2026-11-06. The family is the only home that costs an install which never publishes
  *            exactly nothing, which is the project's stated reason for wanting metadata over a column.
  *            ⚠️ The channel key is deliberately NOT a family: it has one member, and a one-member

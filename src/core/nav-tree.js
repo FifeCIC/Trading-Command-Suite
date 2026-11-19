@@ -156,33 +156,6 @@ export const NAV_TREE = {
       { id: 'signals-overview', label: 'Signals', icon: '🚩' },
     ],
   },
-  // ── STRATEGIES (requirement, 2026-11-18) ────────────────────────────────────────────────
-  // *"I would like a Strategies area (again)! The area will list all strategies in a separate
-  // category in its left hand menu for quick access… The goal here is that the new Strategy area
-  // allows us to see the finished product of the META.Stack pipeline doing its thing. It is in the
-  // theory we understand the strategy and see live samples but it is in the additional (optional)
-  // view we will have a true live overview of everything the strategy has done recently and is
-  // doing right now."*
-  //
-  // ⚠️ WHY ITS OWN AREA AND NOT A SECTION OF TRADING. A strategy is the SUBJECT (a methodology);
-  // a bot is the execution policy that runs it, and `Trading` is where bots are operated. Putting
-  // the library back under Trading is what buried it behind the machinery it describes. The order
-  // also reads as the pipeline: protocols → scoring → signals → STRATEGIES → trading.
-  //
-  // ⚠️ The two new entries are ONE market-movers signal split by SIDE, not two ideas. A "top
-  // winners" list and a "top losers" list need opposite exposures, opposite stop logic and opposite
-  // exhaustion behaviour, so they are two strategies — a single "movers" strategy could not state
-  // which side it takes.
-  strategies: {
-    label: 'Strategies',
-    views: [
-      { id: 'strategy-library', label: 'Strategy Library', icon: '📚' },
-      // Custom (live) views — the optional half the requirement described. Withheld from other users by
-      // default (`DEFAULT_HIDDEN_ROUTES`) until released; the library card links to them.
-      { id: 'day-top-winners', label: "Day's Top Winners", icon: '🏆' },
-      { id: 'day-top-losers', label: "Day's Top Losers", icon: '🕳️' },
-    ],
-  },
   // ⚠️ THE BOTS AREA (owner request, 2026-11-19): *"Create a Bots area between Signals and Trading in
   // the menu"*, moving Bot Monitor, Trading Bots, Create Bot and Bot Comparison into it.
   //
@@ -262,6 +235,36 @@ export const NAV_TREE = {
       { id: 'performance-lab', label: 'Trading Performance', icon: '📊' },
       { id: 'calculators', label: 'Calculators', icon: '⊞' },
       { id: 'trading-settings', label: 'Settings', icon: '⚙' },
+    ],
+  },
+  // ── STRATEGIES (requirement, 2026-11-18) ────────────────────────────────────────────────
+  // *"I would like a Strategies area (again)! The area will list all strategies in a separate
+  // category in its left hand menu for quick access… The goal here is that the new Strategy area
+  // allows us to see the finished product of the META.Stack pipeline doing its thing. It is in the
+  // theory we understand the strategy and see live samples but it is in the additional (optional)
+  // view we will have a true live overview of everything the strategy has done recently and is
+  // doing right now."*
+  //
+  // ⚠️ POSITION MOVED 2026-11-19 (owner): *"Move the Strategies menu item so that it is positioned
+  // after Trading"*. It was between Signals and Bots, where the order read as the pipeline; the
+  // owner reads it the other way round — the operational areas (Bots, Trading) come first and the
+  // library of methodologies follows them. Do not "correct" this back to pipeline order.
+  // ⚠️ OWN AREA, NOT A SECTION OF TRADING. A strategy is the SUBJECT (a methodology); a bot is the
+  // execution policy that runs it, and `Trading` is where bots are operated. Putting the library back
+  // inside Trading is what buried it behind the machinery it describes.
+  //
+  // ⚠️ The two new entries are ONE market-movers signal split by SIDE, not two ideas. A "top
+  // winners" list and a "top losers" list need opposite exposures, opposite stop logic and opposite
+  // exhaustion behaviour, so they are two strategies — a single "movers" strategy could not state
+  // which side it takes.
+  strategies: {
+    label: 'Strategies',
+    views: [
+      { id: 'strategy-library', label: 'Strategy Library', icon: '📚' },
+      // Custom (live) views — the optional half the requirement described. Withheld from other users by
+      // default (`DEFAULT_HIDDEN_ROUTES`) until released; the library card links to them.
+      { id: 'day-top-winners', label: "Day's Top Winners", icon: '🏆' },
+      { id: 'day-top-losers', label: "Day's Top Losers", icon: '🕳️' },
     ],
   },
   // ⚠️ THE AUTOMATION AREA WAS REMOVED 2026-10-02 (owner, Page Walkthrough) — this is the end of
@@ -548,7 +551,7 @@ export const NAV_TREE = {
       // Entries are enforced by scripts/validate-theories.cjs (a theory needs a falsification test).
       { kind: 'section-header', id: 'dev-decisions', label: 'Decisions', icon: '⚖' },
       { id: 'theory-registry', label: 'Theory Registry', icon: '🔬' },
-      // R21 / #990 — the requirement chose a NEW REGISTER over a second section in the review queue, so
+      // R21 / #990 — the requirement settled on a NEW REGISTER over a second section in the review queue, so
       // observations can accumulate BEFORE they become decisions. Sits beside the theory registry
       // because they are the same shape: a held position, written down so it can be judged.
       { id: 'design-observations', label: 'Design Observations', icon: '👁' },

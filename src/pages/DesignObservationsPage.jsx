@@ -9,7 +9,7 @@ import './design-observations.css';
  * ----------------------------------------------------------------------
  * Requirement: Are we noting observations for review and consideration? This is important for
  * re-considering designs. The answer was no — the finding that prompted it went into a code
- * comment, which is durable but invisible to the person who reconsiders designs. The requirement chose a
+ * comment, which is durable but invisible to the person who reconsiders designs. The requirement settled on a
  * dedicated register over a second section in the review queue.
  *
  * WHAT MAKES THIS A REGISTER AND NOT A LIST OF GRIPES

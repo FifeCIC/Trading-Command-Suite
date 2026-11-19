@@ -223,7 +223,7 @@ export default function AppearanceFormsPage() {
 
       {/* ── Add-items form — TWO ARRANGEMENTS, BOTH APPROVED ──────────────────────────────
           Owner request, from /protocols/protocol-builder: *"add 2-3 examples of a similar 'add items'
-          form arrangement and I will choose one."* Three were offered on 2026-10-13; the requirement chose
+          form arrangement and I will choose one."* Three were offered on 2026-10-13; the requirement settled on
           **A and B**, and C (the compact add-bar variant) was DELETED on 2026-10-14. Do not re-add C
           without asking — it was rejected, not overlooked.
 

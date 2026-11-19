@@ -34,6 +34,68 @@ const localProxy = {
   },
 };
 
+/**
+ * ⚠️ DEV-ONLY SERVICE-WORKER KILL SWITCH — and the reason it must live HERE, not in the app.
+ *
+ * The symptom it cures (owner, reported twice: 2026-11-19): the Strategies and Bots areas disappear
+ * from the menu and the theme reverts, and only **Ctrl+Shift+R** brings them back. That is not the app
+ * — it is a **cached build** in the tab. A built edition (`vite preview`, or any built copy served on
+ * this origin) registers a Workbox worker whose navigation fallback answers every page from its
+ * precache, so the dev server is never consulted.
+ *
+ * ── WHY `src/core/sw/dev-unregister.js` CANNOT FIX THIS ON ITS OWN ──────────────────────────────
+ * That module runs **inside the app bundle**. A controlling worker answers the navigation with the
+ * OLD bundle, so the guard is only ever loaded by a page that has already escaped the worker. The fix
+ * lives in the thing that is broken. (Verified the hard way: the guard was hardened twice and the
+ * fault recurred; only a hard reload, which bypasses the worker for that one navigation, cleared it.)
+ *
+ * ⇒ The escape route has to be a resource the worker CANNOT intercept: its own script. Browsers
+ * perform an update check on navigation, and a service worker's script request bypasses the worker.
+ * Serving a self-destructing worker at `/sw.js` means the stale worker fetches it, installs it,
+ * activates it, and it then deletes every cache, unregisters, and reloads the clients it controls.
+ * **A normal refresh is then enough** — which is exactly what the owner asked for.
+ *
+ * ⚠️ `apply: 'serve'` — this is dev-only. The built app ships the real Workbox worker, and shadowing
+ * that in production would disable the PWA's offline cache entirely.
+ * ⚠️ In dev there is no legitimate `/sw.js`, so this cannot shadow anything real. If that ever
+ * changes, this plugin must go.
+ */
+const devSwKillSwitchSource = `
+// tcs-dev-sw-kill-switch — see the docblock in vite.config.js. Self-destructing by design.
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    } catch (e) { /* nothing to clear */ }
+    try { await self.registration.unregister(); } catch (e) { /* already gone */ }
+    try {
+      const clients = await self.clients.matchAll({ type: 'window' });
+      for (const c of clients) c.navigate(c.url);
+    } catch (e) { /* no controlled clients */ }
+  })());
+});
+`;
+
+const devSwKillSwitch = () => ({
+  name: 'tcs-dev-sw-kill-switch',
+  apply: 'serve',
+  configureServer(server) {
+    server.middlewares.use((req, res, next) => {
+      const path = (req.url || '').split('?')[0];
+      if (path !== '/sw.js' && path !== '/service-worker.js') return next();
+      res.setHeader('Content-Type', 'text/javascript');
+      // no-store: a cached copy would never deliver the new worker.
+      res.setHeader('Cache-Control', 'no-store, must-revalidate');
+      res.setHeader('Service-Worker-Allowed', '/');
+      res.statusCode = 200;
+      res.end(devSwKillSwitchSource);
+    });
+  },
+});
+
+
 export default defineConfig(() => {
   return {
   // ⚠️ NO `css.lightningcss` SETTING HERE, DELIBERATELY (removed 2026-11-15). `css.lightningcss`
@@ -71,6 +133,7 @@ export default defineConfig(() => {
   },
   plugins: [
     react(),
+    devSwKillSwitch(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'pwa-192x192.svg', 'pwa-512x512.svg', 'tcs-icon.PNG', 'tcs-logo.png'],
