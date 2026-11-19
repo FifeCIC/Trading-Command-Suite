@@ -96,7 +96,14 @@ if (-not $Quiet) { Write-Host "`n  Trading Command Suite — Health Check" -Fore
 # ── Build staleness check ──────────────────────────────────────────────
 $nestSrc = Get-ChildItem "$ROOT\nest\src" -Recurse -Filter *.ts -ErrorAction SilentlyContinue |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
-$nestDist = Get-Item "$ROOT\nest\dist\src\main.js" -ErrorAction SilentlyContinue
+# ⚠️ THE NEWEST FILE IN dist, NOT `main.js` (#1205 follow-up, measured 2026-11-19). Comparing against
+# the ENTRY file was wrong in a way that only shows up after a correct incremental build: editing a
+# service re-emits that module but `dist/src/main.js` is unchanged, so its mtime stays old and the
+# report said "STALE" while `dist` held the new code — verified by the live endpoint behaving
+# correctly. A staleness check that fires after a successful build is worse than none: it teaches the
+# reader to ignore the line that would catch a real one.
+$nestDist = Get-ChildItem "$ROOT\nest\dist" -Recurse -File -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 if ($nestSrc -and $nestDist) {
     if ($nestSrc.LastWriteTime -gt $nestDist.LastWriteTime) {
