@@ -155,6 +155,67 @@ describe('OutcomeTrackerService — maturation', () => {
   //
   // This asserts the WORD, because the wording is the whole defect: it is the only thing a
   // human reads at 3am. The mock fills nothing, so any claim of drainage is false.
+  // ⚠️ GUARD (#1312, measured 2026-11-19) — the tick's passes must walk FORWARD.
+  //
+  // The query is `take: 250, orderBy predictedAt ASC` and a pass writes nothing when it cannot
+  // fill. Without a cursor, pass 2 asked the same question and got the same 250 rows back, so a
+  // 6-pass tick "visited 1500" while covering **250 distinct rows**. Live evidence, bridges up:
+  // four consecutive passes 6 s apart, each `visited 250, filled 0`, `MAX(outcomeComputedAt)`
+  // frozen for 10 hours, 44,000 rows never read.
+  //
+  // This asserts the CALLS, because the defect was invisible in every return value: the tick
+  // looked busy and its totals added up. Only the query it issued revealed the repeat.
+  it('advances the cursor between passes instead of re-reading the same batch', async () => {
+    const prisma = mockPrisma();
+    // ⚠️ The mock must ADVANCE, or the assertion below tests the mock rather than the service.
+    // A flat `mockResolvedValue` returns the same 250 rows to every pass, so `pass.last` never
+    // changes and the cursor looks stuck even when the code threads it correctly. Each call
+    // therefore returns a later window, exactly as the real query does.
+    let call = 0;
+    prisma.directiveOutcome.findMany.mockImplementation(async () => {
+      call += 1;
+      return Array.from({ length: 250 }, (_, i) => pendingRow({
+        id: `row-${call}-${String(i).padStart(3, '0')}`,
+        predictedAt: new Date(Date.now() - (48 - call) * 3600_000 - i * 1000),
+      }));
+    });
+    prisma.directiveOutcome.count.mockResolvedValue(43692);
+    jest.spyOn(require('@nestjs/common').Logger.prototype, 'warn').mockImplementation(() => undefined);
+    jest.spyOn(require('@nestjs/common').Logger.prototype, 'log').mockImplementation(() => undefined);
+
+    const service = new OutcomeTrackerService(prisma as any);
+    (service as any).maturationYieldMs = 0;
+    await service.computeOutcomes();
+
+    const calls = prisma.directiveOutcome.findMany.mock.calls.map((c: any[]) => c[0]);
+    expect(calls.length).toBeGreaterThan(1); // a multi-pass tick, not a single sweep
+
+    // Pass 1 has no cursor; every later pass must carry one.
+    expect(calls[0].where.AND).toBeUndefined();
+    const later = calls.slice(1);
+    expect(later.length).toBeGreaterThan(0);
+    for (const call of later) {
+      expect(Array.isArray(call.where.AND)).toBe(true);
+      const cursorClause = JSON.stringify(call.where.AND[1]);
+      expect(cursorClause).toMatch(/"gt"/);
+      expect(cursorClause).toMatch(/row-\d+/); // the id tiebreak, not just a timestamp
+    }
+
+    // …and it must MOVE, or pass 2 re-reads pass 1's rows.
+    const cursors = later.map((c: any) => JSON.stringify(c.where.AND[1]));
+    expect(new Set(cursors).size).toBeGreaterThan(1);
+
+    // Each pass must inherit the PREVIOUS pass's last row — not the first pass's.
+    for (let i = 0; i < later.length - 1; i += 1) {
+      expect(cursors[i + 1]).not.toBe(cursors[i]);
+    }
+
+    // The order must be stable, or `gt` on a duplicate timestamp skips rows non-deterministically.
+    for (const call of calls) {
+      expect(JSON.stringify(call.orderBy)).toContain('id');
+    }
+  });
+
   it('does not claim rows were drained when nothing was filled or finalised', async () => {
     const prisma = mockPrisma();
     const BATCH = 250;

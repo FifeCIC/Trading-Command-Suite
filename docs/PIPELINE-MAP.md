@@ -859,7 +859,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 - `nest/src/modules/scoring/outcome-tracker.service.ts:276` — `getRecordingStats()`
   - `considered>0?Math.round((identity/considered)*1000)/10:0`
   - guarded by: `considered>0`
-- `nest/src/modules/scoring/outcome-tracker.service.ts:832` — `getAccuracy()`
+- `nest/src/modules/scoring/outcome-tracker.service.ts:882` — `getAccuracy()`
   - `total>0?Math.round((correct/total)*1000)/1000:0`
   - guarded by: `total>0`
 - … and 2 more

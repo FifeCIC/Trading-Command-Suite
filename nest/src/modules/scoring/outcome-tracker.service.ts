@@ -488,14 +488,18 @@ export class OutcomeTrackerService {
     let finalised = 0;
     let passes = 0;
     let saturated = false;
+    // ⚠️ The tick CURSOR (#1312). Each pass walks strictly forward from where the previous one
+    // stopped, so six passes cover 1,500 DISTINCT rows instead of reading the same 250 six times.
+    let cursor: { predictedAt: Date; id: string } | undefined;
     try {
       do {
-        const pass = await this.runMaturationPass();
+        const pass = await this.runMaturationPass(cursor);
         passes++;
         visited += pass.visited;
         filled += pass.filled;
         finalised += pass.finalised;
         saturated = pass.batchFull;
+        if (pass.last) cursor = pass.last;
         if (pass.visited === 0) break; // queue empty to the frontier — nothing more to drain
         if (
           saturated &&
@@ -554,8 +558,27 @@ export class OutcomeTrackerService {
    * Extracted from the previous single-pass `computeOutcomes()`: the body below is the
    * original sweep, unchanged except that the saturation branch now RETURNS `batchFull`
    * instead of logging (the tick wrapper owns the backlog count and the once-per-tick warn).
+   *
+   * ⚠️ `after` IS THE TICK CURSOR, AND WITHOUT IT EVERY PASS RE-READ THE SAME ROWS (#1312,
+   * measured 2026-11-19). The query is `take: 250, orderBy predictedAt ASC` and a pass writes
+   * nothing when it cannot fill — so pass 2 asked the SAME question and got the SAME 250 rows.
+   * The tick's ceiling of six passes therefore visited **250 distinct rows, six times**, and
+   * reported "visited 1500".
+   *
+   * Measured on the live system, bridges UP, four consecutive passes 6 s apart:
+   *   visited 250, filled 0 · visited 250, filled 0 · visited 250, filled 0 · visited 250, filled 0
+   * with `MAX(outcomeComputedAt)` frozen for 10 hours and 44,000 rows never reached. The head
+   * of the queue was XAUUSD `1d` rows whose next daily bar did not exist, so every pass
+   * re-burned itself on rows that could not progress while everything fillable sat behind them.
+   *
+   * The cursor advances on `(predictedAt, id)` — `id` is needed because one prediction fans out
+   * to a row per directive, so `predictedAt` alone is not unique. Rows sharing the final
+   * timestamp beyond the batch boundary are simply picked up by the next tick: they are deferred,
+   * never dropped, and deferral is strictly better than never being read.
    */
-  private async runMaturationPass(): Promise<{ visited: number; filled: number; finalised: number; batchFull: boolean }> {
+  private async runMaturationPass(
+    after?: { predictedAt: Date; id: string },
+  ): Promise<{ visited: number; filled: number; finalised: number; batchFull: boolean; last: { predictedAt: Date; id: string } | null }> {
     const now = Date.now();
     // ⚠️ THREE separate counters, deliberately (MST-012). `count` is rows visited,
     // `filled` is rows where at least one horizon gained a price, `finalised` is rows
@@ -587,19 +610,35 @@ export class OutcomeTrackerService {
     // actionable rows rather than parked ones.
     //
     // `gracePassed` (25h) still finalises rows that can never fill, so nothing is stranded.
+    const baseWhere = {
+      outcomeComputedAt: null,
+      predictedAt: { lte: new Date(now - 15 * 60 * 1000) },
+      OR: [
+        { predictedAt: { lte: new Date(now - 15 * 60 * 1000) }, priceT15m: null },
+        { predictedAt: { lte: new Date(now - 60 * 60 * 1000) }, priceT1h: null },
+        { predictedAt: { lte: new Date(now - 4 * 60 * 60 * 1000) }, priceT4h: null },
+        { predictedAt: { lte: new Date(now - 24 * 60 * 60 * 1000) }, priceT24h: null },
+      ],
+    };
+    // The cursor is ADDITIVE: same predicate, plus "strictly after the row I last looked at".
+    // `id` breaks the tie because one prediction fans out to a row per directive (#1312).
+    const where = after
+      ? {
+          AND: [
+            baseWhere,
+            {
+              OR: [
+                { predictedAt: { gt: after.predictedAt } },
+                { predictedAt: after.predictedAt, id: { gt: after.id } },
+              ],
+            },
+          ],
+        }
+      : baseWhere;
     const pending = await this.prisma.directiveOutcome.findMany({
-      where: {
-        outcomeComputedAt: null,
-        predictedAt: { lte: new Date(now - 15 * 60 * 1000) },
-        OR: [
-          { predictedAt: { lte: new Date(now - 15 * 60 * 1000) }, priceT15m: null },
-          { predictedAt: { lte: new Date(now - 60 * 60 * 1000) }, priceT1h: null },
-          { predictedAt: { lte: new Date(now - 4 * 60 * 60 * 1000) }, priceT4h: null },
-          { predictedAt: { lte: new Date(now - 24 * 60 * 60 * 1000) }, priceT24h: null },
-        ],
-      },
+      where,
       take: MATURATION_BATCH,
-      orderBy: { predictedAt: 'asc' },
+      orderBy: [{ predictedAt: 'asc' }, { id: 'asc' }],
     });
 
     // A saturated batch is not a quiet one — the tick wrapper reports the backlog and
@@ -700,7 +739,10 @@ export class OutcomeTrackerService {
         (computed.filled > 0 ? `, ${this.marketGapResolutions} via next-session bar` : ''),
       );
     }
-    return { visited: computed.count, filled: computed.filled, finalised: computed.finalised, batchFull };
+    // The cursor handed back to the tick: the LAST row this pass actually read. The tick feeds
+    // it to the next pass so the batch walks FORWARD instead of re-reading the same head (#1312).
+    const last = pending.length ? { predictedAt: pending[pending.length - 1].predictedAt, id: pending[pending.length - 1].id } : null;
+    return { visited: computed.count, filled: computed.filled, finalised: computed.finalised, batchFull, last };
   }
 
   /** Maturable backlog — the count the tick summary reports before and after (#1099). */
