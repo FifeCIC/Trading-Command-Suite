@@ -100,7 +100,13 @@ $nestDist = Get-Item "$ROOT\nest\dist\src\main.js" -ErrorAction SilentlyContinue
 
 if ($nestSrc -and $nestDist) {
     if ($nestSrc.LastWriteTime -gt $nestDist.LastWriteTime) {
-        Write-Host "  ⚠️  Build STALE — src/ is newer than dist/ — run: npm --prefix nest run build:api" -ForegroundColor Yellow
+        # ⚠️ NAME THE FILE. "Build STALE" with no subject sends the reader to `git status` over the
+        # whole repo — and in a shared working tree the newest source file is often ANOTHER AGENT's
+        # uncommitted edit, which they must not rebuild over. Measured 2026-11-19: this read STALE
+        # for 20 minutes because a peer had `isa.service.ts` open with a failing spec, and nothing
+        # said so.
+        $rel = $nestSrc.FullName.Replace("$ROOT\", '')
+        Write-Host "  ⚠️  Build STALE — $rel is newer than dist/ — run: npm --prefix nest run build:api" -ForegroundColor Yellow
     }
 } elseif (-not $nestDist) {
     Write-Host "  ❌ Build MISSING — dist/ does not exist — run: npm --prefix nest run build:api" -ForegroundColor Red
