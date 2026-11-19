@@ -51,7 +51,7 @@ async function main() {
       GROUP BY ts.id, ts.protocolId, ts.name, ts.symbol, ts.active
       ORDER BY SUM(t.pnl) DESC`);
 
-    // ── 2. GIVE-BACK — the project's complaint ──
+    // ── 2. GIVE-BACK — the reported complaint ──
     // `trade.peakProfitPct` is the high-water mark of signed profit% while the position was open
     // (common/trading/peak.ts, #998). A trade that PEAKED positive and CLOSED <= 0 surrendered
     // the whole move.
@@ -125,7 +125,7 @@ async function main() {
       );
     }
 
-    console.log('\n════════ 2. GIVE-BACK (#998 peak record — the project\'s complaint) ════════');
+    console.log('\n════════ 2. GIVE-BACK (#998 peak record — the reported complaint) ════════');
     console.log(`sampled: ${N(giveBackOverall[0].sampled)} trades with a recorded peak, ` +
       `${String(giveBackOverall[0].firstSeen).slice(0, 10)} -> ${String(giveBackOverall[0].lastSeen).slice(0, 10)}`);
     console.log(`PEAKED POSITIVE AND CLOSED AT/BELOW ZERO: ${N(giveBackOverall[0].bledToRed)} of ${N(giveBackOverall[0].sampled)}`);
