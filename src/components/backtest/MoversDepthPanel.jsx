@@ -144,41 +144,48 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
                   <th scope="col" className="mvp-num">Risk</th>
                   <th scope="col">Signal</th>
                   <th scope="col">State</th>
+                  <th scope="col" className="mvp-num">P/L</th>
                 </tr>
               </thead>
               <tbody>
-                {bars.map((b) => (
-                  <tr
-                    key={b.time}
-                    className={`${rowClass(b.time)}${b.beforeCutoff ? ' mvp-depth-row--pre' : ''}`}
-                    onMouseEnter={() => setPinned(b.time)}
-                    onFocus={() => setPinned(b.time)}
-                    tabIndex={0}
-                    onClick={() => setPinned(b.time)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setPinned(b.time);
-                      }
-                    }}
-                  >
-                    <td className="mvp-nowrap">
-                      {clock(b.time)}
-                      {b.beforeCutoff && <span className="mvp-depth-pre" title="before the cutoff — could never trade">pre</span>}
-                    </td>
-                    <td className="mvp-num">{fmtPrice(b.price)}</td>
-                    <td className={`mvp-num ${b.changePct > 0 ? 'mvp-pos' : b.changePct < 0 ? 'mvp-neg' : ''}`}>
-                      {fmtPct(b.changePct)}
-                    </td>
-                    <td className="mvp-num">{Number(b.score).toFixed(1)}</td>
-                    <td className="mvp-num">{Number(b.opportunityPct).toFixed(1)}</td>
-                    <td className="mvp-num">{Number(b.riskMultiplier).toFixed(2)}</td>
-                    <td className="mvp-nowrap">{b.signal}</td>
-                    <td className="mvp-nowrap">
-                      <span className={`mvp-state mvp-state--${STATE_TONE[b.state] ?? 'none'}`}>{STATE_LABEL[b.state] ?? b.state}</span>
-                    </td>
-                  </tr>
-                ))}
+                {bars.map((b) => {
+                  const barPnl = b.exits.reduce((a, x) => a + Number(x.pnl ?? 0), 0);
+                  return (
+                    <tr
+                      key={b.time}
+                      className={`${rowClass(b.time)}${b.beforeCutoff ? ' mvp-depth-row--pre' : ''}`}
+                      onMouseEnter={() => setPinned(b.time)}
+                      onFocus={() => setPinned(b.time)}
+                      tabIndex={0}
+                      onClick={() => setPinned(b.time)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setPinned(b.time);
+                        }
+                      }}
+                    >
+                      <td className="mvp-nowrap">
+                        {clock(b.time)}
+                        {b.beforeCutoff && <span className="mvp-depth-pre" title="before the cutoff — could never trade">pre</span>}
+                      </td>
+                      <td className="mvp-num">{fmtPrice(b.price)}</td>
+                      <td className={`mvp-num ${b.changePct > 0 ? 'mvp-pos' : b.changePct < 0 ? 'mvp-neg' : ''}`}>
+                        {fmtPct(b.changePct)}
+                      </td>
+                      <td className="mvp-num">{Number(b.score).toFixed(1)}</td>
+                      <td className="mvp-num">{Number(b.opportunityPct).toFixed(1)}</td>
+                      <td className="mvp-num">{Number(b.riskMultiplier).toFixed(2)}</td>
+                      <td className="mvp-nowrap">{b.signal}</td>
+                      <td className="mvp-nowrap">
+                        <span className={`mvp-state mvp-state--${STATE_TONE[b.state] ?? 'none'}`}>{STATE_LABEL[b.state] ?? b.state}</span>
+                      </td>
+                      <td className={`mvp-num ${barPnl > 0 ? 'mvp-pos' : barPnl < 0 ? 'mvp-neg' : ''}`}>
+                        {b.exits.length ? fmtMoney(barPnl) : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

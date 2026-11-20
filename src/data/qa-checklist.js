@@ -567,6 +567,18 @@ const QA_CHECKLIST = [
     versionNote: '2026-11-19 — #1319, reshaped. ⚠️ The cutoff is not a convenience: rank on the full day and trade from the open and the result scores against the answer key. ⚠️ The day comes from the dataset NAME; a dataset whose window does not contain its own answer day is refused with the span it does cover, because a warm-up session reported as a result is the defect this replaces. ⚠️ Residual bias is stated on every result: the candidate list was built from close-to-close, so its MEMBERSHIP is optimistic even though its ranking is clean.',
   },
 
+  {
+    id: 'qa-backtest-selection-depth-001',
+    area: 'Backtesting',
+    system: 'run-depth.ts · session-change.ts · includeBreakdown on POST /api/backtest/selection-run · MoversDepthPanel.jsx · /lab/movers-strategy-backtest',
+    name: 'One session is shown bar by bar — score, price, move, decision and directive breakdown — with the ladder that got there',
+    procedure: 'Run `npm --prefix nest test -- run-depth session-change`. Then open `/lab/movers-strategy-backtest`, choose **Long**, tick `movers-winners-2026-11-11`, Top N **1**, leave **Record bar-by-bar detail** on, press Run, and scroll to **Bar by bar**. Pin a bar in either table.',
+    expected: 'Suites: **14 + 5 passed**. The ladder reads candidates 10 → selected 1 → scored 54 → tradable 44 → bar-gate 44 → signals 0 → entries 53 → kept 44 → exits 44, and **no rung exceeds its denominator**. Pinning a bar highlights the same instant in BOTH tables and the breakdown below follows it, showing `mover-detection 93`, `continuation 100`, `speed-momentum 120/120`, and `gap-scanner 25/90 inSignal=false` with the reason "No daily bar data available". Measured 2026-11-20 on NXXT: 44 kept trades, exits **TP 16 / SL 27 / EOD 1**, median hold **5 minutes**, net **−1,538.47** — the answer to "why lose on a +430% mover": a 1%/1% bracket held for one bar.',
+    category: 'Data integrity',
+    priority: 'high',
+    versionNote: '2026-11-20 — #1319 follow-up. ⚠️ The state labels are DERIVED and say so; the engine records no per-bar decision reason (#1323), and a bar that signalled without trading prints that in words rather than a guess. ⚠️ `price` and `changePct` are new on the score series — measured against the previous SESSION close, not the previous bar, or a +430% day would read as a string of small moves. ⚠️ A rung exceeding its own denominator is a broken number: that invariant caught the first build reporting "53 of 44".',
+  },
+
   // ═══════════════════════════════════════════════════
   // DUPLICATE PREVENTION
   // ═══════════════════════════════════════════════════

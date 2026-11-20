@@ -19,6 +19,25 @@
  *
  * Pure: no Prisma, no clock, no Nest. Every rule is exercisable from fixtures.
  */
+
+/**
+ * ── DECISION (2026-11-20, primary) ──
+ * WHAT:       The per-bar timeline LABELS recorded facts and states plainly where a fact is missing.
+ *             It never asserts a reason the engine did not record.
+ * WHY:        A bar that cleared both gates and produced no trade is the most interesting bar in a
+ *             losing run, and the engine keeps no per-bar reason for it (only the totals
+ *             `signalsWithoutTrade` / `tradesRefusedUnaffordable`). The tempting fix — infer
+ *             "unaffordable" or "already in position" from the surrounding bars — would produce a
+ *             confident wrong answer on the one bar a reader is looking at.
+ * INSTEAD OF: Guessing the reason from the next trade's absence, or omitting those bars entirely.
+ *             Omitting them is worse: the ladder would then reconcile, and a reader would conclude
+ *             every signal became a trade.
+ * REVERSE BY: Adding real decision persistence (issue #1323) and reading the stored reason here; the
+ *             label becomes a lookup instead of a fallback. Nothing is stored or migrated today.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 232
+ * GUARD:     nest/src/modules/backtest/run-depth.spec.ts (the bar-gate precedence canary, the
+ *            directional canary, and the "no rung exceeds its denominator" invariant)
+ */
 import { decideEntry } from './entry-side';
 import { minuteOfDayUtc, parseCutoffUtc } from './selection-ranking';
 
