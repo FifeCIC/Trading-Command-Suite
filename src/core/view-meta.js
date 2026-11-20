@@ -677,6 +677,21 @@ const VIEW_META = {
       'GET /api/system/logs/file',
     ],
   },
+  // #1319 — a strategy that CHOOSES its instrument each day. Deliberately NOT another `subject` on
+  // the entry above: the result is a per-day ranking across a day's candidate list, which is a
+  // different shape from one symbol's equity curve, in a page already at 3,707 lines.
+  '/lab/movers-strategy-backtest': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Movers Strategy Backtest',
+    file: 'src/pages/MoversStrategyBacktestPage.jsx',
+    css: 'src/pages/MoversStrategyBacktestPage.css',
+    api: [
+      'POST /api/backtest/selection-run',
+      'GET /api/backtest/movers-datasets',
+      'GET /api/scoring/protocols',
+    ],
+  },
   // ⚠️ ADDED 2026-10-31. "Completed runs" moved off `/lab/backtest-strategies` onto its own page
   // (requirement — the strategies page had eleven steps and four tabs). It reads and compares
   // stored runs and nothing else, so its API list is deliberately short: `runs`, `runs/compare` and

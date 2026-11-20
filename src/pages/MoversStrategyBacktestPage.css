@@ -1,0 +1,788 @@
+/*
+ * MoversStrategyBacktestPage — scoped styles for /lab/movers-strategy-backtest.
+ *
+ * ⚠️ The TABLE arrangement is NOT here. `src/core/tables.css` owns the one base + th + td + hover
+ * treatment for `.mvp-table`, and `validate-table-enrolment.cjs` fails the build for a table class
+ * that is styled only in its own page sheet. Only column-specific rules live below.
+ *
+ * ⚠️ Every custom property below MUST exist in the theme. An undefined one is silently dropped at
+ * runtime (no error — the declaration is just ignored), so the page looks "nearly right" and nobody
+ * notices. Guard: `node scripts/validate-css-tokens.cjs`.
+ */
+
+.mvp-page {
+  padding: 16px 20px 40px;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 1400px;
+}
+
+.mvp-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mvp-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mvp-block h2 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.mvp-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.mvp-leg-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.mvp-leg-note code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* ── segmented controls ─────────────────────────────────────────────────────────────────────────── */
+.mvp-seg {
+  display: inline-flex;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.mvp-seg-btn {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 7px 14px;
+  min-height: 34px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.mvp-seg-btn em {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+
+.mvp-seg-btn:hover:not(:disabled) {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.mvp-seg-btn--on {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: var(--accent);
+}
+
+.mvp-seg-btn--on em {
+  color: var(--ink-soft);
+}
+
+.mvp-seg-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mvp-seg-btn:focus-visible,
+.mvp-chip:focus-visible,
+.mvp-link-btn:focus-visible,
+.mvp-run:focus-visible,
+.mvp-stop:focus-visible,
+.mvp-symbols summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── day chips ─────────────────────────────────────────────────────────────────────────────────── */
+.mvp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mvp-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  font-family: inherit;
+  color: var(--ink-soft);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 14px;
+  min-height: 38px;
+  cursor: pointer;
+}
+
+.mvp-chip:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.mvp-chip--on {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.mvp-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mvp-chip-day {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.mvp-chip-meta {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+
+/* ── symbol disclosure ─────────────────────────────────────────────────────────────────────────── */
+.mvp-symbols {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.mvp-symbols summary {
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.mvp-symbol-line {
+  display: flex;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+  align-items: baseline;
+}
+
+.mvp-symbol-line:last-of-type {
+  border-bottom: 0;
+}
+
+.mvp-symbol-day {
+  flex: 0 0 96px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.mvp-symbol-list {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+/* ── settings + run ────────────────────────────────────────────────────────────────────────────── */
+.mvp-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: flex-end;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.mvp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.mvp-field-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-dim);
+}
+
+.mvp-rule {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-elev));
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  max-width: 96ch;
+}
+
+.mvp-run-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mvp-run {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--bg);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 10px 20px;
+  min-height: 40px;
+  cursor: pointer;
+}
+
+.mvp-run:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mvp-stop {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--risk-critical);
+  background: transparent;
+  border: 1px solid var(--risk-critical);
+  border-radius: 4px;
+  padding: 8px 14px;
+  min-height: 38px;
+  cursor: pointer;
+}
+
+.mvp-link-btn {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  min-height: 28px;
+  cursor: pointer;
+}
+
+.mvp-link-btn:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+.mvp-link-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── progress ─────────────────────────────────────────────────────────────────────────────────── */
+.mvp-block--run {
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.mvp-progress-head {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.mvp-progress {
+  display: flex;
+  gap: 3px;
+  height: 12px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+}
+
+.mvp-seg-slot {
+  flex: 1 1 0;
+  display: block;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 60%, transparent);
+  overflow: hidden;
+}
+
+.mvp-seg-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.mvp-seg-fill--done {
+  width: 100%;
+  opacity: 0.75;
+}
+
+.mvp-seg-fill--bad {
+  width: 100%;
+  background: var(--risk-critical);
+}
+
+/* The only animation on the page: the segment being worked on. Reduced motion makes it a solid bar. */
+.mvp-seg-fill--live {
+  width: 100%;
+  animation: mvp-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes mvp-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mvp-seg-fill--live {
+    animation: none;
+    opacity: 0.85;
+  }
+}
+
+.mvp-progress-status {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.mvp-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 12px;
+}
+
+.mvp-log-line {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  color: var(--ink-soft);
+}
+
+.mvp-log-line--bad {
+  color: var(--risk-critical);
+}
+
+.mvp-log-day {
+  flex: 0 0 96px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* ── results ─────────────────────────────────────────────────────────────────────────────────── */
+.mvp-tallies {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.mvp-caveats {
+  margin: 0;
+  padding: 8px 10px 8px 26px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-dim);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+/* ── settings: the detail switch ─────────────────────────────────────────────────────────────── */
+.mvp-check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 12px;
+  color: var(--ink-soft);
+  max-width: 240px;
+}
+
+.mvp-check input {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+
+.mvp-check em {
+  display: block;
+  font-style: normal;
+  font-size: 10px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.mvp-chip--tight {
+  min-height: 32px;
+  padding: 4px 10px;
+}
+
+/* ── bar-by-bar depth panels ────────────────────────────────────────────────────────────────── */
+.mvp-depth {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mvp-depth-title {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.mvp-depth-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 1200px) {
+  .mvp-depth-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mvp-depth-scroll {
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.mvp-depth-row {
+  cursor: pointer;
+}
+
+.mvp-depth-row--pre td {
+  opacity: 0.62;
+}
+
+/* The pinned instant. Same class in BOTH tables, which is the connection between them. */
+.mvp-depth-row--on td {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  opacity: 1;
+}
+
+.mvp-depth-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.mvp-depth-pre {
+  margin-left: 6px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+
+.mvp-state {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.mvp-state--entry {
+  color: var(--risk-normal);
+  border-color: var(--risk-normal);
+}
+
+.mvp-state--exit {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.mvp-state--warn {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+}
+
+.mvp-state--none {
+  color: var(--text-dim);
+}
+
+/* ── the ladder ─────────────────────────────────────────────────────────────────────────────── */
+.mvp-ladder {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.mvp-ladder-step {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) 92px minmax(80px, 1fr);
+  grid-template-areas:
+    'label count bar'
+    'note  note  note';
+  gap: 2px 12px;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.mvp-ladder-step:last-child {
+  border-bottom: 0;
+}
+
+.mvp-ladder-label {
+  grid-area: label;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.mvp-ladder-count {
+  grid-area: count;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink);
+  text-align: right;
+}
+
+.mvp-ladder-count em {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+
+.mvp-ladder-bar {
+  grid-area: bar;
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 60%, transparent);
+  overflow: hidden;
+}
+
+.mvp-ladder-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.mvp-ladder-note {
+  grid-area: note;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+/* ── group pills + directive share bars ─────────────────────────────────────────────────────── */
+.mvp-group-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.mvp-group-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: var(--bg);
+}
+
+.mvp-group-pill em {
+  font-style: normal;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.mvp-share {
+  display: inline-block;
+  width: 80px;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 60%, transparent);
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.mvp-share-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.mvp-directive-why {
+  display: block;
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--text-dim);
+  white-space: normal;
+  max-width: 46ch;
+  margin-top: 2px;
+}
+
+.mvp-failures {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mvp-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--risk-critical);
+  border: 1px solid var(--risk-critical);
+  border-radius: 4px;
+  padding: 8px 10px;
+  background: var(--panel);
+}
+
+.mvp-note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.mvp-muted {
+  color: var(--text-dim);
+}
+
+.mvp-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  -webkit-overflow-scrolling: touch;
+}
+
+.mvp-num {
+  text-align: right;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.mvp-nowrap {
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+
+.mvp-row--bad td {
+  background: color-mix(in srgb, var(--risk-critical) 10%, transparent);
+}
+
+.mvp-pos {
+  color: var(--risk-normal);
+  font-weight: 700;
+}
+
+.mvp-neg {
+  color: var(--risk-critical);
+  font-weight: 700;
+}
+
+.mvp-chips--inline {
+  gap: 4px;
+}
+
+.mvp-sym {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  background: var(--bg);
+}
+
+.mvp-sym--on {
+  border-color: var(--accent);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  font-weight: 700;
+}
+
+.mvp-sym em {
+  font-style: normal;
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+@media (max-width: 900px) {
+  .mvp-page {
+    padding: 12px 12px 32px;
+  }
+
+  .mvp-symbol-day,
+  .mvp-log-day {
+    flex: 0 0 72px;
+  }
+}

@@ -382,6 +382,16 @@ export const NAV_TREE = {
       // ⚠️ ADDED 2026-10-26 (requirement) — the strategies subject was a toggle on the page
       // above; it is now its own route so the two questions can be described and linked separately.
       { id: 'backtest-strategies', label: 'Backtest Strategies', icon: '⬢' },
+      // ⚠️ ADDED 2026-11-19 (#1319), renamed the same day — a strategy that CHOOSES its instrument
+      // each day. It is not another `subject` on the page above: the result is a candidate list × per
+      // day, and the question is "did it pick the right symbols out of that day's movers?", which a
+      // single-symbol view cannot show.
+      // ⚠️ NAMED FOR THE STRATEGY, NOT THE MECHANISM. It was `backtest-selection` for a few hours and
+      // that name described the ranking. The page exists to test the movers strategy's two legs, so it
+      // carries the strategy's name — a generic "selection backtest" page would invite every other
+      // ranked idea onto the same controls.
+      // Hidden from other users by default — the route is in DEFAULT_HIDDEN_ROUTES.
+      { id: 'movers-strategy-backtest', label: 'Movers Strategy', icon: '◫' },
       // ⚠️ ADDED 2026-11-04 (requirement). The A/B reference panels were a second rendering of
       // results on the strategies page — *"it has results displayed twice"* — so they moved here, to a
       // page about ONE strategy: the run you accepted (A), the latest run (B), side by side, and what

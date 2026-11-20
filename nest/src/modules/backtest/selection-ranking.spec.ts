@@ -3,6 +3,7 @@ import {
   moveSoFarPct,
   rankCandidates,
   buildDayRanks,
+  selectAnswerDay,
   applySelection,
   type RankBar,
 } from './selection-ranking';
@@ -166,6 +167,70 @@ describe('buildDayRanks', () => {
   it('a later cutoff moves the winner — proving the cutoff parameter is live', () => {
     const days = buildDayRanks(bars(), 'winners', 1, '23:59');
     expect(days[1].selected).toEqual(['AAA']); // +50% vs +10% at the close
+  });
+});
+
+describe('selectAnswerDay — a movers dataset is measured on its OWN day only', () => {
+  /** Five warm-up sessions plus the answer day, all rankable — the shape of `movers-*-YYYY-MM-DD`. */
+  const window = buildDayRanks(
+    new Map([
+      [
+        'AAA',
+        [
+          bar('2026-11-04T15:30:00Z', 10),
+          bar('2026-11-05T15:30:00Z', 10),
+          bar('2026-11-06T15:30:00Z', 10),
+          bar('2026-11-09T15:30:00Z', 10),
+          bar('2026-11-10T15:30:00Z', 9),
+        ],
+      ],
+      [
+        'BBB',
+        [
+          bar('2026-11-04T15:30:00Z', 20),
+          bar('2026-11-05T15:30:00Z', 20),
+          bar('2026-11-06T15:30:00Z', 20),
+          bar('2026-11-09T15:30:00Z', 20),
+          bar('2026-11-10T15:30:00Z', 10),
+        ],
+      ],
+    ]),
+    'losers',
+    1,
+    '15:30',
+  );
+
+  it('▶ CANARY — the run sees ONE day, not the whole warm-up window', () => {
+    expect(window.length).toBeGreaterThan(1); // the window really does hold several rankable days
+    const r = selectAnswerDay(window, '2026-11-10');
+    expect(r.reason).toBeNull();
+    expect(r.day?.date).toBe('2026-11-10');
+    expect(r.day?.selected).toEqual(['BBB']); // -50% is the deeper loser on the answer day
+  });
+
+  it('refuses a day the window does not cover, and names the span it does', () => {
+    const r = selectAnswerDay(window, '2026-11-11');
+    expect(r.day).toBeNull();
+    expect(r.reason).toMatch(/2026-11-04\.\.2026-11-10/);
+    expect(r.reason).toMatch(/does not include its own answer day/);
+  });
+
+  it('▶ CANARY — never falls back to "the last day" when the named one is missing', () => {
+    // 2026-11-11 is absent while 11-10 is a perfectly good rankable day. Falling back would return a
+    // result for a date the caller did not ask about, with nothing in the output saying so.
+    expect(selectAnswerDay(window, '2026-11-11').day).toBeNull();
+  });
+
+  it('reports a day that exists but could not be ranked', () => {
+    const r = selectAnswerDay(window, '2026-11-04'); // first day: no previous close
+    expect(r.day).toBeNull();
+    expect(r.reason).toMatch(/first day in the window/);
+  });
+
+  it('refuses an empty window rather than returning no day silently', () => {
+    const r = selectAnswerDay([], '2026-11-10');
+    expect(r.day).toBeNull();
+    expect(r.reason).toMatch(/no bars/);
   });
 });
 

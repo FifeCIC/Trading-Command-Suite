@@ -17,6 +17,9 @@ import { SettingsResolverService } from '../../common/settings/settings-resolver
 import type { BacktestRunRequest } from './backtest.service';
 import { SelectionRunService } from './selection-run.service';
 import type { SelectionRunRequest } from './selection-run.service';
+// #1319 — ONE parser for "which day is this movers list a screen of", shared by the list endpoint and
+// the run so the page can never offer a dataset the run would refuse.
+import { parseMoversDatasetName } from './movers-dataset';
 import { LongRunning } from '../../common/decorators/long-running.decorator';
 
 /**
@@ -56,6 +59,86 @@ export class BacktestController {
   }
 
   /**
+   * ── THE MOVERS PAGE'S ENTIRE DATASET LIST (#1319, reshaped 2026-11-19) ─────────────────────────
+   *
+   * Only datasets that NAME a day (`movers-{winners|losers}-YYYY-MM-DD`) are offered, because that is
+   * the only shape this strategy can be measured on. Everything else is returned in `excluded` WITH a
+   * reason — `dev-window-v1` covers 42 sessions and belongs to a different question, so showing it in
+   * a "which day?" picker would invite a run that silently ranks symbols on days they were never
+   * movers.
+   *
+   * ⚠️ The parse lives in `movers-dataset.ts` and is used by BOTH this endpoint and the run. A second
+   * copy in the page would be the copy that goes stale the first time the convention changes.
+   *
+   * ⚠️ Each dataset's SYMBOLS are returned, not just a count. The owner's question was "what symbols
+   * does this list hold?", and answering it needs the names — a count tells a reader nothing about
+   * whether the list is the kind of thing the strategy trades.
+   */
+  @Get('movers-datasets')
+  @ApiOperation({ summary: 'List only the day-scoped movers datasets, with their symbols' })
+  @ApiOkResponse({ description: 'datasets: the offered ones. excluded: what was not, and why.' })
+  async getMoversDatasets() {
+    const periods = await this.prisma.backtestPeriod.findMany({
+      select: {
+        name: true,
+        timeframe: true,
+        fromDate: true,
+        toDate: true,
+        note: true,
+        symbolId: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    const symbolIds = [...new Set(periods.map((p) => p.symbolId))];
+    const symbols = symbolIds.length
+      ? await this.prisma.symbol.findMany({
+        where: { id: { in: symbolIds } },
+        select: { id: true, ticker: true },
+      })
+      : [];
+    const tickerById = new Map(symbols.map((s) => [s.id, s.ticker]));
+
+    const groups = new Map<string, Array<(typeof periods)[number]>>();
+    for (const p of periods) {
+      if (!groups.has(p.name)) groups.set(p.name, []);
+      groups.get(p.name)!.push(p);
+    }
+
+    const datasets: Array<Record<string, unknown>> = [];
+    const excluded: Array<{ name: string; reason: string }> = [];
+
+    for (const [name, rows] of groups) {
+      const decl = parseMoversDatasetName(name);
+      if (!decl.value) {
+        excluded.push({ name, reason: decl.reason });
+        continue;
+      }
+      const timeframes = [...new Set(rows.map((r) => r.timeframe))];
+      if (timeframes.length > 1) {
+        excluded.push({
+          name,
+          reason: `the group mixes timeframes (${timeframes.join(', ')}); a ranking needs one`,
+        });
+        continue;
+      }
+      datasets.push({
+        name,
+        answerDate: decl.value.answerDate,
+        side: decl.value.side,
+        symbols: rows.map((r) => tickerById.get(r.symbolId)).filter((t): t is string => !!t).sort(),
+        timeframe: timeframes[0],
+        from: new Date(Math.min(...rows.map((r) => r.fromDate.getTime()))).toISOString(),
+        to: new Date(Math.max(...rows.map((r) => r.toDate.getTime()))).toISOString(),
+        note: rows.find((r) => r.note)?.note ?? null,
+      });
+    }
+
+    datasets.sort((a, b) => String(a.answerDate).localeCompare(String(b.answerDate)));
+    return { datasets, excluded };
+  }
+
+  /**
    * #1319 — a strategy that chooses its instrument each day.
    *
    * ⚠️ A SEPARATE ROUTE FROM `/run` ON PURPOSE. `run()` resolves exactly ONE symbol from a
@@ -67,11 +150,14 @@ export class BacktestController {
    * open scores the strategy against the answer key. The ranking reads bars at or before the cutoff
    * ONLY, and entries before it are dropped.
    *
+   * ⚠️ ONE DATASET IS ONE DAY. The day comes from the dataset's own name — its warm-up sessions are
+   * never reported as results. A name that carries no day is a 400, not a guess.
+   *
    * Long-running for the same reason as `/run`: it runs the engine once per selected symbol.
    */
   @LongRunning(600_000)
   @Post('selection-run')
-  @ApiOperation({ summary: 'Run a ranked-selection backtest (top N per day) over a dataset group' })
+  @ApiOperation({ summary: 'Run a ranked-selection backtest on one movers day (top N of its list)' })
   async runSelection(@Body() body: SelectionRunRequest) {
     try {
       return await this.selectionRun.runSelection(body);

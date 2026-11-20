@@ -137,4 +137,13 @@ export const VIEW_EXPLANATIONS = {
     'scoring happens later, after a symbol is promoted to a watchlist. ' +
     'The strip at the top shows how many symbols were filtered out so the app ' +
     'stays transparent about what it is ignoring.',
+
+  'movers-strategy-backtest':
+    'Tests the movers strategy — one that picks its instrument each day rather than owning one. ' +
+    'Long rides the day’s top gainers, Short shorts the day’s top losers; both are the same protocol ' +
+    'pair, so the switch is the leg, not a strategy choice. Each day list is a screen of ONE session, ' +
+    'so a run reports that day only and the earlier sessions in its window are warm-up. The ranking ' +
+    'sees bars up to the cutoff and nothing after it, which is what stops the test scoring itself ' +
+    'against the answer key. The residual bias is stated on every result: a stored list was built ' +
+    'from the full day’s move, so its membership knows the outcome even though its ranking does not.',
 };

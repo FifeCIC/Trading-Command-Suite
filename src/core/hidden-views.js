@@ -108,6 +108,13 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   // silently showing a page he has already withheld.
   '/trading/calculators',
 
+  // ── Pack 8: new pages are withheld UNTIL they are reviewed (rule, 2026-11-19) ─────────────────
+  // Owner: *"any new pages to default to that state"* — hidden from other users until the UI has been
+  // reviewed on his machine. So a new page is added HERE in the same change that registers it, and is
+  // removed from this list only once the owner has looked at it. A page nobody has reviewed must not
+  // appear in someone else's navigation.
+  '/lab/movers-strategy-backtest',
+
   // ── Pack 5: too weak to show, kept for the requirement to finish (2026-11-06) ───────────────────────
   // Owner, Research walkthrough: hide these *from other users* while they are still being worked on.
   // Earnings Whispers is also on the extensions list (Discord-style posting is the other one), so it

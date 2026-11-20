@@ -555,6 +555,17 @@ const QA_CHECKLIST = [
     priority: 'high',
     versionNote: '2026-11-19 — #1314. ⚠️ `symbol` stays NOT NULL and keeps `AAPL`; showing it would state an instrument the bot never trades, which is why the UI shows the scope instead. ⚠️ The two bots are still `active=0` — the scope pathway is proven, the strategy is not switched on. ⚠️ Before this landed the bots had NO `strategy_protocol` row, so routing could not see them at all — found while wiring this, fixed by inserting both subscriptions.',
   },
+  {
+    id: 'qa-backtest-selection-001',
+    area: 'Backtesting',
+    system: 'movers-dataset.ts · selection-ranking.ts · selection-run.service.ts · POST /api/backtest/selection-run · GET /api/backtest/movers-datasets · /lab/movers-strategy-backtest',
+    name: 'A movers day is measured on ITS OWN day only, ranks at the cutoff, trades the top N, and refuses a leg/list mismatch',
+    procedure: 'Run `npm --prefix nest test -- selection-ranking movers-dataset` (42 cases incl. the answer-day and look-ahead canaries). Then open `/lab/movers-strategy-backtest`, choose **Long**, tick `movers-winners-2026-11-11`, Top N 3, cutoff 15:30, pace Fast, and press **Run 1 day**. Then switch to **Short** and run `movers-losers-2026-11-10`. Then `POST /api/backtest/selection-run` with `movers-losers-2026-11-10` and `movers-v1-long`.',
+    expected: 'Suite: **42 passed**. Each run reports ONE day — the one in the dataset name — and the log line names the symbols it picked. The **Result by day** table has exactly one row per day run, and the caveats say the warm-up sessions are not results and that the candidate LIST already knew the day\'s outcome. The mismatched call returns **400** naming the side conflict (`trades the winners side`) and produces no numbers. Measured 2026-11-19 before and after the fix: the old page reported 5 rows for one list (four of them the same ten names moving ±3%); the new page reports the answer day only.',
+    category: 'Data integrity',
+    priority: 'high',
+    versionNote: '2026-11-19 — #1319, reshaped. ⚠️ The cutoff is not a convenience: rank on the full day and trade from the open and the result scores against the answer key. ⚠️ The day comes from the dataset NAME; a dataset whose window does not contain its own answer day is refused with the span it does cover, because a warm-up session reported as a result is the defect this replaces. ⚠️ Residual bias is stated on every result: the candidate list was built from close-to-close, so its MEMBERSHIP is optimistic even though its ranking is clean.',
+  },
 
   // ═══════════════════════════════════════════════════
   // DUPLICATE PREVENTION

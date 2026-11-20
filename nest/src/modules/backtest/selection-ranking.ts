@@ -61,7 +61,7 @@ export interface DayRank {
 }
 
 /** Midnight-to-cutoff comparison on the UTC wall clock, so no timezone library is needed. */
-function minuteOfDayUtc(iso: string): number {
+export function minuteOfDayUtc(iso: string): number {
   const d = new Date(iso);
   return d.getUTCHours() * 60 + d.getUTCMinutes();
 }
@@ -205,6 +205,50 @@ export function buildDayRanks(
   }
 
   return out;
+}
+
+/**
+ * ── THE ONE DAY A MOVERS DATASET MAY BE MEASURED ON ──────────────────────────────────────────────
+ *
+ * A movers dataset is a screen of ONE session plus warm-up sessions so the directives have history.
+ * Ranking every date in its window — what the first version of the page did — reports the strategy on
+ * days its list was never a screen of. Measured 2026-11-19 on `movers-losers-2026-11-10`: five dates
+ * were reported, four of them showing ten ordinary names moving ±3%, because the ten symbols were the
+ * losers of 11-10 and nothing in particular on 11-04.
+ *
+ * ⚠️ The answer day is matched by its DATE STRING, never by "the last day" or "the day with bars in
+ * common with the list" — both of those silently pick a different day when a session is missing from
+ * the bars, and the run would report a plausible result for the wrong date.
+ */
+export interface AnswerDayResult {
+  /** The ranked day, or `null` when it could not be used (see `reason`). */
+  day: DayRank | null;
+  /** Why `day` is null. Always set when `day` is null. */
+  reason: string | null;
+}
+
+export function selectAnswerDay(days: readonly DayRank[], answerDate: string): AnswerDayResult {
+  if (!days.length) {
+    return {
+      day: null,
+      reason: 'the dataset window contains no bars, so no day could be ranked',
+    };
+  }
+  const match = days.find((d) => d.date === answerDate);
+  if (!match) {
+    const span = `${days[0].date}..${days[days.length - 1].date}`;
+    return {
+      day: null,
+      reason: `the dataset's bars cover ${span}, which does not include its own answer day ${answerDate}`,
+    };
+  }
+  if (!match.rankable) {
+    return {
+      day: null,
+      reason: `${answerDate} produced no usable ranking: ${match.reason ?? 'no candidate could be measured'}`,
+    };
+  }
+  return { day: match, reason: null };
 }
 
 /** Trades, reduced to what the selection filter needs. */

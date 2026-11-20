@@ -185,6 +185,9 @@ const PlatformComparisonsPage = lazy(() => import('../pages/PlatformComparisonsP
 // ── Backtest / Strategies ──
 const BacktestProtocolsPage = lazy(() => import('../pages/BacktestProtocolsPage.jsx'));
 const BacktestStrategiesPage = lazy(() => import('../pages/BacktestStrategiesPage.jsx'));
+// #1319 — a strategy that chooses its instrument each day. Its own route because the result shape is
+// a per-day ranking matrix, not one symbol's curve.
+const MoversStrategyBacktestPage = lazy(() => import('../pages/MoversStrategyBacktestPage.jsx'));
 const ScenarioAnalysisPage = lazy(() => import('../pages/ScenarioAnalysisPage.jsx'));
 
 // ── Status / System ──
@@ -388,6 +391,7 @@ export const VIEW_COMPONENTS = {
   // on its own. BacktestPage remains the shared implementation; these are its two routes.
   'backtest': BacktestProtocolsPage,
   'backtest-strategies': BacktestStrategiesPage,
+  'movers-strategy-backtest': MoversStrategyBacktestPage,
   // ⚠️ ADDED 2026-11-04 (requirement). The A/B reference panels moved OFF the strategies page
   // (*"results displayed twice"*) onto this one, which is about a single strategy and its accepted
   // reference. It reads stored runs only — it never runs a backtest.

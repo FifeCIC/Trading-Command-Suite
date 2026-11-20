@@ -40,6 +40,9 @@ import { isBarHole } from './bar-gap';
 import { simTslPlan } from './sim-tsl';
 import { resolveFixedUnits } from './fixed-units';
 import { signalProfitFactor as signalProfitFactorOf, tradeProfitFactor as tradeProfitFactorOf } from './profit-factor';
+// The per-bar "% change today" the score must be read against — one definition, shared with the
+// movers ranker's denominator (#1319 follow-up, 2026-11-20).
+import { createSessionChangeTracker } from './session-change';
 import {
   scoringTotals,
   tradeTotals,
@@ -276,6 +279,22 @@ export interface BacktestRunRequest {
    * Default `false` — the UI and every existing caller keep exactly today's behaviour.
    */
   fullScoreSeries?: boolean;
+  /**
+   * ── THE PER-BAR DECOMPOSITION, ON REQUEST (2026-11-20) ──────────────────────────────────────
+   *
+   * `fullScore()` already computes every directive's `score / maxScore / signalClass` and the group
+   * sub-scores on EVERY bar — and the run threw them away, keeping only the composite. So a result
+   * could say "the score was 12" and could not answer "which directive moved it", which is the only
+   * question worth asking when a symbol gains 430% and the strategy still loses.
+   *
+   * ⚠️ DEFAULT OFF, and it costs JSON weight: ~9 directives × ~300 bars is a few hundred KB. A caller
+   * that renders a summary must not pay for it; a caller that scrutinises one session must be able to
+   * ask for it.
+   *
+   * It also adds `price` and `changePct` to every row (see `session-change.ts`) — the two numbers the
+   * score has to be read against.
+   */
+  includeBreakdown?: boolean;
   /**
    * #1185 — WHICH LEG of a paired bot to measure. Required when the bot holds more than one
    * subscription, because `trading_strategy.protocolId` can only name one and silently measuring the
@@ -924,6 +943,27 @@ export interface BacktestResult extends BacktestResultBracketFields {
     riskMultiplier?: number;
     signal: string;
     passedBar: boolean;
+    /**
+     * The bar's close and its move against the PREVIOUS SESSION's close (2026-11-20). A score cannot be
+     * read without the move it was produced in — "score 12 while the symbol ran 430%" is the question
+     * that started this, and neither number was in the record.
+     */
+    price?: number;
+    changePct?: number | null;
+    /**
+     * The decomposition, present only when the request set `includeBreakdown`. `fullScore()` computes
+     * both on every bar; until 2026-11-20 the run discarded them, so "why did it score 12?" had no
+     * answer that did not require re-running with different code.
+     */
+    groups?: Record<string, number>;
+    directives?: Array<{
+      directiveId: string;
+      score: number;
+      maxScore: number;
+      signalClass: string;
+      reason: string | null;
+      inSignal: boolean | null;
+    }>;
   }>;
   /**
    * Per-score totals for THIS run — sum / highest / lowest / mean, plus the capacity signature and
@@ -1861,10 +1901,23 @@ export class BacktestService {
      */
     let runningEquity = accountSize;
 
+    /**
+     * The bar's "change today", against the PREVIOUS SESSION's close — the same denominator the movers
+     * ranker uses. Seeded with the warm-up bars so the first scored bar is measured against its real
+     * previous session rather than against nothing.
+     */
+    const sessionChange = createSessionChangeTracker();
+    for (let seed = 0; seed < windowSize && seed < bars.length; seed++) {
+      sessionChange(bars[seed].timestamp.toISOString(), bars[seed].close);
+    }
+
     for (let day = windowSize; day < bars.length; day++) {
       const window = bars.slice(day - windowSize, day);
       const currentBar = bars[day];
       const barDate = currentBar.timestamp.toISOString().split('T')[0];
+      // ⚠️ Advanced for EVERY bar, before the news filter below, so a skipped bar cannot leave the
+      // next bar measured against a stale session close.
+      const changePct = sessionChange(currentBar.timestamp.toISOString(), currentBar.close);
 
       // ── News exclusion gate (#105) ──
       const isNewsDay = newsDates?.has(barDate) ?? false;
@@ -1916,6 +1969,19 @@ export class BacktestService {
         riskMultiplier: Number(result.riskMultiplier.toFixed(3)),
         signal,
         passedBar: !belowBotBar,
+        // The two numbers the score has to be read against (2026-11-20). `price` is the bar's close;
+        // `changePct` is measured against the previous SESSION's close, so it agrees with the movers
+        // screen rather than resetting to 0% every morning.
+        price: Number(currentBar.close),
+        changePct: changePct == null ? null : Number(changePct.toFixed(2)),
+        // On request only — see `includeBreakdown` on the request. The decomposition `fullScore()`
+        // already computed and this loop used to discard.
+        ...(request.includeBreakdown
+          ? {
+            groups: result.groups,
+            directives: result.breakdown,
+          }
+          : {}),
       });
       if (belowBotBar) continue;
 
@@ -4460,7 +4526,17 @@ export class BacktestService {
     opportunityScore: number;
     opportunityMax: number;
     riskMultiplier: number;
-    breakdown: Array<{ directiveId: string; score: number; maxScore: number; signalClass: string }>;
+    breakdown: Array<{
+      directiveId: string;
+      score: number;
+      maxScore: number;
+      signalClass: string;
+      reason: string | null;
+      inSignal: boolean | null;
+    }>;
+    /** Group id → 0-100 directional percentage, straight from the gating result. A group the protocol
+     *  does not participate in is ABSENT (not 0), which is why this is a record rather than an array. */
+    groups: Record<string, number>;
   }> {
     const symId = await this.resolveSymbolId(symbol);
     const bundle = symId
@@ -4509,7 +4585,12 @@ export class BacktestService {
           score: d.score,
           maxScore: d.maxScore,
           signalClass: d.signalClass,
+          // The directive's OWN sentence about this bar, and whether it was counted at all. Without
+          // these two a reader sees "25/90" and cannot tell a neutral reading from an excluded one.
+          reason: d.reason ?? null,
+          inSignal: d.inSignal ?? null,
         })),
+      groups: gated.subScores ?? {},
     };
   }
 
