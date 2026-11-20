@@ -36,6 +36,9 @@ import { maxHoldExpired } from './max-hold';
 // `checkSessionWindow()` keeps the ET conversion, DST handling and the city-alias ambiguity (#759) in
 // one place; a re-implemented "is it the US session" here would be a second answer to the same question.
 import { checkSessionWindow } from '../trading/session-window';
+// #1242 — whether the window can be tested on this timeframe at all. The daily-bar trap (a gate that
+// excluded every bar and returned 0 trades) lives in that module WITH its spec, not in a comment here.
+import { sessionGatePlan } from './session-gate';
 // ⚠️ The unmonitored-hole threshold, extracted so it has ONE definition and a test that can fail
 // (#1286). Its guard used to skip the entry bar, so the hole right after entry went unmeasured.
 import { isBarHole } from './bar-gap';
@@ -215,6 +218,15 @@ export interface BacktestReplay {
   bars: Array<{ time: string; open: number; high: number; low: number; close: number }>;
   barsCap: number;
   caveats: string[];
+  /**
+   * #1242 — whether the bot's session window gated this run, and why not when it did not.
+   *
+   * ⚠️ ABSENT MEANS "NO WINDOW WAS DECLARED". `applied: false` means a window WAS declared and could
+   * not be evaluated on this timeframe (see the note in `run()`: a daily bar carries the END of its
+   * session, so applying the gate there excluded every bar). Those are different facts and the UI must
+   * not render them alike.
+   */
+  sessionGate?: { window: string; applied: boolean; because: string | null };
 }
 
 /** A trade stamped exactly at 00:00:00.000 UTC predates the #819 timestamp fix. */
@@ -1898,6 +1910,18 @@ export class BacktestService {
      */
     const barMinutes = timeframeMinutes(timeframe);
 
+    /**
+     * ── CAN THE BOT'S TRADING CLOCK BE TESTED ON THIS TIMEFRAME? (#1242) ─────────────────────────
+     * ⚠️ MEASURED 2026-11-20, AND IT IS WHY THIS GUARD EXISTS. NVDA daily bars are stamped at the
+     * session CLOSE (21:00 UTC = 16:00 ET). Gating each bar on `["us"]` (9:30–16:00 ET) therefore
+     * excluded EVERY bar, and a run that produced 26 trades produced **0** — an empty result that reads
+     * as "the strategy never fires". The plan (and its notice) lives in `session-gate.ts` so the
+     * boundary is a test rather than a comment.
+     */
+    const sessionPlan = sessionGatePlan(sessionWindow, barMinutes, timeframe);
+    const sessionGateApplies = sessionPlan.apply;
+    const sessionWindowNotice = sessionPlan.notice;
+
     if (period && rows.length > PERIOD_BAR_CAP) {
       throw new Error(
         `Period '${period.name}' contains more than ${PERIOD_BAR_CAP} ${timeframe} bars ` +
@@ -2051,7 +2075,9 @@ export class BacktestService {
        * "is it the US session" here would be a second answer to the same question, and the one thing
        * this repo keeps re-learning is that the copy drifts.
        */
-      const sessionGate = checkSessionWindow(sessionWindow, currentBar.timestamp);
+      const sessionGate = sessionGateApplies
+        ? checkSessionWindow(sessionWindow, currentBar.timestamp)
+        : { ok: true };
       const outsideSession = !sessionGate.ok;
       // Recorded BEFORE the `continue`, so a bar the bot's own bar rejected still shows what the
       // engine scored and that the bar — not the protocol — is why it was not traded.
@@ -2655,7 +2681,21 @@ export class BacktestService {
       // claim (the sizing divergence). Absent on a hand-assembled request, because then there is
       // no bot to have diverged from.
       drivenBy: resolved.drivenBy ?? undefined,
-      caveats: resolved.caveats,
+      /**
+       * ⚠️ A WINDOW THAT CANNOT BE EVALUATED ON THIS TIMEFRAME IS REPORTED, NOT APPLIED BLINDLY.
+       * Measured 2026-11-20: NVDA daily bars are stamped at the session CLOSE (21:00 UTC = 16:00 ET),
+       * so gating each bar on `["us"]` excluded EVERY bar and the run returned 26 trades → **0**. An
+       * empty result that reads as "the strategy never fires" is worse than an ungated run that says
+       * why. A daily bar summarises a whole session; its stamp is the end of it, so there is no
+       * instant to test a clock against — the live loop tests a real tick and has no equivalent here.
+       */
+      ...(sessionWindowNotice ? {
+        caveats: [...resolved.caveats, sessionWindowNotice],
+        sessionGate: { window: String(sessionWindow), applied: false, because: sessionWindowNotice },
+      } : sessionWindowNotice === null && sessionGateApplies ? {
+        caveats: resolved.caveats,
+        sessionGate: { window: String(sessionWindow), applied: true, because: null },
+      } : { caveats: resolved.caveats }),
       // #986 — WHICH STORED PERIOD this measured. Echoed with its name and note so the result says
       // why the window mattered, not only which dates it covered.
       measuredPeriod: period

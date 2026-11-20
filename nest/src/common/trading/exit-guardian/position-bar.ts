@@ -56,6 +56,8 @@ import { moneyTargetVerdict } from './money-target';
 export type PositionSide = 'buy' | 'sell';
 
 export interface PositionBar {
+  /** The bar's first price. Used ONLY by the session boundary, whose instant is the bar's opening. */
+  open: number;
   high: number;
   low: number;
   close: number;
@@ -88,7 +90,7 @@ export interface PositionRules {
   tightenPct?: number | null;
 }
 
-export type PositionExitKind = 'SL' | 'TRAIL' | 'TP' | 'TIME' | 'TARGET';
+export type PositionExitKind = 'SESSION' | 'SL' | 'TRAIL' | 'TP' | 'TIME' | 'TARGET';
 
 export interface PositionExit {
   kind: PositionExitKind;
@@ -131,11 +133,27 @@ function favourablePct(side: PositionSide, entryPrice: number, price: number): n
  * @param rules       The tightening plan. `{}` = no tightening.
  * @param heldTooLong The caller's own time-stop verdict for this bar.
  */
+/**
+ * What the DRIVER's own clock rules say about this bar, already decided.
+ *
+ * ⚠️ THESE ARE TWO MECHANISMS WITH TWO DIFFERENT INSTANTS, which is why they arrive as a kind rather
+ * than a flag:
+ *   `SESSION` — the bot's `exitBeforeUtc` boundary was passed. It is an INSTANT: the clock crossed at
+ *               the bar's OPEN, before this bar's range was traded, so it exits at `bar.open` and it is
+ *               tested FIRST.
+ *   `TIME`    — the bot's `maxHoldHours` limit is exceeded. It is a decision to leave at the CLOSE, so
+ *               it is tested AFTER the levels (a level the market traded through is more defensible).
+ *
+ * The combination itself (`decideExitTrigger()`, which also names which mechanism wins when both are
+ * due) belongs to the caller: it owns the two columns.
+ */
+export type TimedExit = 'SESSION' | 'TIME' | null;
+
 export function managePositionBar(
   state: PositionState,
   bar: PositionBar,
   rules: PositionRules = {},
-  heldTooLong = false,
+  timed: TimedExit = null,
   money?: MoneyAtBar,
 ): BarDecision {
   const isLong = state.side === 'buy';
