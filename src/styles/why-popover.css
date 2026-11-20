@@ -16,22 +16,27 @@
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  border: 1px solid var(--line);
+  border: 0;
   color: var(--text-dim);
-  background: var(--bg);
+  background: transparent;
+  opacity: 0.6;
   cursor: pointer;
   padding: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
 }
 
-.why-pop-btn:hover {
+/* The glyph stays quiet until it is needed; hovering the label or the icon brings it forward. */
+.why-pop:hover .why-pop-btn,
+.why-pop-btn:hover,
+.why-pop-btn[aria-expanded='true'] {
+  opacity: 1;
   color: var(--ink);
-  border-color: var(--accent);
 }
 
 .why-pop-btn:focus-visible {
@@ -41,29 +46,48 @@
 
 .why-pop-panel {
   position: absolute;
-  z-index: 30;
-  top: calc(100% + 6px);
+  z-index: 40;
+  top: calc(100% + 10px);
   left: 0;
   width: max-content;
-  max-width: 46ch;
+  max-width: 42ch;
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.55;
   font-weight: 400;
   text-transform: none;
   letter-spacing: normal;
   color: var(--ink-soft);
-  background: var(--panel);
+  background: var(--bg-elev);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px 10px;
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--bg) 60%, transparent);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--bg) 55%, transparent);
   white-space: normal;
   text-align: left;
+}
+
+/* A caret pointing back at the info glyph — the standard popover affordance. */
+.why-pop-panel::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 14px;
+  width: 10px;
+  height: 10px;
+  background: var(--bg-elev);
+  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  transform: rotate(45deg);
 }
 
 /* A panel opened from the right-hand end of a row must not hang off the viewport. */
 .why-pop--block .why-pop-panel {
   left: auto;
   right: 0;
+}
+
+.why-pop--block .why-pop-panel::before {
+  left: auto;
+  right: 14px;
 }

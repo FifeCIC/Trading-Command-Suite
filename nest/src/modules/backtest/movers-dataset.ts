@@ -136,6 +136,18 @@ function sideFromDirection(direction: string | null | undefined): MoversSide | n
 }
 
 /**
+ * Narrow an untrusted value to a side.
+ *
+ * ⚠️ The request body is JSON with no runtime enum check, so `side` can arrive as any string. Without
+ * this, `side: 'long'` (a reasonable guess at the field's meaning — the sides ARE long/short trades)
+ * fell through to the agreement check and was refused with *"the dataset is a losers list"*, which
+ * blames the dataset for a bad request field. Measured 2026-11-20, from a caller who sent exactly that.
+ */
+function asSide(value: unknown): MoversSide | null {
+  return value === 'winners' || value === 'losers' ? value : null;
+}
+
+/**
  * Decide which side this run ranks for, in precedence order: explicit request, then the protocol's
  * own declared direction, then the dataset name.
  *
@@ -152,17 +164,27 @@ export function resolveMoversSide(input: {
   const fromProtocol = sideFromDirection(input.protocolDirection);
 
   if (input.explicit) {
-    // An explicit request wins — but it still has to agree with the list it is ranking.
-    if (input.explicit !== input.datasetSide) {
+    const requested = asSide(input.explicit);
+    if (!requested) {
       return {
         side: null,
         source: 'explicit',
         conflict:
-          `The request asks for the '${input.explicit}' side but the dataset is a '${input.datasetSide}' list. ` +
+          `'${String(input.explicit)}' is not a side this run can rank. Use 'winners' or 'losers' — ` +
+          'the LONG/SHORT leg is decided by the protocol, not by this field.',
+      };
+    }
+    // An explicit request wins — but it still has to agree with the list it is ranking.
+    if (requested !== input.datasetSide) {
+      return {
+        side: null,
+        source: 'explicit',
+        conflict:
+          `The request asks for the '${requested}' side but the dataset is a '${input.datasetSide}' list. ` +
           'Ranking one end of the market while trading the other is a different strategy.',
       };
     }
-    return { side: input.explicit, source: 'explicit' };
+    return { side: requested, source: 'explicit' };
   }
 
   if (fromProtocol) {

@@ -115,6 +115,16 @@ export const BOT_FIELDS: ReadonlyArray<{ key: string; label: string; applied: Ap
    * "this knob does not exist". `sessionWindow` below IS a real column and stays.
    */
   { key: 'exitBeforeUtc', label: 'Exit before (UTC)', applied: 'ignored', why: 'Zero references. The #928 session-exit boundary is live-loop only.' },
+  {
+    key: 'sessionWindow',
+    label: 'Session window',
+    applied: 'honoured',
+    why:
+      'The bot\'s TRADING CLOCK, applied through the live predicate `checkSessionWindow()` — a bar outside the window is scored but not traded, exactly as the live loop skips the bot. ' +
+      '⚠️ Set on every movers bot and read by nothing in the engine until 2026-11-20 (#1242), so older runs traded the pre-market hour before the US open as though the bot were open; ' +
+      '`EXECUTION_SEMANTICS` is 2 from that change, so a comparison against those runs is refused rather than showing a delta.',
+  },
+  { key: 'takeProfitAmount', label: 'Money target (account currency)', applied: 'honoured', why: 'The bot’s ABSOLUTE take-profit. Judged at each bar’s close against the trade’s net-of-commission P&L, and closed at that bar’s close with exit reason TARGET (live: `system:take-profit`, stop-guardian.service.ts). ⚠️ Addressed 2026-11-20 (#1242): the engine sized the position AFTER walking the bracket, so a per-bar money test had no unit count. Sizing now resolves before the walk. Set on 1 of 78 bots.' },
   { key: 'brokerId', label: 'Broker', applied: 'ignored', why: 'Zero references. A run reads stored bars, not a broker.' },
 ];
 

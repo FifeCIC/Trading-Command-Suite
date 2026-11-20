@@ -28,6 +28,19 @@ const BOT = {
 const get = (rows, id) => rows.find((r) => r.id === id);
 
 describe('buildTradeConfig', () => {
+  it('▶ CANARY — a column LIVE does not honour says so in the row a reader actually sees', () => {
+    // Measured 2026-11-20: `strategy.maxPositions` is read on the live dispatch path by nothing — the
+    // live cap is the GLOBAL `risk.maxOpenPositions`. Before this case the row said only "the engine
+    // has no concurrency model", which a reader takes as "live enforces my maxPositions: 1". It does not.
+    const rows = buildTradeConfig(BOT);
+    const maxPos = get(rows, 'maxPositions');
+    expect(maxPos.live).toBe('legacy-only');
+    expect(maxPos.note).toMatch(/LIVE: LEGACY PATH ONLY/);
+    // The other direction: a column live DOES honour must not carry the warning, or every row is noise.
+    expect(get(rows, 'slPct').live).toBe('live');
+    expect(get(rows, 'slPct').note).not.toMatch(/LIVE: /);
+  });
+
   it('takes the bot’s own stop, target, entry bar and max hold, and names the columns', () => {
     const rows = buildTradeConfig(BOT);
     expect(get(rows, 'slPct')).toMatchObject({ value: 2.5, source: 'bot', applied: true });
@@ -64,7 +77,11 @@ describe('buildTradeConfig', () => {
     expect(get(rows, 'maxPositions').applied).toBe(false);
     expect(get(rows, 'maxPyramidTiers').applied).toBe(false);
     expect(get(rows, 'baseSize').applied).toBe(false);
-    expect(get(rows, 'sessionWindow').applied).toBe(false);
+    // `sessionWindow` moved OUT of this list on 2026-11-20 (#1242) — the engine now applies the bot's
+    // trading clock through the live gate. It is asserted in the honoured direction below instead, so
+    // the change is recorded rather than the assertion being quietly dropped.
+    expect(get(rows, 'sessionWindow').applied).toBe(true);
+    expect(get(rows, 'exitBeforeUtc').applied).toBe(false);
   });
 
   it('▶ CANARY — a trailing stop is reported applied BY THE ENGINE and flagged as absent live', () => {

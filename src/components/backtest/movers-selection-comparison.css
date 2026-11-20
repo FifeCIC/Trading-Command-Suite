@@ -1,0 +1,211 @@
+/*
+ * MoversSelectionComparison — scoped styles for the #1328 "change vs the previous test" surfaces.
+ *
+ * ⚠️ TOKENS ONLY. Every custom property here exists in the theme (the risk spectrum, `--bg-elev`,
+ * `--color-warning`) — an undefined one is silently dropped at runtime, so a typo looks like a design
+ * choice. Guard: `node scripts/validate-css-tokens.cjs`; literals: `validate-css-literals.cjs`.
+ *
+ * ⚠️ Nothing here is a global selector: every rule is scoped to a class this component renders, and
+ * those classes are prefixed so they cannot collide with another page's sheet.
+ */
+
+/* ── the delta inside a StatCard's `sub` slot ─────────────────────────────────────────────────── */
+.mvp-delta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+
+.mvp-delta-arrow {
+  font-size: 0.72em;
+}
+
+/* "Flat" is its own state, not a quiet "up": a delta of exactly 0 is still a measurement. */
+.mvp-delta-flat {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.mvp-delta-value {
+  white-space: nowrap;
+}
+
+.mvp-delta-unit {
+  margin-left: 1px;
+  font-weight: 600;
+}
+
+.mvp-delta-vs {
+  font-family: var(--font-body);
+  font-size: 0.92em;
+  font-weight: 400;
+  color: var(--text-dim);
+}
+
+/* ── the refused-comparison statement under the tiles ─────────────────────────────────────────── */
+.mvp-cmp {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mvp-cmp-note {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 4px;
+  background: var(--bg-elev);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+/* "No previous run" is the NORMAL first state, so it gets the accent, not a warning. */
+.mvp-cmp-note--first {
+  border-left-color: var(--accent);
+}
+
+/* "Not comparable — engine changed" is a refusal to measure, so it is toned as a caution. */
+.mvp-cmp-note--blocked {
+  border-left-color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 8%, var(--bg-elev));
+}
+
+.mvp-cmp-tag {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--accent);
+}
+
+.mvp-cmp-note--blocked .mvp-cmp-tag {
+  color: var(--color-warning);
+}
+
+/* The reason is always a sentence; it is clamped here and the whole of it lives in a WhyPopover. */
+.mvp-cmp-text {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.mvp-cmp-config {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.mvp-cmp-config-label {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.mvp-cmp-change {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.mvp-cmp-sep {
+  color: var(--text-faint);
+}
+
+.mvp-cmp-arrow {
+  color: var(--text-dim);
+}
+
+/* ── the collapsible "previous tests on this profile" list ───────────────────────────────────── */
+.mvp-history-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-height: 44px; /* the summary IS the control — it gets a real tap target */
+  padding: 2px;
+  cursor: pointer;
+}
+
+/* A flex summary loses the UA marker, so the disclosure state is drawn explicitly. The alternative
+   text (`/ ''`) keeps the glyph out of the accessibility tree — the open/closed state is already
+   announced by `details`. */
+.mvp-history-summary::before {
+  content: '\25B8' / '';
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.mvp-history[open] > .mvp-history-summary::before {
+  content: '\25BE' / '';
+}
+
+.mvp-history-summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.mvp-history-title {
+  font-size: 12px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.mvp-history-profile {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.mvp-history-count {
+  margin-left: auto;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.mvp-history-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mvp-history-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+/* A stored row the current run may not be subtracted from. Text, not just a tone. */
+.mvp-history-tag {
+  margin-left: 6px;
+  padding: 0 5px;
+  border: 1px solid color-mix(in srgb, var(--color-warning) 45%, transparent);
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-warning);
+}

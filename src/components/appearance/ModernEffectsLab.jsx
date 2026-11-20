@@ -1,9 +1,9 @@
 /**
  * ModernEffectsLab — an ORIGINAL, token-driven "play lab" of modern CSS effects for the Appearance area.
  *
- * ⚠️ WHY THIS EXISTS. Owner, 2026-11-20: *"overall it's dull and boring … Go ahead and work on the
- * Appearance area. Please consider adding some animation and dynamic lighting effects to see what fun
- * we can inject into the UI. Think modern and make use of the browser's latest technologies."*
+ * ⚠️ WHY THIS EXISTS. Decided 2026-11-20: the Appearance area reads as dull and the direction was to
+ * add animation and dynamic lighting so the token layer can be seen doing real work — modern, using the
+ * browser's current capabilities. The reasoning is kept below; the wording is not quoted.
  *
  * ⚠️ ORIGINALITY IS NON-NEGOTIABLE. The owner linked several commercial themes for INSPIRATION. Ideas
  * are not owned — a spotlit card, an aurora gradient, a glowing border are fair to build. Their CSS,

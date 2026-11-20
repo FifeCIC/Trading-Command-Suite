@@ -78,6 +78,31 @@ const ALLOWLIST = [
       'vocabulary entry and this file began mentioning the field. ⚠️ If it ever starts closing a ' +
       'trade, delete this entry rather than widening it.',
   },
+  {
+    file: 'common/trading/exit-guardian/exit-equivalence.ts',
+    why: 'VOCABULARY, not a writer — maps the backtest engine\'s exit reasons onto the live ' +
+      '`CLOSE_REASONS` values so a simulated close can be compared with a real one (#1242). Pure ' +
+      'function, no IO at all. It names `closeReason` as the TARGET key it returns.',
+  },
+  {
+    file: 'modules/backtest/backtest.service.ts',
+    why: 'SIMULATOR — its `TradeRecord` is an in-memory result row, never a Prisma `Trade`. Verified ' +
+      '2026-11-20: this file reads `tradingStrategy` / `marketBar` / `newsArticle` / ' +
+      '`backtestExperiment` and contains no `trade.create` or `trade.update`. The `closeReason` it ' +
+      'sets is the live-vocabulary twin of its own `exitReason` (exit-equivalence.ts). ⚠️ If the ' +
+      'engine ever persists real trades, delete this entry: it would then be the exact gap the ' +
+      'guard exists to catch.',
+  },
+  {
+    file: 'modules/backtest/run-depth.ts',
+    why: 'TYPE + PROJECTION only — carries `closeReason` onto the per-trade row the page renders. ' +
+      'No prisma import in the file.',
+  },
+  {
+    file: 'modules/backtest/selection-run.service.ts',
+    why: 'PROJECTION only — copies `closeReason` from an engine TradeRecord into the DepthTrade the ' +
+      'response carries. It persists `backtestExperiment` rows, never a `Trade`.',
+  },
 ];
 
 function walk(dir, out = []) {

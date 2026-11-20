@@ -393,16 +393,87 @@ model BacktestRun {
   // comparison that cannot tell 100 from 10,000. Nullable: every run made before this column, and every
   // run whose `positionModel` is not `fixedDollar`, legitimately has no amount.
   fixedAmount  Float?
+  // ⚠️ ADDED 2026-11-20 (#1328) — WHICH SELECTION TEST this row is part of.
+  //
+  // WHY: a movers run is not one run. It is a GROUP of per-symbol engine runs chosen by a rank at a
+  // clock time from a dataset that is a screen of ONE session — and until this column existed nothing
+  // joined them, so "show me the change against the previous Wednesday-long test" could not be asked.
+  // Measured 2026-11-20: three rows (APPS, IHRT, MVST) written at 21:56:13/16/18 by one run, with no
+  // record anywhere that they were one test.
+  //
+  // ⚠️ NULL = not part of a selection test (every plain `/run`, every run before this column) —
+  // deliberately distinct from a selection row whose symbols failed to persist.
+  selectionId  String?  @db.VarChar(36)
   createdAt    DateTime @default(now())
 
   symbol Symbol         @relation(fields: [symbolId], references: [id], onDelete: Cascade)
   experiment BacktestExperiment? @relation(fields: [experimentId], references: [id], onDelete: SetNull)
+  selection BacktestSelection? @relation(fields: [selectionId], references: [id], onDelete: SetNull)
   trades BacktestTrade[]
 
   @@index([symbolId, protocolId])
   @@index([createdAt])
   @@index([periodId])
   @@index([experimentId, iteration])
+  @@index([selectionId])
+}
+
+// ── Backtest selection tests (#1328) — ONE movers test, as a named group ─────
+// The per-symbol engine runs already persist into `backtestrun`. What was missing is the TEST: the
+// day, the direction, the dataset it was screened from, the rank time and the top-N — plus the
+// AGGREGATE the page's tiles actually show, which is computed over KEPT trades after the selection
+// filter and therefore cannot be read off any single per-symbol row.
+//
+// ⚠️ `profileKey` IS NOT A CACHE. It is the answer to "may these two runs be subtracted?", and it is
+// derived from the profiling factors ONLY (day, direction, dataset, bot, top-N, rank time, protocol).
+// The trade-management config is deliberately excluded: changing a stop and re-running is the reason
+// the feature exists, so `configJson` sits BESIDE the key and the difference is reported as the cause
+// of the delta rather than used to hide the pair.
+//
+// ⚠️ `semanticsVersion` IS THE COMPARABILITY GATE. An engine change that alters a stored result bumps
+// `EXECUTION_SEMANTICS` (see `common/trading/execution-semantics.ts`); a delta is refused across two
+// versions, because otherwise the difference measures the engine's history instead of the strategy.
+model BacktestSelection {
+  id           String   @id @default(uuid()) @db.VarChar(36)
+  /// sha256 over datasetName|answerDate|side|directionMode|protocolId|botId|topN|cutoffUtc.
+  profileKey   String   @db.VarChar(64)
+  datasetName  String   @db.VarChar(120)
+  answerDate   DateTime @db.Date
+  /// `winners` | `losers` — which end of the day's movers the dataset holds.
+  side         String   @db.VarChar(10)
+  /// `long` | `short` — the direction the protocol trades. Same meaning as `BacktestRun.directionMode`.
+  directionMode String  @db.VarChar(8)
+  /// Slug or UUID, exactly as `BacktestRun.protocolId` stores it.
+  protocolId   String   @db.VarChar(100)
+  botId        String?  @db.VarChar(36)
+  /// The bot's name AT RUN TIME. A later rename must not rewrite history.
+  botName      String?  @db.VarChar(120)
+  topN         Int
+  cutoffUtc    String   @db.VarChar(5)
+  /// The symbols this test actually ran, in the order the ranking produced them.
+  symbolsJson  String   @db.LongText
+  /// The applied trade-management values, as the result reported them (id / value / applied).
+  configJson   String?  @db.LongText
+  /// The tiles' numbers: kept trades only, after the selection filter.
+  trades       Int
+  wins         Int
+  winRate      Float
+  netPnl       Float
+  profitFactor Float?
+  /// Engine trades the selection excluded. Stored so a shrinking population is visible, not implied.
+  engineTradesOutsideSelection Int
+  /// `EXECUTION_SEMANTICS` at run time — the comparability gate.
+  semanticsVersion Int
+  /// The app version that produced it, for a reason line a reader can trace.
+  engineVersion String  @db.VarChar(20)
+  createdAt    DateTime @default(now())
+
+  runs BacktestRun[]
+
+  @@map("backtest_selection")
+  @@index([profileKey, createdAt])
+  @@index([answerDate])
+  @@index([protocolId, createdAt])
 }
 
 // ── Backtest experiments (#1144) — provenance for a tuning loop ──────────────

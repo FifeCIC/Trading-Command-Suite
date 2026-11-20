@@ -26,8 +26,22 @@
  *
  * Pure: the caller supplies the bot row and the request, so every branch is testable without Prisma.
  */
+import { BOT_RULES } from '../trading/bot-rules';
 
 export type TradeConfigSource = 'bot' | 'request' | 'engine-default';
+
+/**
+ * Live's own verdict on the same column, imported from `trading/bot-rules.ts` rather than restated.
+ *
+ * ⚠️ THIS EXISTS BECAUSE `applied: false` WAS BEING READ AS "LIVE DOES IT, THE ENGINE DOESN'T". For
+ * `maxPositions` that reading is wrong in both halves: measured 2026-11-20, `strategy.maxPositions` is
+ * read on the live dispatch path by nothing (only `TradingGatesService`, whose `evaluate()` is called
+ * from a REST controller, and the legacy path), and the live cap is the GLOBAL
+ * `risk.maxOpenPositions` (default 5, broker-wide). A reader told "the engine has no concurrency model"
+ * concludes the bot's `maxPositions: 1` is protecting them live; it is not. One source for that fact —
+ * `bot-rules.ts`, which is the column-by-column declaration — means this table cannot drift from it.
+ */
+export type LiveEnforcement = 'live' | 'legacy-only' | 'display-only' | 'none';
 
 export interface TradeConfigField {
   id: string;
@@ -42,6 +56,10 @@ export interface TradeConfigField {
   note: string;
   /** The bot's own value when it differs from what the run used, so the divergence is visible. */
   botValue?: number | string | null;
+  /** What LIVE does with the same column. Absent for values that are not bot columns. */
+  live?: LiveEnforcement;
+  /** Live's own caveat, verbatim from `bot-rules.ts` — never a second wording of the same fact. */
+  liveNote?: string | null;
 }
 
 /** The subset of `trading_strategy` this module reads. */
@@ -220,8 +238,8 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       label: 'Money target',
       value: num(bot?.takeProfitAmount),
       source: 'bot',
-      applied: false,
-      note: 'NOT APPLIED — an ABSOLUTE target in account currency (the "five pound strategy"), which the engine does not model: it models a percentage distance. The decision itself is extracted to `money-target.ts` so the two can converge (#1242).',
+      applied: true,
+      note: 'trading_strategy.takeProfitAmount — judged at each bar’s close against the trade’s own net-of-commission P&L, then closed at that close (exit reason TARGET; live `system:take-profit`). NULL/0 = no target, which is 77 of 78 bots.',
       botValue: num(bot?.takeProfitAmount),
     },
     {
@@ -247,8 +265,8 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       label: 'Session window',
       value: bot?.sessionWindow ?? null,
       source: bot?.sessionWindow ? 'bot' : 'engine-default',
-      applied: false,
-      note: 'NOT APPLIED — the run trades every bar its window holds; it does not skip outside the bot\'s session.',
+      applied: true,
+      note: 'trading_strategy.sessionWindow — the bot\'s trading clock, applied by the LIVE predicate `checkSessionWindow()`. A bar outside it is scored (and flagged `sessionClosed`) but not traded. Absent = ungated.',
       botValue: bot?.sessionWindow ?? null,
     },
     {
@@ -271,6 +289,27 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       note: 'the equity model every size is derived from',
     },
   ];
+
+  /**
+   * Attach live's verdict to every row that names a real `trading_strategy` column, using
+   * `bot-rules.ts` as the ONE declaration of that fact.
+   *
+   * ⚠️ THE NOTE IS WHAT A READER ACTUALLY SEES, so a `legacy-only`/`display-only` row has to say so in
+   * the note itself. Leaving it in a field nobody renders would keep the original misreading alive:
+   * "the engine does not apply this" reads as "live does".
+   */
+  for (const row of rows) {
+    const rule = BOT_RULES.find((r) => r.field === row.id);
+    if (!rule) continue;
+    row.live = rule.enforcement;
+    row.liveNote = rule.caveat ?? null;
+    if (rule.enforcement !== 'live') {
+      const where = rule.enforcement === 'legacy-only'
+        ? 'LIVE: LEGACY PATH ONLY — the live dispatch path does not read this column at all'
+        : 'LIVE: DISPLAY ONLY — the column is read and recorded, but no live action follows from it';
+      row.note = `${row.note} ⚠️ ${where}${rule.caveat ? `. ${rule.caveat}` : '.'}`;
+    }
+  }
 
   return rows;
 }

@@ -84,6 +84,18 @@ describe('resolveMoversSide', () => {
     expect(r.conflict).toMatch(/asks for the 'winners' side/);
   });
 
+  /**
+   * The request body is JSON with no runtime enum check, so `side` reaches here as an arbitrary
+   * string. `'long'` is the natural mistake — the sides ARE long/short trades — and before this case
+   * existed it produced *"the dataset is a losers list"*, blaming the dataset for a bad request field.
+   */
+  it('names an invalid side as invalid, instead of blaming the dataset', () => {
+    const r = resolveMoversSide({ explicit: 'long' as never, datasetSide: 'losers' });
+    expect(r.side).toBeNull();
+    expect(r.conflict).toMatch(/'long' is not a side this run can rank/);
+    expect(r.conflict).not.toMatch(/dataset is a/);
+  });
+
   it('lets an agreement through', () => {
     expect(resolveMoversSide({ explicit: 'losers', datasetSide: 'losers' })).toEqual({
       side: 'losers',

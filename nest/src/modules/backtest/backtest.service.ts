@@ -32,6 +32,10 @@ import { applyAffordability } from './affordable-size';
 // ⚠️ The bot's own TIME STOP, extracted so the comparison is testable (#1136). Set on 42 of 64 active
 // bots and referenced zero times by this file before 2026-11-16.
 import { maxHoldExpired } from './max-hold';
+// #1242 — the bot's TRADING CLOCK is the live gate, not a second reading of `sessionWindow`. Reusing
+// `checkSessionWindow()` keeps the ET conversion, DST handling and the city-alias ambiguity (#759) in
+// one place; a re-implemented "is it the US session" here would be a second answer to the same question.
+import { checkSessionWindow } from '../trading/session-window';
 // ⚠️ The unmonitored-hole threshold, extracted so it has ONE definition and a test that can fail
 // (#1286). Its guard used to skip the entry bar, so the hole right after entry went unmeasured.
 import { isBarHole } from './bar-gap';
@@ -43,12 +47,15 @@ import { signalProfitFactor as signalProfitFactorOf, tradeProfitFactor as tradeP
 // The per-bar "% change today" the score must be read against — one definition, shared with the
 // movers ranker's denominator (#1319 follow-up, 2026-11-20).
 import { createSessionChangeTracker } from './session-change';
-// #1242 — ONE trailing-stop formula for the live guardian and this engine. The STRENGTH still differs
-// (live records the decision point, the engine moves the stop) and that is stated in the module.
-import { trailTriggerPrice } from '../../common/trading/exit-guardian/simulated-tsl';
 // #1242 — the bracket's stop price is the guardian's protective stop, so a run tests the level the live
 // path would place. ⚠️ `slPct: 0` still means "no bracket" HERE (doBrackets) while it means 1% live.
 import { protectiveStopPrice } from '../../common/trading/exit-guardian/protective-stop';
+// #1242 — one translation between the engine's exit vocabulary and the live close reasons, so the two
+// can be read against each other instead of by hand.
+import { engineExitCloseReason, engineExitEquivalence } from '../../common/trading/exit-guardian/exit-equivalence';
+// #1242 — the per-bar management rules (stop in force → target → time stop → tighten) now live in the
+// shared core, so the engine drives the same decisions a live close does instead of a copy of them.
+import { managePositionBar, PositionState } from '../../common/trading/exit-guardian/position-bar';
 import {
   scoringTotals,
   tradeTotals,
@@ -375,6 +382,23 @@ export interface BacktestRunRequest {
    * `position-time-stop.service.ts` (reason `SYSTEM_TIME_STOP`); the comparison lives in `max-hold.ts`.
    */
   maxHoldHours?: number;
+  /**
+   * The bot's declared TRADING CLOCK — `trading_strategy.sessionWindow`, e.g. `'["us"]'`.
+   *
+   * ⚠️ Absent = ungated, which is what most hand-made requests want. When set, a bar outside the window
+   * produces a SCORE but no trade — the same rule the live loop applies via `checkSessionWindow()`.
+   */
+  sessionWindow?: string;
+  /**
+   * The bot's ABSOLUTE money take-profit, in account currency (`trading_strategy.takeProfitAmount`).
+   * Absent/NULL/0 = no opinion, which is 77 of 78 bots.
+   *
+   * ⚠️ A SEPARATE TARGET FROM `tpPct`, and the reason it exists: `tpPct` is a DISTANCE from entry, so
+   * the money it captures drifts with the price level. Live acts on this one in
+   * `stop-guardian.service.ts` (`system:take-profit`); until 2026-11-20 the engine never read it, so a
+   * bot with a money target was backtested without the exit it actually has.
+   */
+  takeProfitAmount?: number;
   /** Weight overrides — keyed by directive ID, overrides default weights */
   weights?: Record<string, number>;
   /** Execution realism */
@@ -518,7 +542,17 @@ export interface TradeRecord {
    * `EOD`: end-of-data means the sample ran out, a time stop means the BOT decided to close, and
    * collapsing them would make a truncated window indistinguishable from a strategy choice.
    */
-  exitReason: 'TP' | 'SL' | 'TRAIL' | 'TIME' | 'EOD';  // Take-profit, Stop-loss, tightened stop, max hold, End-of-data
+  exitReason: 'TP' | 'SL' | 'TRAIL' | 'TIME' | 'EOD' | 'TARGET';  // Take-profit, Stop-loss, tightened stop, max hold, End-of-data, absolute money target
+  /**
+   * #1242 — the SAME exit expressed in the live `CLOSE_REASONS` vocabulary, so a stored run can be
+   * compared with a real account without translating by hand. `null` for `EOD`, which has no live
+   * counterpart (the data ended). Absent on runs recorded before this field existed, and on a reason
+   * the map does not cover — never defaulted to `broker:unknown`, which is a real live value meaning
+   * something else.
+   */
+  closeReason?: string | null;
+  /** Set only where the equivalence is `qualified` — currently `TRAIL`, which live only records (#936). */
+  closeReasonNote?: string;
   /**
    * #R14 — the stop and target the trade was measured against, or `undefined` for a run made
    * before they were recorded. Optional on purpose: an old run has no levels and must be able to
@@ -609,6 +643,20 @@ export interface BotForBacktest {
    * `entry + maxHoldHours` with reason `SYSTEM_TIME_STOP`.
    */
   maxHoldHours?: number | null;
+  /**
+   * The bot's declared TRADING CLOCK — `trading_strategy.sessionWindow`, e.g. `'["us"]'`.
+   *
+   * ⚠️ Set on essentially every bot and read by NOTHING in the engine until 2026-11-20 (#1242), so a
+   * run traded every bar its window held — including the pre-market hour before the US open — and the
+   * result was reported as the bot's own. Live: `automation-loop.service.ts` →
+   * `checkSessionWindow(strategy.sessionWindow, now)`.
+   */
+  sessionWindow?: string | null;
+  /**
+   * The bot's ABSOLUTE money target in account currency. Live acts on it (`system:take-profit`); the
+   * engine ignored it until 2026-11-20 because the size was resolved after the bracket walk.
+   */
+  takeProfitAmount?: number | null;
   /**
    * The bot's SIMULATED TRAILING STOP (#1294).
    *
@@ -751,6 +799,27 @@ export function mergeBotConfig(
       bot.simTslActivationPct,
       bot.simTslDistancePct,
     ) ?? undefined, 'stopPlan'),
+    // ⚠️ CARRIED NOW, AND IT CHANGES RESULTS (#1242, 2026-11-20). `takeProfitAmount` is live on the
+    // bot (`stop-guardian.service.ts` closes at market with `system:take-profit`) and was read by
+    // NOTHING in the engine, so a bot with a money target was measured without one of its exits. The
+    // blocking reason was ORDER, not the decision: the engine walked the bracket and only then sized
+    // the position, so a per-bar money test had no unit count. The sizing now resolves before the walk,
+    // and the target is judged at each bar's close on the same net-of-commission basis the trade books.
+    //
+    // ⚠️ CONSEQUENCE, stated because it is not reversible by re-running: bot-driven runs stored before
+    // this change measured a population with no money target. They are not comparable with new runs of
+    // the same bot.
+    takeProfitAmount: pick(request.takeProfitAmount, bot.takeProfitAmount, 'takeProfitAmount'),
+    // ⚠️ CARRIED NOW, AND IT CHANGES RESULTS (#1242, 2026-11-20). `sessionWindow` was set on every
+    // movers bot (`["us"]` on both) and read by NOTHING in the engine, so a run traded the pre-market
+    // hour before the US open and reported it as the bot's own result. The predicate is the LIVE one
+    // (`checkSessionWindow`), so the ET conversion, DST and the city-alias ambiguity (#759) keep one
+    // owner.
+    //
+    // ⚠️ CONSEQUENCE, stated because it is not reversible by re-running: bot-driven runs stored before
+    // this change measured a population that included bars the bot was shut for. `EXECUTION_SEMANTICS`
+    // is bumped to 2, so a comparison against them is REFUSED rather than showing a delta.
+    sessionWindow: pick(request.sessionWindow, bot.sessionWindow, 'sessionWindow'),
   };
 
   const baseSize = bot.baseSize ?? null;
@@ -949,6 +1018,16 @@ export interface BacktestResult extends BacktestResultBracketFields {
     riskMultiplier?: number;
     signal: string;
     passedBar: boolean;
+    /**
+     * TRUE when the bar fell OUTSIDE the bot's declared session window (#1242, 2026-11-20).
+     *
+     * ⚠️ A SEPARATE FLAG FROM `passedBar`, DELIBERATELY. `passedBar` answers the bot's ENTRY BAR
+     * (`minComposite`); this answers the trading CLOCK. Collapsing them would change what `passedBar`
+     * has always meant for every stored run and every reader of it. A trade needs both:
+     * `passedBar && !sessionClosed`. An ungated bot never sets this, so it is absent rather than `false`
+     * for the majority — absent means "not measured because there was no window".
+     */
+    sessionClosed?: boolean;
     /**
      * The bar's close and its move against the PREVIOUS SESSION's close (2026-11-20). A score cannot be
      * read without the move it was produced in — "score 12 while the symbol ran 430%" is the question
@@ -1615,6 +1694,12 @@ export class BacktestService {
       atrMultiplier = 1.5,
       // ── Kelly criterion (#269) ──
       kellyCapPct = 25,
+      // #1242 — the bot's ABSOLUTE money target. NULL/0 = no opinion, and `moneyTargetVerdict()`
+      // returns `not-configured` for both, so most bots take the exact path they took before.
+      takeProfitAmount = null,
+      // #1242 — the bot's trading clock. `null` = ungated, which keeps every hand-made request exactly
+      // as it was; a bot that declares a window passes it and bars outside it produce scores, not trades.
+      sessionWindow = null,
     } = resolved.request;
 
     // ⚠️ #986 — A PERIOD WINS ON WHERE TO LOOK; THE REQUEST WINS ON WHAT TO DO THERE.
@@ -1952,6 +2037,22 @@ export class BacktestService {
       // ⚠️ `signal` already cleared the PROTOCOL threshold (ENTRY_THRESHOLD, ~6%). A bar of 10 is a
       // strictly tighter second gate, so this can only ever REMOVE entries — it can never add one.
       const belowBotBar = !passesBotEntryBar(composite, minComposite);
+
+      /**
+       * ── THE BOT'S TRADING CLOCK (#1242, 2026-11-20) ──────────────────────────────────────────────
+       * Live: `automation-loop.service.ts` calls `checkSessionWindow(strategy.sessionWindow, now)` and
+       * skips the bot when it is outside. `trading_strategy.sessionWindow` is set on essentially every
+       * movers bot (`["us"]` on both), and the engine read it **zero** times — so a run traded every
+       * bar its window held, including the pre-market hour before the US open, and reported the result
+       * as the bot's own.
+       *
+       * ⚠️ THE PREDICATE IS THE LIVE ONE, NOT A SECOND READING OF THE COLUMN. `checkSessionWindow()`
+       * owns the ET conversion, the DST handling and the city-alias ambiguity (#759) — re-implementing
+       * "is it the US session" here would be a second answer to the same question, and the one thing
+       * this repo keeps re-learning is that the copy drifts.
+       */
+      const sessionGate = checkSessionWindow(sessionWindow, currentBar.timestamp);
+      const outsideSession = !sessionGate.ok;
       // Recorded BEFORE the `continue`, so a bar the bot's own bar rejected still shows what the
       // engine scored and that the bar — not the protocol — is why it was not traded.
       //
@@ -1975,6 +2076,10 @@ export class BacktestService {
         riskMultiplier: Number(result.riskMultiplier.toFixed(3)),
         signal,
         passedBar: !belowBotBar,
+        // Only present when the bar fell outside a declared window — see the field's type. A trade
+        // needs `passedBar && !sessionClosed`, and this flag is what lets a reader see that a bar the
+        // entry bar allowed was still not tradeable because the bot was shut.
+        ...(outsideSession ? { sessionClosed: true } : {}),
         // The two numbers the score has to be read against (2026-11-20). `price` is the bar's close;
         // `changePct` is measured against the previous SESSION's close, so it agrees with the movers
         // screen rather than resetting to 0% every morning.
@@ -1989,7 +2094,7 @@ export class BacktestService {
           }
           : {}),
       });
-      if (belowBotBar) continue;
+      if (belowBotBar || outsideSession) continue;
 
       const score = composite;
 
@@ -2094,193 +2199,19 @@ export class BacktestService {
           const plan = stopPlan ?? null;
           // #1155 — `isLong` and `side` now come from the SIGNAL CLASS (declared above), not a constant.
           // Every branch below this line was already written for both sides; only the entry gate was not.
-          let worstPct = 0; // worst excursion against the position, as % of entry
-          let bestPct = 0; // best excursion in its favour, as % of entry
-          let barsWalked = 0;
-          /** TRUE when the hold crossed a hole > 1h — the bracket was unmonitored across it. */
-          let spansGap = false;
-          /** The stop actually in force for THIS trade — starts at the configured SL and only tightens. */
-          let liveStop = slPrice;
-          /** Best price seen so far, for the trail. Seeded at entry so the first bar can tighten it. */
-          let bestPrice = currentClose;
-
-          // Walk forward through remaining bars to check SL/TP
-          for (let future = day + 1; future < bars.length; future++) {
-            const fb = bars[future];
-            barsWalked = future - day;
-
-            /**
-             * ⚠️ A HOLE IN THE BAR SERIES MEANS THE BRACKET WAS NOT MONITORED (2026-10-29).
-             * The requirement: *"Sometimes the PC is shutdown while positions are open so some of our data
-             * could be skewed by the app being asleep."* Measured on the VIX 5m dev window: **464 of
-             * 1,027 trades (45.2%) crossed a hole longer than an hour**, the longest 111.3 hours.
-             *
-             * The trade still exits at a real price — so P&L is a real measurement of what the engine
-             * did — but the DURATION is inflated (a 41.6-day window held only 63.9% of its bars) and
-             * the exit REASON is a guess: the level that would have fired during the hole was never
-             * seen. Flagged per trade rather than excluded, so a run can report how much of its
-             * population is contaminated instead of quietly averaging over it.
-             *
-             * ⚠️ #1286 — THIS USED TO SAY `if (future > day + 1)`, which is FALSE on the loop's first
-             * iteration (`future === day + 1`). The pair `(bars[day], bars[day + 1])` — ENTRY BAR →
-             * FIRST FORWARD BAR — was therefore never measured, so a position opened on the last bar
-             * before the machine slept reported `spansGap = 0` for the very hole that swallowed it.
-             * On the first iteration `bars[future - 1]` IS the entry bar, which is precisely what the
-             * flag means, so the guard is removed rather than widened.
-             *
-             * The threshold lives in `bar-gap.ts` so it has one definition and a test that can fail.
-             */
-            const stepMs = fb.timestamp.getTime() - bars[future - 1].timestamp.getTime();
-            if (isBarHole(stepMs, barMinutes)) spansGap = true;
-
-            // ── Excursion, measured on the RAW bar extremes, before any stop test ──
-            const adversePct = isLong
-              ? ((currentClose - fb.low) / currentClose) * 100
-              : ((fb.high - currentClose) / currentClose) * 100;
-            const favourablePct = isLong
-              ? ((fb.high - currentClose) / currentClose) * 100
-              : ((currentClose - fb.low) / currentClose) * 100;
-            if (adversePct > worstPct) worstPct = adversePct;
-            if (favourablePct > bestPct) bestPct = favourablePct;
-
-            // ── Does the stop IN FORCE (set from earlier bars) get hit? ──
-            if ((isLong && fb.low <= liveStop) || (!isLong && fb.high >= liveStop)) {
-              exitPrice = liveStop;
-              // A tightened stop is not the configured SL — say which one fired, so a reader is never
-              // told the original bracket stopped them out when the trail had already moved it.
-              exitReason = liveStop === slPrice ? 'SL' : 'TRAIL';
-              exitDate = fb.timestamp.toISOString();
-              break;
-            }
-            // ── Does the TARGET get hit? Mirrored: a short's target is BELOW the entry (#1155) ──
-            if (isLong ? fb.high >= tpPrice : fb.low <= tpPrice) {
-              exitPrice = tpPrice;
-              exitReason = 'TP';
-              exitDate = fb.timestamp.toISOString();
-              break;
-            }
-
-            // ── Does the BOT'S OWN TIME STOP expire on this bar? (#1136) ──────────────────────
-            // ── DECISION (2026-11-16, primary) ──
-            // WHAT:      the time stop is tested AFTER the stop and the target, and it closes at the
-            //            bar's CLOSE with exit reason `TIME`.
-            // WHY:       A stop or a target is a real price level this bar actually traded through; the
-            //            time stop is a decision to leave at the close. When both could fire on the same
-            //            bar, the level that was genuinely touched is the more defensible exit — booking
-            //            `TIME` first would invent an exit at the close while ignoring a level the
-            //            market traded through. This matters most across a market gap: a position held
-            //            past its limit while the market is shut can only be closed when a bar exists,
-            //            and on that reopen bar the resting stop is what would have filled first.
-            // INSTEAD OF: testing TIME first, which would have booked the reopen bar's close and
-            //            silently pretended the stop never fired. Measured on MSTR 5m (560 trades):
-            //            3 TIME exits — two at exactly 240 min with continuous bars, one at 1,060 min
-            //            across a weekend gap — versus 0 TIME exits with the knob off.
-            // REVERSE BY: moving this block above the SL/TP tests. Every affected trade would then
-            //            exit at the bar close instead of at its stop, so stored runs are not comparable.
-            // REGISTER:  docs/SETTLED-DECISIONS.md row 193
-            // GUARD:     nest/src/modules/backtest/max-hold.spec.ts (boundary + no-limit, canaried)
-            if (maxHoldExpired(currentBar.timestamp.getTime(), fb.timestamp.getTime(), maxHoldHours)) {
-              exitPrice = fb.close;
-              exitReason = 'TIME';
-              exitDate = fb.timestamp.toISOString();
-              break;
-            }
-
-            // ── Tighten for the NEXT bar ──
-            bestPrice = isLong ? Math.max(bestPrice, fb.high) : Math.min(bestPrice, fb.low);
-            if (plan) {
-              const gainPct = (side * (bestPrice - currentClose) / currentClose) * 100;
-              let candidate = liveStop;
-              // 1. Lock at breakeven once the trade is far enough in front.
-              if (plan.lockAtPct != null && gainPct >= plan.lockAtPct) {
-                candidate = Math.max(candidate, currentClose);
-              }              // 2. Trail a fixed distance behind the best price.
-              if (plan.trailPct != null && gainPct > 0) {
-                // ⚠️ THE FORMULA IS THE GUARDIAN'S (#1242). `trailTriggerPrice()` is the same
-                // expression `observeSimulatedTsl()` uses on the live path, so the two cannot drift.
-                const trailStop = trailTriggerPrice(isLong ? 'buy' : 'sell', bestPrice, plan.trailPct);
-                candidate = isLong ? Math.max(candidate, trailStop) : Math.min(candidate, trailStop);
-              }
-              // 3. Step-tighten: every `stepPct` of favourable move, pull the stop in by `tightenPct`.
-              if (plan.stepPct != null && plan.tightenPct != null && gainPct > 0) {
-                const steps = Math.floor(gainPct / plan.stepPct);
-                if (steps > 0) {
-                  const stepped = isLong
-                    ? slPrice + currentClose * (steps * plan.tightenPct) / 100
-                    : slPrice - currentClose * (steps * plan.tightenPct) / 100;
-                  candidate = isLong ? Math.max(candidate, stepped) : Math.min(candidate, stepped);
-                }
-              }
-              // NEVER loosen: a stop that moves backwards is not a stop.
-              liveStop = isLong ? Math.max(liveStop, candidate) : Math.min(liveStop, candidate);
-            }
-          }
-
-          // ── EOD MUST EXIT AT A PRICE, NOT AT ITS OWN ENTRY ────────────────────────────────────
-          // ── DECISION (2026-10-29, primary) ──
-          // WHAT:      a trade with no SL/TP hit closes at the LAST BAR's close, stamped at that bar.
-          // WHY:       Without it `exitPrice`/`exitDate` kept their initial values — the ENTRY close and
-          //            the ENTRY instant — so every end-of-data position was booked as a zero-move round
-          //            trip: P&L = pure cost, hold time = 0 minutes.
-          // INSTEAD OF: leaving `EOD` at the entry price; the alternative would be to DROP open trades,
-          //            which would silently shrink the population instead of marking it.
-          // REVERSE BY: deleting the block below. Runs made before it keep their stored (wrong) values —
-          //            nothing backfills them, because a re-run is the honest way to a corrected
-          //            population.
-          // REGISTER:  docs/SETTLED-DECISIONS.md row 98
-          // GUARD:     none in a unit test — the detectable signature is `backtesttrade` rows with
-          //            `exitReason = 'EOD' AND entryDate = exitDate`, which this block makes impossible.
-          //
-          // 🛑 FIXED 2026-10-29. MEASURED across the 90 stored runs before this fix: **2,124 of 34,313
-          // trades (6.2%)** were `EOD`, and **2,124 of 2,124 had `entryDate == exitDate`**. Their P&L sat
-          // at ~−1.0% each — the cost, nothing else. That is a plausible number with no error, on 6% of
-          // the population, and it silently corrupted both the win rate and the hold-time statistic.
-          //
-          // The convention is MARK-TO-MARKET: a position open at the end of the data closes at the last
-          // bar's close, stamped at that bar. `EOD` already names it as end-of-data, so nothing is
-          // disguised — the exit simply has an actual price and an actual time.
-          //
-          // VERIFIED by re-running the same VIX window: before → 43 of 43 EOD trades shared a stamp, avg
-          // hold 0 min, every `pnlPct` ≈ −1.0%; after → **0 of 43** share a stamp, avg hold
-          // **1,007.6 min**, `pnlPct` spread **−2.08% to −0.39%**.
-          if (exitReason === 'EOD' && bars.length > 0) {
-            const lastBar = bars[bars.length - 1];
-            exitPrice = lastBar.close;
-            exitDate = lastBar.timestamp.toISOString();
-          }
-
-          // ── Symmetric execution costs (fixed #50) ──
-
-          // Entry: buy at ask = mid + spread/2 + slippage
-          // Exit: sell at bid = mid - spread/2 - slippage
-          //
-          // 🛑 FIXED 2026-10-28 (#1146) — THESE WERE ADDED AS ABSOLUTE PRICE UNITS, NOT PERCENTS.
-          //
-          // `slippage` and `spread` are stored, labelled and displayed as DECIMALS OF PRICE:
-          // `BacktestPage.jsx` titles the input *"Slippage as decimal (0.01 = 1%)"* and prints
-          // *"break-even move X% of price ({spread*100}% spread + {slippage*100}% slippage each way)"*.
-          // The engine then did `close + spread/2 + slippage` — adding `0.015` to the PRICE. For VIX at
-          // ~17.00 that is **0.088%**, i.e. 17x under-charged; for BTC near 100,000 it is ~0%; only an
-          // instrument priced near 1.00 was charged what the label promised.
-          //
-          // MEASURED 2026-10-28 before the fix: the same window with a nominal 3% round trip and with
-          // 0.04% differed by **0.18pp per trade** — 0.03 / 17.00 = 0.176%. That is the whole bug, in
-          // one division. The UI's "break-even 3.00%" was a claim the engine did not honour.
-          //
-          // ⚠️ THIS IS A BUG FIX THAT RESTORES AN INTENDED VALUE, not a maths change: the intent is
-          // stated in the input label, the break-even display, and the defaults' own comment
-          // ("forex=spread only, stocks=$0 (modern brokers)"). It is NOT copied for an A/B because
-          // there is no second interpretation to compare — costs in absolute units are meaningless
-          // across instruments (1 pip and 1% cannot share one number).
-          //
-          // ⚠️ CONSEQUENCE, STATED: every stored backtest UNDER-charged, by a factor that depends on the
-          // instrument's price. Comparisons made before 2026-10-28 are cheaper than the same runs now.
-          // Re-run anything you intend to act on.
-          const { entryCost, exitCost } = applyExecutionCosts(currentClose, exitPrice, spread, slippage, side);
-          // ⚠️ `side` MULTIPLIES THE RESULT (#1155). For a short, profit is what the price FELL by, so
-          // `exitCost − entryCost` is negated. Without it every short would be booked with exactly the
-          // long run's P&L sign and a "shorting VIX is better" conclusion would be an artefact.
-          const rawPnlPerShare = side * (exitCost - entryCost);
+          /**
+          /**
+           * ── THE ENTRY COST AND THE SIZE, RESOLVED BEFORE THE WALK (#1242) ──────────────────
+           * Both were computed AFTER the bracket walk, which was fine while nothing inside the walk
+           * needed them. A bot's ABSOLUTE money target (`takeProfitAmount`) does: it closes when the
+           * unrealised P&L reaches an amount in account currency, and that cannot be judged without a
+           * unit count. Sizing depends only on entry-time facts — the entry price, the spread and
+           * slippage, ATR from bars up to this one, and the equity this trade is sized from — so moving
+           * it here changes no value. `applyExecutionCosts()` takes the EXIT price only for `exitCost`,
+           * which is still resolved after the walk; passing the entry price here cannot affect
+           * `entryCost`, which is `close × (1 + side × cost)`.
+           */
+          const entryCost = applyExecutionCosts(currentClose, currentClose, spread, slippage, side).entryCost;
 
           // ── Position sizing (#50, #269, #271) — #843: ONE implementation ──
           // The model maths now lives in `trading/position-sizing.ts`, which the LIVE loop also
@@ -2388,6 +2319,168 @@ export class BacktestService {
 
           // ── Commission (#50) ──
           const totalCommission = commission * positionSize; // per-share commission model
+          /**
+           * The open position as the shared core sees it: the stop in force, the best price seen, and
+           * the excursions so far. From here the per-bar rules belong to `managePositionBar()` (#1242),
+           * so this loop cannot drift from a live close by being edited on its own.
+           */
+          let position: PositionState = {
+            side: isLong ? 'buy' : 'sell',
+            entryPrice: currentClose,
+            initialStop: slPrice,
+            stop: slPrice,
+            target: tpPrice,
+            bestPrice: currentClose,
+            worstPct: 0, // worst excursion against the position, as % of entry
+            bestPct: 0, // best excursion in its favour, as % of entry
+          };
+          let barsWalked = 0;
+          /** TRUE when the hold crossed a hole > 1h — the bracket was unmonitored across it. */
+          let spansGap = false;
+
+          // Walk forward through remaining bars to check SL/TP
+          for (let future = day + 1; future < bars.length; future++) {
+            const fb = bars[future];
+            barsWalked = future - day;
+
+            /**
+             * ⚠️ A HOLE IN THE BAR SERIES MEANS THE BRACKET WAS NOT MONITORED (2026-10-29).
+             * The requirement: *"Sometimes the PC is shutdown while positions are open so some of our data
+             * could be skewed by the app being asleep."* Measured on the VIX 5m dev window: **464 of
+             * 1,027 trades (45.2%) crossed a hole longer than an hour**, the longest 111.3 hours.
+             *
+             * The trade still exits at a real price — so P&L is a real measurement of what the engine
+             * did — but the DURATION is inflated (a 41.6-day window held only 63.9% of its bars) and
+             * the exit REASON is a guess: the level that would have fired during the hole was never
+             * seen. Flagged per trade rather than excluded, so a run can report how much of its
+             * population is contaminated instead of quietly averaging over it.
+             *
+             * ⚠️ #1286 — THIS USED TO SAY `if (future > day + 1)`, which is FALSE on the loop's first
+             * iteration (`future === day + 1`). The pair `(bars[day], bars[day + 1])` — ENTRY BAR →
+             * FIRST FORWARD BAR — was therefore never measured, so a position opened on the last bar
+             * before the machine slept reported `spansGap = 0` for the very hole that swallowed it.
+             * On the first iteration `bars[future - 1]` IS the entry bar, which is precisely what the
+             * flag means, so the guard is removed rather than widened.
+             *
+             * The threshold lives in `bar-gap.ts` so it has one definition and a test that can fail.
+             */
+            const stepMs = fb.timestamp.getTime() - bars[future - 1].timestamp.getTime();
+            if (isBarHole(stepMs, barMinutes)) spansGap = true;
+
+            /**
+             * ── ONE BAR OF POSITION MANAGEMENT (#1242) ─────────────────────────────────────────
+             * The ~80 lines that used to sit here were the engine's own copy of rules the live path
+             * also applies. `managePositionBar()` in `common/trading/exit-guardian/` now owns them: the
+             * order (excursion → the stop IN FORCE → target → time stop → tighten for the NEXT bar),
+             * the mirrored arithmetic, and the never-loosen rule. A run and a live close can no longer
+             * drift apart by editing one of them.
+             *
+             * ⚠️ WHY THE TIME STOP IS PASSED IN RATHER THAN DECIDED HERE: the `maxHoldHours` arithmetic
+             * — the inclusive boundary and "no limit" for null/0 — lives in `max-hold.ts` with its own
+             * spec. The core decides only WHERE in the order it applies: after the levels, because a
+             * level the market genuinely traded through is the more defensible exit than a decision to
+             * leave at the close. MEASURED on MSTR 5m (560 trades) when that order was introduced: 3
+             * TIME exits — two at exactly 240 min with continuous bars, one at 1,060 min across a
+             * weekend gap — against 0 with the knob off. Register row 193.
+             *
+             * ⚠️ THE EXCURSION IS STILL MEASURED ON THE RAW EXTREMES, BEFORE ANY TEST, and it is still
+             * recorded on the bar that EXITS. That is deliberate: a trade that stopped out also went
+             * some way in its favour, and dropping that biases every excursion statistic toward the
+             * trades that survived.
+             */
+            const decision = managePositionBar(
+              position,
+              { high: fb.high, low: fb.low, close: fb.close, timeMs: fb.timestamp.getTime() },
+              plan ?? {},
+              maxHoldExpired(currentBar.timestamp.getTime(), fb.timestamp.getTime(), maxHoldHours),
+              {
+                targetAmount: takeProfitAmount,
+                /**
+                 * ⚠️ MARK-TO-MARKET AT THE BAR'S CLOSE, the same basis the time stop uses. Measured
+                 * against the entry COST (not the entry close) and net of the round-trip commission,
+                 * so the number the target is compared against is the number the trade would book —
+                 * a target judged against a gross or half-costed P&L fires at the wrong moment.
+                 * `takeProfitAmount` is NULL on almost every bot, and `moneyTargetVerdict()` returns
+                 * `not-configured` for NULL/0, so this costs them nothing.
+                 */
+                pnlAtClose: side * (fb.close - entryCost) * positionSize - totalCommission,
+              },
+            );
+            position = decision.state;
+            if (decision.exit) {
+              exitPrice = decision.exit.price;
+              exitReason = decision.exit.kind;
+              exitDate = new Date(decision.exit.timeMs).toISOString();
+              break;
+            }
+          }
+
+          // ── EOD MUST EXIT AT A PRICE, NOT AT ITS OWN ENTRY ────────────────────────────────────
+          // ── DECISION (2026-10-29, primary) ──
+          // WHAT:      a trade with no SL/TP hit closes at the LAST BAR's close, stamped at that bar.
+          // WHY:       Without it `exitPrice`/`exitDate` kept their initial values — the ENTRY close and
+          //            the ENTRY instant — so every end-of-data position was booked as a zero-move round
+          //            trip: P&L = pure cost, hold time = 0 minutes.
+          // INSTEAD OF: leaving `EOD` at the entry price; the alternative would be to DROP open trades,
+          //            which would silently shrink the population instead of marking it.
+          // REVERSE BY: deleting the block below. Runs made before it keep their stored (wrong) values —
+          //            nothing backfills them, because a re-run is the honest way to a corrected
+          //            population.
+          // REGISTER:  docs/SETTLED-DECISIONS.md row 98
+          // GUARD:     none in a unit test — the detectable signature is `backtesttrade` rows with
+          //            `exitReason = 'EOD' AND entryDate = exitDate`, which this block makes impossible.
+          //
+          // 🛑 FIXED 2026-10-29. MEASURED across the 90 stored runs before this fix: **2,124 of 34,313
+          // trades (6.2%)** were `EOD`, and **2,124 of 2,124 had `entryDate == exitDate`**. Their P&L sat
+          // at ~−1.0% each — the cost, nothing else. That is a plausible number with no error, on 6% of
+          // the population, and it silently corrupted both the win rate and the hold-time statistic.
+          //
+          // The convention is MARK-TO-MARKET: a position open at the end of the data closes at the last
+          // bar's close, stamped at that bar. `EOD` already names it as end-of-data, so nothing is
+          // disguised — the exit simply has an actual price and an actual time.
+          //
+          // VERIFIED by re-running the same VIX window: before → 43 of 43 EOD trades shared a stamp, avg
+          // hold 0 min, every `pnlPct` ≈ −1.0%; after → **0 of 43** share a stamp, avg hold
+          // **1,007.6 min**, `pnlPct` spread **−2.08% to −0.39%**.
+          if (exitReason === 'EOD' && bars.length > 0) {
+            const lastBar = bars[bars.length - 1];
+            exitPrice = lastBar.close;
+            exitDate = lastBar.timestamp.toISOString();
+          }
+
+          // ── Symmetric execution costs (fixed #50) ──
+
+          // Entry: buy at ask = mid + spread/2 + slippage
+          // Exit: sell at bid = mid - spread/2 - slippage
+          //
+          // 🛑 FIXED 2026-10-28 (#1146) — THESE WERE ADDED AS ABSOLUTE PRICE UNITS, NOT PERCENTS.
+          //
+          // `slippage` and `spread` are stored, labelled and displayed as DECIMALS OF PRICE:
+          // `BacktestPage.jsx` titles the input *"Slippage as decimal (0.01 = 1%)"* and prints
+          // *"break-even move X% of price ({spread*100}% spread + {slippage*100}% slippage each way)"*.
+          // The engine then did `close + spread/2 + slippage` — adding `0.015` to the PRICE. For VIX at
+          // ~17.00 that is **0.088%**, i.e. 17x under-charged; for BTC near 100,000 it is ~0%; only an
+          // instrument priced near 1.00 was charged what the label promised.
+          //
+          // MEASURED 2026-10-28 before the fix: the same window with a nominal 3% round trip and with
+          // 0.04% differed by **0.18pp per trade** — 0.03 / 17.00 = 0.176%. That is the whole bug, in
+          // one division. The UI's "break-even 3.00%" was a claim the engine did not honour.
+          //
+          // ⚠️ THIS IS A BUG FIX THAT RESTORES AN INTENDED VALUE, not a maths change: the intent is
+          // stated in the input label, the break-even display, and the defaults' own comment
+          // ("forex=spread only, stocks=$0 (modern brokers)"). It is NOT copied for an A/B because
+          // there is no second interpretation to compare — costs in absolute units are meaningless
+          // across instruments (1 pip and 1% cannot share one number).
+          //
+          // ⚠️ CONSEQUENCE, STATED: every stored backtest UNDER-charged, by a factor that depends on the
+          // instrument's price. Comparisons made before 2026-10-28 are cheaper than the same runs now.
+          // Re-run anything you intend to act on.
+          const { exitCost } = applyExecutionCosts(currentClose, exitPrice, spread, slippage, side);
+          // ⚠️ `side` MULTIPLIES THE RESULT (#1155). For a short, profit is what the price FELL by, so
+          // `exitCost − entryCost` is negated. Without it every short would be booked with exactly the
+          // long run's P&L sign and a "shorting VIX is better" conclusion would be an artefact.
+          const rawPnlPerShare = side * (exitCost - entryCost);
+
 
           const grossPnl = rawPnlPerShare * positionSize;
           const netPnl = grossPnl - totalCommission;
@@ -2403,6 +2496,16 @@ export class BacktestService {
             pnl: Number(netPnl.toFixed(4)),
             pnlPct: Number(pnlPct.toFixed(2)),
             exitReason,
+            /**
+             * #1242 — the SAME EXIT in the LIVE vocabulary, so a run and an account can be compared
+             * without a hand translation. `null` on `EOD` (the data ended — no live equivalent) and
+             * absent when the reason is unmapped, which `exit-equivalence.spec.ts` makes impossible for
+             * the five reasons this engine emits.
+             */
+            closeReason: engineExitCloseReason(exitReason),
+            closeReasonNote: engineExitEquivalence(exitReason)?.equivalent === 'qualified'
+              ? engineExitEquivalence(exitReason)!.note
+              : undefined,
             // ⚠️ #R14 — RECORD THE LEVELS WITH THE TRADE. The engine already used them to decide
             // the exit and then threw the numbers away, so every run could say that a stop was hit
             // but not where it was — "not recorded" wearing the face of "not applicable".
@@ -2418,8 +2521,8 @@ export class BacktestService {
             notionalPct: affordability.notionalPct == null ? undefined : Number(affordability.notionalPct.toFixed(3)),
             commission: Number(totalCommission.toFixed(4)),
             // Excursion, as absolute percentages of the entry price (2026-10-29).
-            maxAdversePct: Number(worstPct.toFixed(4)),
-            maxFavourablePct: Number(bestPct.toFixed(4)),
+            maxAdversePct: Number(position.worstPct.toFixed(4)),
+            maxFavourablePct: Number(position.bestPct.toFixed(4)),
             barsHeld: barsWalked,
             spansGap,
           });

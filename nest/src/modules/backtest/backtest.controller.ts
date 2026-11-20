@@ -20,6 +20,8 @@ import type { SelectionRunRequest } from './selection-run.service';
 // #1319 — ONE parser for "which day is this movers list a screen of", shared by the list endpoint and
 // the run so the page can never offer a dataset the run would refuse.
 import { parseMoversDatasetName } from './movers-dataset';
+// Peak % change reached on a dataset's answer day, per symbol — shown in the dataset table.
+import { peakChangeOnDay } from './peak-change';
 import { LongRunning } from '../../common/decorators/long-running.decorator';
 
 /**
@@ -122,14 +124,53 @@ export class BacktestController {
         });
         continue;
       }
+      const fromMs = Math.min(...rows.map((r) => r.fromDate.getTime()));
+      const toMs = Math.max(...rows.map((r) => r.toDate.getTime()));
+      const answerDate = decl.value.answerDate;
+
+      // Highest % change REACHED on the answer day, per symbol. The dataset carried only tickers, so
+      // the page had no move to show beside a name. Convention (see `peak-change.ts`): previous
+      // session's close as the denominator, the day's HIGH as "reached". One bar query per group,
+      // grouped in memory.
+      const symbolIds = rows.map((r) => r.symbolId);
+      const bars = await this.prisma.marketBar.findMany({
+        where: {
+          symbolId: { in: symbolIds },
+          timeframe: timeframes[0],
+          timestamp: { gte: new Date(fromMs), lte: new Date(toMs) },
+        },
+        select: { symbolId: true, timestamp: true, high: true, low: true, close: true },
+        orderBy: { timestamp: 'asc' },
+      });
+      const seriesBySymbol = new Map<string, Array<{ date: string; high: number; low: number; close: number }>>();
+      for (const b of bars) {
+        const arr = seriesBySymbol.get(b.symbolId) ?? [];
+        arr.push({ date: b.timestamp.toISOString().slice(0, 10), high: b.high, low: b.low, close: b.close });
+        seriesBySymbol.set(b.symbolId, arr);
+      }
+      const symbolMoves: Record<string, number | null> = {};
+      for (const r of rows) {
+        const ticker = tickerById.get(r.symbolId);
+        if (!ticker) continue;
+        const series = seriesBySymbol.get(r.symbolId) ?? [];
+        let previousClose: number | null = null;
+        const answerBars: Array<{ high: number; low: number; close: number }> = [];
+        for (const s of series) {
+          if (s.date < answerDate) previousClose = s.close;
+          else if (s.date === answerDate) answerBars.push({ high: s.high, low: s.low, close: s.close });
+        }
+        symbolMoves[ticker] = peakChangeOnDay(answerBars, previousClose, decl.value.side).peakPct;
+      }
+
       datasets.push({
         name,
-        answerDate: decl.value.answerDate,
+        answerDate,
         side: decl.value.side,
         symbols: rows.map((r) => tickerById.get(r.symbolId)).filter((t): t is string => !!t).sort(),
+        symbolMoves,
         timeframe: timeframes[0],
-        from: new Date(Math.min(...rows.map((r) => r.fromDate.getTime()))).toISOString(),
-        to: new Date(Math.max(...rows.map((r) => r.toDate.getTime()))).toISOString(),
+        from: new Date(fromMs).toISOString(),
+        to: new Date(toMs).toISOString(),
         note: rows.find((r) => r.note)?.note ?? null,
       });
     }
@@ -167,6 +208,26 @@ export class BacktestController {
       // A failure must be a failure — see the comment on `/run` above.
       throw new BadRequestException(message || 'Selection backtest failed');
     }
+  }
+
+  /**
+   * #1328 — the previous runs of a selection test. Read by the page's "previous tests" list and by
+   * the delta on the stat tiles (which arrives on the run response itself).
+   */
+  @Get('selection-history')
+  @ApiOperation({ summary: 'Previous runs of a movers test, by profile key / protocol / dataset (#1328)' })
+  async selectionHistory(
+    @Query('profileKey') profileKey?: string,
+    @Query('protocolId') protocolId?: string,
+    @Query('datasetName') datasetName?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.selectionRun.history({
+      profileKey,
+      protocolId,
+      datasetName,
+      limit: limit ? parseInt(limit, 10) : undefined,
+    });
   }
 
   // ⚠️ A backtest scores ONE BAR AT A TIME and legitimately takes minutes (#1139). The global 30 s

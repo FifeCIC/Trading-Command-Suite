@@ -161,7 +161,7 @@ describe('settings inventory — the bot fields a backtest HONOURS, proven behav
     });
   });
 
-  it('the honoured set is exactly symbol, timeframe, protocolId, slPct, tpPct, minComposite, maxHoldHours and the three simTsl fields', () => {
+  it('the honoured set is exactly symbol, timeframe, protocolId, slPct, tpPct, minComposite, maxHoldHours, takeProfitAmount and the three simTsl fields', () => {
     // ⚠️ THE CANARY FOR A SILENT WIDENING **AND** FOR A SILENT REMOVAL. `minComposite` joined this set
     // on 2026-10-22 (#1136): the bot's own entry bar now gates entries, so a run cannot take a trade
     // the bot would skip. `maxHoldHours` joined it on 2026-11-16 (#1136): the bot's own time stop now
@@ -170,10 +170,16 @@ describe('settings inventory — the bot fields a backtest HONOURS, proven behav
     // was backtested with no trail at all, because `StopPlan` existed but nothing supplied it.
     // All three groups were set on real bots and read by nothing. If any wire is ever removed, this
     // fails rather than the inventory quietly reverting to "ignored".
+    //
+    // `takeProfitAmount` joined on 2026-11-20 (#1242): the bot's ABSOLUTE money target was acted on
+    // live (`system:take-profit`) and read by nothing in the engine, because the engine sized the
+    // position only AFTER walking the bracket. The sizing now resolves before the walk, so the target
+    // is judged per bar. Set on 1 of 78 bots — a narrow wire, and it is listed here so removing it is
+    // a decision rather than a silent narrowing.
     expect(honouredBotFields.map((f) => f.key).sort()).toEqual(
       [
-        'maxHoldHours', 'minComposite', 'protocolId', 'simTslActivationPct', 'simTslDistancePct',
-        'simTslEnabled', 'slPct', 'symbol', 'timeframe', 'tpPct',
+        'maxHoldHours', 'minComposite', 'protocolId', 'sessionWindow', 'simTslActivationPct',
+        'simTslDistancePct', 'simTslEnabled', 'slPct', 'symbol', 'takeProfitAmount', 'timeframe', 'tpPct',
       ].sort(),
     );
   });

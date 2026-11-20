@@ -11,70 +11,93 @@
  */
 
 /* ── the form: sections supply the cards, so this is NOT its own panel ────────────────────────── */
-/* Measured 2026-11-20: a panel border here wrapped two bordered fieldsets, so every group drew a
-   second box inside the first and the whole block read as clutter. The `.ff-fieldset` groups are the
-   visible containers now; the section just spaces them. */
+/* The small controls live in ONE head row (owner instruction 2026-11-20: "Trade the top / Rank at /
+   Pace in one row at mvp-form-head"). This is a bounded toolbar, not a full-bleed page: at the page's
+   1400px a row of small toggles spreads to the edges and leaves dead gaps. */
 .mvp-form {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  /* A form is a bounded block, not a full-bleed page. Measured 2026-11-20: at the page's full 1400px
-     the two-column row spread a 150px toggle and a 380px toggle to opposite edges with ~700px of dead
-     space between them — the "worst mess" the owner reported. Bounding the width keeps controls close
-     together and the section borders from becoming mostly-empty boxes. */
-  max-width: 840px;
+  max-width: 1100px;
 }
 
-/* Content-sized rows, not a 1fr/1fr grid: each field takes the width of its control and the row wraps
-   on a narrow screen. `align-items: flex-start` lines the labels up along the top. */
-.mvp-field-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 16px 24px;
-}
-
-.mvp-field-row > .ff-field {
-  flex: 0 0 auto;
-}
-
-/* The field label and its "?" sit on one tidy line instead of the button dropping to a second line. */
+/* The field label and its info glyph sit on one tidy line. */
 .mvp-form .ff-label {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-/* The shared global rule gives every button a 24px minimum, which turns the 18px "?" into a chunky
-   pill beside a 12px label. Render it at its designed 18px and widen only the HIT area, so the glyph
-   stays small without shrinking the tap target. */
-.mvp-form .why-pop-btn {
-  position: relative;
-  min-width: 0;
-  min-height: 0;
-}
-
-.mvp-form .why-pop-btn::after {
-  content: '';
-  position: absolute;
-  inset: -8px;
-  border-radius: 999px;
-}
-
+/* The head is the toolbar: every small control sits here in one wrapping row, clustered from the left
+   with a small gap — never `space-between`, which is what flung them to opposite edges before. */
 .mvp-form-head {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: flex-start;
+  gap: 14px 20px;
   flex-wrap: wrap;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
-/* The strategy leg reads as a labelled switch, not a bare pair of pills. */
-.mvp-leg {
+/* The rare running-state "Hide settings" control goes to the far right of the toolbar. */
+.mvp-form-head .mvp-form-actions {
+  margin-left: auto;
+  align-self: flex-end;
+}
+
+/* Detail (left) and the Run action (right) share the foot row; Run is a real primary action, not a
+   footnote pinned to the page edge. */
+.mvp-form-foot {
   display: flex;
-  align-items: center;
-  gap: 10px;
   flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Dataset table — a compact grid of the stored day lists: one row per day (max 5 shown, latest
+   first), one column per symbol position (1–5). A row is selectable via the checkbox in its Day cell;
+   the selected row is tinted, so the run queue is visible at a glance. */
+.mvp-dataset th:not(:first-child),
+.mvp-dataset td:not(:first-child) {
+  text-align: center;
+}
+
+.mvp-ds-day {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mvp-ds-day input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+}
+
+.mvp-ds-sym {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+/* The peak % change the symbol reached on the answer day, under its ticker. */
+.mvp-ds-ticker {
+  display: block;
+  color: var(--ink);
+}
+
+.mvp-ds-pct {
+  display: block;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+
+.mvp-dataset tbody tr.is-on td {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
 }
 
 /* The ET equivalent inside a UTC cutoff button — small and quiet, so the UTC time stays the label. */
@@ -89,6 +112,71 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+/* Run summary recap — the settings + status that used to live in a full-width summary button, folded
+   into the results panel as compact pills (owner: "take up a lot of space for a small amount of
+   information"). */
+.mvp-run-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.mvp-recap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mvp-recap-leg {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.mvp-recap-item {
+  font-size: 11px;
+  color: var(--ink-soft);
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.mvp-recap-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.mvp-recap-status::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--color-profit);
+}
+
+.mvp-recap-status.is-live::before {
+  background: var(--accent);
+}
+
+.mvp-recap-status.is-stopped::before {
+  background: var(--color-warning);
 }
 
 .mvp-form-actions {
@@ -159,6 +247,16 @@
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 6px;
+}
+
+/* A panel that CONTAINS a table (`.mvp-scroll`) takes a shade of the active theme so the table reads
+   as its own card rather than blending into the panel. `:has()` targets only table panels — the run
+   summary (no table) is untouched — and degrades gracefully where `:has()` is unsupported (no tint,
+   no breakage). Colour lives on the SURFACE and border; the table's own surface (--panel) sits on the
+   tint, so text never moves off --ink and contrast is unaffected. */
+.mvp-panel:has(.mvp-scroll) {
+  background: color-mix(in srgb, var(--accent) 9%, var(--panel));
+  border-color: color-mix(in srgb, var(--accent) 26%, var(--border));
 }
 
 .mvp-panel-head {
@@ -996,6 +1094,12 @@
   color: var(--text-dim);
 }
 
+/* A fact that changes what the reader can conclude — e.g. a run the store refused (#1328). The
+   sentence says what happened; the tone only makes it findable. */
+.mvp-note--warn {
+  color: var(--color-warning);
+}
+
 .mvp-muted {
   color: var(--text-dim);
 }
@@ -1012,6 +1116,23 @@
   text-align: right;
   font-family: var(--font-mono);
   white-space: nowrap;
+}
+
+/* ⚠️ `.mvp-table th` (0,1,1) sets text-align:left and OUTRANKS a bare `.mvp-num` (0,1,0), so numeric
+   HEADERS stayed left while numeric CELLS (no td text-align is set) were pushed right — the "columns
+   aren't under their headers" defect. This pair wins at BOTH ends (0,2,1), so a number column's header
+   and its values share one right edge. Mirrors the canonical `.num` arrangement in tables.css. */
+.mvp-table th.mvp-num,
+.mvp-table td.mvp-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The sort button is an inline-flex box; right-aligning the numeric header places it under the values.
+   Its label ends just left of the sort caret, which occupies the trailing width — standard for a
+   sortable numeric column. */
+.mvp-table th.mvp-num .th-sort {
+  justify-content: flex-end;
 }
 
 .mvp-nowrap {

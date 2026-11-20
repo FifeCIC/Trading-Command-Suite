@@ -229,6 +229,60 @@
   font-family: var(--font-mono);
 }
 
+/* ── Tinted containers (trial) ─────────────────────────────────────────────────────────────────
+   A container holding a table gets a theme-derived tint so the table stands out. Five intensities to
+   judge: three from the themed accent (repaint with the pack) and two semantic (profit/loss). Colour
+   lives on the SURFACE + border only — text stays on --ink, so contrast is unchanged. */
+.appearance-tint-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem;
+  margin-top: 0.4rem;
+}
+
+.appearance-tint {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.8rem;
+  background: var(--panel);
+}
+
+.appearance-tint-name {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-soft);
+}
+
+.appearance-tint--accent-low {
+  background: color-mix(in srgb, var(--accent) 5%, var(--panel));
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--line));
+}
+
+.appearance-tint--accent-medium {
+  background: color-mix(in srgb, var(--accent) 9%, var(--panel));
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
+}
+
+.appearance-tint--accent-strong {
+  background: color-mix(in srgb, var(--accent) 15%, var(--panel));
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
+}
+
+.appearance-tint--profit {
+  background: color-mix(in srgb, var(--color-profit) 9%, var(--panel));
+  border-color: color-mix(in srgb, var(--color-profit) 32%, var(--line));
+}
+
+.appearance-tint--loss {
+  background: color-mix(in srgb, var(--color-loss) 9%, var(--panel));
+  border-color: color-mix(in srgb, var(--color-loss) 32%, var(--line));
+}
+
 /* Chip rows inside a specimen must not carry the page-level summary margins. */
 .appearance-spec-demo .ap-summary {
   margin: 0;

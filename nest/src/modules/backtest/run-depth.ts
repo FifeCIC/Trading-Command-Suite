@@ -75,6 +75,8 @@ export interface DepthTrade {
   direction: 'LONG' | 'SHORT';
   pnl: number;
   exitReason: string;
+  /** #1242 — the same exit in the LIVE `CLOSE_REASONS` vocabulary; `null` for `EOD`. */
+  closeReason?: string | null;
   signal: string;
   /** Did the ranked selection permit this trade? `false` = the engine took it, the strategy could not. */
   kept: boolean;

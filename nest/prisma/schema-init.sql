@@ -10,12 +10,12 @@
 -- directly shippable: `@default(now())` emits `DEFAULT CURRENT_TIMESTAMP(3)`, which MySQL evaluates
 -- in the SESSION timezone (SYSTEM = local). This app stores UTC, so a fresh install would write
 -- timestamps in the future with no error — the #844 fault. The generator applies that correction
--- (114 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
+-- (115 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
 --
 -- ⚠️ The prebuild gate caught this, and it is worth recording: validate-local-time-sources.cjs failed
 -- the build on the FIRST generated version and named every offending column.
 --
--- SCALE: 118 CREATE TABLE statements.
+-- SCALE: 119 CREATE TABLE statements.
 --
 -- WHAT IT DOES NOT COVER, and both are intentional:
 --   1. The 13 raw-managed tables (4 with checked-in DDL in prisma/raw-managed/, 9 created by
@@ -210,12 +210,45 @@ CREATE TABLE `BacktestRun` (
     `accountSize` DOUBLE NULL,
     `riskPct` DOUBLE NULL,
     `fixedAmount` DOUBLE NULL,
+    `selectionId` VARCHAR(36) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
 
     INDEX `BacktestRun_symbolId_protocolId_idx`(`symbolId`, `protocolId`),
     INDEX `BacktestRun_createdAt_idx`(`createdAt`),
     INDEX `BacktestRun_periodId_idx`(`periodId`),
     INDEX `BacktestRun_experimentId_iteration_idx`(`experimentId`, `iteration`),
+    INDEX `BacktestRun_selectionId_idx`(`selectionId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `backtest_selection` (
+    `id` VARCHAR(36) NOT NULL,
+    `profileKey` VARCHAR(64) NOT NULL,
+    `datasetName` VARCHAR(120) NOT NULL,
+    `answerDate` DATE NOT NULL,
+    `side` VARCHAR(10) NOT NULL,
+    `directionMode` VARCHAR(8) NOT NULL,
+    `protocolId` VARCHAR(100) NOT NULL,
+    `botId` VARCHAR(36) NULL,
+    `botName` VARCHAR(120) NULL,
+    `topN` INTEGER NOT NULL,
+    `cutoffUtc` VARCHAR(5) NOT NULL,
+    `symbolsJson` LONGTEXT NOT NULL,
+    `configJson` LONGTEXT NULL,
+    `trades` INTEGER NOT NULL,
+    `wins` INTEGER NOT NULL,
+    `winRate` DOUBLE NOT NULL,
+    `netPnl` DOUBLE NOT NULL,
+    `profitFactor` DOUBLE NULL,
+    `engineTradesOutsideSelection` INTEGER NOT NULL,
+    `semanticsVersion` INTEGER NOT NULL,
+    `engineVersion` VARCHAR(20) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+
+    INDEX `backtest_selection_profileKey_createdAt_idx`(`profileKey`, `createdAt`),
+    INDEX `backtest_selection_answerDate_idx`(`answerDate`),
+    INDEX `backtest_selection_protocolId_createdAt_idx`(`protocolId`, `createdAt`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -2353,6 +2386,9 @@ ALTER TABLE `BacktestRun` ADD CONSTRAINT `BacktestRun_symbolId_fkey` FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE `BacktestRun` ADD CONSTRAINT `BacktestRun_experimentId_fkey` FOREIGN KEY (`experimentId`) REFERENCES `backtest_experiment`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `BacktestRun` ADD CONSTRAINT `BacktestRun_selectionId_fkey` FOREIGN KEY (`selectionId`) REFERENCES `backtest_selection`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `backtest_period` ADD CONSTRAINT `backtest_period_symbolId_fkey` FOREIGN KEY (`symbolId`) REFERENCES `Symbol`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

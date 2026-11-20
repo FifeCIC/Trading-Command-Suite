@@ -20,7 +20,7 @@
     },
     "prismaModels": {
       "label": "Prisma models (declared)",
-      "value": 118,
+      "value": 119,
       "unit": "",
       "source": "nest/prisma/schema.prisma",
       "how": "node scripts/db-schema.cjs --pattern, or: Select-String nest/prisma/schema.prisma '^\\s*model '"
@@ -41,7 +41,7 @@
     },
     "rawManagedDdl": {
       "label": "Live unmodelled tables with checked-in DDL",
-      "value": 4,
+      "value": 5,
       "unit": "",
       "source": "nest/prisma/raw-managed/*.sql",
       "how": "npm --prefix nest run db:check   # authoritative, includes backups"
@@ -55,7 +55,7 @@
     },
     "version": {
       "label": "Application version",
-      "value": "0.168.0",
+      "value": "0.169.0",
       "unit": "",
       "source": "nest/package.json (+ package.json asserted in sync)",
       "how": "curl -s localhost:3201/api/version"

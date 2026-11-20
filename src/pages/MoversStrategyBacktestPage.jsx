@@ -43,6 +43,14 @@ import StatCard from '../components/backtest/StatCard.jsx';
 import '../components/backtest/backtest-panel-base.css';
 import MoversDepthPanel from '../components/backtest/MoversDepthPanel.jsx';
 import TradeConfigPanel from '../components/backtest/TradeConfigPanel.jsx';
+// #1328 — the "change vs the previous test" surfaces: the tile deltas, the refusal statement and the
+// profile history. The component owns its own scoped stylesheet, like every other backtest panel.
+import {
+  buildComparisonView,
+  SelectionComparisonNotes,
+  SelectionDelta,
+  SelectionHistory,
+} from '../components/backtest/MoversSelectionComparison.jsx';
 import NoticeBlock from '../components/NoticeBlock.jsx';
 import WhyPopover from '../components/WhyPopover.jsx';
 // The canonical form standard (.ff-fieldset, .ff-legend, .ff-seg) — the form uses it instead of a
@@ -137,11 +145,9 @@ export default function MoversStrategyBacktestPage() {
     () => (Array.isArray(datasetsQuery.data?.datasets) ? datasetsQuery.data.datasets : []),
     [datasetsQuery.data],
   );
-  const excluded = useMemo(
-    () => (Array.isArray(datasetsQuery.data?.excluded) ? datasetsQuery.data.excluded : []),
-    [datasetsQuery.data],
-  );
-
+  // ⚠️ `datasetsQuery.data.excluded` is intentionally NOT read here. It lists stored datasets whose
+  // name carries no day (so they cannot be ranked), but the owner asked for no explanatory text between
+  // containers (2026-11-20) — the API still returns it for diagnosis. Do not re-surface it on the page.
   /** The legs this install can actually run, by checking the protocol ids exist and are active. */
   const legAvailability = useMemo(() => {
     const list = Array.isArray(protocolsQuery.data?.protocols) ? protocolsQuery.data.protocols : null;
@@ -265,6 +271,45 @@ export default function MoversStrategyBacktestPage() {
 
   const caveats = useMemo(() => [...new Set(okRuns.flatMap((r) => r.caveats ?? []))], [okRuns]);
 
+  /**
+   * ── #1328 — CHANGE VS THE PREVIOUS TEST ────────────────────────────────────────────────────────
+   * The delta on a tile is THIS run minus the previous run of the SAME test. Which pair is "the same
+   * test" is the server's decision (`comparison.profileKey`), never the page's: Wednesday-long and
+   * Thursday-short are different tests and must not be subtracted.
+   *
+   * ⚠️ NOTHING IS SHOWN WHEN THE CONTRACT IS ABSENT. A missing `comparison` is not "no change"; it is
+   * a server that cannot answer, and a zero there would be a fabricated measurement.
+   *
+   * ⚠️ THE TILES SUM THE DAYS, SO THE DELTA MUST SUM THE DAYS' PREVIOUS RUNS. If one day has no
+   * comparable previous run, no delta is shown at all and the note says how many days blocked it —
+   * summing the other four would overstate the change.
+   */
+  const comparisonView = useMemo(() => buildComparisonView(okRuns, totals), [okRuns, totals]);
+
+  /**
+   * Config ids → the labels the trade-management table already uses. An id the page cannot label is
+   * shown as the id itself, so a change is never rendered blank.
+   */
+  const configLabelById = useMemo(() => {
+    const labels = new Map();
+    for (const r of okRuns) {
+      for (const field of r.tradeConfig?.fields ?? []) {
+        if (field?.id && !labels.has(field.id)) labels.set(field.id, field.label || field.id);
+      }
+    }
+    return labels;
+  }, [okRuns]);
+
+  /**
+   * #1328 — a run whose group row could not be stored has no history entry, so the NEXT run will
+   * report "no previous". That is said here, once, rather than left for the reader to discover as an
+   * unexplained first-run state next time.
+   */
+  const unstoredRuns = okRuns.filter((r) => r.selectionRun?.persisted === false);
+
+  /** The delta names the pair it was measured against — a sign with no subject is not a measurement. */
+  const deltaVsLabel = comparisonView?.runCount > 1 ? 'vs each day’s previous test' : 'vs previous test';
+
   /** One row per day, with the ranking it produced. */
   const dayRows = useMemo(
     () =>
@@ -342,102 +387,28 @@ export default function MoversStrategyBacktestPage() {
         </a>
       </div>
       {/* ══ THE FORM — one container, every input, folds away when a run starts ═════════════════ */}
+      {formOpen && (
       <section className="mvp-form" aria-label="Test settings">
         <div className="mvp-form-head">
-          <div className="mvp-leg">
-            <span className="ff-label">Strategy</span>
-            <div className="ff-seg" role="group" aria-label="Strategy leg">
-            {legAvailability.map((l) => (
-              <button
-                key={l.key}
-                type="button"
-                className="ff-seg-btn"
-                aria-pressed={l.key === legKey}
-                disabled={running || l.available === false}
-                title={l.why ?? `${l.protocolId} · ${l.blurb}`}
-                onClick={() => setLegKey(l.key)}
-              >
-                {l.label}
-              </button>
-            ))}
-            </div>
-          </div>
-
-          {!formOpen && (
-            <button
-              type="button"
-              className="mvp-summary"
-              aria-expanded={false}
-              onClick={() => setFormOpen(true)}
-              disabled={running}
-            >
-              <span className="mvp-summary-leg">{leg.label}</span>
-              <span>{selectedDaysLabel}</span>
-              <span>top {topN}</span>
-              <span>{cutoffUtc} UTC</span>
-              <span className="mvp-summary-edit">Change</span>
-            </button>
-          )}
-
-          {formOpen && running && (
-            <div className="mvp-form-actions">
-              <button type="button" className="mvp-link-btn" onClick={() => setFormOpen(false)}>
-                Hide settings
-              </button>
-            </div>
-          )}
-        </div>
-
-        {formOpen && (
-          <>
-            <div className="ff-form">
-              <fieldset className="ff-fieldset">
-                <legend className="ff-legend">Sessions &amp; selection</legend>
-              {/* ── days ── */}
-              <div className="ff-field" id="mvp-sec-data">
-                <span className="ff-label">
-                  Day
-                  <WhyPopover title="What a day is">
-                    Each stored list is a screen of ONE session — the date in its name. The earlier
-                    sessions in its window are directive warm-up and are never reported as results.
-                  </WhyPopover>
-                </span>
-                {datasetsQuery.isError ? (
-                  <NoticeBlock
-                    notice={noticeFromError(datasetsQuery.error, 'TCS-SYS-002', {
-                      operation: 'load the movers day lists',
-                    })}
-                  />
-                ) : daysForLeg.length === 0 ? (
-                  <p className="mvp-note">
-                    No stored list is a <strong>{leg.side}</strong> day — a day without a list cannot be
-                    tested, because the list IS that day’s screen.
-                  </p>
-                ) : (
-                  <div className="mvp-chips" role="group" aria-label={`${leg.side} days`}>
-                    {daysForLeg.map((d) => {
-                      const on = selected.includes(d.name);
-                      return (
-                        <button
-                          key={d.name}
-                          type="button"
-                          className={`mvp-chip${on ? ' mvp-chip--on' : ''}`}
-                          aria-pressed={on}
-                          disabled={running}
-                          onClick={() => toggleDay(d.name)}
-                          title={d.note || d.name}
-                        >
-                          <span className="mvp-chip-day">{dayLabel(d.answerDate)}</span>
-                          <span className="mvp-chip-meta">{d.symbols?.length ?? 0} symbols</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+            <>
+              <div className="ff-field">
+                <span className="ff-label">Strategy</span>
+                <div className="ff-seg" role="group" aria-label="Strategy leg">
+                  {legAvailability.map((l) => (
+                    <button
+                      key={l.key}
+                      type="button"
+                      className="ff-seg-btn"
+                      aria-pressed={l.key === legKey}
+                      disabled={running || l.available === false}
+                      title={l.why ?? `${l.protocolId} · ${l.blurb}`}
+                      onClick={() => setLegKey(l.key)}
+                    >
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-
-              <div className="mvp-field-row">
-              {/* ── picks + cutoff ── */}
               <div className="ff-field" id="mvp-sec-selection">
                 <span className="ff-label">Trade the top</span>
                 <div className="ff-seg" role="group" aria-label="How many symbols per day">
@@ -455,14 +426,13 @@ export default function MoversStrategyBacktestPage() {
                   ))}
                 </div>
               </div>
-
               <div className="ff-field">
                 <span className="ff-label">
                   Rank at
                   <WhyPopover title="Why the cutoff matters">
-                    The ranking sees only bars up to this moment, and no entry before it counts. Ranking
-                    on a day’s full move and then trading from the open would score the strategy against
-                    the answer key.
+                    The ranking sees only bars up to this moment, and no entry before it counts.
+                    Ranking on a day’s full move and then trading from the open would score the
+                    strategy against the answer key.
                   </WhyPopover>
                 </span>
                 <div className="ff-seg" role="group" aria-label="Ranking cutoff">
@@ -482,12 +452,6 @@ export default function MoversStrategyBacktestPage() {
                   ))}
                 </div>
               </div>
-              </div>
-              </fieldset>
-
-              <fieldset className="ff-fieldset">
-                <legend className="ff-legend">Run options</legend>
-                <div className="mvp-field-row">
               <div className="ff-field">
                 <span className="ff-label">Pace</span>
                 <div className="ff-seg" role="group" aria-label="Pace between day runs">
@@ -505,27 +469,127 @@ export default function MoversStrategyBacktestPage() {
                   ))}
                 </div>
               </div>
-
               <div className="ff-field">
-                <span className="ff-label">Detail</span>
-                <label className="mvp-check">
-                  <input
-                    type="checkbox"
-                    checked={detailOn}
+                <span className="ff-label">
+                  Detail
+                  <WhyPopover title="What bar-by-bar detail adds">
+                    The per-bar timeline for each symbol: score, price, move, decision and the breakdown.
+                    Off runs faster and stores less.
+                  </WhyPopover>
+                </span>
+                <div className="ff-seg" role="group" aria-label="Bar-by-bar detail">
+                  <button
+                    type="button"
+                    className="ff-seg-btn"
+                    aria-pressed={!detailOn}
                     disabled={running}
-                    onChange={(e) => setDetailOn(e.target.checked)}
-                  />
-                  <span>
-                    Bar-by-bar detail
-                    <em>scores · price · move · decision · breakdown</em>
-                  </span>
-                </label>
-              </div>
+                    onClick={() => setDetailOn(false)}
+                  >
+                    Off
+                  </button>
+                  <button
+                    type="button"
+                    className="ff-seg-btn"
+                    aria-pressed={detailOn}
+                    disabled={running}
+                    onClick={() => setDetailOn(true)}
+                  >
+                    On
+                  </button>
                 </div>
-              </fieldset>
+              </div>
+              {running && (
+                <div className="mvp-form-actions">
+                  <button type="button" className="mvp-link-btn" onClick={() => setFormOpen(false)}>
+                    Hide settings
+                  </button>
+                </div>
+              )}
+            </>
+        </div>
+        {formOpen && (
+          <>
+            <div className="ff-field" id="mvp-sec-data">
+              <span className="ff-label">
+                Day
+                <WhyPopover title="What a day is">
+                  Each stored list is a screen of ONE session — the date in its name. The earlier
+                  sessions in its window are directive warm-up and are never reported as results.
+                </WhyPopover>
+              </span>
+              {datasetsQuery.isError ? (
+                <NoticeBlock
+                  notice={noticeFromError(datasetsQuery.error, 'TCS-SYS-002', {
+                    operation: 'load the movers day lists',
+                  })}
+                />
+              ) : daysForLeg.length === 0 ? (
+                <p className="mvp-note">
+                  No stored list is a <strong>{leg.side}</strong> day — a day without a list cannot be
+                  tested, because the list IS that day’s screen.
+                </p>
+              ) : (
+                <>
+                  <div className="mvp-scroll">
+                    <table className="mvp-table mvp-dataset">
+                      <thead>
+                        <tr>
+                          <th scope="col">Day</th>
+                          <th scope="col" className="mvp-num">Symbol 1</th>
+                          <th scope="col" className="mvp-num">Symbol 2</th>
+                          <th scope="col" className="mvp-num">Symbol 3</th>
+                          <th scope="col" className="mvp-num">Symbol 4</th>
+                          <th scope="col" className="mvp-num">Symbol 5</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {daysForLeg.slice(-5).map((d) => {
+                          const on = selected.includes(d.name);
+                          const syms = d.symbols ?? [];
+                          return (
+                            <tr key={d.name} className={on ? 'is-on' : undefined}>
+                              <td>
+                                <label className="mvp-ds-day" title={d.note || d.name}>
+                                  <input
+                                    type="checkbox"
+                                    checked={on}
+                                    disabled={running}
+                                    onChange={() => toggleDay(d.name)}
+                                  />
+                                  <span>{dayLabel(d.answerDate)}</span>
+                                </label>
+                              </td>
+                              {[0, 1, 2, 3, 4].map((i) => {
+                                const symbol = syms[i];
+                                return (
+                                  <td key={i} className="mvp-num mvp-ds-sym">
+                                    {symbol ? (
+                                      <>
+                                        <span className="mvp-ds-ticker">{symbol}</span>
+                                        <span className="mvp-ds-pct">{fmtPct(d.symbolMoves?.[symbol])}</span>
+                                      </>
+                                    ) : (
+                                      '—'
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  {daysForLeg.length > 5 && (
+                    <p className="mvp-note">
+                      Showing the latest 5 of {daysForLeg.length} stored {leg.side} days.
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
-            <div className="mvp-run-row">
+            <div className="mvp-form-foot">
               <div className="ff-actions">
                 {running && (
                   <button
@@ -542,17 +606,18 @@ export default function MoversStrategyBacktestPage() {
                     : `Run ${runQueue.length} day${runQueue.length === 1 ? '' : 's'}`}
                 </button>
               </div>
-              <div className="mvp-run-notes">
-                {!running && runQueue.length === 0 && <span className="mvp-note">Pick a day to run.</span>}
-                {currentLegState?.available === false && (
-                  <span className="mvp-note">The {leg.label} leg cannot run: {currentLegState.why}.</span>
-                )}
-                {!running && daysForLeg.length > 1 && (
-                  <span className="mvp-note">
-                    Tick several days to compare them — the totals then describe the whole selection.
-                  </span>
-                )}
-              </div>
+            </div>
+
+            <div className="mvp-run-notes">
+              {!running && runQueue.length === 0 && <span className="mvp-note">Pick a day to run.</span>}
+              {currentLegState?.available === false && (
+                <span className="mvp-note">The {leg.label} leg cannot run: {currentLegState.why}.</span>
+              )}
+              {!running && daysForLeg.length > 1 && (
+                <span className="mvp-note">
+                  Tick several days to compare them — the totals then describe the whole selection.
+                </span>
+              )}
             </div>
           </>
         )}
@@ -565,75 +630,40 @@ export default function MoversStrategyBacktestPage() {
           </p>
         )}
       </section>
-
-      {/* ══ PROGRESS ════════════════════════════════════════════════════════════════════════════ */}
-      {progress && (
-        <section className="mvp-panel" aria-label="Run progress">
-          <div className="mvp-progress-head">
-            <span className="mvp-progress-count">
-              {progress.done} of {progress.queue.length} day{progress.queue.length === 1 ? '' : 's'}
-            </span>
-            <span className="mvp-progress-clock">
-              {elapsedLabel(now - progress.startedAt)}
-              {progress.stopped ? ' · stopped' : ''}
-            </span>
-          </div>
-
-          <div
-            className="mvp-progress"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={progress.queue.length}
-            aria-valuenow={progress.done}
-            aria-label="Days completed"
-          >
-            {progress.queue.map((name, i) => {
-              const failed = results.find((r) => r.datasetName === name)?.notice;
-              const cls = failed
-                ? 'mvp-seg-fill mvp-seg-fill--bad'
-                : i < progress.done
-                  ? 'mvp-seg-fill mvp-seg-fill--done'
-                  : progress.current === name
-                    ? 'mvp-seg-fill mvp-seg-fill--live'
-                    : 'mvp-seg-fill';
-              return (
-                <span key={name} className="mvp-seg-slot" aria-hidden="true">
-                  <span className={cls} />
-                </span>
-              );
-            })}
-          </div>
-
-          <p className="mvp-progress-status" role="status" aria-live="polite">
-            {progress.current
-              ? `Running ${dayLabel(progress.current)} — ranking its ${datasetByName.get(progress.current)?.symbols?.length ?? '?'} candidates, then the engine on what it picked.`
-              : progress.stopped
-                ? 'Stopped. Days already finished are shown below.'
-                : 'Finished.'}
-          </p>
-
-          <ul className="mvp-log">
-            {results.map((r) => (
-              <li key={r.datasetName} className={r.notice ? 'mvp-log-line mvp-log-line--bad' : 'mvp-log-line'}>
-                <span className="mvp-log-day">{dayLabel(r.answerDate ?? datasetByName.get(r.datasetName)?.answerDate)}</span>
-                {r.notice ? (
-                  <span>{r.notice.title}{r.notice.detail ? ` — ${r.notice.detail}` : ''}</span>
-                ) : (
-                  <span>
-                    picked <strong>{r.days?.[0]?.selected?.join(', ') || 'nothing'}</strong> —{' '}
-                    {r.totals?.trades ?? 0} trade(s), {fmtMoney(r.totals?.netPnl)}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
       )}
 
+      {/* The progress panel and the .mvp-progress bar were removed 2026-11-20 (owner): they took a lot
+          of space for little information, and there is no speed control yet to make a live progress
+          indicator worth watching. Run status and the settings recap now live in the Run summary
+          panel below. */}
       {/* ══ RESULTS ═════════════════════════════════════════════════════════════════════════════ */}
-      {results.length > 0 && (
+      {(results.length > 0 || progress) && (
         <div id="mvp-sec-outcome" className="mvp-outcome">
-          <section className="mvp-panel" aria-label="Totals">
+          <section className="mvp-panel mvp-run-summary" aria-label="Run summary">
+            <div className="mvp-run-summary-head">
+              <div className="mvp-recap">
+                <span className="mvp-recap-leg">{leg.label}</span>
+                <span className="mvp-recap-item">{selectedDaysLabel}</span>
+                <span className="mvp-recap-item">top {topN}</span>
+                <span className="mvp-recap-item">{cutoffUtc} UTC</span>
+                <span
+                  className={`mvp-recap-status${running ? ' is-live' : progress?.stopped ? ' is-stopped' : ' is-done'}`}
+                >
+                  {running
+                    ? `Running ${dayLabel(progress?.current)}…`
+                    : progress?.stopped
+                      ? 'Stopped'
+                      : 'Finished'}
+                  {progress ? ` · ${elapsedLabel(now - progress.startedAt)}` : ''}
+                </span>
+              </div>
+              <button type="button" className="mvp-link-btn" onClick={() => setFormOpen(true)}>
+                Change settings
+              </button>
+            </div>
+
+            {results.length > 0 && (
+            <>
             <div className="mvp-tallies">
               <StatCard
                 value={String(okRuns.length)}
@@ -654,13 +684,49 @@ export default function MoversStrategyBacktestPage() {
                 value={totals.winRate == null ? '—' : `${totals.winRate.toFixed(1)}%`}
                 label="Win rate"
                 note="Across every kept trade. A blank means no trade was produced, not zero wins."
+                sub={
+                  comparisonView?.delta?.winRate != null ? (
+                    <SelectionDelta
+                      value={comparisonView.delta.winRate}
+                      unit="pp"
+                      vsLabel={deltaVsLabel}
+                    />
+                  ) : undefined
+                }
               />
               <StatCard
                 value={fmtMoney(totals.netPnl)}
                 label="Net P/L"
                 note="Sum of the kept trades' P/L, after the engine's own costs."
+                sub={
+                  comparisonView?.delta?.netPnl != null ? (
+                    <SelectionDelta
+                      value={comparisonView.delta.netPnl}
+                      money
+                      vsLabel={deltaVsLabel}
+                    />
+                  ) : undefined
+                }
               />
             </div>
+
+            {comparisonView && (
+              <SelectionComparisonNotes view={comparisonView} labelById={configLabelById} />
+            )}
+
+            {/* #1328 — said ONCE, whatever the number of runs: an unstored run is invisible to the
+                next comparison, and that is the difference between "the feature is broken" and "the
+                write failed". */}
+            {unstoredRuns.length > 0 && (
+              <p className="mvp-note mvp-note--warn">
+                {unstoredRuns.length === 1
+                  ? 'This run was not stored, so the previous-tests list will not include it and the next run has nothing to compare against.'
+                  : `${unstoredRuns.length} of ${okRuns.length} runs were not stored, so the previous-tests list will not include them and the next run has nothing to compare against for those days.`}
+                {unstoredRuns[0].selectionRun?.reason
+                  ? ` The store said: ${unstoredRuns[0].selectionRun.reason}`
+                  : ''}
+              </p>
+            )}
 
             {failedRuns.length > 0 && (
               <div className="mvp-failures" role="alert">
@@ -681,8 +747,24 @@ export default function MoversStrategyBacktestPage() {
                 ))}
               </ul>
             )}
+
+            </>
+            )}
           </section>
 
+          {results.length > 0 && (
+          <>
+          {/* #1328 — the stored runs of the SAME test, readable on demand rather than filling the
+              results pane. Its own component so the loading/failed/empty/loaded states cannot be
+              collapsed into one another here. */}
+          {comparisonView?.profileKey && (
+            <SelectionHistory
+              profileKey={comparisonView.profileKey}
+              profileLabel={comparisonView.profileLabel}
+              semanticsVersion={comparisonView.semanticsVersion}
+              currentRunIds={okRuns.map((r) => r.selectionRun?.id).filter(Boolean)}
+            />
+          )}
           <section className="mvp-panel" aria-label="Result by day">
             <h2 className="mvp-panel-title">
               Result by day
@@ -779,13 +861,10 @@ export default function MoversStrategyBacktestPage() {
             )}
           </section>
 
-          {excluded.length > 0 && (
-            <p className="mvp-note">
-              {excluded.length} other stored dataset(s) are not offered here — a day list must be named
-              {' '}<code>movers-{'{winners|losers}'}-YYYY-MM-DD</code>, or there is no way to know which
-              session it describes.
-            </p>
-          )}
+          {/* Stored datasets that are NOT offered (their name carries no day) are deliberately not shown
+              on the page. Measured 2026-11-20: the owner called the count + naming rule "random text
+              between containers". The API still reports them in `datasetsQuery.data.excluded` for anyone
+              diagnosing a missing day — do not re-add a paragraph or note here. */}
 
           {/* ── bar by bar ── */}
           <section className="mvp-panel" aria-label="Bar by bar">
@@ -821,6 +900,8 @@ export default function MoversStrategyBacktestPage() {
 
           {/* ── which configuration these numbers describe ── */}
           <TradeConfigPanel tradeConfig={okRuns[0]?.tradeConfig} />
+          </>
+          )}
         </div>
       )}
     </div>

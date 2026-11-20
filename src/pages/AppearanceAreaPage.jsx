@@ -89,6 +89,15 @@ const PAGE_METHOD = [
   { step: 'State the source of every live figure', because: 'An unchecked number is a claim. The source is what lets the next reader check it.' },
 ];
 
+/** Trial tint intensities for a table-holding container — see "Colour that makes a feature stand out". */
+const TINTS = [
+  { id: 'accent-low', name: 'Accent · subtle' },
+  { id: 'accent-medium', name: 'Accent · medium' },
+  { id: 'accent-strong', name: 'Accent · strong' },
+  { id: 'profit', name: 'Profit tint' },
+  { id: 'loss', name: 'Loss tint' },
+];
+
 export default function AppearanceAreaPage() {
   return (
     <div className="appearance-area">
@@ -200,6 +209,41 @@ export default function AppearanceAreaPage() {
 
       {/* ══ MODERN EFFECTS — original animation & dynamic lighting, to judge before adopting ═══ */}
       <ModernEffectsLab />
+
+      {/* ══ TINTED CONTAINERS — trial colours that make a table stand out ═════════════════════ */}
+      <section className="appearance-section">
+        <h3>Colour that makes a feature stand out</h3>
+        <p className="appearance-note">
+          A container holding a table takes a shade drawn from the active theme, so the table reads as
+          its own card instead of blending into the panel. Five trial intensities below — the three
+          accent ones repaint with the pack, the two semantic ones carry a meaning. Colour is on the
+          surface and border only; the text stays on ink, so contrast is unchanged.
+        </p>
+        <div className="appearance-tint-grid">
+          {TINTS.map((t) => (
+            <article key={t.id} className={`appearance-tint appearance-tint--${t.id}`}>
+              <span className="appearance-tint-name">{t.name}</span>
+              <table className="appearance-table appearance-table--num">
+                <thead>
+                  <tr>
+                    <th scope="col">Feature</th>
+                    <th scope="col">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Alpha</td><td>16.10</td></tr>
+                  <tr><td>Beta</td><td>12.38</td></tr>
+                </tbody>
+              </table>
+            </article>
+          ))}
+        </div>
+        <p className="appearance-note">
+          In app CSS this is one rule: a panel that <em>contains</em> a table wrapper adopts the tint
+          (<code>:has()</code>), so the pattern applies wherever a table sits in a container — and a
+          panel without a table stays plain.
+        </p>
+      </section>
 
       {/* ══ THE METHOD — the build order the owner asked for ═══════════════════════════════════ */}
       <section className="appearance-section">

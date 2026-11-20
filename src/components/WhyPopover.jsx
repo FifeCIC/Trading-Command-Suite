@@ -59,7 +59,17 @@ export default function WhyPopover({
           if (e.key === 'Escape') setOpen(false);
         }}
       >
-        {label}
+        {label === '?' ? (
+          /* A borderless info glyph (info-in-a-circle), the modern convention (Linear, Stripe, the
+             shadcn/Radix libraries) — not a bordered “?” pill, which reads as a button. */
+          <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" strokeWidth="1.4" />
+            <rect x="7.25" y="6.9" width="1.5" height="4.6" rx="0.75" fill="currentColor" />
+            <circle cx="8" cy="4.6" r="0.95" fill="currentColor" />
+          </svg>
+        ) : (
+          label
+        )}
       </button>
       {open && (
         <span className="why-pop-panel" id={id} role="note">

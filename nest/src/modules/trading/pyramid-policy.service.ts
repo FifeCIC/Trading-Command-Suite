@@ -20,35 +20,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 // #1242 — the position filter, the tier arithmetic and the blockers are the shared decision; this
-// service keeps only the IO (which bot, and the policy lookup).
-import { filterOwnPositions, pyramidVerdict } from '../../common/trading/exit-guardian/pyramid-decision';
+// service keeps only the IO (which bot, and the policy lookup). The TYPES are re-exported rather than
+// redeclared: one definition, so the core and this service cannot describe different position shapes.
+import {
+  filterOwnPositions,
+  pyramidVerdict,
+  type PyramidPosition,
+  type PyramidBlockerOut,
+} from '../../common/trading/exit-guardian/pyramid-decision';
 
-export interface PyramidOpenPosition {
-  symbol?: string;
-  ticket?: string | number | null;
-  brokerTicket?: string | null;
-  volume?: number;
-  quantity?: number;
-  sl?: number | null;
-  stopLoss?: number | null;
-  entryPrice?: number;
-  avgCost?: number;
-  currentPrice?: number;
-  profit?: number;
-  unrealizedPnl?: number;
-  /**
-   * ⚠️ ADDED 2026-11-04 — the MT5 MAGIC, i.e. WHICH BOT opened the position (#1018 makes magic the
-   * attribution key). Without it the scale-in policy could only ask "is anything open on this
-   * symbol", which is the wrong question once two bots may hold one symbol on a hedging account.
-   */
-  magic?: number | null;
-}
-
-export interface PyramidBlocker {
-  key: 'duplicate-position' | 'scale-in-not-green' | 'scale-in-not-locked' | 'max-tier';
-  message: string;
-  hint: string;
-}
+export type PyramidOpenPosition = PyramidPosition;
+export type PyramidBlocker = PyramidBlockerOut;
 
 export interface PyramidDecision {
   hasOpenPosition: boolean;

@@ -58,6 +58,16 @@ import {
   type TradeConfigBot,
   type TradeConfigField,
 } from './trade-config';
+// #1328 — the selection TEST as a named group, and whether two of them may be subtracted.
+import {
+  compareSelections,
+  profileKey as buildProfileKey,
+  type Comparison,
+  type SelectionProfile,
+  type StoredSelection,
+} from './selection-profile';
+import { EXECUTION_SEMANTICS } from '../../common/trading/execution-semantics';
+import { APP_VERSION } from '../../version';
 
 export interface SelectionRunRequest {
   /** The `backtest_period.name` shared by every symbol in the dataset group. */
@@ -171,6 +181,16 @@ export interface SelectionRunResult {
     /** Trades the ranker would have permitted but a symbol's own run never produced. */
     engineTradesOutsideSelection: number;
   };
+  /**
+   * #1328 — the delta against the previous run of THE SAME TEST, or the reason there is not one.
+   *
+   * ⚠️ ALWAYS PRESENT. A missing field would leave the UI to invent a "no change" state, and a "no
+   * change" is exactly the claim a refused comparison must not make. `comparable: false` carries
+   * `blockedBy` and a `reason` naming what changed.
+   */
+  comparison: Comparison;
+  /** Whether this test was stored, so the next run has something to compare with. */
+  selectionRun: { id: string | null; persisted: boolean; reason: string | null; runsLinked: number };
   caveats: string[];
 }
 
@@ -310,6 +330,7 @@ export class SelectionRunService {
       direction: t.direction === 'SHORT' ? 'SHORT' : 'LONG',
       pnl: Number(t.pnl ?? 0),
       exitReason: String(t.exitReason ?? ''),
+      closeReason: typeof t.closeReason === 'string' ? t.closeReason : null,
       signal: String(t.signal ?? ''),
       kept: keptSet.has(t),
     }));
@@ -454,6 +475,8 @@ export class SelectionRunService {
 
     const perSymbol: SelectionSymbolResult[] = [];
     const keptTrades: Array<Record<string, unknown>> = [];
+    /** #1328 — the per-symbol runs THIS test created, so the group can be stamped onto them. */
+    const runIds: string[] = [];
     let engineTradesOutsideSelection = 0;
 
     for (const ticker of [...picked.day.selected].sort()) {
@@ -481,6 +504,10 @@ export class SelectionRunService {
         // The trade rows carry no symbol; tag them so the selection filter can read it. Doing this
         // here rather than adding a column to every trade keeps ONE engine output shape.
         const tagged = (result.trades ?? []).map((t) => ({ ...t, symbol: ticker }));
+        // #1328 — only a run the engine actually stored can belong to the group. A computed-but-unstored
+        // run has no row to stamp, and `persistOutcome()` inside the engine already reported it.
+        const storedRunId = (result as { id?: string; persisted?: boolean });
+        if (storedRunId.persisted && storedRunId.id) runIds.push(storedRunId.id);
         const { kept, dropped } = applySelection(tagged, days, cutoffUtc);
         const keptSet = new Set(kept);
         const notSelected = dropped.filter((d) => d.code === 'not-selected').length;
@@ -521,6 +548,71 @@ export class SelectionRunService {
 
     const totalTrades = keptTrades.length;
     const totalWins = keptTrades.filter((t) => Number(t.pnl) > 0).length;
+    const netPnl = keptTrades.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+    const winRate = totalTrades ? (totalWins / totalTrades) * 100 : 0;
+
+    /**
+     * ── THE TEST, AS A NAMED GROUP (#1328) ────────────────────────────────────────────────────────
+     * The per-symbol engine runs already persist into `backtestrun`. They carry no record that they
+     * were ONE test, and the numbers on the page's tiles are computed over KEPT trades after the
+     * selection filter — so they cannot be read off any single per-symbol row either. This block
+     * stores the group and its aggregate, then asks whether the PREVIOUS run of the same test may be
+     * subtracted from it.
+     *
+     * ⚠️ THE PREVIOUS RUN IS READ BEFORE THIS ONE IS WRITTEN, or the comparison would find itself.
+     */
+    const profile: SelectionProfile = {
+      datasetName,
+      answerDate: decl.value.answerDate,
+      side: decl.value.side,
+      directionMode,
+      protocolId: request.protocolId,
+      botId: bot?.id ?? null,
+      topN,
+      cutoffUtc,
+    };
+    const profileKey = buildProfileKey(profile);
+    const appliedConfig = tradeConfig.fields.map((f) => ({ id: f.id, value: f.value, applied: f.applied }));
+
+    let previous: StoredSelection | null = null;
+    try {
+      const row = await this.prisma.backtestSelection.findFirst({
+        where: { profileKey },
+        orderBy: { createdAt: 'desc' },
+      });
+      previous = row
+        ? {
+            id: row.id,
+            createdAt: row.createdAt.toISOString(),
+            engineVersion: row.engineVersion,
+            semanticsVersion: row.semanticsVersion,
+            totals: { trades: row.trades, wins: row.wins, winRate: row.winRate, netPnl: row.netPnl },
+            config: parseConfigJson(row.configJson),
+          }
+        : null;
+    } catch (err) {
+      // A history that cannot be read is REPORTED, never rendered as "no previous run" — those two
+      // states mean opposite things to a reader deciding whether a delta is missing or absent.
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Selection history read failed for profile ${profileKey.slice(0, 12)} — ${message}`);
+    }
+
+    const comparison = compareSelections(
+      { totals: { trades: totalTrades, wins: totalWins, winRate, netPnl }, config: appliedConfig },
+      previous,
+      profile,
+    );
+
+    const stored = await this.persistSelection({
+      profile,
+      profileKey,
+      botName: bot?.name ?? null,
+      symbols: picked.day.selected,
+      config: appliedConfig,
+      totals: { trades: totalTrades, wins: totalWins, winRate, netPnl },
+      engineTradesOutsideSelection,
+      runIds,
+    });
 
     const caveats: string[] = [
       `Measured on ${decl.value.answerDate} only — the session this dataset is a screen of. Its ` +
@@ -579,11 +671,165 @@ export class SelectionRunService {
         selections: picked.day.selected.length,
         trades: totalTrades,
         wins: totalWins,
-        netPnl: keptTrades.reduce((a, t) => a + Number(t.pnl ?? 0), 0),
-        winRate: totalTrades ? (totalWins / totalTrades) * 100 : 0,
+        netPnl,
+        winRate,
         engineTradesOutsideSelection,
       },
+      /**
+       * #1328 — the delta the tiles need, and the reason there is not one when there is not. Always
+       * present: a missing `comparison` would force the UI to invent a "no change" state, which is the
+       * one thing it must never show.
+       */
+      comparison,
+      /**
+       * #1328 — whether the group row was stored. A run that computed numbers but stored nothing must
+       * say so (the #1210 rule): otherwise the NEXT run reports "no previous run" and the operator
+       * concludes the feature is broken rather than the write.
+       */
+      selectionRun: stored,
       caveats,
     };
+  }
+
+  /**
+   * history() — the previous runs of a selection test, newest first (#1328).
+   *
+   * ⚠️ `profileKey` is the precise question ("what else is THIS test"), while `protocolId` and
+   * `datasetName` are the browse question ("what has this protocol done on this list"). Both are
+   * offered because the page needs the first and a reader needs the second, and neither is guessed
+   * from the other: a key built from a different bot or rank time is a DIFFERENT test.
+   */
+  async history(input: {
+    profileKey?: string;
+    protocolId?: string;
+    datasetName?: string;
+    limit?: number;
+  }): Promise<{ selections: Array<Record<string, unknown>>; profiles: number }> {
+    const limit = Math.min(Math.max(1, Math.floor(input.limit ?? 20)), 100);
+    if (!input.profileKey && !input.protocolId && !input.datasetName) {
+      throw new BadRequestException(
+        'one of profileKey, protocolId or datasetName is required — "all history" is not a profile, and returning the last 20 unrelated tests would read as this test\'s history.',
+      );
+    }
+    const where: Record<string, unknown> = {};
+    if (input.profileKey) where.profileKey = input.profileKey;
+    if (input.protocolId) where.protocolId = input.protocolId;
+    if (input.datasetName) where.datasetName = input.datasetName;
+
+    const rows = await this.prisma.backtestSelection.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    return {
+      profiles: new Set(rows.map((r) => r.profileKey)).size,
+      selections: rows.map((r) => ({
+        id: r.id,
+        profileKey: r.profileKey,
+        datasetName: r.datasetName,
+        answerDate: r.answerDate instanceof Date ? r.answerDate.toISOString().slice(0, 10) : String(r.answerDate),
+        side: r.side,
+        directionMode: r.directionMode,
+        protocolId: r.protocolId,
+        botId: r.botId,
+        botName: r.botName,
+        topN: r.topN,
+        cutoffUtc: r.cutoffUtc,
+        totals: { trades: r.trades, wins: r.wins, winRate: r.winRate, netPnl: r.netPnl },
+        engineTradesOutsideSelection: r.engineTradesOutsideSelection,
+        semanticsVersion: r.semanticsVersion,
+        engineVersion: r.engineVersion,
+        createdAt: r.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  /**
+   * persistSelection() — store the TEST, then stamp the group onto its per-symbol runs (#1328).
+   *
+   * ⚠️ A FAILURE HERE IS REPORTED, NEVER THROWN. The run's numbers are already computed and are the
+   * reason the caller asked; discarding them because a history row could not be written would be the
+   * tail wagging the dog. `persisted: false` with the reason is the honest answer, and the next run's
+   * `no-previous` will then be explained by this field rather than looking like an empty history.
+   */
+  private async persistSelection(input: {
+    profile: SelectionProfile;
+    profileKey: string;
+    /** The bot's name as it read at run time — see the note on the write below. */
+    botName: string | null;
+    symbols: readonly string[];
+    config: Array<{ id: string; value: number | string | null; applied: boolean }>;
+    totals: { trades: number; wins: number; winRate: number; netPnl: number };
+    engineTradesOutsideSelection: number;
+    runIds: readonly string[];
+  }): Promise<{ id: string | null; persisted: boolean; reason: string | null; runsLinked: number }> {
+    try {
+      const created = await this.prisma.backtestSelection.create({
+        data: {
+          profileKey: input.profileKey,
+          datasetName: input.profile.datasetName,
+          // A DATE column: the calendar day the screen is of, with no time component to drift.
+          answerDate: new Date(`${input.profile.answerDate}T00:00:00Z`),
+          side: input.profile.side,
+          directionMode: input.profile.directionMode,
+          protocolId: input.profile.protocolId,
+          botId: input.profile.botId,
+          /**
+           * ⚠️ THE NAME AT RUN TIME, not a join at read time. `trading_strategy.name` is editable, so a
+           * rename would otherwise rewrite what every past test says it measured — and a comparison's
+           * whole job is to state what was compared. NULL only when no bot supplied the values.
+           */
+          botName: input.botName,
+          topN: input.profile.topN,
+          cutoffUtc: input.profile.cutoffUtc,
+          symbolsJson: JSON.stringify(input.symbols),
+          configJson: JSON.stringify(input.config),
+          trades: input.totals.trades,
+          wins: input.totals.wins,
+          winRate: input.totals.winRate,
+          netPnl: input.totals.netPnl,
+          profitFactor: null,
+          engineTradesOutsideSelection: input.engineTradesOutsideSelection,
+          semanticsVersion: EXECUTION_SEMANTICS,
+          engineVersion: APP_VERSION,
+        },
+        select: { id: true },
+      });
+
+      let runsLinked = 0;
+      if (input.runIds.length) {
+        const linked = await this.prisma.backtestRun.updateMany({
+          where: { id: { in: [...input.runIds] } },
+          data: { selectionId: created.id },
+        });
+        runsLinked = linked.count;
+      }
+      return { id: created.id, persisted: true, reason: null, runsLinked };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Selection run stored NOT persisted — ${message}`);
+      return { id: null, persisted: false, reason: message, runsLinked: 0 };
+    }
+  }
+}
+
+/**
+ * Read a stored config JSON back into applied values.
+ *
+ * ⚠️ A MALFORMED OR ABSENT BLOB IS AN EMPTY LIST, which makes `configChanges` report nothing — and
+ * that is the safe direction: inventing a change the reader cannot check is worse than reporting none,
+ * and the comparison itself still refuses on semantics.
+ */
+function parseConfigJson(raw: string | null): Array<{ id: string; value: number | string | null; applied: boolean }> {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((f): f is { id: string; value: number | string | null; applied: boolean } => !!f && typeof f.id === 'string')
+      .map((f) => ({ id: f.id, value: f.value ?? null, applied: f.applied === true }));
+  } catch {
+    return [];
   }
 }

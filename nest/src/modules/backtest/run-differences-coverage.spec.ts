@@ -57,6 +57,15 @@ const EXCLUDED: Record<string, string> = {
    * that does not change any verdict. It is named here so the gap is visible rather than absent.
    */
   experimentId: 'NOT COMPARED — identifies the series a run belongs to; grouping by experiment is unimplemented (declared gap, not an input nobody missed)',
+  /**
+   * #1328 — the movers SELECTION TEST this per-symbol run belonged to.
+   *
+   * Not an input to the run: it is provenance, written AFTER the engine returned, by
+   * `SelectionRunService.persistSelection()`. Two runs of the same test that were never stamped would
+   * diff as "identical" on this column, which is correct — the grouping lives in `backtest_selection`,
+   * where the comparison reads the profile key and the semantics version.
+   */
+  selectionId: 'NOT AN INPUT — provenance written by the selection service after the run; the group and its comparability live in `backtest_selection` (#1328)',
 };
 
 /** Scalar columns of `model BacktestRun`, read from the schema so the list cannot drift. */
