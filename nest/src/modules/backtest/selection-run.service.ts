@@ -52,6 +52,12 @@ import {
   type DepthStep,
   type DepthTrade,
 } from './run-depth';
+import {
+  buildTradeConfig,
+  tradeConfigSummary,
+  type TradeConfigBot,
+  type TradeConfigField,
+} from './trade-config';
 
 export interface SelectionRunRequest {
   /** The `backtest_period.name` shared by every symbol in the dataset group. */
@@ -69,6 +75,15 @@ export interface SelectionRunRequest {
    * See `run-depth.ts` for what is recorded versus derived.
    */
   includeBreakdown?: boolean;
+  /**
+   * The bot whose trade-management configuration this run should measure. Omitted means AUTO-RESOLVE:
+   * the service picks the bot subscribed to `protocolId` (preferring active), because a run that
+   * silently used the engine's own literals produced a wrong conclusion on 2026-11-20 — the result was
+   * read as "the strategy's 1%/1% bracket" when the bot was configured 2.5%/6%.
+   *
+   * `null` explicitly disables the lookup, for a deliberate study of the protocol with no bot.
+   */
+  botId?: string | null;
   // Strategy settings forwarded to the per-symbol engine, unchanged.
   slPct?: number;
   tpPct?: number;
@@ -129,6 +144,19 @@ export interface SelectionRunResult {
   candidates: string[];
   /** Sessions in the window BEFORE the answer day: warm-up, not measurement. */
   priorSessions: number;
+  /**
+   * WHERE EVERY TRADE-MANAGEMENT NUMBER CAME FROM — bot record, request override, or engine literal.
+   * ⚠️ This is not documentation. A run without it was read as "the strategy's 1%/1% bracket" while the
+   * bot was configured 2.5%/6%, and every `applied: false` row means the result says nothing about it.
+   */
+  tradeConfig: {
+    /** The bot that supplied the values, or null when none names this protocol. */
+    bot: { id: string; name: string; active: boolean; mode: string | null } | null;
+    /** `auto` = the service found the bot; `explicit` = the caller named it; `none` = nothing available. */
+    resolvedBy: 'auto' | 'explicit' | 'none';
+    fields: TradeConfigField[];
+    summary: string;
+  };
   /** The one ranked day, as an array so a caller renders the same shape as before. */
   days: DayRank[];
   perSymbol: SelectionSymbolResult[];
@@ -173,6 +201,81 @@ export class SelectionRunService {
       );
       return null;
     }
+  }
+
+  /**
+   * Find the bot whose configuration this run should measure.
+   *
+   * ── DECISION (2026-11-20, primary) ──
+   * WHAT:      Auto-resolve the bot for this protocol unless `botId: null` is passed deliberately, and
+   *            return a per-field provenance table (`trade-config.ts`).
+   * WHY:       The run that produced "a 1%/1% bracket is the problem" had no bot, so it measured the
+   *            engine's literals (1%/1%, entry bar 0, no hold) against a bot configured 2.5%/6%, entry
+   *            bar 30, hold 4h. Same dataset, same cutoff: −1,538.47 without the bot, +767.64 with it.
+   *            A conclusion drawn from the first number was a conclusion about nothing.
+   * INSTEAD OF: Reporting "engine default" and leaving the reader to notice. Accurate and useless: the
+   *            measurement still would not describe a configuration any bot runs.
+   * REVERSE BY: Returning `{ bot: null }` from this method unconditionally and dropping `botId` from the
+   *            request it forwards. Nothing is stored.
+   * REGISTER:  docs/SETTLED-DECISIONS.md row 233
+   * GUARD:     nest/src/modules/backtest/trade-config.spec.ts
+   *
+   * ⚠️ `mergeBotConfig()` is what supplies slPct/tpPct/minComposite/maxHoldHours/stopPlan from the
+   * record, and an explicit request field still wins over it.
+   * ⚠️ PREFERENCE ORDER IS STATED, NOT IMPLIED: a bot naming this protocol as its PRIMARY leg beats one
+   * that names it as `shortProtocolId`, and an active bot beats an inactive one. The chosen id is
+   * returned and echoed, so "which bot produced these numbers?" is answerable from the result.
+   */
+  private async resolveBotForRun(
+    protocolId: string,
+    explicit: string | null | undefined,
+  ): Promise<{ bot: TradeConfigBot | null; resolvedBy: 'auto' | 'explicit' | 'none' }> {
+    const select = {
+      id: true,
+      name: true,
+      protocolId: true,
+      active: true,
+      mode: true,
+      slPct: true,
+      tpPct: true,
+      minComposite: true,
+      maxHoldHours: true,
+      cooldownMinutes: true,
+      maxPositions: true,
+      sessionWindow: true,
+      baseSize: true,
+      maxPyramidTiers: true,
+      exitBeforeUtc: true,
+      exhaustionObserveEnabled: true,
+      takeProfitAmount: true,
+      brokerId: true,
+      simTslEnabled: true,
+    } as const;
+
+    if (explicit === null) return { bot: null, resolvedBy: 'none' };
+
+    if (typeof explicit === 'string' && explicit.trim()) {
+      const found = await this.prisma.tradingStrategy.findUnique({
+        where: { id: explicit.trim() },
+        select,
+      });
+      if (!found) {
+        throw new BadRequestException(`No trading_strategy is stored under id '${explicit}'.`);
+      }
+      return { bot: found as unknown as TradeConfigBot, resolvedBy: 'explicit' };
+    }
+
+    const candidates = await this.prisma.tradingStrategy.findMany({
+      where: { OR: [{ protocolId }, { shortProtocolId: protocolId }] },
+      select,
+      orderBy: [{ active: 'desc' }, { updatedAt: 'desc' }],
+    });
+    if (!candidates.length) return { bot: null, resolvedBy: 'none' };
+
+    // A bot that names this protocol as its SHORT leg is a different strategy — prefer the primary.
+    const primary = candidates.filter((c) => c.protocolId === protocolId);
+    const chosen = (primary.length ? primary : candidates)[0];
+    return { bot: chosen as unknown as TradeConfigBot, resolvedBy: 'auto' };
   }
 
   /**
@@ -258,6 +361,30 @@ export class SelectionRunService {
     const topN = Math.max(1, Math.floor(request.topN ?? DEFAULT_TOP_N));
     const cutoffUtc = request.cutoffUtc ?? DEFAULT_CUTOFF_UTC;
 
+    // ── WHICH CONFIGURATION THIS RUN MEASURES ───────────────────────────────────────────────────
+    // ⚠️ BEFORE the bars are loaded, because a bot decides the entry bar (`minComposite`) and a run
+    // that scored first and applied the bar afterwards would have been a different measurement.
+    const { bot, resolvedBy } = await this.resolveBotForRun(request.protocolId, request.botId);
+    const tradeFields = buildTradeConfig(bot, {
+      slPct: request.slPct,
+      tpPct: request.tpPct,
+      minComposite: request.minComposite,
+      accountSize: request.accountSize,
+    });
+    const tradeConfig = {
+      bot: bot
+        ? {
+          id: bot.id,
+          name: bot.name,
+          active: Boolean(bot.active),
+          mode: (bot.mode as string | null) ?? null,
+        }
+        : null,
+      resolvedBy,
+      fields: tradeFields,
+      summary: tradeConfigSummary(bot, tradeFields),
+    };
+
     // ── the dataset group: every period sharing the name ─────────────────────────────────────────
     const periods = await this.prisma.backtestPeriod.findMany({ where: { name: datasetName } });
     if (periods.length === 0) {
@@ -336,6 +463,11 @@ export class SelectionRunService {
         const result = await this.backtest.run({
           periodId,
           protocolId: request.protocolId,
+          // ⚠️ `botId` MAKES THE ENGINE USE THE BOT'S OWN NUMBERS (`mergeBotConfig`): slPct, tpPct,
+          // minComposite, maxHoldHours, stopPlan. Without it every one of those is an engine literal —
+          // measured 2026-11-20, that turned a 2.5%/6% bot into a "1%/1%" result which was then read as
+          // the strategy's configuration. An explicit request field still wins, and the run says so.
+          ...(bot ? { botId: bot.id } : {}),
           slPct: request.slPct,
           tpPct: request.tpPct,
           minComposite: request.minComposite,
@@ -393,6 +525,11 @@ export class SelectionRunService {
     const caveats: string[] = [
       `Measured on ${decl.value.answerDate} only — the session this dataset is a screen of. Its ` +
         `${priorSessions} earlier session(s) are directive warm-up, not results.`,
+      tradeConfig.bot
+        ? `Trade management came from ${tradeConfig.bot.name}${tradeConfig.bot.active ? '' : ` (INACTIVE, ${tradeConfig.bot.mode ?? 'unknown'} mode)`}`
+          + ' — stop, target, entry bar and max hold are that record\'s own values.'
+        : 'NO BOT names this protocol, so stop, target and entry bar are the ENGINE\'S LITERALS. '
+          + 'The result describes the protocol\'s signals at a bracket nobody chose, not a deployed strategy.',
       `The candidate list (${tickers.length} symbols) was built from ${decl.value.answerDate}'s ` +
         'close-to-close move, so the LIST already knows how the day ended. The ranking inside it uses ' +
         `bars up to ${cutoffUtc} UTC only, but membership is optimistic: a screen run live at the ` +
@@ -434,6 +571,7 @@ export class SelectionRunService {
       timeframe,
       candidates: tickers,
       priorSessions,
+      tradeConfig,
       days,
       perSymbol,
       totals: {

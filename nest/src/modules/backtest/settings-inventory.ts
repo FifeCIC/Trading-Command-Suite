@@ -87,7 +87,7 @@ const RUN_FIELDS: ReadonlyArray<{ key: string; label: string; applied: Applied; 
  * `evaluationCount`, `lastSignal`, `lastEvaluatedAt`, `daysActive`, `magic`, `version`). Listing an
  * output beside a setting is how a surface starts implying you can edit a result.
  */
-const BOT_FIELDS: ReadonlyArray<{ key: string; label: string; applied: Applied; why: string }> = [
+export const BOT_FIELDS: ReadonlyArray<{ key: string; label: string; applied: Applied; why: string }> = [
   { key: 'symbol', label: 'Symbol', applied: 'honoured', why: 'mergeBotConfig() → merged.symbol. The period overrides it when one is chosen.' },
   { key: 'timeframe', label: 'Timeframe', applied: 'honoured', why: 'mergeBotConfig() → merged.timeframe. The period overrides it when one is chosen.' },
   { key: 'protocolId', label: 'Protocol', applied: 'honoured', why: 'mergeBotConfig() → merged.protocolId; the run is REFUSED when it resolves to none.' },
@@ -106,9 +106,15 @@ const BOT_FIELDS: ReadonlyArray<{ key: string; label: string; applied: Applied; 
   { key: 'simTslEnabled', label: 'Simulated trailing stop', applied: 'honoured', why: 'Switches the trail on. Translated by sim-tsl.ts into StopPlan (lockAtPct from simTslActivationPct, trailPct from simTslDistancePct) and applied per trade. ⚠️ Set on 3 of 64 active bots and ignored by the engine until 2026-11-17, so older runs of these bots measured NO trail.' },
   { key: 'simTslActivationPct', label: 'Trailing activation %', applied: 'honoured', why: 'Maps to StopPlan.lockAtPct: once the trade is this far in front, the stop moves to breakeven. An explicit stopPlan on the request overrides it.' },
   { key: 'simTslDistancePct', label: 'Trailing distance %', applied: 'honoured', why: 'Maps to StopPlan.trailPct: keeps the stop this far behind the best price reached. If this is blank the whole plan is refused rather than defaulted — see sim-tsl.ts.' },
-  { key: 'sessionTags', label: 'Session tags', applied: 'ignored', why: 'Zero references. Session gating is live-loop only.' },
-  { key: 'sessionWindow', label: 'Session window', applied: 'ignored', why: 'Zero references.' },
-  { key: 'exitBeforeUtc', label: 'Exit before (UTC)', applied: 'ignored', why: 'Zero references.' },
+  /**
+   * ⚠️ `sessionTags` WAS LISTED HERE UNTIL 2026-11-20 AND IS NOT A COLUMN.
+   *
+   * Verified against the schema: `trading_strategy` has no such field. The entry said *"Zero references.
+   * Session gating is live-loop only"* — true, but for the wrong reason: there was nothing to reference.
+   * It told a reader that a knob existed and was ignored, which is a different and worse claim than
+   * "this knob does not exist". `sessionWindow` below IS a real column and stays.
+   */
+  { key: 'exitBeforeUtc', label: 'Exit before (UTC)', applied: 'ignored', why: 'Zero references. The #928 session-exit boundary is live-loop only.' },
   { key: 'brokerId', label: 'Broker', applied: 'ignored', why: 'Zero references. A run reads stored bars, not a broker.' },
 ];
 

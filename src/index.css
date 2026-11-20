@@ -763,6 +763,29 @@ body {
 }
 
 /* --- Background tone overrides --- */
+/* aurora — accent-lit, pack-aware. Two soft pools of the active accent and a cool second light, so the
+   page carries colour that makes containers stand out WITHOUT painting over the panels themselves.
+   `color-mix` keeps it a token, never a literal, so every theme pack and the light/dark modes all
+   repaint correctly. */
+:root[data-bg-tone='aurora'] body {
+  background:
+    radial-gradient(1200px 600px at 12% -10%, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 60%),
+    radial-gradient(900px 500px at 92% 0%, color-mix(in srgb, var(--color-accent-blue) 12%, transparent) 0%, transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* ⚠️ The live shell is `.site-shell.layout-omni`, which paints `background: var(--bg)` OPAQUE over the
+   body — so a body-only tone is invisible in the layout the app actually uses. The aurora must tint the
+   SHELL, or it does nothing. Measured from index.css:880 (`.site-shell.layout-omni { background: var(--bg) }`). */
+:root[data-bg-tone='aurora'] .site-shell.layout-omni {
+  background:
+    radial-gradient(1200px 600px at 10% -12%, color-mix(in srgb, var(--accent) 18%, transparent) 0%, transparent 60%),
+    radial-gradient(900px 520px at 95% -5%, color-mix(in srgb, var(--color-accent-blue) 14%, transparent) 0%, transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
 :root[data-bg-tone='aura'] body {
   background:
     radial-gradient(circle at 18% 12%, rgba(14, 165, 166, 0.08) 0%, var(--bg) 55%);

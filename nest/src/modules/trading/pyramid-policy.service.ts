@@ -19,6 +19,9 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+// #1242 — the position filter, the tier arithmetic and the blockers are the shared decision; this
+// service keeps only the IO (which bot, and the policy lookup).
+import { filterOwnPositions, pyramidVerdict } from '../../common/trading/exit-guardian/pyramid-decision';
 
 export interface PyramidOpenPosition {
   symbol?: string;
@@ -112,34 +115,17 @@ export class PyramidPolicyService {
   }): Promise<PyramidDecision> {
     const { symbol, side, brokerId } = params;
     const ticker = symbol.toUpperCase();
-    const blockers: PyramidBlocker[] = [];
 
-    const open = (params.positions ?? []).filter(p => {
-      if (String(p.symbol ?? '').toUpperCase() !== ticker) return false;
-      // #1079 — cross-account isolation: one provider id (`mt5`) spans several accounts, and a
-      // position on another account is not a duplicate of this order. A row WITHOUT an accountId
-      // is unknown, and unknown keeps blocking (the conservative direction).
-      const rowAccount = (p as { accountId?: string | null }).accountId;
-      if (params.accountId && rowAccount && String(rowAccount) !== String(params.accountId)) return false;
-      // ⚠️ PER-BOT SCOPING (2026-11-04). On a HEDGING account another bot's position on the same
-      // symbol is not ours to scale into — it is a different strategy holding the same instrument.
-      // Ignoring it here is what lets several bots share a symbol at all.
-      // Requires ALL THREE: a hedging account, the incoming bot's magic, and a magic on the row.
-      // Any unknown falls through to the original symbol-wide rule, because being wrong the other
-      // way means scaling into a position we do not own.
-      const hedging = String(params.positionModel || '').toLowerCase() === 'hedging';
-      if (hedging && params.incomingMagic != null) {
-        // ⚠️ `!= null` BEFORE Number(). `Number(null)` is 0, which is finite and would compare
-        // unequal to any real magic — so a position with NO magic was silently ignored, i.e.
-        // "unknown" read as "not ours". Caught by the spec, not by reading it.
-        const rawMagic = (p as PyramidOpenPosition).magic;
-        if (rawMagic != null) {
-          const rowMagic = Number(rawMagic);
-          if (Number.isFinite(rowMagic) && rowMagic !== Number(params.incomingMagic)) return false;
-        }
-      }
-      return true;
-    });
+    // #1242 — the position filter is the shared decision. Its two historical defects (a null magic
+    // reading as another bot's, and symbol-only matching) are asserted in
+    // `common/trading/exit-guardian/pyramid-and-atr.spec.ts` so this call site cannot regress.
+    const open = filterOwnPositions({
+      positions: params.positions ?? [],
+      symbol,
+      accountId: params.accountId,
+      positionModel: params.positionModel,
+      incomingMagic: params.incomingMagic,
+    }) as PyramidOpenPosition[];
 
     if (open.length === 0) {
       return {
@@ -157,57 +143,27 @@ export class PyramidPolicyService {
     // ── Resolve the policy knob (one place) ──
     const { maxTiers, baseSize, source } = await this.resolvePolicy(ticker, params.strategyId);
 
-    // Existing tier count = max(position count, volume ÷ baseSize) — the
-    // retired logic; volume-over-base captures averaged entries on stock.
-    const totalVolume = open.reduce((s, p) => s + Number(p.volume ?? p.quantity ?? 0), 0);
-    const tier = Math.max(open.length, Math.ceil(totalVolume / baseSize));
-    const nextTier = tier + 1;
+    // #1242 — tier arithmetic and the four blockers are the shared decision, so the live path and any
+    // future caller (the backtest, when pyramiding is modelled) cannot disagree about them.
+    const verdict = pyramidVerdict({
+      symbol,
+      side,
+      brokerId,
+      open,
+      maxTiers,
+      baseSize,
+    });
 
-    if (maxTiers <= 1) {
-      blockers.push({
-        key: 'duplicate-position',
-        message: `Duplicate blocked for ${ticker}: ${open.length} open position(s) on ${brokerId.toUpperCase()}. Close existing or wait for cooldown.`,
-        hint: `Close ${open.map(p => (p.ticket ?? p.brokerTicket ? `#${p.ticket ?? p.brokerTicket}` : '')).filter(Boolean).join(', ') || 'the existing position'} — or set maxPyramidTiers > 1 on the bot to allow scale-in`,
-      });
-      return this.decide(ticker, true, tier, nextTier, maxTiers, baseSize, source, blockers);
-    }
-
-    // ── Scale-in conditions (symmetric for SHORT) ──
-    const totalProfit = open.reduce(
-      (s, p) => s + Number(p.profit ?? p.unrealizedPnl ?? 0),
-      0,
+    return this.decide(
+      ticker,
+      true,
+      verdict.tier,
+      verdict.nextTier,
+      verdict.maxTiers,
+      baseSize,
+      source,
+      verdict.blockers as PyramidBlocker[],
     );
-
-    // Profit locked in: broker SL actually set AND at breakeven-or-better
-    // relative to ENTRY (≥ entry for BUY, ≤ entry for SELL) — #721 decision 2.
-    const entry = this.entryOf(open[0]);
-    const sl = this.slOf(open[0]);
-    const lockedIn = sl != null && sl > 0 && entry != null && (
-      side === 'BUY' ? sl >= entry : sl <= entry
-    );
-
-    if (totalProfit <= 0) {
-      blockers.push({
-        key: 'scale-in-not-green',
-        message: `Scale-in blocked for ${ticker}: existing position is not in profit`,
-        hint: 'Close the losing position first — scaling into a loser is not allowed',
-      });
-    } else if (!lockedIn) {
-      blockers.push({
-        key: 'scale-in-not-locked',
-        message: `Scale-in blocked for ${ticker}: existing position's profit is not locked in`,
-        hint: 'Set a broker SL at breakeven-or-better on the open position',
-      });
-    } else if (nextTier > maxTiers) {
-      blockers.push({
-        key: 'max-tier',
-        message: `Pyramid tier limit reached (${tier}/${maxTiers})`,
-        hint: 'Raise maxPyramidTiers on the bot or wait for the position to close',
-      });
-    }
-    // otherwise: allowed — falls through.
-
-    return this.decide(ticker, true, tier, nextTier, maxTiers, baseSize, source, blockers);
   }
 
   /** Resolve the policy knob from the bot strategy, else the #720 default. */

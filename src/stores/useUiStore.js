@@ -23,7 +23,7 @@ export const useUiStore = create(
         set({ themePack: safePack });
       },
       setBackgroundTone: (tone) => {
-        const allowed = ['aura', 'slate', 'black'];
+        const allowed = ['aurora', 'aura', 'slate', 'black'];
         const safeTone = allowed.includes(tone) ? tone : 'aura';
         set({ backgroundTone: safeTone });
       },

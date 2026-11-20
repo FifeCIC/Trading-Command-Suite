@@ -392,6 +392,9 @@ export const NAV_TREE = {
       // ranked idea onto the same controls.
       // Hidden from other users by default — the route is in DEFAULT_HIDDEN_ROUTES.
       { id: 'movers-strategy-backtest', label: 'Movers Strategy', icon: '◫' },
+      // ⚠️ ADDED 2026-11-20 — the COLUMN form of the same strategy: one column per META.Stack phase,
+      // for a wide or multi-monitor view. A skeleton by design; hidden until it is reviewed.
+      { id: 'movers-cockpit', label: 'Movers Cockpit', icon: '🧭' },
       // ⚠️ ADDED 2026-11-04 (requirement). The A/B reference panels were a second rendering of
       // results on the strategies page — *"it has results displayed twice"* — so they moved here, to a
       // page about ONE strategy: the run you accepted (A), the latest run (B), side by side, and what

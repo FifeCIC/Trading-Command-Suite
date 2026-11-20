@@ -1,47 +1,53 @@
 /**
- * MoversStrategyBacktestPage — `/lab/movers-strategy-backtest` (#1319; reshaped 2026-11-19).
+ * MoversStrategyBacktestPage — `/lab/movers-strategy-backtest` (#1319; reshaped 2026-11-19/20).
+ *
+ * ── DECISION (2026-11-20, primary) ──
+ * WHAT:       One FORM container holds every input and collapses to a one-line summary when a run
+ *             starts; results are separate containers, one per META.Stack stage, and verbose help lives
+ *             in `WhyPopover` instead of paragraphs between sections.
+ * WHY:        Measured by the reader on 2026-11-20: *"This page is a mess… it doesn't follow design
+ *             standards"*, with the specific faults being form controls scattered down the page, a
+ *             stage strip that explained rather than showed, a "None" button that hid the one list a
+ *             reader wanted, and explanation prose dumped between containers.
+ * INSTEAD OF: A stage STRIP above the results. The stages are now the containers themselves, which is
+ *             what "clear sections" means; the phase list survives as `src/core/pipeline-phases.js`
+ *             because it is the guard and the future cockpit column spec, not a decoration.
+ * REVERSE BY: Re-inlining the controls and re-adding the strip; nothing else reads either.
+ * REGISTER:  docs/SETTLED-DECISIONS.md rows 234, 235
+ * GUARD:     src/core/pipeline-phases.test.js (a phase may not claim a section that renders nowhere)
  *
  * FOR ONE STRATEGY THAT CHOOSES ITS INSTRUMENT EACH DAY. Every other backtest page answers "would this
  * protocol have worked on THIS symbol?". This one answers the second question on top of it: "which
  * symbols was it even allowed to trade today?" — so the output is a per-day ranking plus the P/L of
  * only the symbols it picked.
  *
- * ── WHY THIS IS NOT A `subject` ON `/lab/backtest-strategies` ───────────────────────────────────
- * `BacktestPage.jsx` renders one symbol's curve. This result is a candidate list × per day. It reuses
- * the ENGINE (`POST /api/backtest/selection-run` calls `run()` once per selected symbol) and the
- * presentation components — not the page.
- *
- * ── WHAT THE FIRST VERSION GOT WRONG, AND WHAT REPLACED IT ─────────────────────────────────────
- * It offered every protocol in the app as a dropdown and every stored dataset as another, then ranked
- * all ten symbols of `movers-losers-2026-11-10` on all five sessions in that window. The ten symbols
- * are the losers of 11-10, so on the four earlier days the "top 3 movers" were ordinary names moving
- * ±3%, and the candidate list itself had been chosen with knowledge of how 11-10 ended.
- *
- * Now: a LONG/SHORT switch bound to the strategy's own two protocols, day toggles covering only the
- * datasets whose names carry a day, and ONE RUN PER DAY. The backend refuses a dataset whose window
- * does not contain its own answer day, so the page cannot silently rank a warm-up session again.
+ * ── WHERE THE NUMBERS COME FROM ────────────────────────────────────────────────────────────────
+ * The run resolves the LEG's bot and measures THAT BOT's configuration (`trade-config.ts`). Without it
+ * the engine's own literals are used — measured 2026-11-20, that turned a 2.5%/6% bot into a "1%/1%"
+ * result, −1,538.47 where the bot's own configuration made +767.64 on the same session.
  *
  * ⚠️ THE CUTOFF IS NOT A SETTING TO CASUALLY RAISE. The ranking reads bars at or before `cutoffUtc`
  * ONLY, and entries before it are dropped. Rank on a day's full move and trade from the open and you
- * score the strategy against the answer key: a beautiful number, and a strategy that cannot exist
- * live. The backend enforces it; the copy on screen explains it so nobody "fixes" it later.
+ * score the strategy against the answer key.
  *
- * ⚠️ THE RESIDUAL BIAS IS SHOWN, NOT BURIED. A dataset's candidate list was built from that day's
- * close-to-close move, so the LIST knows the outcome even though the ranking does not. Every run
- * returns that sentence in `caveats`, and it is rendered with the results. Removing it needs a
- * cutoff-time screen over the whole market (#1321); having more than one day per side needs a
- * repeatable builder (#1322).
+ * ⚠️ NO SYMBOL LIST IS SHOWN BEFORE A RUN. Live, nobody knows which names will be featured — the bot
+ * reads a feed at the cutoff. Showing today's ten names up front invites the reader to think the
+ * strategy chose them; it will show what it PICKED, after the fact, in the results.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import StatCard from '../components/backtest/StatCard.jsx';
-// ⚠️ `StatCard` is styled by the shared backtest panel base, which is imported where it is used rather
-// than globally — `CurrentStrategyPage.jsx` does the same. Without this the tiles render as bare text
-// with no grid, and nothing reports it.
+// ⚠️ `StatCard` is styled by the shared backtest panel base, imported where it is used rather than
+// globally — `CurrentStrategyPage.jsx` does the same. Without it the tiles render as bare text.
 import '../components/backtest/backtest-panel-base.css';
 import MoversDepthPanel from '../components/backtest/MoversDepthPanel.jsx';
+import TradeConfigPanel from '../components/backtest/TradeConfigPanel.jsx';
 import NoticeBlock from '../components/NoticeBlock.jsx';
+import WhyPopover from '../components/WhyPopover.jsx';
+// The canonical form standard (.ff-fieldset, .ff-legend, .ff-seg) — the form uses it instead of a
+// second dialect. `.mvp-field-row` is layout-only (content-sized wrapping rows); controls are canonical.
+import '../core/forms.css';
 import { noticeFromError } from '../core/notices/from-error.js';
 import { useSort, SortableTh } from '../core/use-sort';
 import './MoversStrategyBacktestPage.css';
@@ -63,8 +69,7 @@ const CUTOFF_OPTIONS = [
 
 /**
  * How long to wait between day runs. This is a THROTTLE, not a simulation speed: each day is a real
- * request that finishes when it finishes. "Watch" exists so a reader can follow the ranking appear
- * day by day instead of all at once.
+ * request that finishes when it finishes. "Watch" lets a reader follow the ranking appear day by day.
  */
 const PACE_OPTIONS = [
   { id: 'fast', label: 'Fast', gapMs: 0 },
@@ -77,7 +82,7 @@ const RUN_TIMEOUT_MS = 600_000;
 const fmtPct = (n) => (n == null || Number.isNaN(Number(n)) ? '—' : `${Number(n) >= 0 ? '+' : ''}${Number(n).toFixed(1)}%`);
 const fmtMoney = (n) => (n == null || Number.isNaN(Number(n)) ? '—' : Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 
-/** `2026-11-10` → `Mon 10 Nov`. Formatted from the string in UTC so no local timezone can shift it. */
+/** `2026-11-10` → `Mon 10 Nov`. Formatted in UTC from the string so no local timezone can shift it. */
 function dayLabel(date) {
   if (!date) return '—';
   const d = new Date(`${date}T12:00:00Z`);
@@ -101,6 +106,8 @@ export default function MoversStrategyBacktestPage() {
   /** Ask the run for the per-bar timeline. Off costs nothing; on is what the depth panel renders. */
   const [detailOn, setDetailOn] = useState(true);
   const [focusKey, setFocusKey] = useState(null);
+  /** The form folds away the moment a run starts, so the results own the screen. */
+  const [formOpen, setFormOpen] = useState(true);
 
   const [results, setResults] = useState([]);
   const [progress, setProgress] = useState(null); // { queue, done, current, startedAt, stopped }
@@ -112,8 +119,7 @@ export default function MoversStrategyBacktestPage() {
   const running = Boolean(progress?.current);
 
   // ⚠️ NO `.catch(() => …)`. Swallowing the error makes a failed request render as "no datasets",
-  // which reads as a fact about the data rather than a fact about the connection — and TanStack then
-  // stops retrying because the promise RESOLVED.
+  // which reads as a fact about the data rather than a fact about the connection.
   const datasetsQuery = useQuery({
     queryKey: ['bt-movers-datasets'],
     queryFn: () => apiGet('/api/backtest/movers-datasets'),
@@ -126,8 +132,7 @@ export default function MoversStrategyBacktestPage() {
   });
 
   // ⚠️ MEMOISED, NOT REBUILT PER RENDER. The `[]` fallback is a NEW array every render, which would
-  // make `daysForLeg` new every render, which would re-run the default-selection effect below with a
-  // changed dependency — a render loop before the query resolves.
+  // make `daysForLeg` new every render and re-fire the default-selection effect below.
   const datasets = useMemo(
     () => (Array.isArray(datasetsQuery.data?.datasets) ? datasetsQuery.data.datasets : []),
     [datasetsQuery.data],
@@ -152,7 +157,7 @@ export default function MoversStrategyBacktestPage() {
 
   const currentLegState = legAvailability.find((l) => l.key === legKey);
 
-  /** Datasets whose own name says they hold this leg's side, newest day last. */
+  /** Datasets whose own name says they hold this leg's side, oldest first. */
   const daysForLeg = useMemo(
     () => datasets.filter((d) => d.side === leg.side).sort((a, b) => a.answerDate.localeCompare(b.answerDate)),
     [datasets, leg.side],
@@ -163,10 +168,9 @@ export default function MoversStrategyBacktestPage() {
   // ticked, because the backend refuses that pairing and the page would then look broken.
   //
   // ⚠️ TRACKED BY LEG, NOT BY "is the selection empty". Deriving the default from emptiness means the
-  // effect re-fires after the reader presses **None**, and it means a leg whose lists have not loaded
-  // yet is indistinguishable from a leg with no lists. `selectedLeg` records which leg the current
-  // ticks belong to, and every return path below hands React the SAME array when nothing changed —
-  // a new-but-equal array would re-render forever.
+  // effect re-fires after the reader clears a day, and a leg whose lists have not loaded yet is
+  // indistinguishable from a leg with no lists. Every path hands React the SAME array when nothing
+  // changed — a new-but-equal array would re-render forever.
   const [selectedLeg, setSelectedLeg] = useState(null);
   useEffect(() => {
     if (!daysForLeg.length) return;
@@ -201,6 +205,7 @@ export default function MoversStrategyBacktestPage() {
   async function runAll() {
     stopRef.current = false;
     setResults([]);
+    setFormOpen(false); // the form folds away; its values stay visible in the summary line
     setProgress({ queue: runQueue, done: 0, current: runQueue[0], startedAt: Date.now(), stopped: false });
     setNow(Date.now());
 
@@ -218,8 +223,7 @@ export default function MoversStrategyBacktestPage() {
         collected.push(res);
       } catch (err) {
         // A failed day is REPORTED as a failed day — never dropped, never rendered as zero trades.
-        // ⚠️ The notice keeps the server's own wording as `detail` AND gives it a stable code, so the
-        // same failure is joinable across the UI, the log and an issue (#824/#826).
+        // ⚠️ The notice keeps the server's own wording as `detail` AND gives it a stable code (#824/#826).
         collected.push({
           datasetName: name,
           answerDate: datasetByName.get(name)?.answerDate ?? null,
@@ -239,6 +243,17 @@ export default function MoversStrategyBacktestPage() {
 
   const okRuns = results.filter((r) => !r.notice);
   const failedRuns = results.filter((r) => r.notice);
+
+  // The cockpit skeleton reads the LAST run from session storage — one tab, no persistence, so a
+  // half-built surface cannot become a second source of truth for a run.
+  useEffect(() => {
+    if (!okRuns.length) return;
+    try {
+      window.sessionStorage.setItem('tcs:movers-cockpit:last-run', JSON.stringify(okRuns[okRuns.length - 1]));
+    } catch {
+      /* a full or blocked store is not a reason to break the page */
+    }
+  }, [okRuns]);
 
   const totals = useMemo(() => {
     const trades = okRuns.reduce((a, r) => a + Number(r.totals?.trades ?? 0), 0);
@@ -310,25 +325,33 @@ export default function MoversStrategyBacktestPage() {
   );
   const focusedDepth = depthEntries.find((d) => d.key === focusKey) ?? depthEntries[0] ?? null;
 
-  const selectedSymbols = useMemo(() => {
-    const lines = daysForLeg
-      .filter((d) => selected.includes(d.name))
-      .map((d) => ({ name: d.name, answerDate: d.answerDate, symbols: d.symbols ?? [] }));
-    const union = new Set(lines.flatMap((l) => l.symbols));
-    return { lines, unionCount: union.size };
+  const selectedDaysLabel = useMemo(() => {
+    const lines = daysForLeg.filter((d) => selected.includes(d.name)).map((d) => dayLabel(d.answerDate));
+    if (!lines.length) return 'no day chosen';
+    return lines.length <= 3 ? lines.join(' · ') : `${lines.length} days`;
   }, [daysForLeg, selected]);
 
   return (
     <div className="mvp-page">
-      {/* ── 1 · the leg ─────────────────────────────────────────────────────────────────────── */}
-      <section className="mvp-block" aria-label="Strategy leg">
-        <div className="mvp-row">
-          <div className="mvp-seg" role="group" aria-label="Strategy leg">
+      {/* The Cockpit link is page NAVIGATION, not a form input — it lives above the form so it cannot be
+          mistaken for a control and cannot run on from the Leg toggle into the Day field (owner report
+          2026-11-20: the form head read as one run-on line, "LongShort🧭 CockpitDay?"). */}
+      <div className="mvp-page-actions">
+        <a className="mvp-cockpit-btn" href="/lab/movers-cockpit">
+          🧭 Cockpit
+        </a>
+      </div>
+      {/* ══ THE FORM — one container, every input, folds away when a run starts ═════════════════ */}
+      <section className="mvp-form" aria-label="Test settings">
+        <div className="mvp-form-head">
+          <div className="mvp-leg">
+            <span className="ff-label">Strategy</span>
+            <div className="ff-seg" role="group" aria-label="Strategy leg">
             {legAvailability.map((l) => (
               <button
                 key={l.key}
                 type="button"
-                className={`mvp-seg-btn${l.key === legKey ? ' mvp-seg-btn--on' : ''}`}
+                className="ff-seg-btn"
                 aria-pressed={l.key === legKey}
                 disabled={running || l.available === false}
                 title={l.why ?? `${l.protocolId} · ${l.blurb}`}
@@ -337,208 +360,215 @@ export default function MoversStrategyBacktestPage() {
                 {l.label}
               </button>
             ))}
+            </div>
           </div>
-          <p className="mvp-leg-note">
-            <strong>{leg.label}</strong> — {leg.blurb}. Protocol <code>{leg.protocolId}</code>
-            {currentLegState?.name ? ` (${currentLegState.name})` : ''}.
-          </p>
-        </div>
-        {currentLegState?.available === false && (
-          <p className="mvp-error" role="alert">
-            The {leg.label} leg cannot run: {currentLegState.why}.
-          </p>
-        )}
-        {currentLegState?.available === null && (
-          <p className="mvp-note">
-            Could not confirm the {leg.label} protocol exists — {currentLegState.why}. The Run button
-            stays enabled so the server can answer, but a missing protocol will be reported as an error
-            rather than as zero trades.
-          </p>
-        )}
-      </section>
 
-      {/* ── 2 · the days ────────────────────────────────────────────────────────────────────── */}
-      <section className="mvp-block" aria-label="Days to test">
-        <div className="mvp-block-head">
-          <h2>Days</h2>
-          <div className="mvp-head-actions">
+          {!formOpen && (
             <button
               type="button"
-              className="mvp-link-btn"
-              disabled={running || !daysForLeg.length}
-              onClick={() => setSelected(daysForLeg.map((d) => d.name))}
-            >
-              All
-            </button>
-            <button type="button" className="mvp-link-btn" disabled={running} onClick={() => setSelected([])}>
-              None
-            </button>
-          </div>
-        </div>
-
-        {datasetsQuery.isError && (
-          <NoticeBlock
-            notice={noticeFromError(datasetsQuery.error, 'TCS-SYS-002', {
-              operation: 'load the movers day lists',
-            })}
-          />
-        )}
-
-        {!datasetsQuery.isError && daysForLeg.length === 0 && (
-          <p className="mvp-note">
-            No stored list is a <strong>{leg.side}</strong> day. A day without a list cannot be tested —
-            the list IS that day&apos;s screen.
-          </p>
-        )}
-
-        <div className="mvp-chips" role="group" aria-label={`${leg.side} days`}>
-          {daysForLeg.map((d) => {
-            const on = selected.includes(d.name);
-            return (
-              <button
-                key={d.name}
-                type="button"
-                className={`mvp-chip${on ? ' mvp-chip--on' : ''}`}
-                aria-pressed={on}
-                disabled={running}
-                onClick={() => toggleDay(d.name)}
-                title={d.note || d.name}
-              >
-                <span className="mvp-chip-day">{dayLabel(d.answerDate)}</span>
-                <span className="mvp-chip-meta">
-                  {d.symbols?.length ?? 0} symbols · {d.timeframe}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {daysForLeg.length > 0 && (
-          <p className="mvp-note">
-            {daysForLeg.length} {leg.side} day{daysForLeg.length === 1 ? '' : 's'} stored.{' '}
-            {excluded.length > 0
-              ? `${excluded.length} other dataset(s) are not offered here — a day list must be named movers-{winners|losers}-YYYY-MM-DD, or there is no way to know which session it describes.`
-              : 'Every stored dataset is a day list.'}
-          </p>
-        )}
-
-        {selectedSymbols.lines.length > 0 && (
-          <details className="mvp-symbols" open={selectedSymbols.lines.length === 1}>
-            <summary>
-              Which symbols? {selectedSymbols.unionCount} distinct across {selectedSymbols.lines.length} day
-              {selectedSymbols.lines.length === 1 ? '' : 's'}
-            </summary>
-            {selectedSymbols.lines.map((l) => (
-              <div key={l.name} className="mvp-symbol-line">
-                <span className="mvp-symbol-day">{dayLabel(l.answerDate)}</span>
-                <span className="mvp-symbol-list">{l.symbols.join(', ') || '—'}</span>
-              </div>
-            ))}
-            <p className="mvp-note">
-              These are the candidates the ranking chooses from on that day. They are not pre-filtered by
-              the strategy — the protocol has to reject the ones it does not want.
-            </p>
-          </details>
-        )}
-      </section>
-
-      {/* ── 3 · the settings ────────────────────────────────────────────────────────────────── */}
-      <section className="mvp-block" aria-label="Run settings">
-        <div className="mvp-settings">
-          <div className="mvp-field">
-            <span className="mvp-field-label">Trade the top</span>
-            <div className="mvp-seg" role="group" aria-label="How many symbols per day">
-              {TOP_N_OPTIONS.map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  className={`mvp-seg-btn${n === topN ? ' mvp-seg-btn--on' : ''}`}
-                  aria-pressed={n === topN}
-                  disabled={running}
-                  onClick={() => setTopN(n)}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mvp-field">
-            <span className="mvp-field-label">Rank at (UTC · ET)</span>
-            <div className="mvp-seg" role="group" aria-label="Ranking cutoff">
-              {CUTOFF_OPTIONS.map((c) => (
-                <button
-                  key={c.utc}
-                  type="button"
-                  className={`mvp-seg-btn${c.utc === cutoffUtc ? ' mvp-seg-btn--on' : ''}`}
-                  aria-pressed={c.utc === cutoffUtc}
-                  disabled={running}
-                  title={`${c.label} — ${c.et} ET`}
-                  onClick={() => setCutoffUtc(c.utc)}
-                >
-                  {c.utc}
-                  <em>{c.et}</em>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mvp-field">
-            <span className="mvp-field-label">Pace between days</span>
-            <div className="mvp-seg" role="group" aria-label="Pace between day runs">
-              {PACE_OPTIONS.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className={`mvp-seg-btn${p.id === paceId ? ' mvp-seg-btn--on' : ''}`}
-                  aria-pressed={p.id === paceId}
-                  disabled={running}
-                  onClick={() => setPaceId(p.id)}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <label className="mvp-check">
-            <input
-              type="checkbox"
-              checked={detailOn}
+              className="mvp-summary"
+              aria-expanded={false}
+              onClick={() => setFormOpen(true)}
               disabled={running}
-              onChange={(e) => setDetailOn(e.target.checked)}
-            />
-            <span>
-              Record bar-by-bar detail
-              <em>scores · price · move · decision · directive breakdown</em>
-            </span>
-          </label>
-        </div>
-
-        <p className="mvp-rule">
-          ⏱ The ranking sees only bars at or before the cutoff, and an entry before it is not counted.
-          Ranking on a day&apos;s full move and trading from the open would score the strategy against
-          the answer key.
-        </p>
-
-        <div className="mvp-run-row">
-          <button type="button" className="mvp-run" disabled={!canRun} onClick={runAll}>
-            {running
-              ? `Running ${dayLabel(progress?.current)}…`
-              : `Run ${runQueue.length} day${runQueue.length === 1 ? '' : 's'}`}
-          </button>
-          {running && (
-            <button type="button" className="mvp-stop" onClick={() => { stopRef.current = true; }}>
-              Stop after this day
+            >
+              <span className="mvp-summary-leg">{leg.label}</span>
+              <span>{selectedDaysLabel}</span>
+              <span>top {topN}</span>
+              <span>{cutoffUtc} UTC</span>
+              <span className="mvp-summary-edit">Change</span>
             </button>
           )}
-          {!running && runQueue.length === 0 && <span className="mvp-note">Pick at least one day.</span>}
+
+          {formOpen && running && (
+            <div className="mvp-form-actions">
+              <button type="button" className="mvp-link-btn" onClick={() => setFormOpen(false)}>
+                Hide settings
+              </button>
+            </div>
+          )}
         </div>
+
+        {formOpen && (
+          <>
+            <div className="ff-form">
+              <fieldset className="ff-fieldset">
+                <legend className="ff-legend">Sessions &amp; selection</legend>
+              {/* ── days ── */}
+              <div className="ff-field" id="mvp-sec-data">
+                <span className="ff-label">
+                  Day
+                  <WhyPopover title="What a day is">
+                    Each stored list is a screen of ONE session — the date in its name. The earlier
+                    sessions in its window are directive warm-up and are never reported as results.
+                  </WhyPopover>
+                </span>
+                {datasetsQuery.isError ? (
+                  <NoticeBlock
+                    notice={noticeFromError(datasetsQuery.error, 'TCS-SYS-002', {
+                      operation: 'load the movers day lists',
+                    })}
+                  />
+                ) : daysForLeg.length === 0 ? (
+                  <p className="mvp-note">
+                    No stored list is a <strong>{leg.side}</strong> day — a day without a list cannot be
+                    tested, because the list IS that day’s screen.
+                  </p>
+                ) : (
+                  <div className="mvp-chips" role="group" aria-label={`${leg.side} days`}>
+                    {daysForLeg.map((d) => {
+                      const on = selected.includes(d.name);
+                      return (
+                        <button
+                          key={d.name}
+                          type="button"
+                          className={`mvp-chip${on ? ' mvp-chip--on' : ''}`}
+                          aria-pressed={on}
+                          disabled={running}
+                          onClick={() => toggleDay(d.name)}
+                          title={d.note || d.name}
+                        >
+                          <span className="mvp-chip-day">{dayLabel(d.answerDate)}</span>
+                          <span className="mvp-chip-meta">{d.symbols?.length ?? 0} symbols</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="mvp-field-row">
+              {/* ── picks + cutoff ── */}
+              <div className="ff-field" id="mvp-sec-selection">
+                <span className="ff-label">Trade the top</span>
+                <div className="ff-seg" role="group" aria-label="How many symbols per day">
+                  {TOP_N_OPTIONS.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className="ff-seg-btn"
+                      aria-pressed={n === topN}
+                      disabled={running}
+                      onClick={() => setTopN(n)}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="ff-field">
+                <span className="ff-label">
+                  Rank at
+                  <WhyPopover title="Why the cutoff matters">
+                    The ranking sees only bars up to this moment, and no entry before it counts. Ranking
+                    on a day’s full move and then trading from the open would score the strategy against
+                    the answer key.
+                  </WhyPopover>
+                </span>
+                <div className="ff-seg" role="group" aria-label="Ranking cutoff">
+                  {CUTOFF_OPTIONS.map((c) => (
+                    <button
+                      key={c.utc}
+                      type="button"
+                      className="ff-seg-btn"
+                      aria-pressed={c.utc === cutoffUtc}
+                      disabled={running}
+                      title={`${c.label} — ${c.et} ET`}
+                      onClick={() => setCutoffUtc(c.utc)}
+                    >
+                      {c.utc}
+                      <span className="mvp-et">{c.et}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              </div>
+              </fieldset>
+
+              <fieldset className="ff-fieldset">
+                <legend className="ff-legend">Run options</legend>
+                <div className="mvp-field-row">
+              <div className="ff-field">
+                <span className="ff-label">Pace</span>
+                <div className="ff-seg" role="group" aria-label="Pace between day runs">
+                  {PACE_OPTIONS.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="ff-seg-btn"
+                      aria-pressed={p.id === paceId}
+                      disabled={running}
+                      onClick={() => setPaceId(p.id)}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="ff-field">
+                <span className="ff-label">Detail</span>
+                <label className="mvp-check">
+                  <input
+                    type="checkbox"
+                    checked={detailOn}
+                    disabled={running}
+                    onChange={(e) => setDetailOn(e.target.checked)}
+                  />
+                  <span>
+                    Bar-by-bar detail
+                    <em>scores · price · move · decision · breakdown</em>
+                  </span>
+                </label>
+              </div>
+                </div>
+              </fieldset>
+            </div>
+
+            <div className="mvp-run-row">
+              <div className="ff-actions">
+                {running && (
+                  <button
+                    type="button"
+                    className="ff-btn ff-btn-secondary"
+                    onClick={() => { stopRef.current = true; }}
+                  >
+                    Stop after this day
+                  </button>
+                )}
+                <button type="button" className="ff-btn ff-btn-primary" disabled={!canRun} onClick={runAll}>
+                  {running
+                    ? `Running ${dayLabel(progress?.current)}…`
+                    : `Run ${runQueue.length} day${runQueue.length === 1 ? '' : 's'}`}
+                </button>
+              </div>
+              <div className="mvp-run-notes">
+                {!running && runQueue.length === 0 && <span className="mvp-note">Pick a day to run.</span>}
+                {currentLegState?.available === false && (
+                  <span className="mvp-note">The {leg.label} leg cannot run: {currentLegState.why}.</span>
+                )}
+                {!running && daysForLeg.length > 1 && (
+                  <span className="mvp-note">
+                    Tick several days to compare them — the totals then describe the whole selection.
+                  </span>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {currentLegState?.available === null && (
+          <p className="mvp-note">
+            Could not confirm the {leg.label} protocol exists — {currentLegState.why}. Run stays enabled
+            so the server can answer, and a missing protocol is reported as an error rather than as zero
+            trades.
+          </p>
+        )}
       </section>
 
-      {/* ── 4 · progress ────────────────────────────────────────────────────────────────────── */}
+      {/* ══ PROGRESS ════════════════════════════════════════════════════════════════════════════ */}
       {progress && (
-        <section className="mvp-block mvp-block--run" aria-label="Run progress">
+        <section className="mvp-panel" aria-label="Run progress">
           <div className="mvp-progress-head">
             <span className="mvp-progress-count">
               {progress.done} of {progress.queue.length} day{progress.queue.length === 1 ? '' : 's'}
@@ -576,7 +606,7 @@ export default function MoversStrategyBacktestPage() {
 
           <p className="mvp-progress-status" role="status" aria-live="polite">
             {progress.current
-              ? `Running ${dayLabel(progress.current)} — ranking its ${datasetByName.get(progress.current)?.symbols?.length ?? '?'} candidates, then the engine on the symbols it picked.`
+              ? `Running ${dayLabel(progress.current)} — ranking its ${datasetByName.get(progress.current)?.symbols?.length ?? '?'} candidates, then the engine on what it picked.`
               : progress.stopped
                 ? 'Stopped. Days already finished are shown below.'
                 : 'Finished.'}
@@ -587,10 +617,7 @@ export default function MoversStrategyBacktestPage() {
               <li key={r.datasetName} className={r.notice ? 'mvp-log-line mvp-log-line--bad' : 'mvp-log-line'}>
                 <span className="mvp-log-day">{dayLabel(r.answerDate ?? datasetByName.get(r.datasetName)?.answerDate)}</span>
                 {r.notice ? (
-                  <span>
-                    {r.notice.title}
-                    {r.notice.detail ? ` — ${r.notice.detail}` : ''}
-                  </span>
+                  <span>{r.notice.title}{r.notice.detail ? ` — ${r.notice.detail}` : ''}</span>
                 ) : (
                   <span>
                     picked <strong>{r.days?.[0]?.selected?.join(', ') || 'nothing'}</strong> —{' '}
@@ -603,59 +630,68 @@ export default function MoversStrategyBacktestPage() {
         </section>
       )}
 
-      {/* ── 5 · results ─────────────────────────────────────────────────────────────────────── */}
+      {/* ══ RESULTS ═════════════════════════════════════════════════════════════════════════════ */}
       {results.length > 0 && (
-        <>
-          <div className="mvp-tallies">
-            <StatCard
-              value={String(okRuns.length)}
-              label="Days measured"
-              note={`Out of ${results.length} attempted${failedRuns.length ? `, ${failedRuns.length} failed` : ''}.`}
-            />
-            <StatCard
-              value={String(totals.selections)}
-              label="Picks made"
-              note={`Top ${topN} of each day's list, chosen at ${cutoffUtc} UTC.`}
-            />
-            <StatCard
-              value={String(totals.trades)}
-              label="Trades"
-              note="Trades the engine produced on the symbols a day picked, at or after the cutoff."
-            />
-            <StatCard
-              value={totals.winRate == null ? '—' : `${totals.winRate.toFixed(1)}%`}
-              label="Win rate"
-              note="Across every kept trade. A blank means no trade was produced, not zero wins."
-            />
-            <StatCard
-              value={fmtMoney(totals.netPnl)}
-              label="Net P/L"
-              note="Sum of the kept trades' P/L, after the engine's own costs."
-            />
-          </div>
-
-          {failedRuns.length > 0 && (
-            <div className="mvp-failures" role="alert">
-              <p className="mvp-note">
-                {failedRuns.length} day(s) failed and are excluded from the totals above. They are shown
-                here rather than as zero-trade days.
-              </p>
-              {failedRuns.map((r) => (
-                <NoticeBlock key={r.datasetName} notice={r.notice} compact />
-              ))}
+        <div id="mvp-sec-outcome" className="mvp-outcome">
+          <section className="mvp-panel" aria-label="Totals">
+            <div className="mvp-tallies">
+              <StatCard
+                value={String(okRuns.length)}
+                label="Days measured"
+                note={`Out of ${results.length} attempted${failedRuns.length ? `, ${failedRuns.length} failed` : ''}.`}
+              />
+              <StatCard
+                value={String(totals.selections)}
+                label="Picks made"
+                note={`Top ${topN} of each day's list, chosen at ${cutoffUtc} UTC.`}
+              />
+              <StatCard
+                value={String(totals.trades)}
+                label="Trades"
+                note="Trades the engine produced on the symbols a day picked, at or after the cutoff."
+              />
+              <StatCard
+                value={totals.winRate == null ? '—' : `${totals.winRate.toFixed(1)}%`}
+                label="Win rate"
+                note="Across every kept trade. A blank means no trade was produced, not zero wins."
+              />
+              <StatCard
+                value={fmtMoney(totals.netPnl)}
+                label="Net P/L"
+                note="Sum of the kept trades' P/L, after the engine's own costs."
+              />
             </div>
-          )}
 
-          {caveats.length > 0 && (
-            <ul className="mvp-caveats">
-              {caveats.map((c) => (
-                <li key={c}>{c}</li>
-              ))}
-            </ul>
-          )}
+            {failedRuns.length > 0 && (
+              <div className="mvp-failures" role="alert">
+                <p className="mvp-note">
+                  {failedRuns.length} day(s) failed and are excluded from the totals above. They are shown
+                  here rather than as zero-trade days.
+                </p>
+                {failedRuns.map((r) => (
+                  <NoticeBlock key={r.datasetName} notice={r.notice} compact />
+                ))}
+              </div>
+            )}
 
-          <section className="mvp-block" aria-label="Result by day">
-            <h2>Result by day</h2>
+            {caveats.length > 0 && (
+              <ul className="mvp-caveats">
+                {caveats.map((c) => (
+                  <li key={c}>{c}</li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="mvp-panel" aria-label="Result by day">
+            <h2 className="mvp-panel-title">
+              Result by day
+              <WhyPopover title="How to read this table">
+                Each row is one session. “Ranked at cutoff” is every candidate with its move at that
+                moment; the highlighted ones are what the ranking picked. “Excluded” counts trades the
+                engine produced that the selection did not permit.
+              </WhyPopover>
+            </h2>
             <div className="mvp-scroll">
               <table className="mvp-table">
                 <thead>
@@ -709,8 +745,8 @@ export default function MoversStrategyBacktestPage() {
             </div>
           </section>
 
-          <section className="mvp-block" aria-label="Result by symbol">
-            <h2>Result by symbol</h2>
+          <section className="mvp-panel" aria-label="Result by symbol">
+            <h2 className="mvp-panel-title">Result by symbol</h2>
             {symbolRows.length === 0 ? (
               <p className="mvp-note">No symbol was traded in any day that finished.</p>
             ) : (
@@ -743,10 +779,18 @@ export default function MoversStrategyBacktestPage() {
             )}
           </section>
 
-          {/* ── 6 · bar-by-bar scrutiny ──────────────────────────────────────────────────────── */}
-          <section className="mvp-block" aria-label="Bar by bar">
-            <div className="mvp-block-head">
-              <h2>Bar by bar</h2>
+          {excluded.length > 0 && (
+            <p className="mvp-note">
+              {excluded.length} other stored dataset(s) are not offered here — a day list must be named
+              {' '}<code>movers-{'{winners|losers}'}-YYYY-MM-DD</code>, or there is no way to know which
+              session it describes.
+            </p>
+          )}
+
+          {/* ── bar by bar ── */}
+          <section className="mvp-panel" aria-label="Bar by bar">
+            <div className="mvp-panel-head">
+              <h2 className="mvp-panel-title">Bar by bar</h2>
               {depthEntries.length > 1 && (
                 <div className="mvp-chips" role="group" aria-label="Symbol and day to scrutinise">
                   {depthEntries.map((e) => (
@@ -769,12 +813,15 @@ export default function MoversStrategyBacktestPage() {
               <MoversDepthPanel symbol={focusedDepth.symbol} day={focusedDepth.day} detail={focusedDepth.detail} />
             ) : (
               <p className="mvp-note">
-                No per-bar detail was returned. Turn on <strong>Record bar-by-bar detail</strong> above and
-                run again — a run without it keeps one composite per bar and no decomposition.
+                No per-bar detail was returned. Turn on <strong>Bar-by-bar detail</strong> above and run
+                again — a run without it keeps one composite per bar and no decomposition.
               </p>
             )}
           </section>
-        </>
+
+          {/* ── which configuration these numbers describe ── */}
+          <TradeConfigPanel tradeConfig={okRuns[0]?.tradeConfig} />
+        </div>
       )}
     </div>
   );

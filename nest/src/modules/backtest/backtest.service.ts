@@ -43,6 +43,12 @@ import { signalProfitFactor as signalProfitFactorOf, tradeProfitFactor as tradeP
 // The per-bar "% change today" the score must be read against — one definition, shared with the
 // movers ranker's denominator (#1319 follow-up, 2026-11-20).
 import { createSessionChangeTracker } from './session-change';
+// #1242 — ONE trailing-stop formula for the live guardian and this engine. The STRENGTH still differs
+// (live records the decision point, the engine moves the stop) and that is stated in the module.
+import { trailTriggerPrice } from '../../common/trading/exit-guardian/simulated-tsl';
+// #1242 — the bracket's stop price is the guardian's protective stop, so a run tests the level the live
+// path would place. ⚠️ `slPct: 0` still means "no bracket" HERE (doBrackets) while it means 1% live.
+import { protectiveStopPrice } from '../../common/trading/exit-guardian/protective-stop';
 import {
   scoringTotals,
   tradeTotals,
@@ -2033,7 +2039,24 @@ export class BacktestService {
           // BELOW; `side` carries the sign so every level below is one expression. Getting this backwards
           // would not throw — it would place a short's stop on the profitable side and book a guaranteed
           // loss, which is the plausible-number-no-error class this repo keeps paying for.
-          const slPrice = currentClose * (1 - (side * slPct) / 100);
+          //
+          // #1242 — the STOP is now the guardian's own protective-stop formula, so a run tests the price
+          // the live path would place rather than an expression that happens to agree with it. It is only
+          // reached when `doBrackets`, so `slPct: 0` still means "no bracket" here (live: 1%).
+          const slPriceRaw = protectiveStopPrice({
+            side: isLong ? 'buy' : 'sell',
+            entryPrice: currentClose,
+            slPct,
+          });
+          // `doBrackets` guarantees a usable percentage, so a null here would be an entry price of 0 —
+          // refuse loudly rather than trade a bracket with a fabricated stop.
+          if (slPriceRaw === null) {
+            throw new Error(
+              `Bracket stop could not be computed at ${currentBar.timestamp.toISOString()} `
+              + `(close ${currentClose}, slPct ${slPct}) — refusing to trade a fabricated stop.`,
+            );
+          }
+          const slPrice = slPriceRaw;
           const tpPrice = currentClose * (1 + (side * tpPct) / 100);
 
           let exitPrice = currentClose;
@@ -2171,10 +2194,11 @@ export class BacktestService {
               // 1. Lock at breakeven once the trade is far enough in front.
               if (plan.lockAtPct != null && gainPct >= plan.lockAtPct) {
                 candidate = Math.max(candidate, currentClose);
-              }
-              // 2. Trail a fixed distance behind the best price.
+              }              // 2. Trail a fixed distance behind the best price.
               if (plan.trailPct != null && gainPct > 0) {
-                const trailStop = isLong ? bestPrice * (1 - plan.trailPct / 100) : bestPrice * (1 + plan.trailPct / 100);
+                // ⚠️ THE FORMULA IS THE GUARDIAN'S (#1242). `trailTriggerPrice()` is the same
+                // expression `observeSimulatedTsl()` uses on the live path, so the two cannot drift.
+                const trailStop = trailTriggerPrice(isLong ? 'buy' : 'sell', bestPrice, plan.trailPct);
                 candidate = isLong ? Math.max(candidate, trailStop) : Math.min(candidate, trailStop);
               }
               // 3. Step-tighten: every `stepPct` of favourable move, pull the stop in by `tightenPct`.

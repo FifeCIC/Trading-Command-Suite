@@ -10,53 +10,183 @@
  * notices. Guard: `node scripts/validate-css-tokens.cjs`.
  */
 
+/* ── the form: sections supply the cards, so this is NOT its own panel ────────────────────────── */
+/* Measured 2026-11-20: a panel border here wrapped two bordered fieldsets, so every group drew a
+   second box inside the first and the whole block read as clutter. The `.ff-fieldset` groups are the
+   visible containers now; the section just spaces them. */
+.mvp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* A form is a bounded block, not a full-bleed page. Measured 2026-11-20: at the page's full 1400px
+     the two-column row spread a 150px toggle and a 380px toggle to opposite edges with ~700px of dead
+     space between them — the "worst mess" the owner reported. Bounding the width keeps controls close
+     together and the section borders from becoming mostly-empty boxes. */
+  max-width: 840px;
+}
+
+/* Content-sized rows, not a 1fr/1fr grid: each field takes the width of its control and the row wraps
+   on a narrow screen. `align-items: flex-start` lines the labels up along the top. */
+.mvp-field-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px 24px;
+}
+
+.mvp-field-row > .ff-field {
+  flex: 0 0 auto;
+}
+
+/* The field label and its "?" sit on one tidy line instead of the button dropping to a second line. */
+.mvp-form .ff-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The shared global rule gives every button a 24px minimum, which turns the 18px "?" into a chunky
+   pill beside a 12px label. Render it at its designed 18px and widen only the HIT area, so the glyph
+   stays small without shrinking the tap target. */
+.mvp-form .why-pop-btn {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.mvp-form .why-pop-btn::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 999px;
+}
+
+.mvp-form-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+/* The strategy leg reads as a labelled switch, not a bare pair of pills. */
+.mvp-leg {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* The ET equivalent inside a UTC cutoff button — small and quiet, so the UTC time stays the label. */
+.mvp-et {
+  margin-left: 5px;
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+
+.mvp-run-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mvp-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mvp-page-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ⚠️ GROUPED FIELDS, NOT ONE FLAT WRAPPING ROW (owner report 2026-11-20). The Appearance area's own
+   LAYOUT_GUIDANCE rule says a form past ~5 fields must group its fields by DECISION — a single
+   `flex-wrap` row of mixed-width controls scatters them and reads as a form sprinkled down the page.
+   Field ROWS reuse the canonical `.ff-row-2` (src/core/forms.css); only the group wrapper is local. */
+.mvp-summary {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 7px 10px;
+  min-height: 34px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.mvp-summary:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.mvp-summary:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.mvp-summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.mvp-summary-leg {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.mvp-summary-edit {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.mvp-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.mvp-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mvp-panel-title {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .mvp-page {
   padding: 16px 20px 40px;
   color: var(--ink);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   max-width: 1400px;
-}
-
-.mvp-block {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.mvp-block-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.mvp-block h2 {
-  margin: 0;
-  font-size: 13px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-}
-
-.mvp-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.mvp-leg-note {
-  margin: 0;
-  font-size: 12px;
-  color: var(--ink-soft);
-}
-
-.mvp-leg-note code {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-dim);
 }
 
 /* ── segmented controls ─────────────────────────────────────────────────────────────────────────── */
@@ -251,9 +381,8 @@
 
 .mvp-run-row {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .mvp-run {
@@ -447,7 +576,13 @@
   align-items: flex-start;
   font-size: 12px;
   color: var(--ink-soft);
-  max-width: 240px;
+}
+
+/* Stack the label above its description so neither has to wrap into a column beside the other. */
+.mvp-check > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .mvp-check input {
@@ -468,6 +603,99 @@
 .mvp-chip--tight {
   min-height: 32px;
   padding: 4px 10px;
+}
+
+/* ── cockpit launch ───────────────────────────────────────────────────────────────────────────── */
+.mvp-cockpit-btn {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 14px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.mvp-cockpit-btn:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+}
+
+.mvp-cockpit-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── trade-management provenance ───────────────────────────────────────────────────────────── */
+.mvp-config-summary {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* A run with no bot is the state that produced a wrong conclusion once — it gets the accent, not a
+   quiet grey. */
+.mvp-config-summary--warn {
+  border-color: var(--risk-critical);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--risk-critical) 8%, var(--bg-elev));
+}
+
+.mvp-config-row--ignored td {
+  opacity: 0.72;
+}
+
+.mvp-config-note {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  max-width: 60ch;
+}
+
+.mvp-config-botv {
+  display: block;
+  font-size: 10px;
+  color: var(--risk-critical);
+  font-weight: 600;
+}
+
+.mvp-source {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+}
+
+.mvp-source--bot {
+  color: var(--risk-normal);
+  border-color: var(--risk-normal);
+}
+
+.mvp-source--request {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+}
+
+.mvp-source--default {
+  color: var(--risk-critical);
+  border-color: var(--risk-critical);
 }
 
 /* ── bar-by-bar depth panels ────────────────────────────────────────────────────────────────── */
@@ -556,6 +784,16 @@
 .mvp-state--warn {
   color: var(--ink);
   border-color: var(--ink-soft);
+}
+
+.mvp-state--bad {
+  color: var(--risk-critical);
+  border-color: var(--risk-critical);
+}
+
+.mvp-state--gate {
+  color: var(--text-dim);
+  border-style: dashed;
 }
 
 .mvp-state--none {
@@ -675,21 +913,70 @@
   background: var(--accent);
 }
 
-.mvp-directive-why {
-  display: block;
-  font-family: inherit;
-  font-size: 10px;
-  line-height: 1.45;
-  color: var(--text-dim);
-  white-space: normal;
-  max-width: 46ch;
-  margin-top: 2px;
+.mvp-directive-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .mvp-failures {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.mvp-outcome {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── pipeline coverage strip ──────────────────────────────────────────────────────────────────── */
+.mvp-phases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.mvp-phase {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  background: var(--bg);
+  text-decoration: none;
+}
+
+.mvp-phase em {
+  font-style: normal;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mvp-phase--on {
+  color: var(--ink-soft);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+
+.mvp-phase--on:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+}
+
+.mvp-phase--absent {
+  border-style: dashed;
+}
+
+.mvp-phase:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .mvp-error {

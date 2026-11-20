@@ -579,6 +579,18 @@ const QA_CHECKLIST = [
     versionNote: '2026-11-20 — #1319 follow-up. ⚠️ The state labels are DERIVED and say so; the engine records no per-bar decision reason (#1323), and a bar that signalled without trading prints that in words rather than a guess. ⚠️ `price` and `changePct` are new on the score series — measured against the previous SESSION close, not the previous bar, or a +430% day would read as a string of small moves. ⚠️ A rung exceeding its own denominator is a broken number: that invariant caught the first build reporting "53 of 44".',
   },
 
+  {
+    id: 'qa-backtest-trade-config-001',
+    area: 'Backtesting',
+    system: 'trade-config.ts · resolveBotForRun() · POST /api/backtest/selection-run · TradeConfigPanel.jsx',
+    name: 'A backtest resolves the bot, and every trade-management number declares its source and whether the engine applies it',
+    procedure: 'Run `npm --prefix nest test -- trade-config` (7 cases). Then `POST /api/backtest/selection-run` twice with identical bodies for `movers-winners-2026-11-11` / `movers-v1-long` / Top N 1 / cutoff 15:30 — once as-is, once with `"botId": null`. Compare `tradeConfig` and `perSymbol[0].netPnl`.',
+    expected: 'Suite: **7 passed**. With the bot: `resolvedBy: "auto"`, `bot: Movers V1 Long Bot (INACTIVE, manual)`, stop **2.5%/bot**, target **6%/bot**, entry bar **30%/bot**, and `applied: false` on cooldown / max positions / session window / position size. Measured result **29 trades, 10 wins, 34.5%, net +767.64**. With `"botId": null`: every field reads `engine-default`, stop 1 / target 1 / entry bar 0, and the result is **44 trades, 16 wins, 36.4%, net −1,538.47**. ⚠️ The second win rate is the 36.4% that was reported as the strategy’s performance — the difference is entirely the configuration, not the strategy.',
+    category: 'Data integrity',
+    priority: 'high',
+    versionNote: '2026-11-20 — #1319 follow-up, register row 233. ⚠️ Before this, the page could not tell a bot value from an engine literal, and a conclusion was drawn from the wrong one. ⚠️ `applied: false` rows are the second half of the answer: the engine reads no cooldown, no position cap, no session window and sizes differently, so the run is silent about them (#1325).',
+  },
+
   // ═══════════════════════════════════════════════════
   // DUPLICATE PREVENTION
   // ═══════════════════════════════════════════════════

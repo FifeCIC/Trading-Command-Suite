@@ -114,6 +114,7 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   // removed from this list only once the owner has looked at it. A page nobody has reviewed must not
   // appear in someone else's navigation.
   '/lab/movers-strategy-backtest',
+  '/lab/movers-cockpit',
 
   // ── Pack 5: too weak to show, kept for the requirement to finish (2026-11-06) ───────────────────────
   // Owner, Research walkthrough: hide these *from other users* while they are still being worked on.

@@ -21,6 +21,7 @@
  * legend, but two views of one instant.
  */
 import { useMemo, useState } from 'react';
+import WhyPopover from '../WhyPopover.jsx';
 
 const fmtPct = (n) => (n == null || Number.isNaN(Number(n)) ? '—' : `${Number(n) >= 0 ? '+' : ''}${Number(n).toFixed(1)}%`);
 const fmtMoney = (n) => (n == null || Number.isNaN(Number(n)) ? '—' : Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
@@ -47,6 +48,15 @@ const STATE_TONE = {
   'bar-gate': 'gate',
   'no-data': 'none',
   quiet: 'none',
+};
+
+/** An exit reason carries a tone, so a stop-out and a target are distinguishable at a glance. */
+const EXIT_TONE = {
+  TP: 'entry',
+  SL: 'bad',
+  TIME: 'warn',
+  TRAIL: 'exit',
+  EOD: 'none',
 };
 
 /** The decision in words, using ONLY recorded facts. */
@@ -96,7 +106,7 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
   return (
     <div className="mvp-depth">
       {/* ── 1 · the ladder ─────────────────────────────────────────────────────────────────────── */}
-      <section aria-label="Pipeline steps">
+      <section id="mvp-sec-ladder" aria-label="Pipeline steps">
         <h3 className="mvp-depth-title">
           {symbol} · {day} — from the day’s list to a closed trade
         </h3>
@@ -119,7 +129,7 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
           })}
         </ol>
         {detail.runCounters && (
-          <p className="mvp-note">
+          <p className="mvp-note" id="mvp-sec-persistence">
             The run’s own counters for this symbol: <strong>{detail.runCounters.totalSignals ?? '—'}</strong>{' '}
             entry signals · <strong>{detail.runCounters.signalsWithoutTrade ?? '—'}</strong> without a trade ·{' '}
             <strong>{detail.runCounters.tradesRefusedUnaffordable ?? '—'}</strong> refused as unaffordable.
@@ -130,7 +140,7 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
 
       {/* ── 2 · the two linked tables ──────────────────────────────────────────────────────────── */}
       <div className="mvp-depth-grid">
-        <section aria-label="Bars and scores">
+        <section id="mvp-sec-bars" aria-label="Bars and scores">
           <h3 className="mvp-depth-title">Bars &amp; scores <span className="mvp-muted">(UTC)</span></h3>
           <div className="mvp-scroll mvp-depth-scroll">
             <table className="mvp-table">
@@ -191,7 +201,7 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
           </div>
         </section>
 
-        <section aria-label="Decisions">
+        <section id="mvp-sec-decisions" aria-label="Decisions">
           <h3 className="mvp-depth-title">Decisions <span className="mvp-muted">(one per bar, derived)</span></h3>
           <div className="mvp-scroll mvp-depth-scroll">
             <table className="mvp-table">
@@ -238,8 +248,66 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
         </section>
       </div>
 
-      {/* ── 3 · the decomposition of the pinned bar ────────────────────────────────────────────── */}
-      <section aria-label="Directive breakdown">
+      {/* ── 3 · executions — the per-trade record the phases need ─────────────────────────────── */}
+      <section id="mvp-sec-execution" aria-label="Executions">
+        <h3 className="mvp-depth-title">
+          Executions <span className="mvp-muted">({detail.trades.length} the engine took · {detail.trades.filter((t) => !t.kept).length} refused by the selection)</span>
+        </h3>
+        {detail.trades.length === 0 ? (
+          <p className="mvp-note">The engine opened no trade on this session.</p>
+        ) : (
+          <div className="mvp-scroll mvp-depth-scroll">
+            <table className="mvp-table">
+              <thead>
+                <tr>
+                  <th scope="col">In</th>
+                  <th scope="col" className="mvp-num">Price</th>
+                  <th scope="col">Out</th>
+                  <th scope="col" className="mvp-num">Price</th>
+                  <th scope="col">Side</th>
+                  <th scope="col" className="mvp-num">Bars</th>
+                  <th scope="col">Exit</th>
+                  <th scope="col" className="mvp-num">P/L</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...detail.trades]
+                  .sort((a, b) => String(a.entryDate).localeCompare(String(b.entryDate)))
+                  .map((t, i) => {
+                    const bars = Math.max(
+                      0,
+                      Math.round((new Date(t.exitDate) - new Date(t.entryDate)) / 300_000),
+                    );
+                    return (
+                      <tr key={`${t.entryDate}-${i}`} className={t.kept ? '' : 'mvp-config-row--ignored'}>
+                        <td className="mvp-nowrap">{clock(t.entryDate)}</td>
+                        <td className="mvp-num">{fmtPrice(t.entryPrice)}</td>
+                        <td className="mvp-nowrap">{clock(t.exitDate)}</td>
+                        <td className="mvp-num">{fmtPrice(t.exitPrice)}</td>
+                        <td className="mvp-nowrap mvp-muted">
+                          {t.direction}
+                          {!t.kept && <span className="mvp-depth-pre" title="the selection refused this trade">refused</span>}
+                        </td>
+                        <td className="mvp-num">{bars}</td>
+                        <td className="mvp-nowrap">
+                          <span className={`mvp-state mvp-state--${EXIT_TONE[t.exitReason] ?? 'none'}`}>
+                            {t.exitReason}
+                          </span>
+                        </td>
+                        <td className={`mvp-num ${t.kept && t.pnl > 0 ? 'mvp-pos' : t.kept && t.pnl < 0 ? 'mvp-neg' : 'mvp-muted'}`}>
+                          {t.kept ? fmtMoney(t.pnl) : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* ── 4 · the decomposition of the pinned bar ────────────────────────────────────────────── */}
+      <section id="mvp-sec-directives" aria-label="Directive breakdown">
         <h3 className="mvp-depth-title">
           Why {focused ? clock(focused.time) : '—'} scored {focused ? Number(focused.score).toFixed(1) : '—'}
         </h3>
@@ -252,7 +320,7 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
         ) : (
           <>
             {focused.groups && Object.keys(focused.groups).length > 0 && (
-              <div className="mvp-group-row">
+              <div className="mvp-group-row" id="mvp-sec-protocol">
                 {Object.entries(focused.groups).map(([id, pct]) => (
                   <span key={id} className="mvp-group-pill">
                     {id}
@@ -268,7 +336,7 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
                     <th scope="col">Directive</th>
                     <th scope="col" className="mvp-num">Score</th>
                     <th scope="col" className="mvp-num">Max</th>
-                    <th scope="col" className="mvp-num">Share</th>
+                    <th scope="col">Share</th>
                     <th scope="col">Class</th>
                     <th scope="col">Counted</th>
                   </tr>
@@ -279,13 +347,20 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
                     .map((d) => (
                       <tr key={d.directiveId}>
                         <td className="mvp-nowrap">
-                          {d.directiveId}
-                          {d.reason && <span className="mvp-directive-why">{d.reason}</span>}
+                          <span className="mvp-directive-name">
+                            {d.directiveId}
+                            {/* ⚠️ The reason is a SENTENCE about one bar — help, not content. It used to
+                                be a second line under every directive, which turned a six-row table into a
+                                wall of text (measured by the reader 2026-11-20). */}
+                            {d.reason && (
+                              <WhyPopover title={`Why ${d.directiveId} scored this`}>{d.reason}</WhyPopover>
+                            )}
+                          </span>
                         </td>
                         <td className="mvp-num">{Number(d.score).toFixed(1)}</td>
                         <td className="mvp-num">{Number(d.maxScore).toFixed(1)}</td>
-                        <td className="mvp-num">
-                          <span className="mvp-share">
+                        <td>
+                          <span className="mvp-share" title={`${Math.round((Number(d.score) / Math.max(1, Number(d.maxScore))) * 100)}% of its ceiling`}>
                             <span
                               className="mvp-share-fill"
                               style={{ width: `${Math.round((Number(d.score) / Math.max(1, Number(d.maxScore))) * 100)}%` }}

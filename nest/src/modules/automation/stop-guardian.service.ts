@@ -50,6 +50,14 @@ import { NotificationService } from '../notifications/notifications.service';
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 import { PrismaService } from '../../database/prisma.service';
 import { CLOSE_REASONS } from '../../common/trading/close-reason';
+// #1242 — THE simulated-trailing-stop decision, shared with the backtest. Live OBSERVES the moment and
+// the engine MOVES the stop to it; the arithmetic must be one implementation, and the strength
+// difference is written down beside it (`TRAIL_STRENGTH_NOTE`).
+import { simulatedTslState } from '../../common/trading/exit-guardian/simulated-tsl';
+// #1242 — the protective-stop formula and the money-target decision, shared with the backtest.
+import { protectiveStopPrice } from '../../common/trading/exit-guardian/protective-stop';
+import { moneyTargetVerdict } from '../../common/trading/exit-guardian/money-target';
+import { computeAtr } from '../../common/trading/exit-guardian/atr';
 // The ONE canonical parser for "which strategy did this close belong to" (#949). A local split of
 // the broker comment would be a second implementation of the rule that caused 184/186 ungroupable
 // trades — and `validate-close-attribution.cjs` fails the build on exactly that.
@@ -1108,19 +1116,23 @@ export class StopGuardianService {
     strat: any,
     ownerVia: GuardedPosition['ownerVia'],
   ): Promise<'closed' | 'refused' | null> {
-    const target = Number(strat?.takeProfitAmount);
-    // NULL / 0 is "no opinion", not "close at breakeven". The column defaults to NULL, so this
-    // guard is what keeps 68 bots inert.
-    if (!Number.isFinite(target) || target <= 0) return null;
-
-    const pnl = Number((pos as any).profit);
-    if (!Number.isFinite(pnl)) {
+    const verdict = moneyTargetVerdict({
+      targetAmount: (strat as any)?.takeProfitAmount,
+      pnl: (pos as any).profit === undefined ? null : Number((pos as any).profit),
+    });
+    // NULL / 0 target, or an unreadable P&L — `moneyTargetVerdict()` names which, and the log line
+    // below is the only place a silent skip becomes visible.
+    if (!verdict.configured) return null;
+    if (verdict.reason === 'pnl-unreadable') {
       this.logger.warn(
         `Money target SKIPPED for ${pos.symbol}#${pos.ticket}: P&L unreadable — refusing to close on a guess`,
       );
       return null;
     }
-    if (pnl < target) return null;
+    if (!verdict.reached) return null;
+
+    const target = Number((strat as any)?.takeProfitAmount);
+    const pnl = Number((pos as any).profit);
 
     const last = this.moneyTargetAttemptAt.get(pos.ticket) ?? 0;
     if (Date.now() - last < 60_000) return null;
@@ -2049,34 +2061,28 @@ export class StopGuardianService {
   private observeSimulatedTsl(pos: Mt5RawPosition, strat: any): void {
     try {
       if (!strat?.simTslEnabled) return;
-      const activationPct = Number(strat.simTslActivationPct);
-      const distancePct = Number(strat.simTslDistancePct);
-      // NULL / 0 means NOT CONFIGURED, never "trail at zero distance". Bailing correctly leaves
-      // the position unobserved rather than inventing a threshold.
-      if (!Number.isFinite(activationPct) || activationPct <= 0) return;
-      if (!Number.isFinite(distancePct) || distancePct <= 0) return;
-      if (!Number.isFinite(pos.priceOpen) || pos.priceOpen <= 0) return;
-      if (!Number.isFinite(pos.priceCurrent)) return;
 
-      const isBuy = pos.type === 'buy';
-      // Favourable-direction profit, independent of the broker's own `profit` (which is currency and
-      // already net of swap/commission, so it cannot be compared with a percentage threshold).
-      const profitPct =
-        ((isBuy ? pos.priceCurrent - pos.priceOpen : pos.priceOpen - pos.priceCurrent) /
-          pos.priceOpen) * 100;
+      // ⚠️ THE DECISION IS THE SHARED ONE (#1242). This method used to compute the profit, the
+      // watermark, the trigger price and the touch itself, and the backtest computed the same three
+      // numbers separately. `simulatedTslState()` returns `null` when the configuration cannot express
+      // a trail (blank/zero distance or activation) — NULL IS NOT "no touch", it is "not configured".
+      const state = simulatedTslState({
+        side: pos.type === 'buy' ? 'buy' : 'sell',
+        entryPrice: pos.priceOpen,
+        currentPrice: pos.priceCurrent,
+        bestSoFar: this.simTslWatermark.get(pos.ticket),
+        config: { activationPct: strat.simTslActivationPct, distancePct: strat.simTslDistancePct },
+      });
+      if (!state) return;
 
-      const prevBest = this.simTslWatermark.get(pos.ticket);
-      const best = prevBest === undefined
-        ? pos.priceCurrent
-        : isBuy ? Math.max(prevBest, pos.priceCurrent) : Math.min(prevBest, pos.priceCurrent);
-      this.simTslWatermark.set(pos.ticket, best);
+      this.simTslWatermark.set(pos.ticket, state.best);
 
       // Not yet in enough profit — nothing to observe.
-      if (profitPct < activationPct) return;
+      if (!state.armed) return;
+      if (!state.touched) return;
 
-      const triggerPrice = isBuy ? best * (1 - distancePct / 100) : best * (1 + distancePct / 100);
-      const touched = isBuy ? pos.priceCurrent <= triggerPrice : pos.priceCurrent >= triggerPrice;
-      if (!touched) return;
+      const activationPct = Number(strat.simTslActivationPct);
+      const distancePct = Number(strat.simTslDistancePct);
 
       const last = this.simTslLastMomentAt.get(pos.ticket) ?? 0;
       if (Date.now() - last < this.SIM_TSL_MOMENT_COOLDOWN_MS) return;
@@ -2089,12 +2095,12 @@ export class StopGuardianService {
         strategyName: strat.name ?? null,
         event: 'decision-point',
         entryPrice: pos.priceOpen,
-        triggerPrice,
+        triggerPrice: state.triggerPrice,
         price: pos.priceCurrent,
-        profitPct,
+        profitPct: state.profitPct,
         distancePct,
         activationPct,
-        detail: { best, side: pos.type, watermarkInMemory: true },
+        detail: { best: state.best, side: pos.type, watermarkInMemory: true },
       });
     } catch (err: any) {
       // ⚠️ An observer must never break the guardian. This is instrumentation, not control flow,
@@ -2291,12 +2297,15 @@ export class StopGuardianService {
     side: 'BUY' | 'SELL',
     strat: any,
   ): number | null {
-    const entry = Number(pos.priceOpen);
-    if (!entry || entry <= 0) return null;
-    const slPct = Number(strat?.slPct ?? 1) || 1;
-    const protective =
-      side === 'BUY' ? entry * (1 - slPct / 100) : entry * (1 + slPct / 100);
-    return Number(protective.toFixed(5));
+    // #1242 — ONE protective-stop formula, shared with the backtest's bracket. The rounding to 5
+    // decimals and the `slPct: 0 → 1%` fallback both live in the core, so the two paths cannot drift on
+    // either. See `common/trading/exit-guardian/protective-stop.ts` for the documented semantic
+    // collision (0 means "1%" here and "no bracket" in the engine).
+    return protectiveStopPrice({
+      side: side === 'BUY' ? 'buy' : 'sell',
+      entryPrice: Number(pos.priceOpen),
+      slPct: strat?.slPct,
+    });
   }
 
   /**
@@ -2442,21 +2451,8 @@ export class StopGuardianService {
   }
 
   private computeAtr(bars: any[]): number {
-    const highs = bars.map((b: any) => b.high);
-    const lows = bars.map((b: any) => b.low);
-    const closes = bars.map((b: any) => b.close);
-    const trueRanges: number[] = [];
-    for (let i = 1; i < Math.min(15, bars.length); i++) {
-      trueRanges.push(
-        Math.max(
-          highs[i] - lows[i],
-          Math.abs(highs[i] - closes[i - 1]),
-          Math.abs(lows[i] - closes[i - 1]),
-        ),
-      );
-    }
-    return trueRanges.length > 0
-      ? trueRanges.reduce((a, b) => a + b, 0) / trueRanges.length
-      : 0;
+    // #1242 — the ATR lives in `common/trading/exit-guardian/atr.ts`. It reads the FIRST 14 ranges
+    // (not the last), and returns 0 when it cannot judge — both asserted there rather than re-stated here.
+    return computeAtr(bars.map((b: any) => ({ high: Number(b.high), low: Number(b.low), close: Number(b.close) })));
   }
 }

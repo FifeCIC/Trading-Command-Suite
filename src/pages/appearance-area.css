@@ -71,14 +71,6 @@
   line-height: 1.5;
 }
 
-.appearance-lede {
-  margin: 0;
-  max-width: 78ch;
-  color: var(--ink-soft);
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
 /* The description and its info button sit on one row — see `.appearance-head` above. */
 
 /* Sections carry the same panel surface as the header, so a page reads as composed blocks rather
@@ -115,7 +107,9 @@
 .appearance-table-wrap {
   overflow-x: auto;
   border-radius: 6px;
-}/* ⚠️ The header row must stay distinguishable from the panel behind it. Inside a panel,
+}
+
+/* ⚠️ The header row must stay distinguishable from the panel behind it. Inside a panel,
    `background: var(--panel)` makes the header row invisible — so it is mixed, using the same idiom
    index.css already uses for panel edges (`color-mix(in srgb, var(--panel) 93%, var(--bg) 7%)`). */
 .appearance-table th {
@@ -129,7 +123,9 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
-}.appearance-table tbody tr:last-child td {
+}
+
+.appearance-table tbody tr:last-child td {
   border-bottom: none;
 }
 
@@ -139,6 +135,151 @@
 }
 
 .appearance-avoid {
+  color: var(--ink-soft);
+}
+
+/* ── Agreed-design specimens (landing page) ───────────────────────────────────────────────────
+   ⚠️ THESE ARE LIVE, NOT PICTURES. The owner asked for an area that SHOWS agreed designs, not a prose
+   table describing them (2026-11-20). Each specimen renders with the app's own tokens and classes, so
+   a theme-pack switch repaints it and it cannot drift from the real components. Every specimen links
+   to the page that owns the full-size version; the specimen is the front door, not a second copy. */
+.appearance-spec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 0.9rem;
+}
+
+.appearance-spec {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-elev);
+  padding: 0.75rem 0.85rem;
+}
+
+.appearance-spec h4 {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+
+.appearance-spec-rule {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.appearance-spec-demo {
+  border-top: 1px solid var(--line);
+  padding-top: 0.55rem;
+}
+
+.appearance-spec-link {
+  margin-top: auto;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.appearance-spec-link:hover,
+.appearance-spec-link:focus-visible {
+  text-decoration: underline;
+}
+
+/* Fact strip — a term/value grid stands in for a paragraph of facts. */
+.appearance-facts {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.appearance-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+}
+
+.appearance-facts dt {
+  color: var(--text-dim);
+}
+
+.appearance-facts dd {
+  margin: 0;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A numeric table is aligned at BOTH ends — header and cells right-aligned, tabular figures. This is
+   the rule from ui-standards; the specimen demonstrates it rather than describing it. */
+.appearance-table--num th,
+.appearance-table--num td {
+  padding: 0.35rem 0.6rem;
+}
+
+.appearance-table--num th:not(:first-child),
+.appearance-table--num td:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+/* Chip rows inside a specimen must not carry the page-level summary margins. */
+.appearance-spec-demo .ap-summary {
+  margin: 0;
+}
+
+/* ── The method — an ordered build sequence, numbered rather than bulleted ────────────────────── */
+.appearance-method {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: method;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.appearance-method-step {
+  display: grid;
+  grid-template-columns: 1.4rem 1fr;
+  column-gap: 0.6rem;
+  row-gap: 0.1rem;
+  align-items: baseline;
+  counter-increment: method;
+}
+
+.appearance-method-step::before {
+  content: counter(method);
+  grid-row: 1 / span 2;
+  width: 1.4rem;
+  height: 1.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.appearance-method-do {
+  grid-column: 2;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.appearance-method-why {
+  grid-column: 2;
+  font-size: 0.76rem;
+  line-height: 1.45;
   color: var(--ink-soft);
 }
 
@@ -414,5 +555,5 @@
 .tp-choose.is-active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }

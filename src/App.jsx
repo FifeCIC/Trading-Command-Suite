@@ -1119,6 +1119,16 @@ function AppShell({ directContent = null, directArea = null, directView = null }
               <div className="inline-actions" style={{ padding: '0.5rem 0' }}>
                 <button
                   type="button"
+                  className={backgroundTone === 'aurora' ? 'cta' : ''}
+                  onClick={() => {
+                    setBackgroundTone('aurora');
+                    pushActivity('THEME', 'Background tone set to aurora');
+                  }}
+                >
+                  Aurora
+                </button>
+                <button
+                  type="button"
                   className={backgroundTone === 'aura' ? 'cta' : ''}
                   onClick={() => {
                     setBackgroundTone('aura');

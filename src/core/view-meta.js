@@ -692,6 +692,16 @@ const VIEW_META = {
       'GET /api/scoring/protocols',
     ],
   },
+  // ⚠️ ADDED 2026-11-20 — the COLUMN form of the same strategy. Deliberately its own route: a cockpit
+  // is a different surface (columns across monitors) from a vertical results read.
+  '/lab/movers-cockpit': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Movers Cockpit',
+    file: 'src/pages/MoversCockpitPage.jsx',
+    css: 'src/pages/movers-cockpit.css',
+    api: [],
+  },
   // ⚠️ ADDED 2026-10-31. "Completed runs" moved off `/lab/backtest-strategies` onto its own page
   // (requirement — the strategies page had eleven steps and four tabs). It reads and compares
   // stored runs and nothing else, so its API list is deliberately short: `runs`, `runs/compare` and
