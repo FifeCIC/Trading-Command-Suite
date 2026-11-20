@@ -40,7 +40,7 @@
  */
 import { CLOSE_REASONS } from '../close-reason';
 
-export const ENGINE_EXIT_REASONS = ['TP', 'SL', 'TRAIL', 'TIME', 'EOD', 'TARGET'] as const;
+export const ENGINE_EXIT_REASONS = ['TP', 'SL', 'TRAIL', 'TIME', 'EOD', 'TARGET', 'SESSION'] as const;
 export type EngineExitReason = (typeof ENGINE_EXIT_REASONS)[number];
 
 export interface ExitEquivalence {
@@ -85,6 +85,11 @@ const MAP: Record<EngineExitReason, ExitEquivalence> = {
     closeReason: CLOSE_REASONS.SYSTEM_TAKE_PROFIT,
     equivalent: 'exact',
     note: 'The bot’s ABSOLUTE money target (`takeProfitAmount`) was reached and the position closed at the market — the same event `stop-guardian.service.ts` acts on live.',
+  },
+  SESSION: {
+    closeReason: CLOSE_REASONS.SYSTEM_SESSION_EXIT,
+    equivalent: 'exact',
+    note: 'The bot’s `exitBeforeUtc` boundary was passed, so the position was flattened at the market — the same event `decision-trigger`/`position-time-stop.service.ts` acts on live (#928).',
   },
 };
 

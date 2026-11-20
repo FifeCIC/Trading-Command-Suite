@@ -31,13 +31,20 @@ import { directionFromProtocol } from './direction-from-protocol';
 import { applyAffordability } from './affordable-size';
 // ⚠️ The bot's own TIME STOP, extracted so the comparison is testable (#1136). Set on 42 of 64 active
 // bots and referenced zero times by this file before 2026-11-16.
-import { maxHoldExpired } from './max-hold';
+// ⚠️ `max-hold.ts` WAS HERE AND IS GONE. Its comparison (`>=`, inclusive) disagreed with the live path,
+// which closes only when `hoursHeld - maxHoldHours > 0` (`decideExitTrigger`), and it could not combine
+// with the session boundary — a bot declaring only `exitBeforeUtc` was inert. `decideExitTrigger()`
+// owns both now, for live and for the engine. Register row 245.
 // #1242 — the bot's TRADING CLOCK is the live gate, not a second reading of `sessionWindow`. Reusing
 // `checkSessionWindow()` keeps the ET conversion, DST handling and the city-alias ambiguity (#759) in
 // one place; a re-implemented "is it the US session" here would be a second answer to the same question.
 import { checkSessionWindow } from '../trading/session-window';
 // #1242 — whether the window can be tested on this timeframe at all. The daily-bar trap (a gate that
 // excluded every bar and returned 0 trades) lives in that module WITH its spec, not in a comment here.
+// #928/#1242 — the SAME combined decision the live path uses: hold limit + session boundary, and which
+// one wins when both are due. Extracted for the live path in 2026-09 so it could be canaried; reused here
+// so the engine cannot hold a position the bot would have closed.
+import { decideExitTrigger } from '../automation/exit-trigger';
 import { sessionGatePlan } from './session-gate';
 // ⚠️ The unmonitored-hole threshold, extracted so it has ONE definition and a test that can fail
 // (#1286). Its guard used to skip the entry bar, so the hole right after entry went unmeasured.
@@ -402,6 +409,13 @@ export interface BacktestRunRequest {
    */
   sessionWindow?: string;
   /**
+   * Flat-by boundary, `'HH:MM'` UTC (#928). Absent = hold through any time.
+   *
+   * ⚠️ This is an EXIT rule, not an entry gate: a position open when the clock passes is closed at that
+   * bar's open. The combination with `maxHoldHours` (and which one is blamed) is `decideExitTrigger()`.
+   */
+  exitBeforeUtc?: string;
+  /**
    * The bot's ABSOLUTE money take-profit, in account currency (`trading_strategy.takeProfitAmount`).
    * Absent/NULL/0 = no opinion, which is 77 of 78 bots.
    *
@@ -554,7 +568,7 @@ export interface TradeRecord {
    * `EOD`: end-of-data means the sample ran out, a time stop means the BOT decided to close, and
    * collapsing them would make a truncated window indistinguishable from a strategy choice.
    */
-  exitReason: 'TP' | 'SL' | 'TRAIL' | 'TIME' | 'EOD' | 'TARGET';  // Take-profit, Stop-loss, tightened stop, max hold, End-of-data, absolute money target
+  exitReason: 'TP' | 'SL' | 'TRAIL' | 'TIME' | 'EOD' | 'TARGET' | 'SESSION';  // Take-profit, Stop-loss, tightened stop, max hold, End-of-data, absolute money target, session boundary
   /**
    * #1242 — the SAME exit expressed in the live `CLOSE_REASONS` vocabulary, so a stored run can be
    * compared with a real account without translating by hand. `null` for `EOD`, which has no live
@@ -664,6 +678,14 @@ export interface BotForBacktest {
    * `checkSessionWindow(strategy.sessionWindow, now)`.
    */
   sessionWindow?: string | null;
+  /**
+   * The bot's EXIT-side boundary — `trading_strategy.exitBeforeUtc`, `'HH:MM'` UTC (#928).
+   *
+   * ⚠️ The other half of the session policy: `sessionWindow` says when a bot may OPEN, this says when it
+   * must be FLAT. Expressed nowhere in the engine until 2026-11-20, so a run held positions through a
+   * boundary the operator had declared.
+   */
+  exitBeforeUtc?: string | null;
   /**
    * The bot's ABSOLUTE money target in account currency. Live acts on it (`system:take-profit`); the
    * engine ignored it until 2026-11-20 because the size was resolved after the bracket walk.
@@ -832,6 +854,16 @@ export function mergeBotConfig(
     // this change measured a population that included bars the bot was shut for. `EXECUTION_SEMANTICS`
     // is bumped to 2, so a comparison against them is REFUSED rather than showing a delta.
     sessionWindow: pick(request.sessionWindow, bot.sessionWindow, 'sessionWindow'),
+    // ⚠️ CARRIED NOW, AND IT CHANGES RESULTS (#1242, 2026-11-20). `exitBeforeUtc` is the EXIT half of the
+    // session policy: `sessionWindow` says when a bot may open, this says when it must be FLAT (#928).
+    // It was expressed nowhere in the engine, so a run held positions through a boundary the operator
+    // had declared — the position that "would have been closed at 13:30" stayed open for the rest of the
+    // data and its P&L belonged to a period the bot would not have been in the market.
+    //
+    // ⚠️ COMBINED WITH `maxHoldHours` BY THE LIVE FUNCTION (`decideExitTrigger`), because a bot may
+    // declare either, both or neither, and the two must not mask each other. `EXECUTION_SEMANTICS` is 3
+    // from this change, so a comparison against an older run is refused rather than showing a delta.
+    exitBeforeUtc: pick(request.exitBeforeUtc, bot.exitBeforeUtc, 'exitBeforeUtc'),
   };
 
   const baseSize = bot.baseSize ?? null;
@@ -1712,6 +1744,8 @@ export class BacktestService {
       // #1242 — the bot's trading clock. `null` = ungated, which keeps every hand-made request exactly
       // as it was; a bot that declares a window passes it and bars outside it produce scores, not trades.
       sessionWindow = null,
+      // #1242 — flat-by boundary. `null` = hold through any time, so every hand-made request is unchanged.
+      exitBeforeUtc = null,
     } = resolved.request;
 
     // ⚠️ #986 — A PERIOD WINS ON WHERE TO LOOK; THE REQUEST WINS ON WHAT TO DO THERE.
@@ -2401,24 +2435,44 @@ export class BacktestService {
              * the mirrored arithmetic, and the never-loosen rule. A run and a live close can no longer
              * drift apart by editing one of them.
              *
-             * ⚠️ WHY THE TIME STOP IS PASSED IN RATHER THAN DECIDED HERE: the `maxHoldHours` arithmetic
-             * — the inclusive boundary and "no limit" for null/0 — lives in `max-hold.ts` with its own
-             * spec. The core decides only WHERE in the order it applies: after the levels, because a
-             * level the market genuinely traded through is the more defensible exit than a decision to
-             * leave at the close. MEASURED on MSTR 5m (560 trades) when that order was introduced: 3
-             * TIME exits — two at exactly 240 min with continuous bars, one at 1,060 min across a
-             * weekend gap — against 0 with the knob off. Register row 193.
+             * ⚠️ WHY THE TIME RULES ARE PASSED IN RATHER THAN DECIDED HERE: the `maxHoldHours` and
+             * `exitBeforeUtc` arithmetic — the boundary being inclusive, "no limit" for null/0, and
+             * WHICH mechanism wins when both are due — belongs to `decideExitTrigger()`
+             * (`automation/exit-trigger.ts`), which is the same function the live path calls. The core
+             * decides only WHERE each applies in the order: the session boundary is an instant at the
+             * bar's OPEN, the time stop is a decision at the CLOSE. MEASURED on MSTR 5m (560 trades)
+             * when the time stop was placed after the levels: 3 TIME exits — two at exactly 240 min
+             * with continuous bars, one at 1,060 min across a weekend gap — against 0 with it off.
+             * Register row 193.
              *
-             * ⚠️ THE EXCURSION IS STILL MEASURED ON THE RAW EXTREMES, BEFORE ANY TEST, and it is still
-             * recorded on the bar that EXITS. That is deliberate: a trade that stopped out also went
-             * some way in its favour, and dropping that biases every excursion statistic toward the
-             * trades that survived.
+             * ⚠️ THE EXCURSION IS STILL MEASURED ON THE RAW EXTREMES, BEFORE ANY FURTHER TEST, and it
+             * is still recorded on the bar that EXITS. That is deliberate: a trade that stopped out
+             * also went some way in its favour, and dropping that biases every excursion statistic
+             * toward the trades that survived. The one exception is the session exit, whose instant
+             * precedes the bar's range entirely.
              */
+            const timed = decideExitTrigger({
+              /**
+               * ⚠️ `0` IS THE ENGINE'S "NO LIMIT" AND LIVE'S "NO LIMIT" IS `null` — so it is normalised
+               * HERE, not passed through. Measured 2026-11-20: passing the engine's default `0` straight
+               * into `decideExitTrigger()` made `overBy = hoursHeld - 0 > 0` true on every bar after the
+               * first, so a boundary-only bot reported **100 TIME exits** it should never have had. The
+               * engine's request defaults `maxHoldHours` to 0; live's `parseMaxHoldHours()` returns null
+               * for absent/invalid. One of them has to translate, and it is the caller.
+               */
+              maxHoldHours: Number(maxHoldHours) > 0 ? Number(maxHoldHours) : null,
+              hoursHeld: (fb.timestamp.getTime() - currentBar.timestamp.getTime()) / 3_600_000,
+              exitBeforeUtc,
+              // The BAR's instant is the clock the run is measured against — never the process clock,
+              // which would make a replay of the same window disagree with itself.
+              at: fb.timestamp,
+            });
+
             const decision = managePositionBar(
               position,
-              { high: fb.high, low: fb.low, close: fb.close, timeMs: fb.timestamp.getTime() },
+              { open: fb.open, high: fb.high, low: fb.low, close: fb.close, timeMs: fb.timestamp.getTime() },
               plan ?? {},
-              maxHoldExpired(currentBar.timestamp.getTime(), fb.timestamp.getTime(), maxHoldHours),
+              timed.due ? (timed.trigger === 'max_hold' ? 'TIME' : 'SESSION') : null,
               {
                 targetAmount: takeProfitAmount,
                 /**

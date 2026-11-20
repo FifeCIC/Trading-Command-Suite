@@ -114,7 +114,7 @@ export const BOT_FIELDS: ReadonlyArray<{ key: string; label: string; applied: Ap
    * It told a reader that a knob existed and was ignored, which is a different and worse claim than
    * "this knob does not exist". `sessionWindow` below IS a real column and stays.
    */
-  { key: 'exitBeforeUtc', label: 'Exit before (UTC)', applied: 'ignored', why: 'Zero references. The #928 session-exit boundary is live-loop only.' },
+  { key: 'exitBeforeUtc', label: 'Exit before (UTC)', applied: 'honoured', why: 'The bot\'s FLAT-BY boundary (#928), applied per bar through the same `decideExitTrigger()` the live path calls: the position closes at the first bar whose clock is past the boundary, at that bar\'s OPEN, with exit reason SESSION (live: `system:session-exit`). ⚠️ The engine held positions through a declared boundary until 2026-11-20 (#1242), so older runs carry P&L from a period the bot would not have been in the market.' },
   {
     key: 'sessionWindow',
     label: 'Session window',

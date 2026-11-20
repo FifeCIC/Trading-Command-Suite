@@ -178,8 +178,9 @@ describe('settings inventory — the bot fields a backtest HONOURS, proven behav
     // a decision rather than a silent narrowing.
     expect(honouredBotFields.map((f) => f.key).sort()).toEqual(
       [
-        'maxHoldHours', 'minComposite', 'protocolId', 'sessionWindow', 'simTslActivationPct',
-        'simTslDistancePct', 'simTslEnabled', 'slPct', 'symbol', 'takeProfitAmount', 'timeframe', 'tpPct',
+        'exitBeforeUtc', 'maxHoldHours', 'minComposite', 'protocolId', 'sessionWindow',
+        'simTslActivationPct', 'simTslDistancePct', 'simTslEnabled', 'slPct', 'symbol',
+        'takeProfitAmount', 'timeframe', 'tpPct',
       ].sort(),
     );
   });

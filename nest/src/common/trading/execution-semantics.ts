@@ -27,7 +27,7 @@
  */
 
 /** Bump on any change that would alter what a stored run computes. The history is `SEMANTICS_LOG`. */
-export const EXECUTION_SEMANTICS = 2;
+export const EXECUTION_SEMANTICS = 3;
 
 export interface SemanticsChange {
   version: number;
@@ -63,6 +63,17 @@ export const SEMANTICS_LOG: readonly SemanticsChange[] = [
       'outside it is scored but not traded, using the live predicate `checkSessionWindow()`. Set on ' +
       'every movers bot, so runs of those bots before this version traded the pre-market hour before ' +
       'the US open as though the bot were open.',
+    issue: 1242,
+  },
+  {
+    version: 3,
+    date: '2026-11-20',
+    what:
+      'The bot\'s EXIT-side boundary (`trading_strategy.exitBeforeUtc`, "be flat by HH:MM UTC") is ' +
+      'applied: the position closes at the first bar past it, at that bar\'s OPEN, with reason SESSION. ' +
+      'Combined with `maxHoldHours` by the live `decideExitTrigger()`, which also decides which mechanism ' +
+      'is blamed when both are due. `max-hold.ts` is deleted: its comparison was inclusive where live is ' +
+      'strictly greater, and it could not express a boundary-only bot.',
     issue: 1242,
   },
 ];

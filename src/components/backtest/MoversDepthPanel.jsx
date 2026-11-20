@@ -85,6 +85,8 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
 
   const bars = detail?.bars ?? [];
   const steps = detail?.steps ?? [];
+  /** The day-list size, read off the ladder's own first rung before that rung is dropped below. */
+  const candidatesTotal = steps.find((s) => s.id === 'candidates')?.count ?? 0;
 
   const focused = useMemo(
     () => bars.find((b) => b.time === pinned) ?? bars.find((b) => b.state !== 'quiet' && b.state !== 'no-data') ?? bars[0] ?? null,
@@ -105,28 +107,29 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
 
   return (
     <div className="mvp-depth">
-      {/* ── 1 · the ladder ─────────────────────────────────────────────────────────────────────── */}
+      {/* ── 1 · the funnel, as square cards ─────────────────────────────────────────────────────── */}
       <section id="mvp-sec-ladder" aria-label="Pipeline steps">
         <h3 className="mvp-depth-title">
           {symbol} · {day} — from the day’s list to a closed trade
         </h3>
-        <ol className="mvp-ladder">
-          {steps.map((s) => {
-            const pct = s.of ? Math.round((s.count / Math.max(1, s.of)) * 100) : null;
-            return (
-              <li key={s.id} className="mvp-ladder-step">
-                <span className="mvp-ladder-label">{s.label}</span>
-                <span className="mvp-ladder-count">
-                  <strong>{s.count}</strong>
-                  {s.of != null && <em>of {s.of}</em>}
-                </span>
-                <span className="mvp-ladder-bar" aria-hidden="true">
-                  <span className="mvp-ladder-fill" style={{ width: `${pct == null ? 100 : pct}%` }} />
-                </span>
-                <span className="mvp-ladder-note">{s.note}</span>
+        {/* ⚠️ SQUARE CARDS, NOT A LADDER WITH BARS (owner, 2026-11-20). The progress bars claimed a
+            "loading" shape for counts that were never loading — they were always 0–100% of the
+            previous rung. And two rungs were immediately redundant: the single symbol was already
+            highlighted in the day table, and its "of N" came from that same list. Both are dropped
+            here; the first card carries the list size, so the reader keeps the denominator. */}
+        <ol className="mvp-step-cards">
+          {steps
+            .filter((s) => s.id !== 'candidates' && s.id !== 'selected')
+            .map((s) => (
+              <li key={s.id} className="mvp-step-card">
+                <span className="mvp-step-count">{s.count}</span>
+                <span className="mvp-step-label">{s.label}</span>
+                {s.of != null && <span className="mvp-step-of">of {s.of}</span>}
+                {s.id === 'scored' && candidatesTotal > 0 && (
+                  <span className="mvp-step-of">on a {candidatesTotal}-symbol list</span>
+                )}
               </li>
-            );
-          })}
+            ))}
         </ol>
         {detail.runCounters && (
           <p className="mvp-note" id="mvp-sec-persistence">

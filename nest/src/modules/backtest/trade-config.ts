@@ -229,8 +229,8 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       label: 'Exit before (UTC)',
       value: bot?.exitBeforeUtc ?? null,
       source: 'bot',
-      applied: false,
-      note: 'NOT APPLIED — the #928 session boundary closes a live position at a wall-clock moment; the engine has no equivalent, so a run cannot show the overnight risk the bot avoids.',
+      applied: true,
+      note: 'trading_strategy.exitBeforeUtc — the FLAT-BY boundary, combined with max hold by the live `decideExitTrigger()`. The position closes at the first bar past it, at that bar\'s OPEN (reason SESSION). Absent = hold through any time.',
       botValue: bot?.exitBeforeUtc ?? null,
     },
     {

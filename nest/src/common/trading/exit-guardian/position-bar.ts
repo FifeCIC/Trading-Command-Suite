@@ -14,20 +14,17 @@
  *
  * ── THE ORDER IS THE DECISION, SO IT IS DOCUMENTED ───────────────────────────────────────────────
  *
- *   1. EXCURSION   measured on the RAW bar extremes, before any test — so a trade that exits on this
- *                  bar still records how far it went against and in favour. Losing that on the exit
- *                  bar biases the excursion statistics toward the trades that survived.
- *   2. STOP        the level IN FORCE, set from an EARLIER bar — never from this bar's own high.
- *                  Tightening a stop from this bar's high and then testing this bar's low would be
- *                  look-ahead: OHLC cannot order an intrabar high against an intrabar low.
- *   3. TARGET      the take-profit level.
- *   3a. MONEY      the bot's ABSOLUTE target in account currency, judged at the close.
- *   4. TIME STOP   a decision to leave at the close, so it comes AFTER the levels. When both could
- *                  fire on one bar, the level the market actually traded through is the defensible
- *                  exit; booking the close first would invent an exit while ignoring a real one.
- *                  The verdict is passed IN (`heldTooLong`) because `maxHoldHours` arithmetic has its
- *                  own module and its own inclusive-boundary spec (`modules/backtest/max-hold.ts`).
- *   5. TIGHTEN     for the NEXT bar only, from this bar's extremes.
+ *   1. SESSION    the bot's `exitBeforeUtc` boundary was passed — an INSTANT, at the bar's OPEN,
+ *                 before this bar's range was traded. So it exits at `open` and is tested FIRST.
+ *   2. EXCURSION  measured on the RAW bar extremes, before any further test — so a trade that exits on
+ *                 this bar still records how far it went against and in favour.
+ *   3. STOP       the level IN FORCE, set from an EARLIER bar — never from this bar's own high.
+ *   4. TARGET     the take-profit level.
+ *   5. MONEY      the bot's ABSOLUTE target in account currency, judged at the close.
+ *   6. TIME STOP  a decision to leave at the close, so it comes AFTER the levels. When both could
+ *                 fire on one bar, the level the market actually traded through is the defensible
+ *                 exit; booking the close first would invent an exit while ignoring a real one.
+ *   7. TIGHTEN    for the NEXT bar only, from this bar's extremes.
  *
  * ⚠️ A TIGHTER STOP IS NEVER LOOSER. Every candidate is combined with `max`/`min` against the stop
  * already in force; a stop that moves backwards is not a stop.
@@ -163,7 +160,17 @@ export function managePositionBar(
     throw new Error(`managePositionBar: entry price must be > 0, got ${state.entryPrice}`);
   }
 
-  // ── 1. Excursion, on the RAW extremes, before any test ──
+  // ── 1. THE SESSION BOUNDARY — an instant, so it comes first ──
+  // The bot declared "be flat by HH:MM UTC". The clock crossed at this bar's OPEN, before any of this
+  // bar's range was traded, so the position leaves at the open price — the first price available after
+  // the boundary — and this bar contributes NO excursion, because its range had not happened yet.
+  // Testing the boundary after the levels would book an exit at a price the owner had already said they
+  // would not be holding through.
+  if (timed === 'SESSION') {
+    return { state, exit: { kind: 'SESSION', price: bar.open, timeMs: bar.timeMs } };
+  }
+
+  // ── 2. Excursion, on the RAW extremes, before any test ──
   const adversePct = isLong
     ? ((state.entryPrice - bar.low) / state.entryPrice) * 100
     : ((bar.high - state.entryPrice) / state.entryPrice) * 100;
@@ -176,7 +183,7 @@ export function managePositionBar(
     bestPct: Math.max(state.bestPct, inFavourPct),
   };
 
-  // ── 2. The stop IN FORCE (set from an earlier bar) ──
+  // ── 3. The stop IN FORCE (set from an earlier bar) ──
   const stopTouched = isLong ? bar.low <= state.stop : bar.high >= state.stop;
   if (stopTouched) {
     return {
@@ -191,12 +198,12 @@ export function managePositionBar(
     };
   }
 
-  // ── 3. The target ──
+  // ── 4. The target ──
   if (isLong ? bar.high >= state.target : bar.low <= state.target) {
     return { state: next, exit: { kind: 'TP', price: state.target, timeMs: bar.timeMs } };
   }
 
-  // ── 4. The bot's ABSOLUTE money target, at the close ──
+  // ── 5. The bot's ABSOLUTE money target, at the close ──
   // ⚠️ AFTER the percentage target and BEFORE the time stop. Reaching an amount in account currency can
   // only be known once a price is observed, and a percentage level the market traded through is the
   // more specific event — so the same "levels beat close-price decisions" rule as the time stop applies.
@@ -209,12 +216,12 @@ export function managePositionBar(
     }
   }
 
-  // ── 5. The bot's own time stop, at the close ──
-  if (heldTooLong) {
+  // ── 6. The bot's own time stop, at the close ──
+  if (timed === 'TIME') {
     return { state: next, exit: { kind: 'TIME', price: bar.close, timeMs: bar.timeMs } };
   }
 
-  // ── 6. Tighten for the NEXT bar ──
+  // ── 7. Tighten for the NEXT bar ──
   // ⚠️ `bestPrice` is updated HERE and not at the top, so a bar that exits never feeds the trail. That
   // is not tidiness: it is the same look-ahead rule as the stop test, expressed on the value the trail
   // is computed from.

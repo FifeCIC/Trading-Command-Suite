@@ -77,11 +77,11 @@ describe('buildTradeConfig', () => {
     expect(get(rows, 'maxPositions').applied).toBe(false);
     expect(get(rows, 'maxPyramidTiers').applied).toBe(false);
     expect(get(rows, 'baseSize').applied).toBe(false);
-    // `sessionWindow` moved OUT of this list on 2026-11-20 (#1242) — the engine now applies the bot's
-    // trading clock through the live gate. It is asserted in the honoured direction below instead, so
-    // the change is recorded rather than the assertion being quietly dropped.
+    // `sessionWindow` and `exitBeforeUtc` both moved OUT of this list on 2026-11-20 (#1242) — the engine
+    // now applies the bot's trading clock and its flat-by boundary. They are asserted in the honoured
+    // direction above instead, so the change is recorded rather than the assertions being dropped.
     expect(get(rows, 'sessionWindow').applied).toBe(true);
-    expect(get(rows, 'exitBeforeUtc').applied).toBe(false);
+    expect(get(rows, 'exitBeforeUtc').applied).toBe(true);
   });
 
   it('▶ CANARY — a trailing stop is reported applied BY THE ENGINE and flagged as absent live', () => {
