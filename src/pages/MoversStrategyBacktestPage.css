@@ -835,6 +835,147 @@
   font-weight: 600;
 }
 
+/* ── editing the bot config in place (register row 247) ───────────────────────────────────────────
+   A dirty row is marked with a left accent bar so "this one will be written" is visible without
+   reading the footer. The controls are 44px tall per the a11y policy — the note column already makes
+   these rows taller than that, so the target costs no density. */
+.mvp-config-row--dirty td {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.mvp-config-row--dirty td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.mvp-cfg-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.mvp-cfg-input {
+  width: 84px;
+  min-height: 44px;
+  padding: 0 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: right;
+  color: var(--ink);
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+
+.mvp-cfg-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+.mvp-cfg-input-wrap:focus-within .mvp-cfg-unit {
+  color: var(--ink);
+}
+
+.mvp-cfg-unit {
+  min-width: 12px;
+  font-size: 10px;
+  text-align: left;
+  color: var(--text-dim);
+}
+
+/* One pill is the whole control, so the 44×44 target is real rather than two small parts beside it. */
+.mvp-cfg-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 10px 0 8px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.mvp-cfg-switch:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+.mvp-cfg-switch-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--line);
+  transition: background 150ms ease, box-shadow 150ms ease;
+}
+
+.mvp-cfg-switch--on {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+
+.mvp-cfg-switch--on .mvp-cfg-switch-dot {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.mvp-cfg-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.mvp-cfg-actions-text {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.mvp-cfg-save {
+  min-height: 44px;
+  padding: 0 18px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--on-accent);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.mvp-cfg-save:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.mvp-cfg-save:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mvp-cfg-error {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--risk-critical);
+  background: color-mix(in srgb, var(--risk-critical) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--risk-critical) 45%, var(--line));
+  border-radius: 6px;
+}
+
 .mvp-source {
   display: inline-block;
   font-size: 10px;

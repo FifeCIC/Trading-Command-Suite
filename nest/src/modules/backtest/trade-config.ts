@@ -288,7 +288,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: false,
       note: 'NOT APPLIED — averaging into a winner is enforced LIVE (pyramid-policy.service.ts, called by the automation loop). The engine opens one trade per signal and has no blended-entry model, so a run cannot show what adding size would have done. The decision itself is extracted to `pyramid-decision.ts` (#1242).',
       botValue: num(bot?.maxPyramidTiers),
-      editable: { control: 'number', min: 1, max: 10, step: 1 },
+      editable: { control: 'number', min: 1, max: 10, step: 1, integer: true },
     },
     {
       id: 'exitBeforeUtc',
@@ -298,7 +298,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: true,
       note: 'trading_strategy.exitBeforeUtc — the FLAT-BY boundary, combined with max hold by the live `decideExitTrigger()`. The position closes at the first bar past it, at that bar\'s OPEN (reason SESSION). Absent = hold through any time.',
       botValue: bot?.exitBeforeUtc ?? null,
-      editable: { control: 'time' },
+      editable: { control: 'time', nullable: true },
     },
     {
       id: 'takeProfitAmount',
@@ -308,7 +308,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: true,
       note: 'trading_strategy.takeProfitAmount — judged at each bar’s close against the trade’s own net-of-commission P&L, then closed at that close (exit reason TARGET; live `system:take-profit`). NULL/0 = no target, which is 77 of 78 bots.',
       botValue: num(bot?.takeProfitAmount),
-      editable: { control: 'number', unit: '$', min: 0, step: 1 },
+      editable: { control: 'number', unit: '$', min: 0, step: 1, nullable: true },
     },
     {
       id: 'exhaustionObserveEnabled',
@@ -347,7 +347,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: false,
       note: 'NOT COMPARABLE — the live loop sends lots; this run sizes in units from an equity model (#843). P&L does not transfer.',
       botValue: num(bot?.baseSize),
-      editable: { control: 'number', unit: 'lot', min: 0, step: 0.01 },
+      editable: { control: 'number', unit: 'lot', min: 0, step: 0.01, nullable: true },
     },
     {
       id: 'accountSize',

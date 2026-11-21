@@ -979,7 +979,13 @@ export default function MoversStrategyBacktestPage() {
           </section>
 
           {/* ── which configuration these numbers describe ── */}
-          <TradeConfigPanel tradeConfig={okRuns[0]?.tradeConfig} />
+          {/* A change here PATCHes the bot and runs the same queue again (register row 247), so the
+              page's own runner is handed in rather than the panel starting a run of its own. */}
+          <TradeConfigPanel
+            tradeConfig={okRuns[0]?.tradeConfig}
+            onRetest={runQueue.length ? runAll : undefined}
+            retestBusy={running}
+          />
           </>
           )}
         </div>

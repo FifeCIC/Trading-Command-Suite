@@ -98,6 +98,49 @@ describe('trade-config editability', () => {
     }
   });
 
+  /**
+   * ⚠️ THE COLUMN TYPE IS THE OTHER HALF OF "IS THIS EDITABLE". `Int` refuses a fraction and a
+   * required column refuses `null`, and BOTH failures happen at the database — after the panel has
+   * told the reader it saved. Declaring `integer`/`nullable` beside the control and checking them
+   * against the DMMF means the mis-declaration is caught here instead of in a refused PATCH.
+   */
+  it('the declared integer/nullable flags match the column types in the schema', () => {
+    const model = Prisma.dmmf.datamodel.models.find((m) => m.name === 'TradingStrategy');
+    if (!model) throw new Error('TradingStrategy model not found in the Prisma DMMF');
+    const checked: string[] = [];
+    for (const f of fields.filter((x) => x.editable)) {
+      const col = model.fields.find((c) => c.name === f.id);
+      if (!col) continue; // the phantom-column test above owns that failure
+      checked.push(f.id);
+      expect([Boolean(f.editable?.integer), Boolean(f.editable?.nullable)]).toEqual([
+        col.type === 'Int',
+        !col.isRequired,
+      ]);
+    }
+    // Guard against the guard: an empty loop would pass every assertion above.
+    expect(checked.length).toBeGreaterThan(8);
+  });
+
+  it('CANARY — int/nullable flags that disagree with the column are reported', () => {
+    const model = Prisma.dmmf.datamodel.models.find((m) => m.name === 'TradingStrategy');
+    if (!model) throw new Error('TradingStrategy model not found in the Prisma DMMF');
+    const mismatched = (rows: TradeConfigField[]): string[] =>
+      rows
+        .filter((r) => r.editable && model.fields.find((c) => c.name === r.id))
+        .filter((r) => {
+          const col = model.fields.find((c) => c.name === r.id)!;
+          return Boolean(r.editable?.integer) !== (col.type === 'Int')
+            || Boolean(r.editable?.nullable) !== !col.isRequired;
+        })
+        .map((r) => r.id);
+    expect(mismatched(fields)).toEqual([]);
+    // `maxHoldHours` is Int? — calling it a nullable Float is exactly the mis-declaration to catch.
+    const broken = fields.map((r) =>
+      r.id === 'maxHoldHours' ? { ...r, editable: { ...r.editable!, integer: false } } : r,
+    );
+    expect(mismatched(broken)).toEqual(['maxHoldHours']);
+  });
+
   it('CANARY — a field named as a column that is not one is reported', () => {
     const columns = botColumns();
     const fabricated = [

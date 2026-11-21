@@ -414,6 +414,25 @@ export const NOTICES = {
     params: ['name', 'level', 'cap', 'active', 'nextLevel', 'nextXp', 'nextCap'],
     refs: ['#1193'],
   },
+  /**
+   * A save from the backtest trade-management table (register row 247). It gets its own code because
+   * the failure is specific and the reader needs to know WHICH half happened: the `trading_strategy`
+   * row the live loop reads was not written, so the live bot is unchanged — while the numbers on the
+   * page still describe the previous configuration.
+   */
+  'TCS-TRADE-026': {
+    severity: 'error',
+    area: 'TRADE',
+    title: 'Bot settings were not saved',
+    message: '\u201c{name}\u201d was NOT changed, so the run was not repeated.',
+    cause: '{detail}',
+    action:
+      'Correct the value and try again. A refusal naming the active-bot ceiling or a running A/B ' +
+      'comparison is a guard, not a fault: deactivate the bot or finish the comparison first. The ' +
+      'live bot still holds its previous settings, and the table above still describes them.',
+    params: ['name', 'detail'],
+    refs: ['#247'],
+  },
 
   // ── Integrations ─────────────────────────────────────────
   'TCS-INTEG-001': {
