@@ -91,3 +91,15 @@
   left: auto;
   right: 14px;
 }
+
+/* A hover glyph sits beside a value and stays quiet until it is needed. Hover is an ENHANCEMENT: the
+   button inside is still clickable and keyboard-operable, so touch and keyboard users are not excluded. */
+.why-pop--hover {
+  gap: 0.15rem;
+}
+
+.why-pop--hover .why-pop-btn {
+  width: 18px;
+  height: 18px;
+  opacity: 0.45;
+}

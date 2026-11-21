@@ -510,13 +510,8 @@ export default function MoversStrategyBacktestPage() {
         {formOpen && (
           <>
             <div className="ff-field" id="mvp-sec-data">
-              <span className="ff-label">
-                Day
-                <WhyPopover title="What a day is">
-                  Each stored list is a screen of ONE session — the date in its name. The earlier
-                  sessions in its window are directive warm-up and are never reported as results.
-                </WhyPopover>
-              </span>
+              {/* No "Day" label (decided 2026-11-20). The table's own Day column header names it, so a
+                  label above the table only repeated that. */}
               {datasetsQuery.isError ? (
                 <NoticeBlock
                   notice={noticeFromError(datasetsQuery.error, 'TCS-SYS-002', {
@@ -862,9 +857,9 @@ export default function MoversStrategyBacktestPage() {
           </section>
 
           {/* Stored datasets that are NOT offered (their name carries no day) are deliberately not shown
-              on the page. Measured 2026-11-20: the owner called the count + naming rule "random text
-              between containers". The API still reports them in `datasetsQuery.data.excluded` for anyone
-              diagnosing a missing day — do not re-add a paragraph or note here. */}
+              on the page. Measured 2026-11-20: the count + naming rule read as noise between containers.
+              The API still reports them in `datasetsQuery.data.excluded` for anyone diagnosing a missing
+              day — do not re-add a paragraph or note here. */}
 
           {/* ── bar by bar ── */}
           <section className="mvp-panel" aria-label="Bar by bar">

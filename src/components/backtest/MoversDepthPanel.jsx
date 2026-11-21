@@ -40,6 +40,21 @@ const STATE_LABEL = {
   quiet: 'HOLD',
 };
 
+/**
+ * What each badge MEANS, in one sentence — so the reader never has to infer it. Each sentence describes
+ * ONE BAR. The column holds a badge per bar; it is not a trade's story, and saying so is the whole point
+ * of this map (raised on 2026-11-21: how a bar could be both ENTRY and EXIT).
+ */
+const STATE_HINT = {
+  'entry+exit': 'A trade opened on this bar AND closed on this bar — a same-bar bracket hit (TP or SL inside the 5 minutes).',
+  entry: 'A trade opened on this bar and was still open at its end.',
+  exit: 'A trade closed on this bar, and nothing opened on it.',
+  'signal-not-traded': 'The signal was actionable but no trade opened, and the engine records no per-bar reason.',
+  'bar-gate': 'The score did not clear the bot’s own entry bar, so the signal was never acted on.',
+  'no-data': 'No directional reading on this bar.',
+  quiet: 'Not actionable for this protocol’s side.',
+};
+
 const STATE_TONE = {
   'entry+exit': 'entry',
   entry: 'entry',
@@ -59,16 +74,37 @@ const EXIT_TONE = {
   EOD: 'none',
 };
 
-/** The decision in words, using ONLY recorded facts. */
+/**
+ * The decision in words, using ONLY recorded facts.
+ *
+ * ⚠️ EVERY TRADE ON THE BAR IS NAMED, not just the first. A row showing "LONG opened at 0.96" beside an
+ * `ENTRY + EXIT` badge leaves the exit unexplained — the row knew and the sentence did not (raised
+ * 2026-11-21). An entry and a same-bar exit are ONE trade (the bracket closed inside the 5 minutes);
+ * two different trades are joined with " · ".
+ *
+ * ⚠️ A PRE-CUTOFF TRADE IS NOT "REFUSED". The selection cannot refuse something that never reached it:
+ * before the cutoff the ranking is not known yet, which is why `kept` is false on every one of them
+ * (measured: all 34 pre-cutoff trades on movers-winners-2026-11-11 carried it). Calling that a refusal
+ * invented a rejection reason, so the wording now names the real cause.
+ */
 function decisionText(bar) {
   if (bar.state === 'entry' || bar.state === 'entry+exit') {
-    const e = bar.entries[0];
-    const refused = bar.entries.some((x) => !x.kept);
-    return `${e.direction} opened at ${fmtPrice(bar.price)}${refused ? ' — refused by the selection' : ''}`;
+    const parts = [];
+    const first = bar.entries[0];
+    parts.push(`${first.direction} opened at ${fmtPrice(bar.price)}`);
+    if (bar.exits.length) {
+      parts.push(exitPhrase(bar.exits[0]));
+    } else if (bar.orphanedExits > 0) {
+      // The trade left before the next bar. Saying "still open" here would be a contradiction with the
+      // executions table, which is exactly the kind of quiet disagreement this panel exists to remove.
+      parts.push('closed before the next bar it could be shown on');
+    }
+    if (bar.beforeCutoff) parts.push('before the cutoff — the ranking was not known yet');
+    else if (bar.entries.some((x) => !x.kept)) parts.push('after the cutoff, refused by the selection');
+    return parts.join(' · ');
   }
   if (bar.state === 'exit') {
-    const x = bar.exits[0];
-    return `${x.exitReason} closed ${x.direction} for ${fmtMoney(x.pnl)}`;
+    return exitPhrase(bar.exits[0]);
   }
   if (bar.state === 'signal-not-traded') {
     return `${bar.signal} cleared the gates and produced no trade — the engine does not record the per-bar reason`;
@@ -78,6 +114,11 @@ function decisionText(bar) {
   }
   if (bar.state === 'no-data') return 'no directional reading on this bar';
   return `${bar.signal} — not actionable for this leg`;
+}
+
+/** `TP closed LONG for 471.75` — one phrasing, used by both the same-bar leg and a standalone exit. */
+function exitPhrase(x) {
+  return `${x.exitReason} closed ${x.direction} for ${fmtMoney(x.pnl)}`;
 }
 
 export default function MoversDepthPanel({ symbol, day, detail }) {
@@ -109,147 +150,110 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
     <div className="mvp-depth">
       {/* ── 1 · the funnel, as square cards ─────────────────────────────────────────────────────── */}
       <section id="mvp-sec-ladder" aria-label="Pipeline steps">
-        <h3 className="mvp-depth-title">
-          {symbol} · {day} — from the day’s list to a closed trade
-        </h3>
-        {/* ⚠️ SQUARE CARDS, NOT A LADDER WITH BARS (owner, 2026-11-20). The progress bars claimed a
-            "loading" shape for counts that were never loading — they were always 0–100% of the
-            previous rung. And two rungs were immediately redundant: the single symbol was already
-            highlighted in the day table, and its "of N" came from that same list. Both are dropped
-            here; the first card carries the list size, so the reader keeps the denominator. */}
+        {/* ⚠️ NO HEADING AND NO RUN-COUNTER PARAGRAPH (decided 2026-11-20). The paragraph was judged
+            clutter, and the stored run id was not yet of use to a reader. The symbol and day are already
+            in the panel's own chip bar above; repeating them as an h3 was the clutter. */}
+        {/* ⚠️ SQUARE CARDS, NOT A LADDER WITH BARS. The progress bars claimed a "loading" shape for counts
+            that were never loading. Two rungs were also redundant: the single symbol was already
+            highlighted in the day table, and its "of N" came from that same list. Both are dropped; the
+            first card carries the list size so the denominator is not lost. Each card explains itself on
+            hover (and on click / keyboard for touch and screen readers). */}
         <ol className="mvp-step-cards">
           {steps
             .filter((s) => s.id !== 'candidates' && s.id !== 'selected')
             .map((s) => (
               <li key={s.id} className="mvp-step-card">
-                <span className="mvp-step-count">{s.count}</span>
-                <span className="mvp-step-label">{s.label}</span>
-                {s.of != null && <span className="mvp-step-of">of {s.of}</span>}
-                {s.id === 'scored' && candidatesTotal > 0 && (
-                  <span className="mvp-step-of">on a {candidatesTotal}-symbol list</span>
-                )}
+                <span className="mvp-step-head">
+                  <span className="mvp-step-count">{s.count}</span>
+                  {s.of != null && <span className="mvp-step-of">of {s.of}</span>}
+                </span>
+                <span className="mvp-step-label">
+                  {s.label}
+                  <WhyPopover title={`What “${s.label}” counts`} hover>
+                    {s.note}
+                    {s.id === 'scored' && candidatesTotal > 0 && (
+                      <> Read against the {candidatesTotal}-symbol list this session started from.</>
+                    )}
+                  </WhyPopover>
+                </span>
               </li>
             ))}
         </ol>
-        {detail.runCounters && (
-          <p className="mvp-note" id="mvp-sec-persistence">
-            The run’s own counters for this symbol: <strong>{detail.runCounters.totalSignals ?? '—'}</strong>{' '}
-            entry signals · <strong>{detail.runCounters.signalsWithoutTrade ?? '—'}</strong> without a trade ·{' '}
-            <strong>{detail.runCounters.tradesRefusedUnaffordable ?? '—'}</strong> refused as unaffordable.
-            {detail.runId ? <> Stored run <code>{detail.runId}</code>.</> : null}
-          </p>
-        )}
+        {/* The run-counters paragraph (with the stored-run id) was removed 2026-11-20 — it was judged
+            clutter, and the run id was not yet of use to a reader. The per-symbol counters remain on the
+            ladder cards above (signals / no-trade / refused); the raw `runCounters` object is still on
+            `detail` for diagnostics. */}
       </section>
 
-      {/* ── 2 · the two linked tables ──────────────────────────────────────────────────────────── */}
-      <div className="mvp-depth-grid">
-        <section id="mvp-sec-bars" aria-label="Bars and scores">
-          <h3 className="mvp-depth-title">Bars &amp; scores <span className="mvp-muted">(UTC)</span></h3>
-          <div className="mvp-scroll mvp-depth-scroll">
-            <table className="mvp-table">
-              <thead>
-                <tr>
-                  <th scope="col">Time</th>
-                  <th scope="col" className="mvp-num">Price</th>
-                  <th scope="col" className="mvp-num">Chg %</th>
-                  <th scope="col" className="mvp-num">Score</th>
-                  <th scope="col" className="mvp-num">Opportunity</th>
-                  <th scope="col" className="mvp-num">Risk</th>
-                  <th scope="col">Signal</th>
-                  <th scope="col">State</th>
-                  <th scope="col" className="mvp-num">P/L</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bars.map((b) => {
-                  const barPnl = b.exits.reduce((a, x) => a + Number(x.pnl ?? 0), 0);
-                  return (
-                    <tr
-                      key={b.time}
-                      className={`${rowClass(b.time)}${b.beforeCutoff ? ' mvp-depth-row--pre' : ''}`}
-                      onMouseEnter={() => setPinned(b.time)}
-                      onFocus={() => setPinned(b.time)}
-                      tabIndex={0}
-                      onClick={() => setPinned(b.time)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setPinned(b.time);
-                        }
-                      }}
+      {/* ── 2 · ONE timeline: the score, the reading, and the outcome on the same row ─────────────
+          ⚠️ THIS WAS TWO TABLES AND THE READER WAS RIGHT THAT THEY WERE NEAR-IDENTICAL (2026-11-20):
+          both listed the same bars with the same time and the same P/L repeated, differing only in
+          which columns they carried. They are merged here, and the SCORE table keeps only score-side
+          facts (State was removed — it labels the OUTCOME, not the reading) while the DECISION reason
+          joins the row as a column. Executions stay a separate table because they are one row per
+          TRADE, not per bar. */}
+      <section id="mvp-sec-bars" aria-label="Bars, scores and decisions">
+        <h3 className="mvp-depth-title">Bars &amp; decisions <span className="mvp-muted">(UTC)</span></h3>
+        <div className="mvp-scroll mvp-depth-scroll">
+          <table className="mvp-table">
+            <thead>
+              <tr>
+                <th scope="col">Time</th>
+                <th scope="col" className="mvp-num">Price</th>
+                <th scope="col" className="mvp-num">Chg %</th>
+                <th scope="col" className="mvp-num">Score</th>
+                <th scope="col" className="mvp-num">Opportunity</th>
+                <th scope="col" className="mvp-num">Risk</th>
+                <th scope="col">Signal</th>
+                <th scope="col">Decision</th>
+                <th scope="col">Why / what</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bars.map((b) => (
+                <tr
+                  key={b.time}
+                  className={`${rowClass(b.time)}${b.beforeCutoff ? ' mvp-depth-row--pre' : ''}`}
+                  onMouseEnter={() => setPinned(b.time)}
+                  onFocus={() => setPinned(b.time)}
+                  tabIndex={0}
+                  onClick={() => setPinned(b.time)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setPinned(b.time);
+                    }
+                  }}
+                >
+                  <td className="mvp-nowrap">
+                    {clock(b.time)}
+                    {b.beforeCutoff && <span className="mvp-depth-pre" title="before the cutoff — could never trade">pre</span>}
+                  </td>
+                  <td className="mvp-num">{fmtPrice(b.price)}</td>
+                  <td className={`mvp-num ${b.changePct > 0 ? 'mvp-pos' : b.changePct < 0 ? 'mvp-neg' : ''}`}>
+                    {fmtPct(b.changePct)}
+                  </td>
+                  <td className="mvp-num">{Number(b.score).toFixed(1)}</td>
+                  <td className="mvp-num">{Number(b.opportunityPct).toFixed(1)}</td>
+                  <td className="mvp-num">{Number(b.riskMultiplier).toFixed(2)}</td>
+                  <td className="mvp-nowrap">{b.signal}</td>
+                  <td className="mvp-nowrap">
+                    {/* The badge carries its own definition in a tooltip AND in the text alternative, so the
+                        three labels cannot be read as contradictory statements about one trade. */}
+                    <span
+                      className={`mvp-state mvp-state--${STATE_TONE[b.state] ?? 'none'}`}
+                      title={STATE_HINT[b.state] ?? undefined}
                     >
-                      <td className="mvp-nowrap">
-                        {clock(b.time)}
-                        {b.beforeCutoff && <span className="mvp-depth-pre" title="before the cutoff — could never trade">pre</span>}
-                      </td>
-                      <td className="mvp-num">{fmtPrice(b.price)}</td>
-                      <td className={`mvp-num ${b.changePct > 0 ? 'mvp-pos' : b.changePct < 0 ? 'mvp-neg' : ''}`}>
-                        {fmtPct(b.changePct)}
-                      </td>
-                      <td className="mvp-num">{Number(b.score).toFixed(1)}</td>
-                      <td className="mvp-num">{Number(b.opportunityPct).toFixed(1)}</td>
-                      <td className="mvp-num">{Number(b.riskMultiplier).toFixed(2)}</td>
-                      <td className="mvp-nowrap">{b.signal}</td>
-                      <td className="mvp-nowrap">
-                        <span className={`mvp-state mvp-state--${STATE_TONE[b.state] ?? 'none'}`}>{STATE_LABEL[b.state] ?? b.state}</span>
-                      </td>
-                      <td className={`mvp-num ${barPnl > 0 ? 'mvp-pos' : barPnl < 0 ? 'mvp-neg' : ''}`}>
-                        {b.exits.length ? fmtMoney(barPnl) : '—'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section id="mvp-sec-decisions" aria-label="Decisions">
-          <h3 className="mvp-depth-title">Decisions <span className="mvp-muted">(one per bar, derived)</span></h3>
-          <div className="mvp-scroll mvp-depth-scroll">
-            <table className="mvp-table">
-              <thead>
-                <tr>
-                  <th scope="col">Time</th>
-                  <th scope="col">Decision</th>
-                  <th scope="col">Why / what</th>
-                  <th scope="col" className="mvp-num">P/L</th>
+                      {STATE_LABEL[b.state] ?? b.state}
+                    </span>
+                  </td>
+                  <td>{decisionText(b)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {bars.map((b) => {
-                  const pnl = b.exits.reduce((a, x) => a + Number(x.pnl ?? 0), 0);
-                  return (
-                    <tr
-                      key={b.time}
-                      className={rowClass(b.time)}
-                      onMouseEnter={() => setPinned(b.time)}
-                      onFocus={() => setPinned(b.time)}
-                      tabIndex={0}
-                      onClick={() => setPinned(b.time)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setPinned(b.time);
-                        }
-                      }}
-                    >
-                      <td className="mvp-nowrap">{clock(b.time)}</td>
-                      <td className="mvp-nowrap">
-                        <span className={`mvp-state mvp-state--${STATE_TONE[b.state] ?? 'none'}`}>{STATE_LABEL[b.state] ?? b.state}</span>
-                      </td>
-                      <td>{decisionText(b)}</td>
-                      <td className={`mvp-num ${pnl > 0 ? 'mvp-pos' : pnl < 0 ? 'mvp-neg' : ''}`}>
-                        {b.exits.length ? fmtMoney(pnl) : '—'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {/* ── 3 · executions — the per-trade record the phases need ─────────────────────────────── */}
       <section id="mvp-sec-execution" aria-label="Executions">

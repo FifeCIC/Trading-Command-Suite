@@ -16,7 +16,7 @@
  * exact class of mistake (`a warm-up call hides the regression you are measuring`) is called out in
  * the development philosophy.
  */
-import { decideExitTrigger, hasAnyExitRule } from './exit-trigger';
+import { decideExitTrigger, hasAnyExitRule, normaliseMaxHoldHours } from './exit-trigger';
 
 /** UTC clock helper — `new Date('...Z')` is unambiguous, local-time strings are not. */
 const at = (hhmm: string) => new Date(`2026-10-01T${hhmm}:00.000Z`);
@@ -159,5 +159,36 @@ describe('decideExitTrigger — #928 exit-side session boundary', () => {
     it('true when only the hold limit is declared', () => {
       expect(hasAnyExitRule(4, null)).toBe(true);
     });
+  });
+});
+
+/**
+ * ⚠️ `0` IS TWO DIFFERENT THINGS IN THIS REPO, AND THIS IS WHERE THEY ARE RECONCILED.
+ *
+ * Measured 2026-11-20: the backtest request defaults `maxHoldHours` to `0` ("no time stop"), and handing
+ * that straight to `decideExitTrigger()` made `overBy = hoursHeld - 0 > 0` true on every bar after the
+ * first — a boundary-only bot reported **100 TIME exits** it could never have had. The translation used
+ * to live at the engine's call site; it lives in the function now, so a caller cannot forget it.
+ */
+describe('normaliseMaxHoldHours — "no limit" has several spellings', () => {
+  it('passes a real limit through', () => {
+    expect(normaliseMaxHoldHours(4)).toBe(4);
+    expect(normaliseMaxHoldHours(0.5)).toBe(0.5);
+  });
+
+  it('▶ CANARY — 0, negatives, NaN and Infinity all mean NO LIMIT, never "expire now"', () => {
+    for (const value of [0, -1, -0.0001, Number.NaN, Number.POSITIVE_INFINITY, null, undefined]) {
+      expect(normaliseMaxHoldHours(value as never)).toBeNull();
+    }
+  });
+
+  it('and `decideExitTrigger` therefore fires NO time stop for any of them', () => {
+    const at = new Date('2026-11-20T18:00:00Z');
+    for (const value of [0, -1, Number.NaN, null]) {
+      const d = decideExitTrigger({ maxHoldHours: value as never, hoursHeld: 99, exitBeforeUtc: null, at });
+      expect(d.due).toBe(false);
+      expect(d.trigger).toBeNull();
+      expect(d.overMaxHold).toBe(false);
+    }
   });
 });

@@ -136,6 +136,38 @@ describe('buildDepthBars', () => {
     expect(bars[0].entries).toHaveLength(1);
     expect(bars[0].exits).toHaveLength(1);
   });
+
+  it('▶ CANARY — a bracket hit INSIDE the entry bar is ENTRY + EXIT, not a bare ENTRY', () => {
+    // Owner report 2026-11-21: the page showed ENTRY + EXIT, ENTRY and EXIT with no way to reconcile
+    // them. A trade that opens and closes on one bar was labelled with only its opening leg, so the
+    // exit vanished from a bar that WANTED to show it. On movers-winners-2026-11-11 / NXXT this was
+    // 26 of 63 trades: the bot's +5.9%/-2.6% bracket against a stock moving ~1000% in a session.
+    // Fails on the pre-fix precedence (`entries.length ? 'entry' : ...`).
+    const bars = buildDepthBars({
+      ...base,
+      series: [row('2026-11-11T16:05:00.000Z'), row('2026-11-11T16:10:00.000Z')],
+      trades: [trade({ entryDate: '2026-11-11T16:05:00.000Z', exitDate: '2026-11-11T16:05:00.000Z' })],
+    });
+    expect(bars[0].state).toBe('entry+exit');
+    expect(bars[0].entries).toHaveLength(1);
+    // The SAME trade, on the same row — the exit is a fact about this bar and is not dropped.
+    expect(bars[0].exits).toHaveLength(1);
+    expect(bars[0].exits[0].exitReason).toBe('TP');
+    expect(bars[1].state).not.toBe('entry+exit');
+  });
+
+  it('▶ CANARY — an exit whose instant is not a bar is COUNTED on the bar it left, never dropped', () => {
+    // 25 of the 63 NXXT trades close at an instant that is not a bar in the window (end-of-data or a
+    // data gap). Dropping them made the timeline under-read the executions table with no explanation.
+    const bars = buildDepthBars({
+      ...base,
+      series: [row('2026-11-11T16:05:00.000Z')],
+      trades: [trade({ entryDate: '2026-11-11T16:05:00.000Z', exitDate: '2026-11-11T20:00:00.000Z' })],
+    });
+    expect(bars[0].state).toBe('entry');
+    expect(bars[0].exits).toHaveLength(0);
+    expect(bars[0].orphanedExits).toBe(1);
+  });
 });
 
 describe('buildStepLadder', () => {

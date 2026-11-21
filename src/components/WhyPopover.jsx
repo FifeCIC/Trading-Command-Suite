@@ -25,11 +25,17 @@ import '../styles/why-popover.css';
 export default function WhyPopover({
   /** Visible label; defaults to a "?" glyph. Always accompany with an `aria-label`. */
   label = '?',
-  /** Accessible name — required, because the glyph alone says nothing. */
+  /** Accessible name — the glyph alone says nothing. Required when the trigger is the info icon. */
   title,
   children,
   /** `inline` fits inside a table cell; `block` sits under a heading. */
   variant = 'inline',
+  /**
+   * Render a bare info glyph that also opens on HOVER while staying click/keyboard operable. Use it
+   * BESIDE a value as a help affordance (a step card, a metric); use the default (a click-only button)
+   * when the trigger has its own visible label.
+   */
+  hover = false,
 }) {
   const [open, setOpen] = useState(false);
   const id = useId();
@@ -46,8 +52,18 @@ export default function WhyPopover({
     return () => document.removeEventListener('mousedown', onDown);
   }, [open]);
 
+  // ⚠️ HOVER IS AN ENHANCEMENT, NEVER THE ONLY WAY IN. Click, Enter/Space and keyboard focus all still
+  // open it, because a hover-only help is unreachable on touch and by anyone using a keyboard — the
+  // accessibility policy forbids `title` for exactly this reason.
+  const hoverProps = hover
+    ? {
+        onMouseEnter: () => setOpen(true),
+        onMouseLeave: () => setOpen(false),
+      }
+    : {};
+
   return (
-    <span className={`why-pop why-pop--${variant}`} ref={ref}>
+    <span className={`why-pop why-pop--${variant}${hover ? ' why-pop--hover' : ''}`} ref={ref} {...hoverProps}>
       <button
         type="button"
         className="why-pop-btn"

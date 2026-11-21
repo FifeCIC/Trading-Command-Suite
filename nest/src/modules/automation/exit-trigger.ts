@@ -41,7 +41,15 @@ import { checkExitBoundary, type ExitBoundaryResult } from '../trading/session-w
 export type TimedStopTrigger = 'max_hold' | 'exit_boundary';
 
 export interface ExitTriggerInput {
-  /** The strategy's `maxHoldHours`. `null` = no limit declared. */
+  /**
+   * The strategy's `maxHoldHours`. `null` = no limit declared.
+   *
+   * ⚠️ `0`, a NEGATIVE and a NON-FINITE value are ALSO "no limit" — normalised by
+   * `normaliseMaxHoldHours()` below, not by each caller. Measured 2026-11-20: the backtest request
+   * defaults `maxHoldHours` to `0`, and passing that straight through made `overBy = hoursHeld - 0 > 0`
+   * true on every bar after the first, so a boundary-only bot reported **100 TIME exits** it could
+   * never have had. The translation therefore lives in the function, where a caller cannot forget it.
+   */
   maxHoldHours: number | null;
   /** How long the position has been open. */
   hoursHeld: number;
@@ -49,6 +57,23 @@ export interface ExitTriggerInput {
   exitBeforeUtc: unknown;
   /** Injectable clock — the tests pin the boundary rather than depending on the wall clock. */
   at?: Date;
+}
+
+/**
+ * Hours → a limit, or `null` for "no limit".
+ *
+ * ⚠️ `0` IS TWO DIFFERENT THINGS IN THIS REPO and this is the single place the two are reconciled: the
+ * backtest request treats `0` as "no time stop" (its own long-standing default), while a live caller
+ * that handed `0` to `decideExitTrigger()` would make every position instantly over the limit. Both
+ * arrive here as `0`, so "no limit" is the only reading that cannot close a position nobody asked to
+ * close — and a zero-length hold is the one interpretation that would look like a catastrophic
+ * strategy rather than a mis-read field.
+ */
+export function normaliseMaxHoldHours(value: number | null | undefined): number | null {
+  if (value === null || value === undefined) return null;
+  const hours = Number(value);
+  if (!Number.isFinite(hours) || hours <= 0) return null;
+  return hours;
 }
 
 /**
@@ -67,7 +92,10 @@ export type ExitTriggerDecision = {
 } & ({ due: false; trigger: null } | { due: true; trigger: TimedStopTrigger });
 
 export function decideExitTrigger(input: ExitTriggerInput): ExitTriggerDecision {
-  const { maxHoldHours, hoursHeld, exitBeforeUtc } = input;
+  const { hoursHeld, exitBeforeUtc } = input;
+  // ⚠️ NORMALISED HERE, NOT BY THE CALLER — see `normaliseMaxHoldHours()`. A raw `0` reaching
+  // `overBy > 0` below would make every position instantly over the limit.
+  const maxHoldHours = normaliseMaxHoldHours(input.maxHoldHours);
   const boundary = checkExitBoundary(exitBeforeUtc, input.at);
 
   // `null` and 0 are DIFFERENT: `parseMaxHoldHours` returns null for "no limit" precisely so a

@@ -44,7 +44,7 @@ import { checkSessionWindow } from '../trading/session-window';
 // #928/#1242 — the SAME combined decision the live path uses: hold limit + session boundary, and which
 // one wins when both are due. Extracted for the live path in 2026-09 so it could be canaried; reused here
 // so the engine cannot hold a position the bot would have closed.
-import { decideExitTrigger } from '../automation/exit-trigger';
+import { decideExitTrigger, type ExitTriggerDecision } from '../automation/exit-trigger';
 import { sessionGatePlan } from './session-gate';
 // ⚠️ The unmonitored-hole threshold, extracted so it has ONE definition and a test that can fail
 // (#1286). Its guard used to skip the entry bar, so the hole right after entry went unmeasured.
@@ -744,6 +744,21 @@ export function daysRangeStart(newestBarAt: Date, days: number): Date {
 export function passesBotEntryBar(compositePct: number, minComposite?: number | null): boolean {  const bar = Number(minComposite ?? 0);
   if (!Number.isFinite(bar) || bar <= 0) return true;
   return compositePct >= bar;
+}
+
+/**
+ * Which exit kind a `decideExitTrigger()` verdict implies — ONE mapping, used by the loop AND by its
+ * agreement fixture (`session-exit-agreement.spec.ts`).
+ *
+ * ⚠️ EXPORTED SO A TEST CANNOT RE-STATE IT. Written inline in the loop, the fixture would have to copy
+ * the mapping to assert anything, and a copy of the thing under test is the shape this repo keeps
+ * paying for — the fixture would then pass while the loop said something else.
+ */
+export function timedExitKind(
+  decision: Pick<ExitTriggerDecision, 'due' | 'trigger'>,
+): 'TIME' | 'SESSION' | null {
+  if (!decision.due) return null;
+  return decision.trigger === 'max_hold' ? 'TIME' : 'SESSION';
 }
 
 /**
@@ -2452,15 +2467,11 @@ export class BacktestService {
              * precedes the bar's range entirely.
              */
             const timed = decideExitTrigger({
-              /**
-               * ⚠️ `0` IS THE ENGINE'S "NO LIMIT" AND LIVE'S "NO LIMIT" IS `null` — so it is normalised
-               * HERE, not passed through. Measured 2026-11-20: passing the engine's default `0` straight
-               * into `decideExitTrigger()` made `overBy = hoursHeld - 0 > 0` true on every bar after the
-               * first, so a boundary-only bot reported **100 TIME exits** it should never have had. The
-               * engine's request defaults `maxHoldHours` to 0; live's `parseMaxHoldHours()` returns null
-               * for absent/invalid. One of them has to translate, and it is the caller.
-               */
-              maxHoldHours: Number(maxHoldHours) > 0 ? Number(maxHoldHours) : null,
+              // ⚠️ NO NORMALISATION HERE. `decideExitTrigger()` treats `0`, a negative and a non-finite
+              // value as "no limit" itself (`normaliseMaxHoldHours()`), because the translation at a
+              // call site is exactly what produced 100 phantom TIME exits on 2026-11-20 — and the next
+              // caller would have had to remember it too.
+              maxHoldHours,
               hoursHeld: (fb.timestamp.getTime() - currentBar.timestamp.getTime()) / 3_600_000,
               exitBeforeUtc,
               // The BAR's instant is the clock the run is measured against — never the process clock,
@@ -2472,7 +2483,7 @@ export class BacktestService {
               position,
               { open: fb.open, high: fb.high, low: fb.low, close: fb.close, timeMs: fb.timestamp.getTime() },
               plan ?? {},
-              timed.due ? (timed.trigger === 'max_hold' ? 'TIME' : 'SESSION') : null,
+              timedExitKind(timed),
               {
                 targetAmount: takeProfitAmount,
                 /**

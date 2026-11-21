@@ -96,8 +96,18 @@ export interface DepthBarRow extends DepthSeriesRow {
   state: BarState;
   /** Trades that OPENED on this bar. More than one only if the engine stacked. */
   entries: Array<{ direction: 'LONG' | 'SHORT'; kept: boolean; pnl: number | null }>;
-  /** Trades that CLOSED on this bar. */
+  /**
+   * Trades that CLOSED on this bar — INCLUDING one that closed inside the bar it opened on (a
+   * same-bar bracket hit). That case is listed in BOTH `entries` and `exits` on purpose: reporting
+   * only the opening leg is what let a TP show as a bare `ENTRY` row.
+   */
   exits: Array<{ direction: 'LONG' | 'SHORT'; kept: boolean; pnl: number; exitReason: string }>;
+  /**
+   * Trades on this bar whose EXIT instant is not a bar in this window — an end-of-data close, a
+   * session exit, or a data gap. Counted, never dropped (`closedOffBar`), so `entry` + `orphanedExits`
+   * reconciles with the executions table instead of silently under-reading it.
+   */
+  orphanedExits: number;
 }
 
 export interface DepthStep {
@@ -132,14 +142,41 @@ export function buildDepthBars(input: {
   const cutoffMinute = parseCutoffUtc(cutoffUtc);
 
   const dayBars = series.filter((r) => String(r.time).slice(0, 10) === answerDate);
+  const barInstant = new Set(dayBars.map((r) => new Date(r.time).getTime()));
 
   return dayBars.map((row) => {
-    const entries = trades
-      .filter((t) => sameInstant(t.entryDate, row.time))
-      .map((t) => ({ direction: t.direction, kept: t.kept, pnl: t.kept ? t.pnl : null }));
-    const exits = trades
-      .filter((t) => sameInstant(t.exitDate, row.time))
-      .map((t) => ({ direction: t.direction, kept: t.kept, pnl: t.pnl, exitReason: t.exitReason }));
+    /**
+     * ── DECISION (2026-11-21, primary) ──
+     * WHAT:      `exits` includes the trade that closes INSIDE the bar it opened on, that trade is
+     *            listed in `entries` AND `exits` on the same row, and both branches label the row
+     *            `entry+exit`. A trade whose exit instant is not a bar here is counted in
+     *            `orphanedExits`.
+     * WHY:       The old precedence (`entries.length ? 'entry' : …`) reported a same-bar bracket hit as
+     *            a bare ENTRY, while a bar that entered AND exited via two DIFFERENT trades said
+     *            ENTRY + EXIT — the same words for two different facts, which is what a reader cannot
+     *            reconcile. Measured on movers-winners-2026-11-11 / NXXT: 26 of 63 trades closed
+     *            within 5 minutes, and 25 more closed at an instant that is not a bar in the window,
+     *            so most real exits were invisible on the timeline.
+     * INSTEAD OF: Keeping the "an entry outranks an exit" precedence. It is not merely a label: it
+     *            reproduced the regression the same test file already pins (a bar that closed and
+     *            opened a position must say `entry+exit`). Both facts now give one answer.
+     * REVERSE BY: Restoring the `entries.length ? 'entry' :` branch above and removing the
+     *            self-exit/`orphanedExits` handling. Nothing is stored — the timeline is recomputed
+     *            from recorded trades on every request, so old runs re-derive correctly without backfill.
+     * REGISTER:  docs/SETTLED-DECISIONS.md row 232
+     * GUARD:     nest/src/modules/backtest/run-depth.spec.ts — the two "CANARY" cases below, canaried
+     *            against the pre-fix code (both fail there).
+     */
+    const opened = trades.filter((t) => sameInstant(t.entryDate, row.time));
+    // A trade that closes inside the bar it opened on matches BOTH filters — which is exactly how it
+    // ends up listed as an entry AND an exit, instead of being reported as a bare entry.
+    const closed = trades.filter((t) => sameInstant(t.exitDate, row.time));
+
+    const entries = opened.map((t) => ({ direction: t.direction, kept: t.kept, pnl: t.kept ? t.pnl : null }));
+    const exits = closed.map((t) => ({ direction: t.direction, kept: t.kept, pnl: t.pnl, exitReason: t.exitReason }));
+    // An exit that cannot be placed on a bar is NOT an exit on this bar — it is a fact this row has to
+    // carry, or the executions table and this timeline disagree with no explanation.
+    const orphanedExits = opened.filter((t) => !barInstant.has(new Date(t.exitDate).getTime())).length;
 
     const beforeCutoff = minuteOfDayUtc(row.time) < cutoffMinute;
 
@@ -152,7 +189,7 @@ export function buildDepthBars(input: {
     else if (decideEntry(row.signal, directionMode).enter) state = 'signal-not-traded';
     else state = 'quiet';
 
-    return { ...row, beforeCutoff, state, entries, exits };
+    return { ...row, beforeCutoff, state, entries, exits, orphanedExits };
   });
 }
 

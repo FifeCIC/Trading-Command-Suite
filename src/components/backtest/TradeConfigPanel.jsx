@@ -94,7 +94,7 @@ export default function TradeConfigPanel({ tradeConfig }) {
               <th scope="col">Setting</th>
               <th scope="col" className="mvp-num">This run used</th>
               <th scope="col">Source</th>
-              <th scope="col">Applied?</th>
+              <th scope="col">Applied by the engine?</th>
               <th scope="col">Where it lives</th>
             </tr>
           </thead>
