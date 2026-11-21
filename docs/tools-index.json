@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 207,
+  "count": 208,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -375,6 +375,16 @@
       "category": "database",
       "purpose": "write the canonical development window as `backtest_period` rows (#1132).",
       "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "build-movers-dataset.cjs",
+      "where": "nest",
+      "category": "generator",
+      "purpose": "build a `movers-{winners|losers}-YYYY-MM-DD` day list from stored bars (#1322).",
+      "selfTest": true,
       "reaches": [
         "npm"
       ]

@@ -777,7 +777,7 @@ export default function MoversStrategyBacktestPage() {
                     </WhyPopover>
                   )}
                 </div>
-              ) : (
+              ) : sessionGateView.appliedCount > 0 ? (
                 <p className="mvp-gate mvp-gate--applied">
                   <span className="mvp-gate-tag">Window applied</span>
                   <span className="mvp-gate-text">
@@ -787,7 +787,7 @@ export default function MoversStrategyBacktestPage() {
                       : `on ${sessionGateView.appliedCount} of ${sessionGateView.runCount} days.`}
                   </span>
                 </p>
-              )
+              ) : null
             )}
 
             {comparisonView && (

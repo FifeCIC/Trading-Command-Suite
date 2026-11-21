@@ -43,6 +43,36 @@ export type TradeConfigSource = 'bot' | 'request' | 'engine-default';
  */
 export type LiveEnforcement = 'live' | 'legacy-only' | 'display-only' | 'none';
 
+/**
+ * What the row can be EDITED as — the server's declaration, not the page's guess.
+ *
+ * ── DECISION (2026-11-21, owner) ──
+ * WHAT:      A bot-backed row in this table is editable, and saving it writes the `trading_strategy`
+ *            record that LIVE trades obey — not a run-scoped override.
+ * WHY:       Owner, on this page: *"I think we should save them as live values and so the user would be
+ *            editing the same bot configuration as will be used live. Anything else becomes very
+ *            complex… stop protecting the user from using a rubbish strategy they didn't test well."*
+ *            A run-scoped override creates a SECOND configuration, and two copies drift — only one gets
+ *            the next fix.
+ * INSTEAD OF: A per-run override panel (the original Backtesting screen's model), which would have left
+ *            the screen able to test numbers no bot ever runs.
+ * REVERSE BY: Dropping `editable` from every row — the panel then renders read-only values again and no
+ *            write path exists.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 247
+ * GUARD:     nest/src/modules/backtest/trade-config-editability.spec.ts
+ *
+ * ⚠️ `control` is declared HERE because only the server knows which column exists and what shape its
+ * value has. A page that guessed would offer an input for a field the PATCH rejects.
+ */
+export interface TradeConfigEditable {
+  control: 'number' | 'toggle' | 'time';
+  /** The unit the stored number is in — the same unit as `value`, rendered beside the input. */
+  unit?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
 export interface TradeConfigField {
   id: string;
   label: string;
@@ -60,6 +90,11 @@ export interface TradeConfigField {
   live?: LiveEnforcement;
   /** Live's own caveat, verbatim from `bot-rules.ts` — never a second wording of the same fact. */
   liveNote?: string | null;
+  /**
+   * Present when this row is a real `trading_strategy` column the panel may write. Absent = read-only:
+   * the value is a request field, an engine literal, or a column with no safe free-text form.
+   */
+  editable?: TradeConfigEditable;
 }
 
 /** The subset of `trading_strategy` this module reads. */
@@ -98,6 +133,11 @@ export interface TradeConfigRequest {
   minComposite?: number;
   accountSize?: number;
   commission?: number;
+  /**
+   * #1325 — which population the run measures. Only `'portfolio'` makes `cooldownMinutes` applicable,
+   * and the row has to say so: the same bot read in both modes must not claim the same thing.
+   */
+  admission?: 'independent' | 'portfolio';
 }
 
 /**
@@ -146,6 +186,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: true,
       note: bot ? 'trading_strategy.slPct' : 'a literal in BacktestService.run() — no bot names this protocol',
       botValue: botSl,
+      editable: { control: 'number', unit: '%', min: 0, max: 100, step: 0.1 },
     },
     {
       id: 'tpPct',
@@ -156,6 +197,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: true,
       note: bot ? 'trading_strategy.tpPct' : 'a literal in BacktestService.run() — no bot names this protocol',
       botValue: botTp,
+      editable: { control: 'number', unit: '%', min: 0, max: 100, step: 0.1 },
     },
     {
       id: 'minComposite',
@@ -168,6 +210,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
         ? 'trading_strategy.minComposite — the second, tighter gate after the protocol threshold'
         : 'a literal in BacktestService.run() — every signal the protocol emits is traded',
       botValue: botBar,
+      editable: { control: 'number', unit: '%', min: 0, max: 100, step: 1 },
     },
     {
       id: 'maxHoldHours',
@@ -179,6 +222,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       // 0 = no limit, which is the engine's own documented default when the bot sets none.
       note: botHold !== null ? 'trading_strategy.maxHoldHours' : 'no time stop — the engine holds until stop, target or end of data',
       botValue: botHold,
+      editable: { control: 'number', unit: 'h', min: 0, max: 720, step: 1 },
     },
     {
       id: 'simTslEnabled',
@@ -193,6 +237,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       note: 'The ENGINE moves the stop to the trail. The LIVE guardian only records the decision point (#936) — '
         + 'so a run with a trailing stop shows protection the live bot does not yet have.',
       botValue: bot?.simTslEnabled ? 'on' : 'off',
+      editable: { control: 'toggle' },
     },
     {
       id: 'cooldownMinutes',
@@ -200,11 +245,18 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       value: num(bot?.cooldownMinutes),
       unit: 'min',
       source: 'bot',
-      applied: false,
-      note:
-        'NOT APPLIED — the engine has no cooldown, because overlapping hypothetical positions make the window ambiguous. '
-        + 'A run can therefore open one trade per bar while the live bot waits. See #1325.',
+      /**
+       * ⚠️ APPLIED ONLY IN `admission: 'portfolio'` MODE — and the row says which, so the same bot can be
+       * read in both modes without the table lying about either. In the default (independent) mode the
+       * engine still has no cooldown, because overlapping hypothetical trades make the window ambiguous;
+       * the portfolio filter resolves that ambiguity the way live does (entry-to-entry, `|| 5`).
+       */
+      applied: request.admission === 'portfolio',
+      note: request.admission === 'portfolio'
+        ? 'APPLIED by the portfolio admission filter: entries closer than this to the previous entry are refused, entry-to-entry as the live loop measures it (`cooldownMinutes || 5`).'
+        : 'NOT APPLIED in independent mode — the engine has no cooldown, because overlapping hypothetical positions make the window ambiguous. Ask for `admission: "portfolio"` to apply it. See #1325.',
       botValue: num(bot?.cooldownMinutes),
+      editable: { control: 'number', unit: 'min', min: 0, max: 1440, step: 1 },
     },
     {
       id: 'maxPositions',
@@ -214,6 +266,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: false,
       note: 'NOT APPLIED — the engine has no concurrency model; it evaluates each bar against one position per symbol.',
       botValue: num(bot?.maxPositions),
+      editable: { control: 'number', min: 1, max: 50, step: 1 },
     },
     {
       id: 'maxPyramidTiers',
@@ -223,6 +276,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: false,
       note: 'NOT APPLIED — averaging into a winner is enforced LIVE (pyramid-policy.service.ts, called by the automation loop). The engine opens one trade per signal and has no blended-entry model, so a run cannot show what adding size would have done. The decision itself is extracted to `pyramid-decision.ts` (#1242).',
       botValue: num(bot?.maxPyramidTiers),
+      editable: { control: 'number', min: 1, max: 10, step: 1 },
     },
     {
       id: 'exitBeforeUtc',
@@ -232,6 +286,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: true,
       note: 'trading_strategy.exitBeforeUtc — the FLAT-BY boundary, combined with max hold by the live `decideExitTrigger()`. The position closes at the first bar past it, at that bar\'s OPEN (reason SESSION). Absent = hold through any time.',
       botValue: bot?.exitBeforeUtc ?? null,
+      editable: { control: 'time' },
     },
     {
       id: 'takeProfitAmount',
@@ -241,6 +296,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: true,
       note: 'trading_strategy.takeProfitAmount — judged at each bar’s close against the trade’s own net-of-commission P&L, then closed at that close (exit reason TARGET; live `system:take-profit`). NULL/0 = no target, which is 77 of 78 bots.',
       botValue: num(bot?.takeProfitAmount),
+      editable: { control: 'number', unit: '$', min: 0, step: 1 },
     },
     {
       id: 'exhaustionObserveEnabled',
@@ -250,6 +306,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: false,
       note: 'NOT APPLIED — the live guardian records a decision point (#995) and acts on nothing; the engine has no observer.',
       botValue: bot?.exhaustionObserveEnabled ? 'on' : 'off',
+      editable: { control: 'toggle' },
     },
     {
       id: 'brokerId',
@@ -278,6 +335,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: false,
       note: 'NOT COMPARABLE — the live loop sends lots; this run sizes in units from an equity model (#843). P&L does not transfer.',
       botValue: num(bot?.baseSize),
+      editable: { control: 'number', unit: 'lot', min: 0, step: 0.01 },
     },
     {
       id: 'accountSize',

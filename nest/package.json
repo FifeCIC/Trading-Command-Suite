@@ -89,6 +89,8 @@
     "seed:dev-window": "node scripts/seed-dev-test-window.cjs",
     "seed:dev-window:apply": "node scripts/seed-dev-test-window.cjs --apply",
     "seed:dev-window:check": "node scripts/seed-dev-test-window.cjs --check",
+    "backtest:movers-dataset": "node scripts/build-movers-dataset.cjs",
+    "backtest:movers-dataset:self-test": "node scripts/build-movers-dataset.cjs --self-test",
     "db:rule-inventory": "node scripts/report-rule-inventory.cjs",
     "db:migrate-strategy-keys": "node scripts/migrate-strategy-keys.cjs"
   },

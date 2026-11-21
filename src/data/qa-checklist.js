@@ -613,11 +613,11 @@ const QA_CHECKLIST = [
     area: 'Documentation / build gates',
     system: 'scripts/validate-phrasing.cjs · package.json (first in root prebuild)',
     name: 'A requirement is never described as a person',
-    procedure: 'Run `node scripts/validate-phrasing.cjs --self-test`. Then add the line `the requirement approved this line` to any tracked `.md`, run `node scripts/validate-phrasing.cjs`, remove it and run again.',
+    procedure: 'Run `node scripts/validate-phrasing.cjs --self-test`. Then add the line `the requirement was approved this line` to any tracked `.md`, run `node scripts/validate-phrasing.cjs`, remove it and run again.',
     expected: 'Self-test **10/10** — each rule fires on its defect AND is silent on the corrected form. The injected line exits **1** naming file and line; removing it exits **0** across ~1,611 files. `Requirement (2026-09-23):` and the lowercase `(requirement, 2026-10-27)` label PASS; technical "owner" (`owning module`, `RAW_MANAGED_TABLES.owner`, position owner) is a different word and is untouched.',
     category: 'Guard',
     priority: 'medium',
-    versionNote: '2026-11-19 — register row 230. The guard judges three ILLOGICAL FORMS, never the word. ⚠️ No check can see a substitution that breaks a sentence across a line wrap — four of the 225 replacements did, and only reading each replacement in its two surrounding lines found them. ⚠️ The earlier scripted passes "passed" while leaving a dozen possessives untouched because grep prints the RENDERED line, where `requirement\'s` is stored escaped in a single-quoted string — the same class as a canary that cannot prove its own edit landed.',
+    versionNote: '2026-11-19 — register row 230. The guard judges three ILLOGICAL FORMS, never the word. ⚠️ No check can see a substitution that breaks a sentence across a line wrap — four of the 225 replacements did, and only reading each replacement in its two surrounding lines found them. ⚠️ The earlier scripted passes "passed" while leaving a dozen possessives untouched because grep prints the RENDERED line, where a possessive ending in \u2019s is stored escaped in a single-quoted string — the same class as a canary that cannot prove its own edit landed.',
   },
   {
     id: 'qa-t212-pie-001',

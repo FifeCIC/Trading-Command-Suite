@@ -67,7 +67,13 @@ import {
   type StoredSelection,
 } from './selection-profile';
 import { EXECUTION_SEMANTICS } from '../../common/trading/execution-semantics';
+// #1325 — "could the bot have taken this trade?" Applied AFTER the engine has decided every trade, so it
+// filters a population rather than deciding one.
+import { admitTrades } from './portfolio-admission';
 import { APP_VERSION } from '../../version';
+
+/** The one numeric coercion this file needs, kept local (a `null` must not read as 0). */
+const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
 export interface SelectionRunRequest {
   /** The `backtest_period.name` shared by every symbol in the dataset group. */
@@ -94,6 +100,30 @@ export interface SelectionRunRequest {
    * `null` explicitly disables the lookup, for a deliberate study of the protocol with no bot.
    */
   botId?: string | null;
+  /**
+   * ⚠️ WHICH POPULATION TO MEASURE — the one the engine can compute, or the one the bot could act on.
+   *
+   * `independent` (default, the incumbent): every signal becomes a hypothetical trade walked forward on
+   * its own. Correct for measuring SIGNAL quality; it is what every stored run contains.
+   *
+   * `portfolio`: the same decided trades, then an ADMISSION filter asking whether the bot was free —
+   * `cooldownMinutes` between entries and a cap on concurrent positions. Measured 2026-11-20: one
+   * movers day produced **53 entries where the bot could have taken 13**.
+   *
+   * ⚠️ OPT-IN IS REGISTER ROW 23, NOT HEDGING: switching the default would silently change the
+   * population of every stored result. With both arms available, the two can be compared on ONE
+   * dataset — which is the only way the change can be judged.
+   */
+  admission?: 'independent' | 'portfolio';
+  /**
+   * The concurrency cap for `admission: 'portfolio'`. This is the GLOBAL `risk.maxOpenPositions`
+   * (default 5, broker-wide) — **not** `trading_strategy.maxPositions`, which `bot-rules.ts` records as
+   * `legacy-only` and which the live dispatch path never reads.
+   *
+   * ⚠️ `null`/absent means NO CAP IS DECLARED, and the run says so rather than inventing 5: the setting
+   * is deployment state, and a default here would be a number nothing measured.
+   */
+  maxConcurrent?: number | null;
   // Strategy settings forwarded to the per-symbol engine, unchanged.
   slPct?: number;
   tpPct?: number;
@@ -114,8 +144,34 @@ export interface SelectionSymbolResult {
   excludedNotSelected: number;
   excludedBeforeCutoff: number;
   error?: string;
+  /**
+   * #1325 — trades this symbol produced that the ADMISSION filter refused (cooldown / cap).
+   * Absent in `independent` mode and absent when nothing was refused — 0 and "not measured" are
+   * different facts and must not render alike.
+   */
+  refusedByAdmission?: number;
   /** Present only when the request asked for `includeBreakdown`. */
   detail?: SelectionSymbolDetail;
+}
+
+/**
+ * #1325 — what the portfolio ADMISSION filter did, and what it deliberately does not model.
+ *
+ * ⚠️ `refused` is CAPPED AT 50 ROWS and `counts` is not: a page does not need 200 refusal sentences, but
+ * a reader must be able to see that 200 were refused. The counts are the claim; the rows are evidence.
+ */
+export interface SelectionAdmission {
+  mode: 'portfolio';
+  applied: { maxConcurrent: number | null; cooldownMinutes: number };
+  counts: {
+    considered: number;
+    admitted: number;
+    refused: number;
+    byCode: { cap: number; cooldown: number };
+  };
+  refused: Array<{ symbol: string; entryDate: string; code: 'cap' | 'cooldown'; because: string }>;
+  /** Listed on every result so nobody infers the population is a portfolio simulation. */
+  notModelled: string[];
 }
 
 /** One symbol's session, taken apart. Every field is either recorded by the run or labelled from it. */
@@ -191,6 +247,12 @@ export interface SelectionRunResult {
   comparison: Comparison;
   /** Whether this test was stored, so the next run has something to compare with. */
   selectionRun: { id: string | null; persisted: boolean; reason: string | null; runsLinked: number };
+  /**
+   * #1325 — present ONLY in `admission: 'portfolio'` mode. `null` means the run measured the independent
+   * population, which is what every stored run before this contains — so a reader is never left to guess
+   * which of the two they are looking at.
+   */
+  admission: SelectionAdmission | null;
   caveats: string[];
 }
 
@@ -546,10 +608,83 @@ export class SelectionRunService {
       }
     }
 
-    const totalTrades = keptTrades.length;
-    const totalWins = keptTrades.filter((t) => Number(t.pnl) > 0).length;
-    const netPnl = keptTrades.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+    /**
+     * ── COULD THE BOT HAVE TAKEN THESE TRADES? (#1325) ─────────────────────────────────────────────
+     * Applied AFTER the per-symbol loop, because both rules are properties of the PORTFOLIO — a cooldown
+     * is measured against the previous entry wherever it was, and a cap counts positions open at an
+     * instant, across every symbol. `keptTrades` already carries `symbol`, and the filter only removes.
+     *
+     * ⚠️ THE ENTRIES AND EXITS ARE UNCHANGED. Each trade was decided by the shared scoring/gating/exit
+     * core; this asks only "was the bot free?". That is why it can be an opt-in filter rather than a
+     * second engine — and why the refused trades can be NAMED rather than silently vanishing.
+     */
+    const admissionMode = request.admission === 'portfolio' ? 'portfolio' : 'independent';
+    let admittedTrades: Array<Record<string, unknown>> = keptTrades;
+    let admission: SelectionAdmission | null = null;
+    if (admissionMode === 'portfolio') {
+      // Each trade carries its own instants so the filter never re-parses a date per comparison.
+      const timed = keptTrades.map((t) => ({
+        raw: t,
+        symbol: String(t.symbol ?? ''),
+        entryDate: String(t.entryDate ?? ''),
+        entryMs: Date.parse(String(t.entryDate)),
+        exitMs: Date.parse(String(t.exitDate)),
+      }));
+      const result = admitTrades(timed, {
+        maxConcurrent: request.maxConcurrent ?? null,
+        // Live reads `cooldownMinutes || 5`, and so does `admitTrades()` — the bot's own value when it
+        // has one, five minutes when it does not.
+        cooldownMinutes: num(bot?.cooldownMinutes ?? null),
+      });
+      admittedTrades = result.admitted.map((x) => x.raw);
+      admission = {
+        mode: 'portfolio',
+        applied: result.applied,
+        counts: {
+          considered: keptTrades.length,
+          admitted: result.admitted.length,
+          refused: result.refused.length,
+          byCode: {
+            cap: result.refused.filter((r) => r.code === 'cap').length,
+            cooldown: result.refused.filter((r) => r.code === 'cooldown').length,
+          },
+        },
+        refused: result.refused.slice(0, 50).map((r) => ({
+          symbol: r.trade.symbol,
+          entryDate: r.trade.entryDate,
+          code: r.code,
+          because: r.because,
+        })),
+        notModelled: [
+          'pyramiding / averaging into an open position (`maxPyramidTiers`) — it changes size and exits, which a filter cannot see',
+          'the equity effect of the refused trades — in `compound` mode the admitted subset would have sized later trades differently',
+          'margin — a cap of N positions says nothing about whether N were affordable',
+        ],
+      };
+    }
+
+    const totalTrades = admittedTrades.length;
+    const totalWins = admittedTrades.filter((t) => Number(t.pnl) > 0).length;
+    const netPnl = admittedTrades.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
     const winRate = totalTrades ? (totalWins / totalTrades) * 100 : 0;
+
+    /**
+     * ⚠️ THE PER-SYMBOL FIGURES ARE RECOMPUTED FROM WHAT SURVIVED, not left at the pre-admission counts
+     * the loop pushed. A panel whose rows sum to more than the total is the "plausible output" this repo
+     * keeps paying for — the reader would see 53 trades in the table and 13 in the tile.
+     */
+    if (admissionMode === 'portfolio') {
+      for (const row of perSymbol) {
+        const mine = admittedTrades.filter((t) => t.symbol === row.symbol);
+        const wins = mine.filter((t) => Number(t.pnl) > 0).length;
+        row.trades = mine.length;
+        row.wins = wins;
+        row.winRate = mine.length ? (wins / mine.length) * 100 : 0;
+        row.netPnl = mine.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+        const refusedHere = admission!.refused.filter((r) => r.symbol === row.symbol).length;
+        if (refusedHere) row.refusedByAdmission = refusedHere;
+      }
+    }
 
     /**
      * ── THE TEST, AS A NAMED GROUP (#1328) ────────────────────────────────────────────────────────
@@ -633,6 +768,16 @@ export class SelectionRunService {
           'direction — confirm the protocol id is the leg you meant.',
       );
     }
+    if (admission) {
+      caveats.push(
+        `ADMISSION: portfolio — ${admission.counts.refused} of ${admission.counts.considered} trade(s) the engine ` +
+          `decided were refused because the bot could not have taken them (${admission.counts.byCode.cooldown} inside the ` +
+          `${admission.applied.cooldownMinutes}-minute cooldown, ${admission.counts.byCode.cap} while ` +
+          `${admission.applied.maxConcurrent ?? 'no'}-position cap was full). Every figure above describes the ADMITTED ` +
+          'population; the independent population is what every run stored before #1325 contains, so the two are not ' +
+          'comparable with each other without saying so.',
+      );
+    }
     if (engineTradesOutsideSelection > 0) {
       caveats.push(
         `${engineTradesOutsideSelection} trade(s) the engine produced were excluded by the selection ` +
@@ -687,6 +832,7 @@ export class SelectionRunService {
        * concludes the feature is broken rather than the write.
        */
       selectionRun: stored,
+      admission,
       caveats,
     };
   }
