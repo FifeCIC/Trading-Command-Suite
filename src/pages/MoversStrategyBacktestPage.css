@@ -966,14 +966,39 @@
 }
 
 .mvp-cfg-error {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   margin: 8px 0 0;
-  padding: 8px 12px;
+  padding: 10px 12px;
   font-size: 12px;
   line-height: 1.5;
-  color: var(--risk-critical);
+  color: var(--ink);
   background: color-mix(in srgb, var(--risk-critical) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--risk-critical) 45%, var(--line));
   border-radius: 6px;
+}
+
+.mvp-cfg-error-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--risk-critical);
+}
+
+.mvp-cfg-error-code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.mvp-cfg-error-cause {
+  color: var(--ink-soft);
+}
+
+.mvp-cfg-error-action {
+  color: var(--text-dim);
 }
 
 .mvp-source {

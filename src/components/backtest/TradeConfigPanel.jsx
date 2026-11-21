@@ -34,6 +34,8 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { apiPatch } from '../../core/api/client';
+import { noticeFromError } from '../../core/notices/from-error.js';
+import { collectChanges, sameFieldValue, storedRaw } from '../../core/trade-config-edit.js';
 import WhyPopover from '../WhyPopover.jsx';
 
 const SOURCE_LABEL = {
@@ -57,59 +59,16 @@ const fmt = (v, unit) => {
   return String(v);
 };
 
-/** The stored column as the raw value a control holds. Empty string means "no value". */
-const storedRaw = (f) => {
-  if (!f.editable) return '';
-  if (f.editable.control === 'toggle') return f.botValue === 'on';
-  return f.botValue === null || f.botValue === undefined ? '' : String(f.botValue);
-};
-
-/**
- * Raw input → the value the PATCH sends, or a refusal.
- *
- * ⚠️ AN EMPTY INPUT IS NOT ZERO. `Number('')` is `0`, so a cleared box would silently set a stop loss
- * of 0% (no stop) or a cooldown of 0 minutes while looking like it saved what was typed. Empty is
- * therefore `null` when the column is nullable and an ERROR otherwise — never a silent zero.
- */
-function parseValue(field, raw) {
-  const e = field.editable;
-  if (!e) return { ok: true, value: undefined };
-  if (e.control === 'toggle') return { ok: true, value: Boolean(raw) };
-
-  const text = String(raw ?? '').trim();
-  if (text === '') {
-    if (e.control === 'time' || e.nullable) return { ok: true, value: null };
-    return { ok: false, error: `${field.label} cannot be empty — this column has no “no value” state.` };
-  }
-  if (e.control === 'time') {
-    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(text)) {
-      return { ok: false, error: `${field.label} must be a 24-hour time, HH:MM (UTC).` };
-    }
-    return { ok: true, value: text };
-  }
-  const n = Number(text);
-  if (!Number.isFinite(n)) return { ok: false, error: `${field.label} must be a number.` };
-  if (e.integer && !Number.isInteger(n)) {
-    return { ok: false, error: `${field.label} must be a whole number — the column is an integer.` };
-  }
-  if (e.min !== undefined && n < e.min) return { ok: false, error: `${field.label} cannot be below ${e.min}.` };
-  if (e.max !== undefined && n > e.max) return { ok: false, error: `${field.label} cannot be above ${e.max}.` };
-  return { ok: true, value: n };
-}
-
-/** Two raw inputs are the same when they parse to the same typed value. */
-function sameValue(field, a, b) {
-  const pa = parseValue(field, a);
-  const pb = parseValue(field, b);
-  if (!pa.ok || !pb.ok) return String(a) === String(b);
-  return pa.value === pb.value;
-}
-
 export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = false }) {
   const [showIgnored, setShowIgnored] = useState(true);
   const [draft, setDraft] = useState({});
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
+  /**
+   * Two shapes reach this state: a registry notice from the save, and a local validation sentence.
+   * ⚠️ Named `alert` with a `.text` field on purpose — rendering `err.message` is the raw-error
+   * pattern the notices ratchet counts, and a notice must carry its code and remedy as well.
+   */
+  const [alert, setAlert] = useState(null);
 
   const bot = tradeConfig?.bot ?? null;
   const botId = bot?.id ?? null;
@@ -121,25 +80,18 @@ export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = f
    */
   useEffect(() => {
     setDraft({});
-    setError(null);
+    setAlert(null);
   }, [tradeConfig]);
 
   const fields = useMemo(() => tradeConfig?.fields ?? [], [tradeConfig]);
-  const editableFields = useMemo(() => fields.filter((f) => f.editable), [fields]);
 
-  /** Parsed, validated changes — the exact body the PATCH will send. */
-  const changes = useMemo(() => {
-    const body = {};
-    const problems = [];
-    for (const f of editableFields) {
-      const raw = f.id in draft ? draft[f.id] : storedRaw(f);
-      if (sameValue(f, raw, storedRaw(f))) continue;
-      const parsed = parseValue(f, raw);
-      if (parsed.ok) body[f.id] = parsed.value;
-      else problems.push(parsed.error);
-    }
-    return { body, problems, count: Object.keys(body).length + problems.length };
-  }, [draft, editableFields]);
+  /** The value a control is showing: the draft when one exists, otherwise the stored column. */
+  const rawFor = (f) => (
+    Object.prototype.hasOwnProperty.call(draft, f.id) ? draft[f.id] : storedRaw(f)
+  );
+
+  /** Parsed, validated changes — the exact body the PATCH will send. Rules live in `core/`. */
+  const changes = useMemo(() => collectChanges(fields, draft), [draft, fields]);
 
   if (!tradeConfig) return null;
 
@@ -152,13 +104,13 @@ export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = f
   const diverged = (f) => f.botValue != null && f.botValue !== f.value;
 
   const setField = (id, raw) => {
-    setError(null);
+    setAlert(null);
     setDraft((prev) => ({ ...prev, [id]: raw }));
   };
 
   const discard = () => {
     setDraft({});
-    setError(null);
+    setAlert(null);
   };
 
   /**
@@ -168,26 +120,29 @@ export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = f
   const saveAndRetest = async () => {
     if (!canSave || !changes.count) return;
     if (changes.problems.length) {
-      setError(changes.problems[0]);
+      setAlert({ title: 'Check the value', message: changes.problems[0], cause: null, action: null });
       return;
     }
     setSaving(true);
-    setError(null);
+    setAlert(null);
     try {
       await apiPatch(`/api/trading/strategies/${encodeURIComponent(botId)}`, changes.body);
       setDraft({});
       await onRetest();
     } catch (err) {
-      // The server's own wording — a ceiling refusal names the gate that refused, and paraphrasing it
-      // would drop the only part a reader can act on.
-      setError(err?.detail || err?.message || 'The bot config was not saved.');
+      // A registry notice, not the raw string: the code is the message's stable identity, and a
+      // refusal (the active-bot ceiling, a running A/B comparison) arrives as the server's own
+      // wording in `cause`. Paraphrasing it would drop the only part a reader can act on.
+      setAlert(
+        noticeFromError(err, 'TCS-TRADE-026', { name: bot?.name ?? 'this bot' }),
+      );
     } finally {
       setSaving(false);
     }
   };
 
   const control = (f) => {
-    const raw = f.id in draft ? draft[f.id] : storedRaw(f);
+    const raw = rawFor(f);
     const label = `${f.label} — ${bot?.name ?? 'bot'}`;
     if (f.editable.control === 'toggle') {
       const on = Boolean(raw);
@@ -286,9 +241,7 @@ export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = f
           </thead>
           <tbody>
             {shown.map((f) => {
-              const dirty = f.editable
-                ? !sameValue(f, f.id in draft ? draft[f.id] : storedRaw(f), storedRaw(f))
-                : false;
+              const dirty = f.editable ? !sameFieldValue(f, rawFor(f), storedRaw(f)) : false;
               return (
                 <tr
                   key={f.id}
@@ -363,7 +316,17 @@ export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = f
         </div>
       )}
 
-      {error && <p className="mvp-cfg-error" role="alert">{error}</p>}
+      {alert && (
+        <div className="mvp-cfg-error" role="alert">
+          <span className="mvp-cfg-error-head">
+            {alert.code && <span className="mvp-cfg-error-code">{alert.code}</span>}
+            <strong>{alert.title}</strong>
+          </span>
+          <span className="mvp-cfg-error-msg">{alert.message}</span>
+          {alert.cause && <span className="mvp-cfg-error-cause">{alert.cause}</span>}
+          {alert.action && <span className="mvp-cfg-error-action">{alert.action}</span>}
+        </div>
+      )}
 
       <p className="mvp-note">{tradeConfig.summary}</p>
     </section>

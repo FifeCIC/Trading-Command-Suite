@@ -1,6 +1,6 @@
 {
   "name": "tradingcs",
-  "version": "0.171.0",
+  "version": "0.172.0",
   "releaseStage": "alpha",
   "private": true,
   "license": "AGPL-3.0",
@@ -99,6 +99,7 @@
     "test:session": "node --test src/core/session-utils.test.js",
     "test:theories": "node ./scripts/validate-theories.cjs --self-test",
     "test:threshold-ceiling": "node --test src/core/threshold-ceiling.test.js",
+    "test:trade-config": "node --test src/core/trade-config-edit.test.js",
     "test:version": "node ./scripts/bump-version.cjs --self-test",
     "validate:arch-docs": "node ./scripts/validate-architecture-docs.cjs",
     "validate:bridge-bounds": "node scripts/validate-bridge-recovery-bounds.cjs",

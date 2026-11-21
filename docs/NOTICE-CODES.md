@@ -78,8 +78,9 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-TRADE-023` | error | TRADE | Position size could not be computed — no order sent |
 | `TCS-TRADE-024` | warning | TRADE | Bot not activated — its protocol never reaches the bar |
 | `TCS-TRADE-025` | warning | TRADE | Bot not activated — the active-bot limit for your level |
+| `TCS-TRADE-026` | error | TRADE | Bot settings were not saved |
 
-**57 codes** — 3 critical, 27 error, 16 warning, 5 info, 6 success.
+**58 codes** — 3 critical, 28 error, 16 warning, 5 info, 6 success.
 
 ## Codes by area
 
@@ -333,6 +334,16 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Params:** `name`, `level`, `cap`, `active`, `nextLevel`, `nextXp`, `nextCap`
 - **Call:** `notice('TCS-TRADE-025', { name, level, cap, active, nextLevel, nextXp, nextCap })`
 - **Related:** #1193
+
+#### `TCS-TRADE-026` — Bot settings were not saved
+
+- **Severity:** error
+- **Message:** “{name}” was NOT changed, so the run was not repeated.
+- **Cause:** {detail}
+- **Action:** Correct the value and try again. A refusal naming the active-bot ceiling or a running A/B comparison is a guard, not a fault: deactivate the bot or finish the comparison first. The live bot still holds its previous settings, and the table above still describes them.
+- **Params:** `name`, `detail`
+- **Call:** `notice('TCS-TRADE-026', { name, detail })`
+- **Related:** #1329
 
 ### SCORE — Scoring and signals
 

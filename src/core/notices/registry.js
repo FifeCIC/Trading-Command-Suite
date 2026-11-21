@@ -431,7 +431,7 @@ export const NOTICES = {
       'comparison is a guard, not a fault: deactivate the bot or finish the comparison first. The ' +
       'live bot still holds its previous settings, and the table above still describes them.',
     params: ['name', 'detail'],
-    refs: ['#247'],
+    refs: ['#1329'],
   },
 
   // ── Integrations ─────────────────────────────────────────
