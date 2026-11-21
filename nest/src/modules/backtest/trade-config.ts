@@ -71,6 +71,17 @@ export interface TradeConfigEditable {
   min?: number;
   max?: number;
   step?: number;
+  /**
+   * The column is `Int`. A fractional value is REJECTED by the database, so the control rounds and
+   * the save is refused rather than made approximate. Asserted against the Prisma DMMF in the guard.
+   */
+  integer?: boolean;
+  /**
+   * The column accepts NULL. Without this, an empty input must be an ERROR — sending `null` to a
+   * required Int/Float fails at the database, and sending `0` instead would silently change the
+   * strategy to "no stop loss" or "no cooldown" while appearing to save what was typed.
+   */
+  nullable?: boolean;
 }
 
 export interface TradeConfigField {
@@ -186,7 +197,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: true,
       note: bot ? 'trading_strategy.slPct' : 'a literal in BacktestService.run() — no bot names this protocol',
       botValue: botSl,
-      editable: { control: 'number', unit: '%', min: 0, max: 100, step: 0.1 },
+      editable: { control: 'number', unit: '%', min: 0, max: 100, step: 0.1, nullable: true },
     },
     {
       id: 'tpPct',
@@ -197,7 +208,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: true,
       note: bot ? 'trading_strategy.tpPct' : 'a literal in BacktestService.run() — no bot names this protocol',
       botValue: botTp,
-      editable: { control: 'number', unit: '%', min: 0, max: 100, step: 0.1 },
+      editable: { control: 'number', unit: '%', min: 0, max: 100, step: 0.1, nullable: true },
     },
     {
       id: 'minComposite',
@@ -210,6 +221,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
         ? 'trading_strategy.minComposite — the second, tighter gate after the protocol threshold'
         : 'a literal in BacktestService.run() — every signal the protocol emits is traded',
       botValue: botBar,
+      // Float (required) — `minComposite` is not nullable, so an empty input is refused, not zeroed.
       editable: { control: 'number', unit: '%', min: 0, max: 100, step: 1 },
     },
     {
@@ -222,7 +234,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       // 0 = no limit, which is the engine's own documented default when the bot sets none.
       note: botHold !== null ? 'trading_strategy.maxHoldHours' : 'no time stop — the engine holds until stop, target or end of data',
       botValue: botHold,
-      editable: { control: 'number', unit: 'h', min: 0, max: 720, step: 1 },
+      editable: { control: 'number', unit: 'h', min: 0, max: 720, step: 1, integer: true, nullable: true },
     },
     {
       id: 'simTslEnabled',
@@ -256,7 +268,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
         ? 'APPLIED by the portfolio admission filter: entries closer than this to the previous entry are refused, entry-to-entry as the live loop measures it (`cooldownMinutes || 5`).'
         : 'NOT APPLIED in independent mode — the engine has no cooldown, because overlapping hypothetical positions make the window ambiguous. Ask for `admission: "portfolio"` to apply it. See #1325.',
       botValue: num(bot?.cooldownMinutes),
-      editable: { control: 'number', unit: 'min', min: 0, max: 1440, step: 1 },
+      editable: { control: 'number', unit: 'min', min: 0, max: 1440, step: 1, integer: true },
     },
     {
       id: 'maxPositions',
@@ -266,7 +278,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: false,
       note: 'NOT APPLIED — the engine has no concurrency model; it evaluates each bar against one position per symbol.',
       botValue: num(bot?.maxPositions),
-      editable: { control: 'number', min: 1, max: 50, step: 1 },
+      editable: { control: 'number', min: 1, max: 50, step: 1, integer: true },
     },
     {
       id: 'maxPyramidTiers',
@@ -347,6 +359,13 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       note: 'the equity model every size is derived from',
     },
   ];
+
+  /**
+   * ⚠️ NO BOT, NO INPUT. `bot === null` means no `trading_strategy` record names this protocol, so
+   * there is nothing for a save to land on — the panel must render values, not controls. Declaring
+   * editability per row and stripping it centrally keeps that rule in ONE place: a row cannot forget.
+   */
+  if (!bot) for (const row of rows) delete row.editable;
 
   /**
    * Attach live's verdict to every row that names a real `trading_strategy` column, using

@@ -130,7 +130,23 @@ describe('bot-rules registry — a bot declared once', () => {
     // button applies them; the automation loop does not.
     const legacy = NOT_LIVE_RULES.filter((r) => r.enforcement === 'legacy-only').map((r) => r.field);
     expect(legacy).toEqual(
-      expect.arrayContaining(['minRarityBand', 'useRaritySizing', 'maxSize', 'maxPositions', 'maxDailyLoss']),
+      expect.arrayContaining(['minRarityBand', 'useRaritySizing', 'maxSize', 'maxPositions']),
     );
+  });
+
+  /**
+   * ⚠️ `maxDailyLoss` MOVED OUT OF THE `legacy-only` SET ON 2026-11-21, and the reason is the point:
+   * `legacy-only` says "a legacy path applies this", and nothing applies it anywhere. Measured by
+   * searching every non-spec `.ts` under `nest/src` for a read of `strategy.maxDailyLoss` — the only hits
+   * are DTO mapping, the treatment hash, and the GLOBAL `risk.maxDailyLoss` setting. The friendlier
+   * classification was a claim about a mechanism that does not exist, which is worse than "none" because
+   * it reads as covered.
+   */
+  it('says `none` where nothing reads the column, rather than the friendlier `legacy-only`', () => {
+    const dailyLoss = BOT_RULES.find((r) => r.field === 'maxDailyLoss');
+    expect(dailyLoss?.enforcement).toBe('none');
+    // The SUMMARY is what a reader sees in the table; the caveat carries the evidence.
+    expect(dailyLoss?.summary).toMatch(/NOT IMPLEMENTED/);
+    expect(dailyLoss?.caveat).toMatch(/advertising a limit the live path never reads/);
   });
 });

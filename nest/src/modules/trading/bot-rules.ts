@@ -211,16 +211,18 @@ export const BOT_RULES: BotRule[] = [
       'to gate on it — gating would halt 18 of 39 live bots on a rule nobody has validated (#917).' },
 
   // ── routing ─────────────────────────────────────────────────────────────────────────────────
-  { field: 'protocolId', label: 'Protocol', stage: 'routing', enforcement: 'display-only',
-    enforcedBy: 'nest/src/modules/trading/trading-strategy.service.ts',
-    summary: 'Legacy single protocol link; seeds one subscription and is used for the bot label.',
+  { field: 'protocolId', label: 'Protocol', stage: 'routing', enforcement: 'live',
+    enforcedBy: 'nest/src/modules/automation/automation-loop.service.ts',
+    summary: 'The bot\'s protocol: it seeds the subscription, labels the bot, and GATES trading.',
     caveat:
-      '⚠️ Until 2026-10-06 this column was also READ by the pre-trade gate reconciliation ' +
-      '(`signal-envelope.service.ts`), making it a second source for "participating bots" while ' +
-      'routing joins `strategy_protocol` — the disagreement could starve a subscribed bot or let ' +
-      'a subscription-less bot lower the gate. All 40 active bots were measured to agree, and the ' +
-      'reconciliation now resolves subscriptions; display-only is now true in fact. Canary: ' +
-      '`signal-envelope-gate-reconciliation.spec.ts`.' },
+      '⚠️ RECLASSIFIED 2026-11-21 — this said `display-only`, and that was wrong. Read at ' +
+      '`automation-loop.service.ts:1618`: a NULL sets `dataStatus = "blocked"` ("No protocol linked") and ' +
+      'gate 3 then skips the bot every tick, and a non-NULL one selects the required bar count and the ' +
+      'cadence. A column that can stop a bot trading is not display-only. ⚠️ The routing SUBSCRIPTION ' +
+      'still lives in `strategy_protocol` (until 2026-10-06 this column was a second source for ' +
+      '"participating bots" in `signal-envelope.service.ts`); the two are separate reads of one concept ' +
+      'and the subscription is the one that decides WHICH signals arrive. Canary: ' +
+      '`signal-envelope-gate-reconciliation.spec.ts` covers the subscription side.' },
   { field: 'shortProtocolId', label: 'Short protocol', stage: 'routing', enforcement: 'display-only',
     enforcedBy: 'nest/src/modules/scoring/protocols.controller.ts',
     summary: 'Legacy second link; the protocol list and symbol pages filter on it.',
@@ -330,10 +332,17 @@ export const BOT_RULES: BotRule[] = [
     caveat:
       '⚠️ Legacy path only. The live cap is the GLOBAL `risk.maxOpenPositions` (default 5, ' +
       'broker-wide). This rule therefore exists in THREE places and only one is live.' },
-  { field: 'maxDailyLoss', label: 'Max daily loss', stage: 'risk', enforcement: 'legacy-only',
-    enforcedBy: 'nest/src/modules/trading/trading-strategy.service.ts',
-    summary: 'Per-bot realised-loss stop for the trading day.',
-    caveat: '⚠️ Legacy path only. The live stop is the GLOBAL `risk.maxDailyLoss` setting.' },
+  { field: 'maxDailyLoss', label: 'Max daily loss', stage: 'risk', enforcement: 'none',
+    enforcedBy: null,
+    summary: 'Per-bot realised-loss stop for the trading day — NOT IMPLEMENTED on either path.',
+    caveat:
+      '⚠️ RECLASSIFIED 2026-11-21 — this said `legacy-only`, which implies a legacy path applies it. ' +
+      'Nothing does. Measured by searching every non-spec `.ts` under `nest/src` for a read of ' +
+      '`strategy.maxDailyLoss`: the only hits are DTO mapping (`trading-strategy.service.ts:795/915/1276`), ' +
+      'the treatment hash (`strategy-derivation.service.ts:683`) and the GLOBAL `risk.maxDailyLoss` ' +
+      'setting (`settings-registry.ts:303`, alerts, `mt5-connection-manager.service.ts:71`). ' +
+      'So a bot form offering a per-bot daily loss is advertising a limit the live path never reads — ' +
+      'the day is actually cut by the global setting. Either wire it or stop offering it.' },
 
   // #1257 (2026-11-12) — THE MONEY-AT-RISK CEILING, and the first per-bot risk cap that is LIVE.
   { field: 'maxTradeRiskPct', label: 'Max risk per trade (% of equity)', stage: 'risk', enforcement: 'live',
