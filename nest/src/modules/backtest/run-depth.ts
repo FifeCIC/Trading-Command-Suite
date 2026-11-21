@@ -37,6 +37,10 @@
  * REGISTER:  docs/SETTLED-DECISIONS.md row 232
  * GUARD:     nest/src/modules/backtest/run-depth.spec.ts (the bar-gate precedence canary, the
  *            directional canary, and the "no rung exceeds its denominator" invariant)
+ *
+ * ⚠️ ROW 246 (2026-11-21) SUPERSEDES ONE DETAIL OF ROW 232 ABOVE: the per-bar STATE used to let an
+ * entry outrank an exit, so a bracket that closed inside its own bar was reported as a bare ENTRY. Row
+ * 246 changes the LABEL only — "the engine records no per-bar reason" is still true and still stated.
  */
 import { decideEntry } from './entry-side';
 import { minuteOfDayUtc, parseCutoffUtc } from './selection-ranking';
@@ -104,7 +108,7 @@ export interface DepthBarRow extends DepthSeriesRow {
   exits: Array<{ direction: 'LONG' | 'SHORT'; kept: boolean; pnl: number; exitReason: string }>;
   /**
    * Trades on this bar whose EXIT instant is not a bar in this window — an end-of-data close, a
-   * session exit, or a data gap. Counted, never dropped (`closedOffBar`), so `entry` + `orphanedExits`
+   * session exit, or a data gap. Counted, never dropped (in `orphanedExits`), so `entry` + `orphanedExits`
    * reconciles with the executions table instead of silently under-reading it.
    */
   orphanedExits: number;
@@ -163,7 +167,7 @@ export function buildDepthBars(input: {
      * REVERSE BY: Restoring the `entries.length ? 'entry' :` branch above and removing the
      *            self-exit/`orphanedExits` handling. Nothing is stored — the timeline is recomputed
      *            from recorded trades on every request, so old runs re-derive correctly without backfill.
-     * REGISTER:  docs/SETTLED-DECISIONS.md row 232
+     * REGISTER:  docs/SETTLED-DECISIONS.md row 246
      * GUARD:     nest/src/modules/backtest/run-depth.spec.ts — the two "CANARY" cases below, canaried
      *            against the pre-fix code (both fail there).
      */

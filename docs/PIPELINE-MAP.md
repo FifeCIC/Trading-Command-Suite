@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **612** backend source files (specs excluded). Two access paths, because one
+Scanned **613** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**612** source files · **3400** declarations · **400** ratio sites · **1788** nodes · **186** unreferenced
+**613** source files · **3402** declarations · **401** ratio sites · **1790** nodes · **186** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|

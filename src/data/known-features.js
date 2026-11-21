@@ -1057,4 +1057,43 @@ export const KNOWN_FEATURES = {
     'Per-route code splitting (lazy page loading)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
     'Bundle Size Guard (PWA cliff + growth ratchet)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
     'Movers & Treatment (six ordered states per mover)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
+  // ── batch #56 (2026-11-20) — 10 handoffs dated 2026-11-20: 9 full, 1 partial
+  //    (`2026-11-20-1242-session-gate.md` declares a QA entry only; no capability row is invented
+  //    for it and it stays in the handoff store). Theme: THE EXIT DECISION GAINS ONE OWNER AND A
+  //    BACKTEST COMES BACK ABLE TO SAY HOW IT DECIDED — an exit in the live vocabulary, the bot's
+  //    clock gating entries, its flat-by boundary closing a position, and a stored test that can be
+  //    compared only within one execution-semantics version.
+  //    ⚠️ Three landings (#1242 trailing, protective stop / money target, scale-in + ATR) declare
+  //    ONE capability between them: `shared exit decision` (singular) and `shared exit decisions`
+  //    (plural) name the same `exit-guardian/` core, so it is recorded ONCE, in the plural, at the
+  //    strength the last landing states. `Shared scale-in decision` is recorded separately because
+  //    the handoff for it names a distinct decision, not a restatement.
+  //    ⚠️ Two QA tests from this batch had already landed WITH their work
+  //    (`qa-backtest-selection-depth-001`, `qa-backtest-trade-config-001`) and are not re-added.
+    'Exit equivalence between a backtest run and a live close': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'Exit-side session boundary in backtests': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'Backtest comparison against the previous run of the same test': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Shared exit decisions (exit-guardian core)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Shared scale-in decision (exit-guardian core)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Cockpit column spec + pipeline stage checklist': { dataPersistence: 'ephemeral', uiSurfaces: 2, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Backtest configuration provenance': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'Movers backtest — bar-by-bar depth': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+  // ── batch #57 BACKFILL — 2026-11-19 (ten full write-ups whose capability rows never reached
+  //    this seed; their QA tests had landed, their architecture entries had not). ⚠️ SEED-FIRST:
+  //    these rows are recorded here, which survives a reinstall, but the `capability` table is
+  //    read FIRST by `CapabilityMapPage.lookupKnown()`. The API was UNREACHABLE (localhost:3201
+  //    refused) when this batch ran, so nothing was pushed — run `node nest/scripts/seed-capabilities.cjs`
+  //    (or POST /api/capabilities per name) when the API is up, or the DB and this seed will drift.
+  //    ⚠️ The seven 2026-11-19 Notes (bugfix/refactor, no shape change) declare no capability and
+  //    none is invented for them. ──
+    'Market-Wide Movers Discovery': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'both', devCompletion: 'complete' },
+    'Backtest Direction Resolution': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Queued Protocol & Bot Change Suggestions': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Non-fixed symbol scope (a bot defined by a daily list)': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Movers Strategy Bots (registered, blocked)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Movers Strategy Backtest': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+    'Bots area (bot lifecycle views in one place)': { dataPersistence: 'config', uiSurfaces: 4, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Persistent Fault Registry': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Phrasing Guard (a requirement is not narrated as a person)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Trading212 pie membership + instrument names': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
 };

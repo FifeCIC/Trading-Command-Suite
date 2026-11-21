@@ -103,6 +103,22 @@ function elapsedLabel(ms) {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
+/**
+ * `["us"]` → `US`; `us` (an alias the engine still accepts) → `US`. Anything that is not a JSON list
+ * is shown as it was stored — an unparsable window is a fact the reader should see, not a crash and
+ * never a blank.
+ */
+function gateWindowLabel(raw) {
+  if (raw == null || raw === '') return 'declared';
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length) return parsed.join(' + ').toUpperCase();
+  } catch {
+    /* not JSON — the stored text IS the label */
+  }
+  return String(raw).toUpperCase();
+}
+
 export default function MoversStrategyBacktestPage() {
   const [legKey, setLegKey] = useState('long');
   const [selected, setSelected] = useState([]);
@@ -269,7 +285,38 @@ export default function MoversStrategyBacktestPage() {
     return { trades, wins, netPnl, selections, winRate: trades ? (wins / trades) * 100 : null };
   }, [okRuns]);
 
-  const caveats = useMemo(() => [...new Set(okRuns.flatMap((r) => r.caveats ?? []))], [okRuns]);
+  /**
+   * ── #1242 — THE SESSION GATE HAS THREE STATES, AND THEY MUST NOT LOOK ALIKE ────────────────────
+   * `sessionGate` is ABSENT when no window is declared (nothing to report). `applied: true` means the
+   * window gated entries. `applied: false` means a window WAS declared but this timeframe cannot
+   * carry it — a daily bar is stamped at the session's END, so there is no intraday instant to test a
+   * clock against, and the run traded UNGATED. Measured 2026-11-20: applying the window there
+   * excluded every bar (26 trades → 0), so an empty result would read as "the strategy never fires".
+   *
+   * ⚠️ THE SENTENCE IS RENDERED ONCE. The server also pushes `because` onto `caveats`, so it is
+   * filtered out of that list below; otherwise the same paragraph appears as a statement AND a
+   * bullet, which reads as two separate caveats.
+   */
+  const sessionGateView = useMemo(() => {
+    const ranged = okRuns.filter((r) => r.sessionGate);
+    if (!ranged.length) return null;
+    const ungated = ranged.filter((r) => r.sessionGate.applied === false);
+    const applied = ranged.filter((r) => r.sessionGate.applied === true);
+    return {
+      runCount: okRuns.length,
+      ungatedCount: ungated.length,
+      appliedCount: applied.length,
+      window: ranged[0].sessionGate.window ?? null,
+      because: ungated[0]?.sessionGate.because ?? null,
+    };
+  }, [okRuns]);
+
+  const caveats = useMemo(() => {
+    const gateSentences = new Set(
+      (sessionGateView ? okRuns.map((r) => r.sessionGate?.because) : []).filter(Boolean),
+    );
+    return [...new Set(okRuns.flatMap((r) => r.caveats ?? []))].filter((c) => !gateSentences.has(c));
+  }, [okRuns, sessionGateView]);
 
   /**
    * ── #1328 — CHANGE VS THE PREVIOUS TEST ────────────────────────────────────────────────────────
@@ -704,6 +751,44 @@ export default function MoversStrategyBacktestPage() {
                 }
               />
             </div>
+
+            {/*
+              #1242 — the session gate, in the two states that have something to say. Absent stays
+              absent: "no window declared" is the normal state of most bots and must not be dressed
+              up as a confirmation. `applied` is a quiet statement; `not applied` is a caution whose
+              sentence is clamped here and shown whole in the popover (keyboard reachable, unlike a
+              `title` attribute).
+            */}
+            {sessionGateView && (
+              sessionGateView.ungatedCount > 0 ? (
+                <div className="mvp-gate mvp-gate--ungated" role="status">
+                  <span className="mvp-gate-tag">
+                    {sessionGateView.ungatedCount === sessionGateView.runCount
+                      ? 'Window not applied'
+                      : `Window not applied \u00b7 ${sessionGateView.ungatedCount} of ${sessionGateView.runCount} days`}
+                  </span>
+                  <span className="mvp-gate-text">
+                    {sessionGateView.because
+                      || 'The window was declared but the run traded ungated, and the server did not say why.'}
+                  </span>
+                  {sessionGateView.because && (
+                    <WhyPopover title="Why the session window was not applied">
+                      {sessionGateView.because}
+                    </WhyPopover>
+                  )}
+                </div>
+              ) : (
+                <p className="mvp-gate mvp-gate--applied">
+                  <span className="mvp-gate-tag">Window applied</span>
+                  <span className="mvp-gate-text">
+                    Session window {gateWindowLabel(sessionGateView.window)} gated entries{' '}
+                    {sessionGateView.appliedCount === sessionGateView.runCount
+                      ? 'on every day of this run.'
+                      : `on ${sessionGateView.appliedCount} of ${sessionGateView.runCount} days.`}
+                  </span>
+                </p>
+              )
+            )}
 
             {comparisonView && (
               <SelectionComparisonNotes view={comparisonView} labelById={configLabelById} />

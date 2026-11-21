@@ -65,14 +65,31 @@ const STATE_TONE = {
   quiet: 'none',
 };
 
-/** An exit reason carries a tone, so a stop-out and a target are distinguishable at a glance. */
+/**
+ * An exit reason carries a tone, so a stop-out and a target are distinguishable at a glance.
+ *
+ * ⚠️ EVERY REASON THE ENGINE CAN RETURN IS MAPPED. An unmapped reason falls through to `none`, which
+ * is also EOD's tone — so "the session clock closed this trade" would have rendered as the same
+ * non-event as "the data ran out". #1242 added the live vocabulary's two newest closes:
+ * `TARGET` (`system:take-profit`) and `SESSION` (`system:session-exit`).
+ */
 const EXIT_TONE = {
   TP: 'entry',
+  TARGET: 'entry',
   SL: 'bad',
   TIME: 'warn',
+  SESSION: 'session',
   TRAIL: 'exit',
   EOD: 'none',
 };
+
+/** Reasons whose stored code is a system/engine token rather than a word a reader knows. */
+const EXIT_LABEL = {
+  TARGET: 'Take profit',
+  SESSION: 'Session close',
+};
+
+const exitReasonText = (reason) => EXIT_LABEL[reason] ?? reason;
 
 /**
  * The decision in words, using ONLY recorded facts.
@@ -297,8 +314,11 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
                         </td>
                         <td className="mvp-num">{bars}</td>
                         <td className="mvp-nowrap">
-                          <span className={`mvp-state mvp-state--${EXIT_TONE[t.exitReason] ?? 'none'}`}>
-                            {t.exitReason}
+                          <span
+                            className={`mvp-state mvp-state--${EXIT_TONE[t.exitReason] ?? 'none'}`}
+                            title={t.exitReason}
+                          >
+                            {exitReasonText(t.exitReason)}
                           </span>
                         </td>
                         <td className={`mvp-num ${t.kept && t.pnl > 0 ? 'mvp-pos' : t.kept && t.pnl < 0 ? 'mvp-neg' : 'mvp-muted'}`}>
@@ -328,12 +348,33 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
           <>
             {focused.groups && Object.keys(focused.groups).length > 0 && (
               <div className="mvp-group-row" id="mvp-sec-protocol">
-                {Object.entries(focused.groups).map(([id, pct]) => (
-                  <span key={id} className="mvp-group-pill">
-                    {id}
-                    <em>{Number(pct).toFixed(0)}%</em>
-                  </span>
-                ))}
+                {Object.entries(focused.groups).map(([id, pct]) => {
+                  // Count THIS group's directives on the pinned bar, so the explanation states real
+                  // numbers rather than a definition the reader has to trust. The detail payload does
+                  // not carry a per-directive group id, so fall back to the bar's group total.
+                  const groupRows = focused.directives.filter(
+                    (d) => (d.group ?? d.groupId ?? d.kind) === id,
+                  );
+                  return (
+                    <span key={id} className="mvp-group-pill">
+                      {id}
+                      <em>{Number(pct).toFixed(0)}%</em>
+                      <WhyPopover title={`What “${id}” means on this bar`} hover>
+                        A directive group — related rules scored together and capped before they
+                        contribute to the composite. Here it is <strong>{Number(pct).toFixed(0)}%</strong> of
+                        this bar’s total.
+                        {groupRows.length > 0 && (
+                          <>
+                            {' '}It holds {groupRows.length} directive
+                            {groupRows.length === 1 ? '' : 's'} on this bar.
+                          </>
+                        )}
+                        {' '}A group’s share can be tuned by weight strategy, so the same group is not
+                        always worth the same.
+                      </WhyPopover>
+                    </span>
+                  );
+                })}
               </div>
             )}
             <div className="mvp-scroll mvp-depth-scroll">
