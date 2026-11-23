@@ -53,13 +53,27 @@ import {
   SelectionDelta,
   SelectionHistory,
 } from '../components/backtest/MoversSelectionComparison.jsx';
+// #1341 — the best ever recorded for this test, and the settings that produced it.
+import BestRecordPanel from '../components/backtest/BestRecordPanel.jsx';
+// #1340 — what the run already records and this page does not show, with the live values.
+import UnusedDataPanel from '../components/backtest/UnusedDataPanel.jsx';
+// #1342 — the accordion a step is rendered in, from the shared library, plus this strategy's step list.
+import StepAccordion, { StepMeta } from '../components/StepAccordion.jsx';
+import { MOVERS_PAGE_ID, MOVERS_STEP } from '../features/movers-strategy/steps.js';
+import ResultByDayStep from '../features/movers-strategy/ResultByDayStep.jsx';
+import ResultBySymbolStep from '../features/movers-strategy/ResultBySymbolStep.jsx';
+import ScoringFunnelStep from '../features/movers-strategy/ScoringFunnelStep.jsx';
+import DirectiveRecordStep from '../features/movers-strategy/DirectiveRecordStep.jsx';
+import { dayLabel, fmtMoney, fmtPct } from '../features/movers-strategy/format.js';
+// The margin annotation between two steps: what the step above does not yet show, from data we already have.
+import StepAuditNote from '../components/StepAuditNote.jsx';
 import NoticeBlock from '../components/NoticeBlock.jsx';
 import WhyPopover from '../components/WhyPopover.jsx';
 // The canonical form standard (.ff-fieldset, .ff-legend, .ff-seg) — the form uses it instead of a
 // second dialect. `.mvp-field-row` is layout-only (content-sized wrapping rows); controls are canonical.
 import '../core/forms.css';
 import { noticeFromError } from '../core/notices/from-error.js';
-import { useSort, SortableTh } from '../core/use-sort';
+import { useSort } from '../core/use-sort';
 import './MoversStrategyBacktestPage.css';
 
 /** The strategy's two legs. Ids, not names — a name is not an identifier. */
@@ -89,16 +103,8 @@ const PACE_OPTIONS = [
 
 const RUN_TIMEOUT_MS = 600_000;
 
-const fmtPct = (n) => (n == null || Number.isNaN(Number(n)) ? '—' : `${Number(n) >= 0 ? '+' : ''}${Number(n).toFixed(1)}%`);
-const fmtMoney = (n) => (n == null || Number.isNaN(Number(n)) ? '—' : Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-
-/** `2026-11-10` → `Mon 10 Nov`. Formatted in UTC from the string so no local timezone can shift it. */
-function dayLabel(date) {
-  if (!date) return '—';
-  const d = new Date(`${date}T12:00:00Z`);
-  if (Number.isNaN(d.getTime())) return date;
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
-}
+// #1342 — the display formatters live with the strategy now, so the page and its extracted steps use
+// ONE copy. See `format.js` for why they are not `src/core/format-utils.js`.
 
 function elapsedLabel(ms) {
   const total = Math.max(0, Math.round(ms / 1000));
@@ -134,6 +140,9 @@ export default function MoversStrategyBacktestPage() {
   const [focusKey, setFocusKey] = useState(null);
   /** The form folds away the moment a run starts, so the results own the screen. */
   const [formOpen, setFormOpen] = useState(true);
+  // #1342 — a monotonic counter that OPENS the settings step from the summary's 'Change settings'
+  // button. A boolean could not: it is already true, so pressing the button would do nothing.
+  const [settingsSignal, setSettingsSignal] = useState(0);
 
   const [results, setResults] = useState([]);
   const [progress, setProgress] = useState(null); // { queue, done, current, startedAt, stopped }
@@ -327,6 +336,11 @@ export default function MoversStrategyBacktestPage() {
     };
   }, [okRuns]);
 
+  /**
+   * ⚠️ `caveats` IS NO LONGER RENDERED (owner, 2026-11-23). The count is kept because step 2's header is
+   * the honest place to say "there are N things a reader should know" without printing all of them —
+   * and because abandoning the derived value would make it look as though the payload carried none.
+   */
   const caveats = useMemo(() => {
     const gateSentences = new Set(
       (sessionGateView ? okRuns.map((r) => r.sessionGate?.because) : []).filter(Boolean),
@@ -453,6 +467,32 @@ export default function MoversStrategyBacktestPage() {
     [okRuns, datasetByName],
   );
   const focusedDepth = depthEntries.find((d) => d.key === focusKey) ?? depthEntries[0] ?? null;
+  /**
+   * The scoring funnel's headline, computed ONCE from the same per-bar states the funnel table counts.
+   * ⚠️ Step 6's header must not re-derive these: two implementations of one count is how a tile and a
+   * table end up disagreeing, which is the shape this repo keeps paying for.
+   */
+  const funnelSummary = useMemo(() => {
+    let scored = 0;
+    let entered = 0;
+    for (const e of depthEntries) {
+      const bars = e.detail?.bars ?? [];
+      scored += bars.length;
+      entered += bars.filter((b) => b.state === 'entry' || b.state === 'entry+exit').length;
+    }
+    return { scored, entered };
+  }, [depthEntries]);
+
+  /** The directive ids this protocol actually scored, from the run's own bars (never from a name list). */
+  const protocolDirectives = useMemo(() => {
+    const ids = new Set();
+    for (const e of depthEntries) {
+      for (const b of e.detail?.bars ?? []) {
+        for (const d of b.directives ?? []) if (d?.directiveId) ids.add(d.directiveId);
+      }
+    }
+    return [...ids];
+  }, [depthEntries]);
 
   /**
    * ── THE DAY AS A WHOLE (owner, 2026-11-23) ──────────────────────────────────────────────────────
@@ -489,8 +529,20 @@ export default function MoversStrategyBacktestPage() {
           🧭 Cockpit
         </a>
       </div>
-      {/* ══ THE FORM — one container, every input, folds away when a run starts ═════════════════ */}
+      {/* ══ STEP 1 — THE FORM ═════════════════════════════════════════════════════════════════ */}
       {formOpen && (
+      <StepAccordion
+        pageId={MOVERS_PAGE_ID}
+        {...MOVERS_STEP['mvp-step-settings']}
+        openSignal={settingsSignal}
+        meta={(
+          <>
+            <StepMeta value={leg.label} label="leg" />
+            <StepMeta value={`top ${topN}`} label="per day" />
+            <StepMeta value={cutoffUtc} label="UTC screen" />
+          </>
+        )}
+      >
       <section className="mvp-form" aria-label="Test settings">
         <div className="mvp-form-head">
             <>
@@ -732,11 +784,6 @@ export default function MoversStrategyBacktestPage() {
               {currentLegState?.available === false && (
                 <span className="mvp-note">The {leg.label} leg cannot run: {currentLegState.why}.</span>
               )}
-              {!running && daysForLeg.length > 1 && (
-                <span className="mvp-note">
-                  Tick several days to compare them — the totals then describe the whole selection.
-                </span>
-              )}
             </div>
           </>
         )}
@@ -761,6 +808,9 @@ export default function MoversStrategyBacktestPage() {
           </p>
         )}
       </section>
+      </StepAccordion>
+
+          <StepAuditNote afterStep={MOVERS_STEP['mvp-step-settings'].step} ideas={MOVERS_STEP['mvp-step-settings'].audit} />
       )}
 
       {/* The progress panel and the .mvp-progress bar were removed 2026-11-20 (owner): they took a lot
@@ -770,7 +820,25 @@ export default function MoversStrategyBacktestPage() {
       {/* ══ RESULTS ═════════════════════════════════════════════════════════════════════════════ */}
       {(results.length > 0 || progress) && (
         <div id="mvp-sec-outcome" className="mvp-outcome">
-          <section className="mvp-panel mvp-run-summary" aria-label="Run summary">
+          <StepAccordion
+            pageId={MOVERS_PAGE_ID}
+            {...MOVERS_STEP['mvp-step-summary']}
+            meta={(
+              <>
+                <StepMeta
+                  value={totals.netPnl == null ? '—' : fmtMoney(totals.netPnl)}
+                  label="net P/L"
+                  tone={totals.netPnl > 0 ? 'pos' : totals.netPnl < 0 ? 'neg' : ''}
+                />
+                <StepMeta value={totals.trades ?? 0} label="trades" />
+                <StepMeta value={totals.winRate == null ? '—' : `${totals.winRate.toFixed(1)}%`} label="win rate" />
+              </>
+            )}
+          >
+          {/* ⚠️ NO INNER `.mvp-panel` (owner, 2026-11-23): the accordion body carries the tint, so a
+              panel here would be a coloured box inside a coloured box. The recap line and the totals
+              grid are content, not chrome, so they stay. */}
+          <div className="mvp-run-summary">
             <div className="mvp-run-summary-head">
               <div className="mvp-recap">
                 <span className="mvp-recap-leg">{leg.label}</span>
@@ -788,7 +856,15 @@ export default function MoversStrategyBacktestPage() {
                   {progress ? ` · ${elapsedLabel(now - progress.startedAt)}` : ''}
                 </span>
               </div>
-              <button type="button" className="mvp-link-btn" onClick={() => setFormOpen(true)}>
+              <button
+                type="button"
+                className="mvp-link-btn"
+                onClick={() => {
+                  setFormOpen(true);
+                  // The settings step may be folded; a button that reveals nothing reads as broken.
+                  setSettingsSignal((n) => n + 1);
+                }}
+              >
                 Change settings
               </button>
             </div>
@@ -840,6 +916,13 @@ export default function MoversStrategyBacktestPage() {
                 }
               />
             </div>
+
+            {/*
+              #1341 — the BEST ever for this test, beside the delta against the PREVIOUS run. Two
+              different questions: the tile above answers "did I beat last time", this answers "have I
+              ever been better than this" — and prints the settings that got there.
+            */}
+            <BestRecordPanel okRuns={okRuns} />
 
             {/*
               #1242 — the session gate, in the two states that have something to say. Absent stays
@@ -926,24 +1009,32 @@ export default function MoversStrategyBacktestPage() {
               </p>
             )}
 
-            {caveats.length > 0 && (
-              <ul className="mvp-caveats">
-                {caveats.map((c) => (
-                  <li key={c}>{c}</li>
-                ))}
-              </ul>
-            )}
+            {/**
+              * ⚠️ THE CAVEAT LIST WAS REMOVED (owner, 2026-11-23: "there's no point in outputting this …
+              * it's too much to read"). It was eleven sentences of prose between the figures and the
+              * tables, and a reader skims a wall — which is worse than not printing it, because the one
+              * caveat that changes an interpretation is invisible inside the other ten.
+              *
+              * ⚠️ THE DATA IS NOT GONE. `caveats` is still on every run response, so a TABLE version (one
+              * row per caveat, with the figure it touches) can be built without re-running anything —
+              * tracked in #1342 as step 2's cheapest win.
+              *
+              * ⚠️ THE ONE CAVEAT THAT CHANGES AN INTERPRETATION IS STILL ON THE PAGE: "no bot names this
+              * protocol, so these are the ENGINE's literals" is carried by step 10's `meta`, which reads
+              * `no bot` when `tradeConfig.bot` is null. That is why removing the list does not remove the
+              * ability to notice the run is unbracketed.
+              */}
 
             </>
             )}
-          </section>
+          </div>
 
-          {results.length > 0 && (
-          <>
           {/* #1328 — the stored runs of the SAME test, readable on demand rather than filling the
               results pane. Its own component so the loading/failed/empty/loaded states cannot be
-              collapsed into one another here. */}
-          {comparisonView?.profileKey && (
+              collapsed into one another here. ⚠️ INSIDE the summary step: it explains the delta
+              printed on the tiles beside it, and a reader who has to hunt for it in another accordion
+              reads the delta as unexplained. */}
+          {results.length > 0 && comparisonView?.profileKey && (
             <SelectionHistory
               profileKey={comparisonView.profileKey}
               profileLabel={comparisonView.profileLabel}
@@ -951,111 +1042,133 @@ export default function MoversStrategyBacktestPage() {
               currentRunIds={okRuns.map((r) => r.selectionRun?.id).filter(Boolean)}
             />
           )}
-          <section className="mvp-panel" aria-label="Result by day">
-            <h2 className="mvp-panel-title">
-              Result by day
-              <WhyPopover title="How to read this table">
-                Each row is one session. “Ranked at cutoff” is every candidate with its move at that
-                moment; the highlighted ones are what the ranking picked. “Excluded” counts trades the
-                engine produced that the selection did not permit.
-              </WhyPopover>
-            </h2>
-            <div className="mvp-scroll">
-              <table className="mvp-table">
-                <thead>
-                  <tr>
-                    <SortableTh col="answerDate" label="Day" api={daySort} buttonClassName="th-sort" firstDir="asc" />
-                    <th scope="col">Ranked at cutoff</th>
-                    <th scope="col">Traded</th>
-                    <SortableTh col="candidates" label="Candidates" api={daySort} className="mvp-num" buttonClassName="th-sort" />
-                    <SortableTh col="trades" label="Trades" api={daySort} className="mvp-num" buttonClassName="th-sort" />
-                    <SortableTh col="winRate" label="Win %" api={daySort} className="mvp-num" buttonClassName="th-sort" />
-                    <SortableTh col="netPnl" label="Net P/L" api={daySort} className="mvp-num" buttonClassName="th-sort" />
-                    <SortableTh col="excluded" label="Excluded" api={daySort} className="mvp-num" buttonClassName="th-sort" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {daySort.sorted.map((d) => (
-                    <tr key={d.id} className={d.notice ? 'mvp-row--bad' : ''}>
-                      <td className="mvp-nowrap">{dayLabel(d.answerDate)}</td>
-                      <td>
-                        {d.notice ? (
-                          <span className="mvp-muted">{d.notice.title}</span>
-                        ) : (
-                          <span className="mvp-chips mvp-chips--inline">
-                            {d.ranked.map((c) => (
-                              <span
-                                key={c.symbol}
-                                className={`mvp-sym${c.selected ? ' mvp-sym--on' : ''}`}
-                                title={c.reason || (c.movePct == null ? 'not measurable' : `rank ${c.rank}`)}
-                              >
-                                {c.symbol}
-                                {c.movePct != null && <em>{fmtPct(c.movePct)}</em>}
-                              </span>
-                            ))}
-                          </span>
-                        )}
-                      </td>
-                      <td className="mvp-nowrap">
-                        {d.notice ? '—' : d.selected.length ? <strong>{d.selected.join(', ')}</strong> : <span className="mvp-muted">nothing</span>}
-                      </td>
-                      <td className="mvp-num">{d.notice ? '—' : d.candidates}</td>
-                      <td className="mvp-num">{d.notice ? '—' : d.trades}</td>
-                      <td className="mvp-num">{d.notice ? '—' : d.winRate == null ? '—' : `${Number(d.winRate).toFixed(1)}%`}</td>
-                      <td className={`mvp-num ${d.netPnl > 0 ? 'mvp-pos' : d.netPnl < 0 ? 'mvp-neg' : ''}`}>
-                        {d.notice ? '—' : fmtMoney(d.netPnl)}
-                      </td>
-                      <td className="mvp-num mvp-muted">{d.notice ? '—' : d.excluded}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          </StepAccordion>
 
-          <section className="mvp-panel" aria-label="Result by symbol">
-            <h2 className="mvp-panel-title">Result by symbol</h2>
-            {symbolRows.length === 0 ? (
-              <p className="mvp-note">No symbol was traded in any day that finished.</p>
-            ) : (
-              <div className="mvp-scroll">
-                <table className="mvp-table">
-                  <thead>
-                    <tr>
-                      <SortableTh col="symbol" label="Symbol" api={symbolSort} buttonClassName="th-sort" firstDir="asc" />
-                      <SortableTh col="days" label="Days picked" api={symbolSort} className="mvp-num" buttonClassName="th-sort" />
-                      <SortableTh col="trades" label="Trades" api={symbolSort} className="mvp-num" buttonClassName="th-sort" />
-                      <SortableTh col="winRate" label="Win %" api={symbolSort} className="mvp-num" buttonClassName="th-sort" />
-                      <SortableTh col="netPnl" label="Net P/L" api={symbolSort} className="mvp-num" buttonClassName="th-sort" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {symbolSort.sorted.map((s) => (
-                      <tr key={s.symbol}>
-                        <td><strong>{s.symbol}</strong></td>
-                        <td className="mvp-num">{s.days}</td>
-                        <td className="mvp-num">{s.trades}</td>
-                        <td className="mvp-num">{s.winRate == null ? '—' : `${s.winRate.toFixed(1)}%`}</td>
-                        <td className={`mvp-num ${s.netPnl > 0 ? 'mvp-pos' : s.netPnl < 0 ? 'mvp-neg' : ''}`}>
-                          {fmtMoney(s.netPnl)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          <StepAuditNote afterStep={MOVERS_STEP['mvp-step-summary'].step} ideas={MOVERS_STEP['mvp-step-summary'].audit} />
+
+          {results.length > 0 && (
+          <>
+          <StepAccordion
+            pageId={MOVERS_PAGE_ID}
+            {...MOVERS_STEP['mvp-step-best']}
+            meta={(
+              <>
+                <StepMeta
+                  value={okRuns[okRuns.length - 1]?.best?.best?.perDay == null
+                    ? '—'
+                    : fmtMoney(okRuns[okRuns.length - 1].best.best.perDay)}
+                  label="best per day"
+                />
+                <StepMeta
+                  value={okRuns[okRuns.length - 1]?.best?.improved ? 'new' : 'not beaten'}
+                  label="this run"
+                  tone={okRuns[okRuns.length - 1]?.best?.improved ? 'pos' : ''}
+                />
+              </>
             )}
-          </section>
+          >
+            <BestRecordPanel okRuns={okRuns} />
+          </StepAccordion>
+
+          <StepAuditNote afterStep={MOVERS_STEP['mvp-step-best'].step} ideas={MOVERS_STEP['mvp-step-best'].audit} />
+
+          <StepAccordion
+            pageId={MOVERS_PAGE_ID}
+            {...MOVERS_STEP['mvp-step-day']}
+            meta={(
+              <StepMeta
+                value={`${dayRows.filter((d) => !d.notice).length}/${dayRows.length}`}
+                label="days measured"
+              />
+            )}
+          >
+            <ResultByDayStep sort={daySort} />
+          </StepAccordion>
+
+          <StepAuditNote afterStep={MOVERS_STEP['mvp-step-day'].step} ideas={MOVERS_STEP['mvp-step-day'].audit} />
+
+          <StepAccordion
+            pageId={MOVERS_PAGE_ID}
+            {...MOVERS_STEP['mvp-step-symbol']}
+            meta={(
+              <>
+                <StepMeta value={symbolRows.length} label="symbols" />
+                <StepMeta value={symbolRows.reduce((a, s) => a + Number(s.trades || 0), 0)} label="trades" />
+              </>
+            )}
+          >
+            <ResultBySymbolStep sort={symbolSort} />
+          </StepAccordion>
+
+          <StepAuditNote afterStep={MOVERS_STEP['mvp-step-symbol'].step} ideas={MOVERS_STEP['mvp-step-symbol'].audit} />
+
+
+          {/*
+            #1344 — the scoring step. Every bucket is a count of the ENGINE's own per-bar verdict
+            (`bar.state`), so this table cannot disagree with the Decisions table further down: both read
+            one vocabulary. The speed rating is `speed-momentum`'s own score, uninvented.
+          */}
+          <StepAccordion
+            pageId={MOVERS_PAGE_ID}
+            {...MOVERS_STEP['mvp-step-funnel']}
+            meta={(
+              <>
+                <StepMeta value={funnelSummary.scored} label="bars scored" />
+                <StepMeta value={funnelSummary.entered} label="traded" />
+                <StepMeta
+                  value={funnelSummary.scored > 0
+                    ? `${((funnelSummary.entered / funnelSummary.scored) * 100).toFixed(1)}%`
+                    : '—'}
+                  label="of bars"
+                />
+              </>
+            )}
+          >
+            <ScoringFunnelStep entries={depthEntries} />
+          </StepAccordion>
+
+          <StepAuditNote afterStep={MOVERS_STEP['mvp-step-funnel'].step} ideas={MOVERS_STEP['mvp-step-funnel'].audit} />
+
+
+          {/*
+            #1344 — the protocol step: what each directive has actually scored and predicted. The figures
+            are measured across EVERY strategy (the endpoint has no protocol filter), which the step says
+            above its table — these are not this run's evidence.
+          */}
+          <StepAccordion
+            pageId={MOVERS_PAGE_ID}
+            {...MOVERS_STEP['mvp-step-directives']}
+            meta={(
+              <StepMeta value={protocolDirectives.length || '—'} label="directives in protocol" />
+            )}
+          >
+            <DirectiveRecordStep entries={depthEntries} />
+          </StepAccordion>
+
+          <StepAuditNote afterStep={MOVERS_STEP['mvp-step-directives'].step} ideas={MOVERS_STEP['mvp-step-directives'].audit} />
+
 
           {/* Stored datasets that are NOT offered (their name carries no day) are deliberately not shown
               on the page. Measured 2026-11-20: the count + naming rule read as noise between containers.
               The API still reports them in `datasetsQuery.data.excluded` for anyone diagnosing a missing
               day — do not re-add a paragraph or note here. */}
 
-          {/* ── bar by bar ── */}
-          <section className="mvp-panel" aria-label="Bar by bar">
-            <div className="mvp-panel-head">
-              <h2 className="mvp-panel-title">Bar by bar</h2>
+          {/* ── step 6 · bar by bar ── */}
+          <StepAccordion
+            pageId={MOVERS_PAGE_ID}
+            {...MOVERS_STEP['mvp-step-bars']}
+            meta={(
+              <>
+                <StepMeta value={daySymbols.length} label="symbols" />
+                <StepMeta value={mergedTrades.length} label="executions" />
+              </>
+            )}
+          >
+          {/* ⚠️ NO INNER `.mvp-panel` (owner, 2026-11-23). The accordion body IS the tinted surface
+              now; a panel inside it was a coloured box within a coloured box. The head/heading stay —
+              the chips below them are controls, not chrome. */}
+          <div className="mvp-panel-head">
+            <h2 className="mvp-panel-title">Bar by bar</h2>
               {depthEntries.length > 1 && (
                 <div className="mvp-chips" role="group" aria-label="Symbol and day to scrutinise">
                   {/*
@@ -1113,11 +1226,40 @@ export default function MoversStrategyBacktestPage() {
                 again — a run without it keeps one composite per bar and no decomposition.
               </p>
             )}
-          </section>
+          </StepAccordion>
 
-          {/* ── which configuration these numbers describe ── */}
+          <StepAuditNote afterStep={MOVERS_STEP['mvp-step-bars'].step} ideas={MOVERS_STEP['mvp-step-bars'].audit} />
+
+          {/*
+            #1340 — the inventory sits AFTER the depth panel on purpose: it is what you read once you
+            have looked at the numbers and want to know what else the run already knows.
+          */}
+          <StepAccordion
+            pageId={MOVERS_PAGE_ID}
+            {...MOVERS_STEP['mvp-step-inventory']}
+          >
+            <UnusedDataPanel runs={okRuns} bare />
+          </StepAccordion>
+
+          <StepAuditNote afterStep={MOVERS_STEP['mvp-step-inventory'].step} ideas={MOVERS_STEP['mvp-step-inventory'].audit} />
+
+          {/* ── step 8 · which configuration these numbers describe ── */}
           {/* A change here PATCHes the bot and runs the same queue again (register row 247), so the
               page's own runner is handed in rather than the panel starting a run of its own. */}
+          <StepAccordion
+            pageId={MOVERS_PAGE_ID}
+            {...MOVERS_STEP['mvp-step-config']}
+            meta={(
+              <>
+                <StepMeta value={okRuns[0]?.tradeConfig?.bot?.name ?? 'no bot'} label="bot" />
+                <StepMeta
+                  value={okRuns[0]?.tradeConfig?.bot?.active ? 'active' : 'inactive'}
+                  label="state"
+                  tone={okRuns[0]?.tradeConfig?.bot?.active ? 'pos' : ''}
+                />
+              </>
+            )}
+          >
           <TradeConfigPanel
             tradeConfig={okRuns[0]?.tradeConfig}
             onRetest={runQueue.length ? runAll : undefined}
@@ -1129,6 +1271,7 @@ export default function MoversStrategyBacktestPage() {
              */
             getBaselineNetPnl={() => totalsRef.current?.netPnl ?? null}
           />
+          </StepAccordion>
           </>
           )}
         </div>

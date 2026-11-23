@@ -476,6 +476,55 @@ model BacktestSelection {
   @@index([protocolId, createdAt])
 }
 
+// ── THE BEST RESULT PER TEST, KEPT LONG TERM (owner requirement, 2026-11-23) ──────────────────
+// Owner: *"we need to store the best P/L results long term … If we don't have the highest amount we
+// risk deviating from it many times, improving the deviation, but never overall making new ground.
+// Ideally everytime the profit improves, we backup the settings that come with it and that should be
+// for ALL backtesting so again it should be a core thing not just this page."*
+//
+// WHY A TABLE AND NOT A PAGE FEATURE. A record held in one page's memory dies with the tab, and the
+// tuning loop this protects is exactly the one that runs across days. `backtest_selection` already
+// stores every run — what it cannot answer is "which of these is the best, and what settings made
+// it", because the answer is a query over all of them and nobody runs it.
+//
+// ⚠️ THE BASIS IS STORED, NOT IMPLIED. `netPnl` alone must never decide a record: five days always
+// beats one, so a run would "improve" purely by measuring more days. The record is therefore replaced
+// only on `perDay` (net P/L per measured day), and the raw totals are stored BESIDE it so a reader can
+// see which number the verdict came from rather than trusting a derived one.
+model BacktestBest {
+  id          String @id @default(uuid()) @db.VarChar(36)
+  /// `movers-selection` | `protocol-backtest` — which writer owns this record.
+  scope       String @db.VarChar(24)
+  /// The test's identity WITHOUT its days: same protocol, bot, side, cutoff — so many days accumulate
+  /// into one record instead of one record per day.
+  profileKey  String @db.VarChar(64)
+  /// Human-readable identity, so a row can be read without joining anything.
+  label       String @db.VarChar(191)
+  /// THE BASIS: net P/L per measured day. Only this number replaces a record.
+  perDay      Float
+  netPnl      Float
+  days        Int
+  trades      Int
+  wins        Int
+  winRate     Float
+  profitFactor Float?
+  /// The settings that produced it, as the run reported them (id / value / applied).
+  configJson  String? @db.LongText
+  /// Where it came from, so the run can be opened. Not a relation: a run may be pruned.
+  runId       String? @db.VarChar(36)
+  /// `EXECUTION_SEMANTICS` at run time — a record from different semantics is not a comparable best.
+  semanticsVersion Int
+  engineVersion String @db.VarChar(20)
+  /// When the RECORD was set — not when it was last checked.
+  achievedAt  DateTime @default(now())
+  /// Every attempt measured against it, so "unchanged" is distinguishable from "not run".
+  attempts    Int @default(1)
+
+  @@map("backtest_best")
+  @@unique([scope, profileKey])
+  @@index([scope, perDay])
+}
+
 // ── Backtest experiments (#1144) — provenance for a tuning loop ──────────────
 // A LOOP is: adjust one setting → re-run → compare → decide → adjust again. The runs already exist;
 // what did not exist was a record that they are the SAME attempt, and what the attempt was FOR.

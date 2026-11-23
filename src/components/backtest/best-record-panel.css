@@ -1,0 +1,125 @@
+/**
+ * best-record-panel.css — scoped styles for `BestRecordPanel` (#1341).
+ *
+ * ⚠️ Tokens only, no literals: the theme is user-configurable (`ui-standards`), so a hard-coded colour
+ * here would survive a theme switch and become the one element a reader cannot read.
+ *
+ * ⚠️ The state is never colour-only. "New record" / "Not beaten" / "First recorded run" are WORDS in a
+ * tag, so the panel survives greyscale and a screen reader — colour only reinforces them.
+ */
+
+.brp {
+  margin: 16px 0;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.brp-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.brp-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.brp-tag {
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+
+.brp-tag--new-record {
+  color: var(--risk-normal);
+  background: var(--panel);
+}
+
+.brp-tag--has-record {
+  color: var(--ink-soft);
+  background: transparent;
+}
+
+.brp-tag--first-run {
+  color: var(--ink-soft);
+  background: var(--panel);
+}
+
+.brp-table-wrap {
+  overflow-x: auto;
+}
+
+.brp .mvp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.brp .mvp-table th,
+.brp .mvp-table td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.brp .mvp-table thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+}
+
+.brp .mvp-table tbody th {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.brp-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.brp-strong {
+  font-weight: 650;
+}
+
+.brp-when {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+.brp-row--beaten {
+  opacity: 0.75;
+}
+
+.brp-because,
+.brp-foot {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+.brp-sub {
+  margin: 14px 0 6px;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.brp-state--differs {
+  color: var(--color-warning);
+  font-weight: 600;
+}

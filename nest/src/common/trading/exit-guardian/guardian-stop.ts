@@ -15,6 +15,28 @@
  * produce the same stop. This module is that rule, extracted from the live service **without changing
  * its arithmetic**.
  *
+ * ── MEASURED 2026-11-23: THE PROTOCOL'S BREAKDOWN IS NOT A SUBSTITUTE FOR THE GUARDIAN'S INPUTS ───
+ * The engine CAN emit per-directive scores on request (`includeBreakdown`), which looks like it closes
+ * the gap. It does not, and the number is the reason: the guardian runs its OWN four directives
+ * (`atr-trailing-stop`, `supertrend`, `chandelier-exit`, `wick-filter`) on the position's own bars,
+ * while a protocol's breakdown only contains the directives THAT PROTOCOL subscribes to. Measured on
+ * the movers protocols: `movers-v1-long` carries **1 of the 4** (`wick-filter`), `movers-v1-short`
+ * **1 of 4**. A consensus over one signal, compared against a threshold calibrated for four, is a
+ * number wearing a verdict's clothes — and the live service carries its own #890 guard for exactly the
+ * "threshold calibrated for FOUR signals applied to ONE" shape it once shipped by accident.
+ *
+ * ⇒ Wiring this needs the engine to run the four guardian directives per bar, not to read the
+ * protocol's breakdown. That is a maths change (register row 23) and is tracked rather than done.
+ * PLANNED IN #1339
+ * MISSING:    the engine never calls `guardianStopDecision()`, so every backtest of a bot the live
+ *             guardian has touched reports a stop policy that account does not have.
+ * TODAY:      a run reports the fixed `slPct` stop; the Stop Guardian row is marked `applied: false`
+ *             with `NOT APPLIED`, and the Guardian table on the page is a status, not evidence.
+ * WHEN BUILT: run the four IDs through `DirectivesService.runAll()` per bar inside the position walk
+ *             (`managePositionBar` already owns the stop in force), feed the consensus to
+ *             `guardianStopDecision()`, and record the outcome per bar. Opt-in and A/B'd: it changes
+ *             every P/L in the run.
+ *
  * ── THE RULE ────────────────────────────────────────────────────────────────────────────────────
  *   1. distance to leave = `max(3 × ATR, the declared slPct distance from entry)`
  *      ⚠️ The declared-distance FLOOR is not cosmetic: measured 2026-09-21, `3 × ATR(5m)` on FX is

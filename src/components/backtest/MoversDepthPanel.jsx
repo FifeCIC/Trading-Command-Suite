@@ -150,6 +150,107 @@ function exitPhrase(x) {
 }
 
 /**
+ * Why the selection did not count a trade, in words.
+ *
+ * ⚠️ ONE WORD WAS DOING TWO JOBS (2026-11-23, owner report): the row read `LONG refused` beside `Exit SL`.
+ * That is not a contradiction — `kept: false` means the SELECTION did not count the trade, while the
+ * engine still opened it, walked it and stopped it out. "refused" made it read as though the bot had
+ * declined to trade and then exited a position it never had.
+ */
+const NOT_COUNTED = {
+  // ⚠️ SHORT TAGS, not sentences. The owner's objection to the old wording (2026-11-23) was that a
+  // floating sentence explained nothing: the same fact belongs in a COLUMN of a table, where it can be
+  // counted and compared. The full definition is the column header's tooltip.
+  'before-cutoff': 'before screen',
+  'not-selected': 'not in list',
+};
+
+const NOT_COUNTED_HINT = {
+  'before-cutoff': 'Entered before the screen time — the ranking had not been taken yet, so the day list could not have chosen it.',
+  'not-selected': 'The day list chose other symbols instead of this one. The engine still opened, walked and closed the trade, so its P/L is real but is in no total on this page.',
+};
+
+/**
+ * SelectionSummaryTable — WHAT THE DAY LIST COUNTED, per symbol (#1340).
+ *
+ * Owner, 2026-11-23: a sentence floating under a table said *"not counted — day list did not pick this
+ * symbol"*, and the report was that this explains nothing. It does not, because it is one row's reason
+ * with no denominator beside it: a reader cannot tell whether one trade or forty were excluded.
+ *
+ * So the same facts are a table — per symbol, how many rows the engine opened, how many the day list
+ * counted, and how many fell out and why. ⚠️ The P/L columns are separated because that is the whole
+ * point: an ignored trade's P/L is real and is in no total above.
+ */
+export function SelectionSummaryTable({ trades }) {
+  if (!Array.isArray(trades) || trades.length === 0) return null;
+  const bySymbol = new Map();
+  for (const t of trades) {
+    const key = t.symbol ?? '—';
+    const row = bySymbol.get(key) ?? {
+      symbol: key, opened: 0, counted: 0, beforeCutoff: 0, notSelected: 0, other: 0,
+      pnlCounted: 0, pnlIgnored: 0,
+    };
+    row.opened += 1;
+    const pnl = Number.isFinite(Number(t.pnl)) ? Number(t.pnl) : 0;
+    if (t.kept) {
+      row.counted += 1;
+      row.pnlCounted += pnl;
+    } else {
+      row.pnlIgnored += pnl;
+      if (t.selectionReason === 'before-cutoff') row.beforeCutoff += 1;
+      else if (t.selectionReason === 'not-selected') row.notSelected += 1;
+      // A reason nobody classified is COUNTED as `other` rather than dropped — an unclassified
+      // exclusion that renders as nothing is the "plausible output, no error" shape.
+      else row.other += 1;
+    }
+    bySymbol.set(key, row);
+  }
+  const rows = [...bySymbol.values()].sort((a, b) => b.pnlCounted - a.pnlCounted);
+  const anyIgnored = rows.some((r) => r.opened !== r.counted);
+
+  return (
+    <div className="mvp-scroll">
+      <table className="mvp-table">
+        <caption className="mvp-caption">
+          What the day list counted. A row the engine opened but the selection did not admit has real
+          P/L and is in no total on this page.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Symbol</th>
+            <th scope="col" className="mvp-num">Opened</th>
+            <th scope="col" className="mvp-num">Counted</th>
+            <th scope="col" className="mvp-num" title={NOT_COUNTED_HINT['before-cutoff']}>Before screen</th>
+            <th scope="col" className="mvp-num" title={NOT_COUNTED_HINT['not-selected']}>Not in list</th>
+            {rows.some((r) => r.other > 0) && <th scope="col" className="mvp-num">Not classified</th>}
+            <th scope="col" className="mvp-num">P/L counted</th>
+            <th scope="col" className="mvp-num">P/L ignored</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.symbol}>
+              <th scope="row" className="mvp-nowrap">{r.symbol}</th>
+              <td className="mvp-num">{r.opened}</td>
+              <td className="mvp-num">{r.counted}</td>
+              <td className={`mvp-num ${r.beforeCutoff ? '' : 'mvp-muted'}`}>{r.beforeCutoff || '—'}</td>
+              <td className={`mvp-num ${r.notSelected ? '' : 'mvp-muted'}`}>{r.notSelected || '—'}</td>
+              {rows.some((x) => x.other > 0) && (
+                <td className={`mvp-num ${r.other ? 'mvp-warn' : 'mvp-muted'}`}>{r.other || '—'}</td>
+              )}
+              <td className={`mvp-num ${r.pnlCounted > 0 ? 'mvp-pos' : r.pnlCounted < 0 ? 'mvp-neg' : 'mvp-muted'}`}>
+                {fmtMoney(r.pnlCounted)}
+              </td>
+              <td className={`mvp-num mvp-muted`}>{anyIgnored && r.pnlIgnored ? fmtMoney(r.pnlIgnored) : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
  * ExecutionsTable — the per-trade record, ONE implementation for two views.
  *
  * ⚠️ EXTRACTED 2026-11-23 so the per-symbol panel and the merged all-symbols table cannot drift. The
@@ -160,56 +261,176 @@ export function ExecutionsTable({ trades, symbol }) {
   if (!trades.length) {
     return <p className="mvp-note">The engine opened no trade on this session.</p>;
   }
+  const notCounted = trades.filter((t) => !t.kept).length;
+  return (
+    <>
+      <div className="mvp-scroll mvp-depth-scroll">
+        <table className="mvp-table">
+          <thead>
+            <tr>
+              <th scope="col">Symbol</th>
+              <th scope="col">In</th>
+              <th scope="col" className="mvp-num">Price</th>
+              <th scope="col">Out</th>
+              <th scope="col" className="mvp-num">Price</th>
+              <th scope="col">Side</th>
+              <th scope="col" className="mvp-num">Bars</th>
+              <th scope="col">Exit</th>
+              <th scope="col" className="mvp-num">P/L</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...trades]
+              .sort((a, b) => String(a.entryDate).localeCompare(String(b.entryDate)))
+              .map((t, i) => {
+                const span = Math.max(
+                  0,
+                  Math.round((new Date(t.exitDate) - new Date(t.entryDate)) / 300_000),
+                );
+                return (
+                  <tr key={`${t.symbol ?? symbol ?? ''}-${t.entryDate}-${i}`} className={t.kept ? '' : 'mvp-config-row--ignored'}>
+                    <td className="mvp-nowrap">{t.symbol || symbol || '—'}</td>
+                    <td className="mvp-nowrap">{clock(t.entryDate)}</td>
+                    <td className="mvp-num">{fmtPrice(t.entryPrice)}</td>
+                    <td className="mvp-nowrap">{clock(t.exitDate)}</td>
+                    <td className="mvp-num">{fmtPrice(t.exitPrice)}</td>
+                    <td className="mvp-nowrap mvp-muted">
+                      {t.direction}
+                      {!t.kept && (
+                        <span
+                          className="mvp-depth-pre"
+                          title={NOT_COUNTED_HINT[t.selectionReason] ?? 'The selection did not count this trade.'}
+                        >
+                          {NOT_COUNTED[t.selectionReason] ?? 'not counted'}
+                        </span>
+                      )}
+                    </td>
+                    <td className="mvp-num">{span}</td>
+                    <td className="mvp-nowrap">
+                      <span
+                        className={`mvp-state mvp-state--${EXIT_TONE[t.exitReason] ?? 'none'}`}
+                        title={t.exitReason}
+                      >
+                        {exitReasonText(t.exitReason)}
+                      </span>
+                    </td>
+                    <td
+                      className={`mvp-num ${t.kept && t.pnl > 0 ? 'mvp-pos' : t.kept && t.pnl < 0 ? 'mvp-neg' : 'mvp-muted'}`}
+                      title={t.kept ? undefined : 'this trade is NOT in any total on the page'}
+                    >
+                      {fmtMoney(t.pnl)}
+                    </td>
+                  </tr>
+                );
+              })}
+          </tbody>
+        </table>
+      </div>
+      {notCounted > 0 && (
+        /**
+         * ⚠️ THIS WAS A SENTENCE AND IS NOW A TABLE (owner, 2026-11-23). The sentence named one reason
+         * with no denominator, so a reader could not tell whether one trade or forty had been excluded —
+         * and it floated under the table rather than sitting beside the numbers it described.
+         */
+        <SelectionSummaryTable trades={trades} />
+      )}
+    </>
+  );
+}
+
+/**
+ * DecisionsTable — WHAT THE PIPELINE DID ON EVERY BAR, in one row per bar.
+ *
+ * Owner, 2026-11-23: META.Stack records signals and bot decisions, and those are needed on this page as a
+ * row of decisions — "REFUSED" is not good enough, because a day has to be understandable as it unfolds.
+ *
+ * ⚠️ EVERY COLUMN HERE ALREADY EXISTED IN THE PAYLOAD — this is a RENDERER, not a second scoring path.
+ * `detail.bars` carries the composite `score`, the directional/opportunity split, the risk multiplier, the
+ * signal class, `passedBar`, and every directive's own `score`/`signalClass`/`reason`/`inSignal`. Nothing
+ * is recomputed and no threshold is re-invented: a bar is judged by the same numbers the engine used,
+ * including `passedBar`, which is the engine's OWN verdict on the entry gate.
+ *
+ * ⚠️ THE THREE STATES THAT USED TO LOOK ALIKE: a bar with no score, a bar that scored but was under the
+ * bar, and a bar that scored, passed, and still produced no trade. They are separate rows here because
+ * they mean three different things about the day.
+ */
+export function DecisionsTable({ bars, cutoffUtc }) {
+  const rows = Array.isArray(bars) ? bars : [];
+  if (!rows.length) {
+    return <p className="mvp-note">No scored bars were returned for this session.</p>;
+  }
+
+  /** The directive that did most of the work on this bar, and its own sentence. */
+  const why = (b) => {
+    const ds = (b.directives ?? []).filter((d) => d && typeof d.score === 'number');
+    if (!ds.length) return b.signal || 'no directive detail on this bar';
+    const top = [...ds].sort((a, b2) => (b2.score ?? 0) - (a.score ?? 0))[0];
+    const counted = top.inSignal === false ? ' (read, not counted in direction)' : '';
+    return `${top.directiveId} ${top.score}/${top.maxScore}${counted}${top.reason ? ` — ${top.reason}` : ''}`;
+  };
+
+  const decide = (b) => {
+    if (b.state === 'no-data') {
+      return { label: 'NO DATA', tone: 'none', why: 'no bar to judge — the series has a hole here' };
+    }
+    const entered = (b.entries ?? []).length > 0;
+    const exited = (b.exits ?? []).length > 0;
+    if (entered && exited) return { label: 'ENTER + EXIT', tone: 'entry', why: why(b) };
+    if (entered) return { label: 'ENTER', tone: 'entry', why: why(b) };
+    if (exited) {
+      const reason = (b.exits ?? []).map((e) => e.exitReason).filter(Boolean).join(' · ');
+      return { label: `EXIT ${reason}`.trim(), tone: 'warn', why: why(b) };
+    }
+    if (b.passedBar) {
+      return {
+        label: 'SIGNAL — NO TRADE',
+        tone: 'warn',
+        why: `${why(b)} · cleared the entry bar, but the engine opened nothing (already in a position, or unaffordable)`,
+      };
+    }
+    return { label: 'SKIP — UNDER BAR', tone: 'none', why: why(b) };
+  };
+
   return (
     <div className="mvp-scroll mvp-depth-scroll">
       <table className="mvp-table">
         <thead>
           <tr>
-            <th scope="col">Symbol</th>
-            <th scope="col">In</th>
-            <th scope="col" className="mvp-num">Price</th>
-            <th scope="col">Out</th>
-            <th scope="col" className="mvp-num">Price</th>
-            <th scope="col">Side</th>
-            <th scope="col" className="mvp-num">Bars</th>
-            <th scope="col">Exit</th>
-            <th scope="col" className="mvp-num">P/L</th>
+            <th scope="col">Time</th>
+            <th scope="col" className="mvp-num">Score</th>
+            <th scope="col" className="mvp-num">Dir %</th>
+            <th scope="col" className="mvp-num">Opp %</th>
+            <th scope="col" className="mvp-num">Risk ×</th>
+            <th scope="col">Signal</th>
+            <th scope="col">Decision</th>
+            <th scope="col">Why</th>
           </tr>
         </thead>
         <tbody>
-          {[...trades]
-            .sort((a, b) => String(a.entryDate).localeCompare(String(b.entryDate)))
-            .map((t, i) => {
-              const span = Math.max(
-                0,
-                Math.round((new Date(t.exitDate) - new Date(t.entryDate)) / 300_000),
-              );
-              return (
-                <tr key={`${t.symbol ?? symbol ?? ''}-${t.entryDate}-${i}`} className={t.kept ? '' : 'mvp-config-row--ignored'}>
-                  <td className="mvp-nowrap">{t.symbol || symbol || '—'}</td>
-                  <td className="mvp-nowrap">{clock(t.entryDate)}</td>
-                  <td className="mvp-num">{fmtPrice(t.entryPrice)}</td>
-                  <td className="mvp-nowrap">{clock(t.exitDate)}</td>
-                  <td className="mvp-num">{fmtPrice(t.exitPrice)}</td>
-                  <td className="mvp-nowrap mvp-muted">
-                    {t.direction}
-                    {!t.kept && <span className="mvp-depth-pre" title="the selection refused this trade">refused</span>}
-                  </td>
-                  <td className="mvp-num">{span}</td>
-                  <td className="mvp-nowrap">
-                    <span
-                      className={`mvp-state mvp-state--${EXIT_TONE[t.exitReason] ?? 'none'}`}
-                      title={t.exitReason}
-                    >
-                      {exitReasonText(t.exitReason)}
+          {rows.map((b, i) => {
+            const d = decide(b);
+            return (
+              <tr key={`${b.time}-${i}`} className={b.beforeCutoff ? 'mvp-config-row--ignored' : ''}>
+                <td className="mvp-nowrap">
+                  {clock(b.time)}
+                  {b.beforeCutoff && cutoffUtc ? (
+                    <span className="mvp-depth-pre" title={`before the ${cutoffUtc} screen — context, not a decision`}>
+                      pre-screen
                     </span>
-                  </td>
-                  <td className={`mvp-num ${t.kept && t.pnl > 0 ? 'mvp-pos' : t.kept && t.pnl < 0 ? 'mvp-neg' : 'mvp-muted'}`}>
-                    {t.kept ? fmtMoney(t.pnl) : '—'}
-                  </td>
-                </tr>
-              );
-            })}
+                  ) : null}
+                </td>
+                <td className="mvp-num">{Math.round(b.score ?? 0)}</td>
+                <td className="mvp-num">{b.signalPct == null ? '—' : Number(b.signalPct).toFixed(1)}</td>
+                <td className="mvp-num">{b.opportunityPct == null ? '—' : Number(b.opportunityPct).toFixed(1)}</td>
+                <td className="mvp-num">{b.riskMultiplier == null ? '—' : Number(b.riskMultiplier).toFixed(2)}</td>
+                <td className="mvp-nowrap mvp-muted">{b.signal || '—'}</td>
+                <td className="mvp-nowrap">
+                  <span className={`mvp-state mvp-state--${d.tone}`}>{d.label}</span>
+                </td>
+                <td className="mvp-config-note">{d.why}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -358,9 +579,17 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
       {/* ── 3 · executions — the per-trade record the phases need ─────────────────────────────── */}
       <section id="mvp-sec-execution" aria-label="Executions">
         <h3 className="mvp-depth-title">
-          Executions <span className="mvp-muted">({trades.length} the engine took · {trades.filter((t) => !t.kept).length} refused by the selection)</span>
+          Executions <span className="mvp-muted">({trades.length} the engine took · {trades.filter((t) => !t.kept).length} not counted)</span>
         </h3>
         <ExecutionsTable trades={trades} symbol={symbol} />
+      </section>
+
+      {/* ── 4 · decisions — one row per bar, the pipeline's own verdict ────────────────────────── */}
+      <section id="mvp-sec-decisions" aria-label="Decisions">
+        <h3 className="mvp-depth-title">
+          Decisions <span className="mvp-muted">· every bar, in order · {symbol}</span>
+        </h3>
+        <DecisionsTable bars={bars} cutoffUtc={detail?.cutoffUtc} />
       </section>
 
       {/* ── 4 · the decomposition of the pinned bar ────────────────────────────────────────────── */}

@@ -16,6 +16,8 @@ import { PrismaService } from '../../database/prisma.service';
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 import type { BacktestRunRequest } from './backtest.service';
 import { SelectionRunService } from './selection-run.service';
+// #1341 — the best result per test, so the page can ask before a run as well as after one.
+import { BestRunService } from './best-run.service';
 import type { SelectionRunRequest } from './selection-run.service';
 // #1319 — ONE parser for "which day is this movers list a screen of", shared by the list endpoint and
 // the run so the page can never offer a dataset the run would refuse.
@@ -51,6 +53,8 @@ export class BacktestController {
     private readonly prisma: PrismaService,
     private readonly settingsResolver: SettingsResolverService,
     private readonly selectionRun: SelectionRunService,
+    // #1341 — the best result per test, read before a run as well as after one.
+    private readonly bestRun: BestRunService,
   ) {}
 
   @Get('datasets')
@@ -208,6 +212,33 @@ export class BacktestController {
       // A failure must be a failure — see the comment on `/run` above.
       throw new BadRequestException(message || 'Selection backtest failed');
     }
+  }
+
+  /**
+   * #1341 — THE BEST RESULT EVER RECORDED FOR A TEST, across every scope.
+   *
+   * ⚠️ A reader needs this BEFORE a run as well as after one: "am I about to beat the record, or am I
+   * improving a deviation?" is the question the record exists to answer, and asking it only after a
+   * run means every run is already measured against nothing.
+   */
+  @Get('best')
+  @ApiOperation({ summary: 'The best recorded result per test, best first (#1341)' })
+  async best(
+    @Query('scope') scope?: string,
+  ) {
+    const SCOPES = ['movers-selection', 'protocol-backtest'] as const;
+    const wanted = SCOPES.filter((s) => !scope || s === scope);
+    if (scope && wanted.length === 0) {
+      // An unknown scope must REFUSE, not return an empty list that reads as "no records yet".
+      throw new BadRequestException(
+        `Unknown scope "${scope}". Known scopes: ${SCOPES.join(', ')}.`,
+      );
+    }
+    const scopes = await Promise.all(wanted.map(async (s) => ({
+      scope: s,
+      records: await this.bestRun.list(s),
+    })));
+    return { scopes };
   }
 
   /**

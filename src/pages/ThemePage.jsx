@@ -43,9 +43,9 @@ const PATTERNS = [
   { id: 'snapshot-cards', name: 'Snapshot Cards', tag: 'tinted row' },
 ];
 
-function Section({ id, name, tag, children }) {
+function Section({ id, name, tag, wide = false, children }) {
   return (
-    <section className="thm-section" id={id}>
+    <section className={`thm-section${wide ? ' thm-section--wide' : ''}`} id={id}>
       <div className="thm-section-head">
         <h2 className="thm-section-name">{name}</h2>
         <span className="thm-section-tag">{tag}</span>
@@ -137,7 +137,7 @@ export default function ThemePage() {
             </div>
           </Section>
 
-          <Section id="dense-table" name="Dense Table" tag="busy">
+          <Section id="dense-table" name="Dense Table" tag="busy" wide>
             <div className="thm-scroll">
               <table className="thm-table thm-table--dense">
                 <thead>
@@ -187,7 +187,7 @@ export default function ThemePage() {
             </div>
           </Section>
 
-          <Section id="spacious-table" name="Spacious Table" tag="default">
+          <Section id="spacious-table" name="Spacious Table" tag="default" wide>
             <div className="thm-frame">
               <table className="thm-table thm-table--spacious">
                 <thead>
@@ -309,7 +309,7 @@ export default function ThemePage() {
             </div>
           </Section>
 
-          <Section id="detail-rail" name="Detail Rail" tag="sidebar">
+          <Section id="detail-rail" name="Detail Rail" tag="sidebar" wide>
             <div className="thm-rail-layout">
               <div className="thm-rail">
                 <div className="thm-rail-item is-selected">

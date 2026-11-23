@@ -12,6 +12,9 @@
 /* ── Page frame ─────────────────────────────────────────────────────────────────────────────── */
 
 .thm-page {
+  width: 100%;
+  max-width: var(--page-max-width);
+  margin: 0 auto;
   padding: var(--space-lg) var(--space-xl) var(--space-2xl);
   display: flex;
   flex-direction: column;
@@ -159,11 +162,21 @@
 
 .thm-index-name { flex: 1; }
 
+/* Containers sit BESIDE each other, not in one long column: a specimen judged at 1,400px wide
+   reads as a different design from the same specimen at ~650px, and the owner's verdict was that
+   the wide version lost the original look. Only the specimens that need the room (a ten-column
+   table, the two-column detail rail) span both tracks. */
 .thm-gallery {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-lg);
+  align-items: start;
   min-width: 0;
+}
+
+@media (min-width: 1200px) {
+  .thm-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .thm-section--wide { grid-column: span 2; }
 }
 
 /* ── Section shell ──────────────────────────────────────────────────────────────────────────── */
@@ -294,7 +307,7 @@
 
 .thm-stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(152px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 0.6rem;
 }
 
@@ -437,6 +450,7 @@
   align-items: center;
   gap: 0.8rem;
   flex-wrap: wrap;
+  max-width: 640px;
   padding: 0.6rem 0.85rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -511,6 +525,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+  max-width: 680px;
   padding: 0.7rem 0.85rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -553,7 +568,7 @@
 
 .thm-two-col {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 0.85rem;
 }
 
@@ -753,7 +768,7 @@
 
 .thm-card-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 0.85rem;
 }
 
@@ -799,6 +814,8 @@
   display: flex;
   gap: 1.6rem;
   flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
   padding: 0.7rem 1rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -820,7 +837,7 @@
 
 .thm-trade-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
   gap: 0.85rem;
 }
 
@@ -956,7 +973,7 @@
 
 .thm-snapshot-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.6rem;
 }
 .thm-snapshot {
@@ -977,3 +994,13 @@
 .thm-snapshot strong { font-family: var(--font-mono); font-size: var(--text-xl); }
 .thm-snapshot-delta { font-family: var(--font-mono); font-size: var(--text-xs); }
 .thm-snapshot-meta { font-size: var(--text-2xs); color: var(--text-dim); }
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,173 @@
+/**
+ * step-accordion.css — the `StepAccordion` primitive.
+ *
+ * ⚠️ Tokens only (`ui-standards`): the theme is user-configurable, so a literal colour here would
+ * survive a theme switch and become the one element a reader cannot read.
+ *
+ * ⚠️ THE MARKER IS DECORATION. It rotates with `[open]`, which is pleasant, but the state is carried
+ * by the `<summary>` text and by the native `details` behaviour. A reader who cannot see the glyph
+ * loses nothing.
+ *
+ * ⚠️ The focus ring is `:focus-visible` and drawn with `outline`, not a background change — a
+ * background-only focus state disappears against a highlighted row.
+ */
+
+.step-acc {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.step-acc__summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+/* The native disclosure triangle differs per engine and cannot be aligned with the text. */
+.step-acc__summary::-webkit-details-marker {
+  display: none;
+}
+
+.step-acc__summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.step-acc__marker {
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  align-self: center;
+  border-left: 6px solid var(--ink-soft);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 120ms ease;
+}
+
+.step-acc[open] .step-acc__marker {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-acc__marker {
+    transition: none;
+  }
+}
+
+.step-acc__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.step-acc__title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.step-acc__num {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.step-acc__purpose {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--ink-soft);
+}
+
+.step-acc__meta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+}
+
+.step-acc__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.15;
+}
+
+.step-acc__stat strong {
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.step-acc__stat span {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.step-acc__stat.is-pos strong {
+  color: var(--risk-normal);
+}
+
+.step-acc__stat.is-neg strong {
+  color: var(--risk-critical);
+}
+
+.step-acc__actions {
+  padding: 0 14px 10px;
+}
+
+.step-acc__body {
+  padding: 4px 14px 14px;
+  border-top: 1px solid var(--line);
+  /*
+   * ⚠️ THE BODY OWNS THE TINT, AND THE INNER PANEL IS GONE (owner, 2026-11-23).
+   *
+   * The tinted surface is the page's EXISTING one — `.mvp-panel:has(.mvp-scroll)` in
+   * `MoversStrategyBacktestPage.css` paints `color-mix(in srgb, var(--accent) 9%, var(--panel))` with a
+   * 26% accent border. That rule has the same specificity as a child selector, and the page's stylesheet
+   * loads LAST, so neutralising the inner panel from here lost the tie and the accordion rendered a
+   * tinted box inside an untinted one. Removing the inner container removes the fight; this rule puts
+   * the SAME declaration on the surface that remains.
+   *
+   * The `--accent` mix is deliberate rather than `--panel-raised`: a step's body should read as
+   * "content belonging to this step", exactly as a scrollable panel did before it became a step.
+   */
+  background: color-mix(in srgb, var(--accent) 9%, var(--panel));
+  border-top-color: color-mix(in srgb, var(--accent) 26%, var(--line));
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+/* A nested panel would draw a second border inside this one. The steps own the chrome now. */
+.step-acc__body > .mvp-panel,
+.step-acc__body > .mvp-block,
+.step-acc__body > .brp {
+  border: none;
+  padding: 0;
+  background: transparent;
+  margin: 0;
+}
+
+.step-acc__body > .mvp-panel > .mvp-panel-title {
+  margin-top: 8px;
+}

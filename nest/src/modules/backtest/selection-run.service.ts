@@ -67,6 +67,10 @@ import {
   type StoredSelection,
 } from './selection-profile';
 import { EXECUTION_SEMANTICS } from '../../common/trading/execution-semantics';
+// ONE definition of the trade profit factor, so a record's factor and its P/L describe one sample.
+import { tradeProfitFactor } from './profit-factor';
+// #1341 — the best result per test, so a tuning loop cannot "improve" its way below an earlier best.
+import { BestRunService, bestProfileKey, type BestRecord } from './best-run.service';
 // #1325 — "could the bot have taken this trade?" Applied AFTER the engine has decided every trade, so it
 // filters a population rather than deciding one.
 import { admitTrades } from './portfolio-admission';
@@ -275,6 +279,13 @@ export interface SelectionRunResult {
   exitDivergence: ExitDivergence;
   /** #1335 — how optimistic the stop fills in this population are. `measured: 0` = not recorded. */
   fillGap: FillGapSummary;
+  /**
+   * #1341 — the BEST result ever recorded for this test, and whether this run replaced it.
+   *
+   * ⚠️ ALWAYS PRESENT. A missing field would leave the page to render "no record", which is a claim
+   * about history the page is not in a position to make.
+   */
+  best: BestRecord;
   caveats: string[];
 }
 
@@ -288,6 +299,7 @@ export class SelectionRunService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly backtest: BacktestService,
+    private readonly bestRun: BestRunService,
   ) {}
 
   /** The protocol's own declared direction, or null when it cannot be read (reported, not guessed). */
@@ -393,6 +405,8 @@ export class SelectionRunService {
     result: unknown,
     tagged: Array<Record<string, unknown>>,
     keptSet: Set<unknown>,
+    /** Trade object → why the selection dropped it. Object identity: the same instances `tagged` holds. */
+    dropCode: Map<unknown, string> | null,
     answerDate: string,
     cutoffUtc: string,
     directionMode: 'long' | 'short',
@@ -418,6 +432,10 @@ export class SelectionRunService {
       closeReason: typeof t.closeReason === 'string' ? t.closeReason : null,
       signal: String(t.signal ?? ''),
       kept: keptSet.has(t),
+      // ⚠️ THE REASON, so a table can say WHICH refusal rather than "refused" (2026-11-23).
+      selectionReason: keptSet.has(t)
+        ? null
+        : ((dropCode?.get(t) as 'not-selected' | 'before-cutoff' | undefined) ?? 'not-selected'),
     }));
 
     const bars = buildDepthBars({ series, trades, answerDate, cutoffUtc, directionMode });
@@ -629,7 +647,7 @@ export class SelectionRunService {
           profitFactor: result.stats?.profitFactor ?? null,
           excludedNotSelected: notSelected,
           excludedBeforeCutoff: beforeCutoff,
-          ...(request.includeBreakdown ? { detail: this.buildDetail(result, tagged, keptSet, decl.value.answerDate, cutoffUtc, directionMode, picked.day.selected.length, tickers.length) } : {}),
+          ...(request.includeBreakdown ? { detail: this.buildDetail(result, tagged, keptSet, new Map(dropped.map((d) => [d.trade, d.code])), decl.value.answerDate, cutoffUtc, directionMode, picked.day.selected.length, tickers.length) } : {}),
         });
       } catch (err) {
         // ONE symbol failing must not discard the whole day — and it is REPORTED, never rendered as
@@ -791,8 +809,40 @@ export class SelectionRunService {
       runIds,
     });
 
-    const caveats: string[] = [
-      `Measured on ${decl.value.answerDate} only — the session this dataset is a screen of. Its ` +
+    /**
+     * ── THE BEST RESULT FOR THIS TEST, KEPT (#1341) ──────────────────────────────────────────────
+     *
+     * ⚠️ THE KEY EXCLUDES THE DAY ON PURPOSE. `profileKey` above identifies ONE TEST OF ONE DAY, which
+     * is what a delta needs. The record needs the opposite: "these settings, this leg, over however
+     * many days were measured" — so many days accumulate onto one record instead of one record per day.
+     * That is precisely why the record is decided on net P/L PER DAY: a five-day run must not beat a
+     * one-day run merely for measuring more days.
+     */
+    const best = await this.bestRun.consider({
+      scope: 'movers-selection',
+      profileKey: bestProfileKey([
+        profile.protocolId,
+        profile.botId,
+        profile.directionMode,
+        profile.side,
+        `top${profile.topN}`,
+        profile.cutoffUtc,
+      ]),
+      label: `${bot?.name ?? profile.protocolId} · ${profile.directionMode} · top ${profile.topN} · ${profile.cutoffUtc}`,
+      netPnl,
+      days: 1,
+      trades: totalTrades,
+      wins: totalWins,
+      winRate,
+      // The TRADE-based factor, over the same admitted population as `netPnl` and `trades`, so a
+      // record's factor can never describe a different sample from its P/L (`profit-factor.ts`).
+      profitFactor: tradeProfitFactor(admittedTrades as Array<{ pnl: number | null | undefined }>),
+      config: appliedConfig,
+      runId: stored.id,
+      engineVersion: APP_VERSION,
+    });
+
+    const caveats: string[] = [      `Measured on ${decl.value.answerDate} only — the session this dataset is a screen of. Its ` +
         `${priorSessions} earlier session(s) are directive warm-up, not results.`,
       tradeConfig.bot
         ? `Trade management came from ${tradeConfig.bot.name}${tradeConfig.bot.active ? '' : ` (INACTIVE, ${tradeConfig.bot.mode ?? 'unknown'} mode)`}`
@@ -895,6 +945,8 @@ export class SelectionRunService {
       exitDivergence: summariseExitDivergence(admittedTrades),
       /** #1335 — the same fill-assumption report, over the same population. */
       fillGap: summariseFillGap(admittedTrades),
+      /** #1341 — the best ever for this test, and whether this run is the new one. */
+      best,
       caveats,
     };
   }

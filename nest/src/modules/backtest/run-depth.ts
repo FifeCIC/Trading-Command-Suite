@@ -91,6 +91,16 @@ export interface DepthTrade {
   signal: string;
   /** Did the ranked selection permit this trade? `false` = the engine took it, the strategy could not. */
   kept: boolean;
+  /**
+   * WHY the selection did not count it — `null`/absent when it did.
+   *
+   * ⚠️ A REFUSED ROW STILL HAS AN EXIT (2026-11-23, owner report). Measured: a row read `LONG refused`
+   * beside `Exit SL`, which looks impossible and is the plain consequence of one word doing two jobs.
+   * `kept: false` means "the SELECTION did not count this trade" — the engine still opened it, walked it
+   * and stopped it out. The reason is now carried so the table can say *which* refusal it was instead of
+   * printing a verdict with no cause.
+   */
+  selectionReason?: 'not-selected' | 'before-cutoff' | null;
 }
 
 export type BarState =

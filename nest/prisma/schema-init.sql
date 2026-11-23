@@ -10,12 +10,12 @@
 -- directly shippable: `@default(now())` emits `DEFAULT CURRENT_TIMESTAMP(3)`, which MySQL evaluates
 -- in the SESSION timezone (SYSTEM = local). This app stores UTC, so a fresh install would write
 -- timestamps in the future with no error — the #844 fault. The generator applies that correction
--- (115 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
+-- (116 default(s) rewritten to `UTC_TIMESTAMP`) and is reproducible.
 --
 -- ⚠️ The prebuild gate caught this, and it is worth recording: validate-local-time-sources.cjs failed
 -- the build on the FIRST generated version and named every offending column.
 --
--- SCALE: 119 CREATE TABLE statements.
+-- SCALE: 120 CREATE TABLE statements.
 --
 -- WHAT IT DOES NOT COVER, and both are intentional:
 --   1. The 13 raw-managed tables (4 with checked-in DDL in prisma/raw-managed/, 9 created by
@@ -249,6 +249,31 @@ CREATE TABLE `backtest_selection` (
     INDEX `backtest_selection_profileKey_createdAt_idx`(`profileKey`, `createdAt`),
     INDEX `backtest_selection_answerDate_idx`(`answerDate`),
     INDEX `backtest_selection_protocolId_createdAt_idx`(`protocolId`, `createdAt`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `backtest_best` (
+    `id` VARCHAR(36) NOT NULL,
+    `scope` VARCHAR(24) NOT NULL,
+    `profileKey` VARCHAR(64) NOT NULL,
+    `label` VARCHAR(191) NOT NULL,
+    `perDay` DOUBLE NOT NULL,
+    `netPnl` DOUBLE NOT NULL,
+    `days` INTEGER NOT NULL,
+    `trades` INTEGER NOT NULL,
+    `wins` INTEGER NOT NULL,
+    `winRate` DOUBLE NOT NULL,
+    `profitFactor` DOUBLE NULL,
+    `configJson` LONGTEXT NULL,
+    `runId` VARCHAR(36) NULL,
+    `semanticsVersion` INTEGER NOT NULL,
+    `engineVersion` VARCHAR(20) NOT NULL,
+    `achievedAt` DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)),
+    `attempts` INTEGER NOT NULL DEFAULT 1,
+
+    INDEX `backtest_best_scope_perDay_idx`(`scope`, `perDay`),
+    UNIQUE INDEX `backtest_best_scope_profileKey_key`(`scope`, `profileKey`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

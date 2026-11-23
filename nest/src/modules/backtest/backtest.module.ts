@@ -10,6 +10,8 @@ import { DirectivePreviewController } from './directive-preview.controller';
 // #1319 — a strategy that CHOOSES its instrument each day. It reuses `BacktestService.run()` unchanged
 // and adds only the ranking + selection filter, so there is no second engine to drift.
 import { SelectionRunService } from './selection-run.service';
+// #1341 — the BEST result per test, kept for the whole subsystem rather than one page's memory.
+import { BestRunService } from './best-run.service';
 import { DirectivesModule } from '../directives/directives.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { DatabaseModule } from '../../database/database.module';
@@ -23,8 +25,8 @@ import { SystemModule } from '../system/system.module';
 
 @Module({
   imports: [DirectivesModule, forwardRef(() => ScoringModule), DatabaseModule, ProvidersModule, SystemModule],
-  providers: [BacktestService, BacktestPeriodService, DirectivePreviewService, SelectionRunService],
+  providers: [BacktestService, BacktestPeriodService, DirectivePreviewService, SelectionRunService, BestRunService],
   controllers: [BacktestController, DirectivePreviewController],
-  exports: [BacktestPeriodService],
+  exports: [BacktestPeriodService, BestRunService],
 })
 export class BacktestModule {}

@@ -67,6 +67,9 @@ import { protectiveStopPrice } from '../../common/trading/exit-guardian/protecti
 // can be read against each other instead of by hand.
 import { engineExitCloseReason, engineExitEquivalence, summariseExitDivergence, type ExitDivergence } from '../../common/trading/exit-guardian/exit-equivalence';
 import { summariseFillGap, type FillGapSummary } from '../../common/trading/exit-guardian/stop-fill-gap';
+// #1341 — the best result per test, recorded for the whole subsystem (movers + protocol runs alike).
+import { BestRunService, bestProfileKey } from './best-run.service';
+import { APP_VERSION } from '../../version';
 // #1242 — the per-bar management rules (stop in force → target → time stop → tighten) now live in the
 // shared core, so the engine drives the same decisions a live close does instead of a copy of them.
 import { managePositionBar, PositionState } from '../../common/trading/exit-guardian/position-bar';
@@ -1326,6 +1329,12 @@ export class BacktestService {
     // #986 — resolves a stored period to the window a run measures. Only touched when
     // `request.periodId` is set, so a day-range run does not depend on the database here.
     private readonly periods?: BacktestPeriodService,
+    /**
+     * #1341 — the best result per test. OPTIONAL so every existing construction site (and every spec
+     * that builds this service with four arguments) keeps working; a run without it simply records no
+     * best, which is stated in the result rather than guessed at.
+     */
+    private readonly bestRun?: BestRunService,
   ) {}
 
   /**
@@ -3156,6 +3165,56 @@ export class BacktestService {
           },
         });
         persistedRunId = run.id;
+
+        /**
+         * ── THE BEST RESULT FOR THIS TEST (#1341) ────────────────────────────────────────────────
+         *
+         * ⚠️ THE DAYS ARE PART OF THE UNIT, AND THAT IS WHY THE RECORD IS PER DAY. A `days-range` run
+         * of 30 days and a `period:` run of 5 measure different amounts of market, so the record must
+         * not be decided on the raw `totalPnl` — a longer run would win by existing.
+         *
+         * ⚠️ THE KEY EXCLUDES THE WINDOW DATES. Two runs of the same symbol, protocol, timeframe and
+         * bot on different dates are the SAME test at a different time; that is what lets a record
+         * accumulate instead of resetting whenever the dates move.
+         */
+        if (this.bestRun) {
+          void this.bestRun.consider({
+          scope: 'protocol-backtest',
+          profileKey: bestProfileKey([
+            symbol.toUpperCase(),
+            protocolId ?? 'unscoped',
+            timeframe,
+            resolved.drivenBy?.botId ?? null,
+            positionModel,
+          ]),
+          label: `${symbol.toUpperCase()} · ${protocolId ?? 'unscoped'} · ${timeframe}`
+            + (resolved.drivenBy?.botId ? ' · bot' : ' · no bot'),
+          netPnl: totalPnl,
+          days: Math.max(1, totalDays),
+          trades: trades.length,
+          wins: trades.filter((t) => Number(t.pnl) > 0).length,
+          winRate,
+          profitFactor: tradeProfitFactor,
+          config: {
+            // Only what a caller could re-apply. A record whose settings cannot be reproduced is a
+            // number without a cause.
+            positionModel,
+            accountSize,
+            riskPct,
+            maxLeverage,
+            slippage,
+            spread,
+            commission,
+            timeframe,
+          },
+          runId: run.id,
+          engineVersion: APP_VERSION,
+        }).catch((err) => {
+          // `consider()` already reports its own failures; this catch exists so a bookkeeping fault can
+          // never turn a completed run into a failed one.
+          this.logger.warn(`Best-run record failed for ${symbol}: ${err instanceof Error ? err.message : err}`);
+        });
+        }
 
         // Persist individual trades
         if (trades.length > 0) {

@@ -1392,6 +1392,23 @@
   color: var(--text-dim);
 }
 
+/* #1340 — a table's own caption, so an explanation sits WITH the numbers it describes instead of
+   floating under them. Tokens only: the theme is user-configurable. */
+.mvp-caption {
+  caption-side: top;
+  text-align: left;
+  padding: 0 0 8px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-dim);
+  white-space: normal;
+}
+
+.mvp-warn {
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
 .mvp-scroll {
   overflow-x: auto;
   border: 1px solid var(--border);
@@ -1481,4 +1498,24 @@
   .mvp-log-day {
     flex: 0 0 72px;
   }
+}
+.mvp-inv-label {
+  display: block;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.mvp-inv-tells {
+  white-space: normal;
+  min-width: 320px;
+  line-height: 1.45;
+}
+.mvp-inv-head {
+  margin: 8px 0 6px;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--ink);
 }
