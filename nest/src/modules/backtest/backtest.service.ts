@@ -46,6 +46,9 @@ import { checkSessionWindow } from '../trading/session-window';
 // so the engine cannot hold a position the bot would have closed.
 import { decideExitTrigger, type ExitTriggerDecision } from '../automation/exit-trigger';
 import { sessionGatePlan } from './session-gate';
+// #1282 — ONE publisher per run. Eight ticker/timeframe pairs are written by two publishers at
+// different price scales, and the engine had no `provider` filter at all.
+import { chooseBarProvider, type BarProviderChoice } from './bar-provider';
 // ⚠️ The unmonitored-hole threshold, extracted so it has ONE definition and a test that can fail
 // (#1286). Its guard used to skip the entry bar, so the hole right after entry went unmeasured.
 import { isBarHole } from './bar-gap';
@@ -234,6 +237,14 @@ export interface BacktestReplay {
    * not render them alike.
    */
   sessionGate?: { window: string; applied: boolean; because: string | null };
+  /**
+   * #1282 — WHICH PUBLISHER'S BARS THIS RUN READ.
+   *
+   * ⚠️ `ambiguous: true` is a REPORTED state, not a footnote: two publishers write some
+   * symbol/timeframe pairs at different price scales, and this run read exactly one of them. A result
+   * whose `provider` differs from another run's is not comparable.
+   */
+  barsProvider?: { provider: string | null; available: string[]; ambiguous: boolean; note: string | null };
 }
 
 /** A trade stamped exactly at 00:00:00.000 UTC predates the #819 timestamp fix. */
@@ -408,6 +419,14 @@ export interface BacktestRunRequest {
    * produces a SCORE but no trade — the same rule the live loop applies via `checkSessionWindow()`.
    */
   sessionWindow?: string;
+  /**
+   * WHICH PUBLISHER'S BARS TO READ (#1282). Absent = the engine decides and REPORTS the choice.
+   *
+   * ⚠️ Two publishers write some symbol/timeframe pairs at different price scales (WTI was measured
+   * ~25× apart), so a run must never blend them. Pinning this makes the choice explicit and repeatable;
+   * a pin that has no bars in the window is REFUSED rather than falling back.
+   */
+  barProvider?: string;
   /**
    * Flat-by boundary, `'HH:MM'` UTC (#928). Absent = hold through any time.
    *
@@ -1044,6 +1063,14 @@ export function persistOutcome(
 
 export interface BacktestResult extends BacktestResultBracketFields {
   id: string;
+  /**
+   * #1282 — WHICH PUBLISHER'S BARS THIS RUN READ. See `bar-provider.ts`.
+   *
+   * ⚠️ `ambiguous: true` is a REPORTED state, not a footnote: two publishers write some
+   * symbol/timeframe pairs at different price scales, and this run read exactly one of them. Two runs
+   * whose `provider` differs are not comparable.
+   */
+  barsProvider?: { provider: string | null; available: string[]; ambiguous: boolean; note: string | null };
   /**
    * #1210 — was this run written to `backtestrun`? A computed run that stored nothing used to be
    * INDISTINGUISHABLE from a stored one: same 200, same stats, no row. False means the result exists
@@ -1904,6 +1931,25 @@ export class BacktestService {
       : positionModel;
     this.logger.log(`Backtest: ${symbol} ${days}d ${timeframe} protocol=${protocolId ?? 'unscoped'} brackets=${doBrackets} slip=${slippage} spread=${spread} commission=${commission} sizing=${sizingLabel} acct=${accountSize} risk=${riskPct}%`);
 
+    /**
+     * ── ONE PUBLISHER, OR THE RUN REFUSES TO MIX (#1282) ─────────────────────────────────────────
+     * `marketbar.provider` was never filtered here, and EIGHT ticker/timeframe pairs have two publishers
+     * writing one `symbolId` — BTC/ETH/SOL 5m (binance + mt5), SOUN 5m and NVDA 15m (mt5 + yahoo),
+     * WTI 1d/1h/4h (mt5 + yahoo). WTI was measured ~**25× apart** between the two, so a bar blend reads
+     * as a real move: "−45.92% intraday" was a level mismatch.
+     *
+     * ⚠️ Counted over EACH window below, not over all history: a publisher that stopped months ago must
+     * not constrain today's window, and one that started yesterday must not look like an equal partner.
+     */
+    const providerCounts = async (where: Record<string, unknown>): Promise<Record<string, number>> => {
+      const rows = await this.prisma.marketBar.groupBy({
+        by: ['provider'],
+        where: where as never,
+        _count: { _all: true },
+      });
+      return Object.fromEntries(rows.map((r) => [r.provider, Number((r._count as { _all: number })._all)]));
+    };
+
     // Load all bars
     //
     // ⚠️ #986 / #1132 — TWO DIFFERENT QUESTIONS, two different queries, and until 2026-11-01 the
@@ -1917,16 +1963,20 @@ export class BacktestService {
     // the control says and what a reader assumes. `take` is gone from this branch because a row limit
     // cannot express a date range.
     let rows: Array<{ timestamp: Date } & Record<string, unknown>>;
+    let barProvider: BarProviderChoice;
     if (period) {
       // A PERIOD run asks "every bar between these two instants" and must NOT be clamped with `take`,
       // because `take` returns the FIRST rows in ascending order and would silently drop the END of the
       // window. `take` is used only to DETECT an over-cap window, which is a refusal, not a truncation.
+      const scope = {
+        symbol: { ticker: symbol.toUpperCase() },
+        timeframe,
+        timestamp: { gte: period.from, lte: period.to },
+      };
+      barProvider = chooseBarProvider(await providerCounts(scope), request.barProvider);
+      if (barProvider.refused) throw new BadRequestException(barProvider.refused);
       rows = await this.prisma.marketBar.findMany({
-        where: {
-          symbol: { ticker: symbol.toUpperCase() },
-          timeframe,
-          timestamp: { gte: period.from, lte: period.to },
-        },
+        where: { ...scope, ...(barProvider.provider ? { provider: barProvider.provider } : {}) } as never,
         orderBy: { timestamp: 'asc' },
         take: PERIOD_BAR_CAP + 1,
       });
@@ -1946,8 +1996,11 @@ export class BacktestService {
         );
       }
       const from = daysRangeStart(newest.timestamp, days);
+      const scope = { symbol: { ticker: symbol.toUpperCase() }, timeframe, timestamp: { gte: from } };
+      barProvider = chooseBarProvider(await providerCounts(scope), request.barProvider);
+      if (barProvider.refused) throw new BadRequestException(barProvider.refused);
       rows = await this.prisma.marketBar.findMany({
-        where: { symbol: { ticker: symbol.toUpperCase() }, timeframe, timestamp: { gte: from } },
+        where: { ...scope, ...(barProvider.provider ? { provider: barProvider.provider } : {}) } as never,
         orderBy: { timestamp: 'asc' },
       });
     }
@@ -2761,6 +2814,17 @@ export class BacktestService {
         caveats: resolved.caveats,
         sessionGate: { window: String(sessionWindow), applied: true, because: null },
       } : { caveats: resolved.caveats }),
+      /**
+       * #1282 — which publisher the bars came from, and whether the choice was a DECISION or a refusal
+       * avoided. Always present on a run that read bars; `ambiguous: true` means two publishers exist
+       * for this symbol/timeframe and the note names both.
+       */
+      barsProvider: {
+        provider: barProvider.provider,
+        available: barProvider.available,
+        ambiguous: barProvider.ambiguous,
+        note: barProvider.note,
+      },
       // #986 — WHICH STORED PERIOD this measured. Echoed with its name and note so the result says
       // why the window mattered, not only which dates it covered.
       measuredPeriod: period

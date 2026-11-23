@@ -70,6 +70,9 @@ import { EXECUTION_SEMANTICS } from '../../common/trading/execution-semantics';
 // #1325 — "could the bot have taken this trade?" Applied AFTER the engine has decided every trade, so it
 // filters a population rather than deciding one.
 import { admitTrades } from './portfolio-admission';
+// #1282 — the ranker compares closes ACROSS symbols, so a blend of two publishers' price scales would
+// reorder the candidate list. One publisher, chosen and reported.
+import { chooseBarProvider } from './bar-provider';
 import { APP_VERSION } from '../../version';
 
 /** The one numeric coercion this file needs, kept local (a `null` must not read as 0). */
@@ -124,6 +127,11 @@ export interface SelectionRunRequest {
    * is deployment state, and a default here would be a number nothing measured.
    */
   maxConcurrent?: number | null;
+  /**
+   * WHICH PUBLISHER'S BARS TO READ (#1282). Absent = chosen and reported by `chooseBarProvider()`.
+   * A pin with no bars in the window is REFUSED rather than resolved to "whatever is there".
+   */
+  barProvider?: string;
   // Strategy settings forwarded to the per-symbol engine, unchanged.
   slPct?: number;
   tpPct?: number;
@@ -210,6 +218,11 @@ export interface SelectionRunResult {
   candidates: string[];
   /** Sessions in the window BEFORE the answer day: warm-up, not measurement. */
   priorSessions: number;
+  /**
+   * #1282 — which publisher the RANKING read. A candidate order produced from two price scales is not
+   * a ranking, so the choice is reported rather than assumed.
+   */
+  rankingProvider: { provider: string | null; available: string[]; ambiguous: boolean; note: string | null };
   /**
    * WHERE EVERY TRADE-MANAGEMENT NUMBER CAME FROM — bot record, request override, or engine literal.
    * ⚠️ This is not documentation. A run without it was read as "the strategy's 1%/1% bracket" while the
@@ -495,12 +508,31 @@ export class SelectionRunService {
     // ── bars for RANKING (all candidates, one read) ─────────────────────────────────────────────
     const from = new Date(Math.min(...periods.map((p) => p.fromDate.getTime())));
     const to = new Date(Math.max(...periods.map((p) => p.toDate.getTime())));
+    /**
+     * ⚠️ ONE PUBLISHER FOR THE RANKING TOO (#1282). The ranker compares closes across symbols, so a blend
+     * of two publishers' scales is worse here than anywhere: it would reorder the candidates.
+     */
+    const rankingScope = {
+      symbol: { ticker: { in: tickers } },
+      timeframe,
+      timestamp: { gte: from, lte: to },
+    };
+    const providerRows = await this.prisma.marketBar.groupBy({
+      by: ['provider'],
+      where: rankingScope as never,
+      _count: { _all: true },
+    });
+    const rankingProvider = chooseBarProvider(
+      Object.fromEntries(providerRows.map((r) => [r.provider, Number((r._count as { _all: number })._all)])),
+      request.barProvider,
+    );
+    if (rankingProvider.refused) throw new BadRequestException(rankingProvider.refused);
+
     const rows = await this.prisma.marketBar.findMany({
       where: {
-        symbol: { ticker: { in: tickers } },
-        timeframe,
-        timestamp: { gte: from, lte: to },
-      },
+        ...rankingScope,
+        ...(rankingProvider.provider ? { provider: rankingProvider.provider } : {}),
+      } as never,
       select: { timestamp: true, close: true, symbol: { select: { ticker: true } } },
       orderBy: { timestamp: 'asc' },
     });
@@ -808,6 +840,16 @@ export class SelectionRunService {
       timeframe,
       candidates: tickers,
       priorSessions,
+      /**
+       * #1282 — which publisher the RANKING read, and whether that was a decision or an avoided
+       * refusal. A candidate order produced from two price scales is not a ranking.
+       */
+      rankingProvider: {
+        provider: rankingProvider.provider,
+        available: rankingProvider.available,
+        ambiguous: rankingProvider.ambiguous,
+        note: rankingProvider.note,
+      },
       tradeConfig,
       days,
       perSymbol,

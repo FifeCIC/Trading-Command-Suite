@@ -2,10 +2,10 @@
  * LoadingLab — three loading animations, one per situation, for the Appearance area to judge.
  *
  * ── WHY THIS EXISTS ─────────────────────────────────────────────────────────────────────────────
- * Owner, 2026-11-23: *"We lack a loading animation: please add three examples… as we'll potentially use
- * different animations for different situations."* The same day, opening `/lab/movers-strategy-backtest`
- * showed a blank form field for 2–3 seconds while the day list loaded, and the page read as broken. So
- * the gap is not decoration: it is **an unanswered wait rendered as absence**.
+ * Decided 2026-11-23: the app had no loading animation, and three examples were wanted because different
+ * situations call for different ones. The same day, opening `/lab/movers-strategy-backtest` showed a blank
+ * form field for several seconds while the day list loaded, and the page read as broken. So the gap is not
+ * decoration: it is **an unanswered wait rendered as absence**.
  *
  * ── THE RULE ALL THREE OBEY (development-philosophy §7, "make silence visible") ──────────────────
  * A loading state must say which of three things is true. They are not interchangeable:

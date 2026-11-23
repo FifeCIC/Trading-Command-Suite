@@ -845,11 +845,14 @@
   opacity: 0.72;
 }
 
+/* The behavioural column. ⚠️ `--ink-soft`, NOT `--text-dim`: this is a sentence a reader has to
+   understand, not a caption they can skim past. It is also the reason the width is capped — a
+   behavioural sentence running the width of a 1400px table is unreadable. */
 .mvp-config-note {
-  font-size: 11px;
+  font-size: 11.5px;
   line-height: 1.5;
-  color: var(--text-dim);
-  max-width: 60ch;
+  color: var(--ink-soft);
+  max-width: 58ch;
 }
 
 .mvp-config-botv {
@@ -1107,7 +1110,9 @@
   opacity: 0.62;
 }
 
-/* The pinned instant. Same class in BOTH tables, which is the connection between them. */
+/* The pinned instant, marked in the bars table only. ⚠️ #1333 — a second `--rel` weight and a matching
+   rule in the executions table were added on 2026-11-23 and REVERSED the same day: one hover lit 2–3
+   rows across the two tables and the owner found it distracting. A hover affordance marks ONE row. */
 .mvp-depth-row--on td {
   background: color-mix(in srgb, var(--accent) 20%, transparent);
   opacity: 1;

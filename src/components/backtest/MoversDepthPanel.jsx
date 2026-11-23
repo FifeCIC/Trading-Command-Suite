@@ -16,9 +16,20 @@
  * Those rows say so in words. Do not "improve" the wording into a guess.
  *
  * ── THE TWO TABLES ARE ONE TIMELINE ─────────────────────────────────────────────────────────────
- * A row in either table can be pinned; the same instant highlights in both, and the decomposition
- * below follows the pinned bar. That is the "connection" between the two tables — not a colour
- * legend, but two views of one instant.
+ * A bar row can be pinned, the decomposition below follows it, and the pinned instant is marked in the
+ * bars table.
+ *
+ * ⚠️ #1333 — A BIDIRECTIONAL LINK WAS BUILT HERE ON 2026-11-23 AND REVERSED THE SAME DAY. The ask was
+ * *"sync … so that the related row is displayed within each table"*, which was implemented as: a pin
+ * marks every trade whose entry or exit shares the instant, and marks the exit bar of a pinned trade.
+ * Owner, after using it: *"It's highlighting two rows at a time in the first table and in different
+ * styles, sometimes three rows in the second table. All very distracting."*
+ *
+ * ⚠️ **THE LESSON IS ABOUT COUNT, NOT ABOUT CORRECTNESS.** The rows it marked really were related — the
+ * measurement held (54 bars, 63 trades, 55 entries and 57 exits landing on a bar clock). But one hover
+ * lighting 2–3 rows in each table turns a table you are READING into a table you are watching, and this
+ * page is read for hours. **A hover affordance must mark one row, or none.** Do not rebuild this without
+ * a way to keep the marked set at exactly one row in each table.
  */
 import { useMemo, useState } from 'react';
 import WhyPopover from '../WhyPopover.jsx';
@@ -141,8 +152,9 @@ function exitPhrase(x) {
 export default function MoversDepthPanel({ symbol, day, detail }) {
   const [pinned, setPinned] = useState(null);
 
-  const bars = detail?.bars ?? [];
-  const steps = detail?.steps ?? [];
+  const bars = useMemo(() => detail?.bars ?? [], [detail]);
+  const steps = useMemo(() => detail?.steps ?? [], [detail]);
+  const trades = useMemo(() => detail?.trades ?? [], [detail]);
   /** The day-list size, read off the ladder's own first rung before that rung is dropped below. */
   const candidatesTotal = steps.find((s) => s.id === 'candidates')?.count ?? 0;
 
@@ -161,6 +173,10 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
     );
   }
 
+  /**
+   * The ONE row a pin marks — the bar itself. ⚠️ Not a set: a hover that lights two or three rows in
+   * each table was rejected by the owner on sight (#1333), and the count was the problem, not the rule.
+   */
   const rowClass = (time) => `mvp-depth-row${time === focusTime ? ' mvp-depth-row--on' : ''}`;
 
   return (
@@ -275,9 +291,9 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
       {/* ── 3 · executions — the per-trade record the phases need ─────────────────────────────── */}
       <section id="mvp-sec-execution" aria-label="Executions">
         <h3 className="mvp-depth-title">
-          Executions <span className="mvp-muted">({detail.trades.length} the engine took · {detail.trades.filter((t) => !t.kept).length} refused by the selection)</span>
+          Executions <span className="mvp-muted">({trades.length} the engine took · {trades.filter((t) => !t.kept).length} refused by the selection)</span>
         </h3>
-        {detail.trades.length === 0 ? (
+        {trades.length === 0 ? (
           <p className="mvp-note">The engine opened no trade on this session.</p>
         ) : (
           <div className="mvp-scroll mvp-depth-scroll">
@@ -295,10 +311,10 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
                 </tr>
               </thead>
               <tbody>
-                {[...detail.trades]
+                {[...trades]
                   .sort((a, b) => String(a.entryDate).localeCompare(String(b.entryDate)))
                   .map((t, i) => {
-                    const bars = Math.max(
+                    const span = Math.max(
                       0,
                       Math.round((new Date(t.exitDate) - new Date(t.entryDate)) / 300_000),
                     );
@@ -312,7 +328,7 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
                           {t.direction}
                           {!t.kept && <span className="mvp-depth-pre" title="the selection refused this trade">refused</span>}
                         </td>
-                        <td className="mvp-num">{bars}</td>
+                        <td className="mvp-num">{span}</td>
                         <td className="mvp-nowrap">
                           <span
                             className={`mvp-state mvp-state--${EXIT_TONE[t.exitReason] ?? 'none'}`}

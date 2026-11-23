@@ -18,6 +18,17 @@
  * cooldown, no position cap, no session filter and sizes differently from the live loop, so those rows
  * say the result is silent about them. A row rendered as a plain value would read as measured.
  *
+ * ── WHAT THE LAST COLUMN SAYS (owner, 2026-11-23) ───────────────────────────────────────────────
+ * It used to be "Where it lives": `trading_strategy.tpPct`, `#1325`, `NOT APPLIED — the engine has no
+ * concurrency model`. Owner: *"too much technical information … the information displayed should be
+ * description of what the value does and how it affects the trade or decisions made. Potentially even
+ * making some of it dynamic based on the settings value."*
+ *
+ * So the column renders `field.effect` — a value-aware sentence about the TRADING ("6% is banked and the
+ * trade closes there. It caps a winner"), and `field.note` keeps the provenance in the payload for
+ * diagnosis. The guard is `trade-config-effect.spec.ts`, which fails on a schema path, an identifier, an
+ * issue number or a verdict cap appearing in an effect.
+ *
  * ── EDITING IS PERMANENT, AND THAT IS THE DECISION (register row 247) ───────────────────────────
  * Owner, on this page: *"I think we should save them as live values and so the user would be editing
  * the same bot configuration as will be used live… stop protecting the user from using a rubbish
@@ -236,7 +247,7 @@ export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = f
               <th scope="col" className="mvp-num">This run used</th>
               <th scope="col">Source</th>
               <th scope="col">Applied by the engine?</th>
-              <th scope="col">Where it lives</th>
+              <th scope="col">What it does</th>
             </tr>
           </thead>
           <tbody>
@@ -285,7 +296,11 @@ export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = f
                       <span className="mvp-state mvp-state--warn">no</span>
                     )}
                   </td>
-                  <td className="mvp-config-note">{f.note}</td>
+                    {/* ⚠️ `f.effect`, NOT `f.note`. Owner, 2026-11-23: the technical column was "too much
+                      technical information" — the column now says what the value DOES to a trade, and the
+                      provenance (`f.note`: the column name, the literal site, the issue) stays in the API
+                      payload for diagnosis. Do not put it back here; it buried the sentence a reader needs. */}
+                  <td className="mvp-config-note">{f.effect}</td>
                 </tr>
               );
             })}

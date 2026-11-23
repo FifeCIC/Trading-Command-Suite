@@ -735,7 +735,7 @@ const QA_CHECKLIST = [
     expected: '5m: **140 / 140** (all bars inside the US session) / **0** (the gate bites), with `sessionGate.applied: true`. 1d: **26 trades unchanged**, `sessionGate.applied: false` with a notice naming the 26→0 measurement — a timeframe whose bars carry the END of their session cannot carry the window and is refused rather than silently emptying the run. ⚠️ `passedBar` keeps its meaning (the entry bar); the clock is a separate `sessionClosed` flag, so no stored run’s field changes meaning.',
     category: 'Data integrity',
     priority: 'high',
-    versionNote: '2026-11-20 — #1242, register row 244, `EXECUTION_SEMANTICS` 2. ⚠️ Declared QA only: the handoff carries no Capability Map and no Architecture Framework entry, so those two sections were NOT written from it and the source stays in the handoff store. ⚠️ Stored movers selections now predate the gate (version 1), so a delta against one is refused until the profile is re-run once — intended, and the #1328 mechanism reports it.',
+    versionNote: '2026-11-20 — #1242, register row 244, `EXECUTION_SEMANTICS` 2. ⚠️ Declared QA only: the handoff carries no Capability Map and no Architecture Framework entry — a NOTE by contract, not an omission — so those two sections were NOT invented from it. Confirmed on re-read 2026-11-23 (batch #58) and the source moved to `processed/`. ⚠️ Stored movers selections now predate the gate (version 1), so a delta against one is refused until the profile is re-run once — intended, and the #1328 mechanism reports it.',
   },
   {
     id: 'qa-backtest-exit-boundary-001',

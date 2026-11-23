@@ -5,9 +5,9 @@
  * `src/core` follows) instead of being asserted in a comment.
  *
  * ── THE DECISION, AND WHY IT IS A FUNCTION ──────────────────────────────────────────────────────
- * Owner, 2026-11-23: *"three examples of loading animations… as we'll potentially use different
- * animations for different situations."* The danger with three options is that the choice becomes taste.
- * It is not taste — it is a question about what the client KNOWS:
+ * Decided 2026-11-23: three loading animations, because different situations call for different ones. The
+ * danger with three options is that the choice becomes taste. It is not taste — it is a question about
+ * what the client KNOWS:
  *
  *   shape known                  → skeleton (draw the layout that is coming, so nothing jumps)
  *   length known, shape not      → step rail (one segment per real step)

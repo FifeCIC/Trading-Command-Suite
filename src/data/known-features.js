@@ -1059,7 +1059,8 @@ export const KNOWN_FEATURES = {
     'Movers & Treatment (six ordered states per mover)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
   // ── batch #56 (2026-11-20) — 10 handoffs dated 2026-11-20: 9 full, 1 partial
   //    (`2026-11-20-1242-session-gate.md` declares a QA entry only; no capability row is invented
-  //    for it and it stays in the handoff store). Theme: THE EXIT DECISION GAINS ONE OWNER AND A
+  //    for it, and it stayed in the handoff store until batch #58 (2026-11-23) confirmed it a valid
+  //    Note by contract and moved it to `processed/`). Theme: THE EXIT DECISION GAINS ONE OWNER AND A
   //    BACKTEST COMES BACK ABLE TO SAY HOW IT DECIDED — an exit in the live vocabulary, the bot's
   //    clock gating entries, its flat-by boundary closing a position, and a stored test that can be
   //    compared only within one execution-semantics version.
@@ -1096,4 +1097,16 @@ export const KNOWN_FEATURES = {
     'Persistent Fault Registry': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
     'Phrasing Guard (a requirement is not narrated as a person)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
     'Trading212 pie membership + instrument names': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // ── batch #58 (2026-11-23) — 2 handoffs RE-READ after batches #56/#57 left them in the store.
+  //    `2026-11-19-1319-selection-backtest.md` was rejected by batch #57 for "declaring no Capability
+  //    Map and no Architecture Framework entry". That rejection was WRONG: the file carries all
+  //    three (`## Capability Map Entry`, `## Architecture Framework Entry`, `## QA Test Entry`), so
+  //    it is processed here — ONE capability row, one slice bullet. ⚠️ Its QA test is NOT re-added:
+  //    `qa-backtest-selection-001` already holds the answer-day rewrite that REPLACED this test,
+  //    and a second id for one procedure would name two tests.
+  //    `2026-11-20-1242-session-gate.md` is a valid NOTE by contract (frontmatter + What Changed +
+  //    Files + the QA Test Entry ONLY, no shape change): its test `qa-backtest-session-gate-001`
+  //    was already recorded by batch #56, so nothing is added and its "no capability" is correct
+  //    rather than missing. Both sources moved to `processed/`.
+    'Ranked-selection backtest (a strategy that picks its instrument daily)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
 };

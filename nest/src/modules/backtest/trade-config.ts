@@ -93,7 +93,31 @@ export interface TradeConfigField {
   source: TradeConfigSource;
   /** FALSE means the engine ignores this field, so the result says nothing about it. */
   applied: boolean;
-  /** Where the number lives — a column, a literal site, or why it cannot be applied. */
+  /**
+   * ── WHAT THE READER SEES ────────────────────────────────────────────────────────────────────────
+   * A plain-English description of what this value DOES and how it changes a trade or a decision.
+   *
+   * ⚠️ Decided 2026-11-23: the column was too much technical information. The provenance can live in
+   * comments — nothing vital is lost — but what is DISPLAYED must describe what the value does and how it
+   * affects the trade or the decisions made, ideally varying with the value itself.
+   *
+   * So this field is BEHAVIOURAL and VALUE-AWARE: "No stop loss" when the value is null, "closed once it
+   * is 6% in profit" when it is 6. It names no column, no file and no issue — `note` keeps all of that.
+   *
+   * ── DECISION (2026-11-23) ──
+   * WHAT:      the rendered column is `effect`; `note` stays in the payload and is never rendered.
+   * WHY:      the provenance told a reader which column a number came from, never what it does. The same
+   *           bot at `tpPct: 25` and at no target trades oppositely, and the sentence must differ.
+   * REVERSE BY: rendering `note` again in `TradeConfigPanel`'s last cell — nothing else changes.
+   * REGISTER:  docs/SETTLED-DECISIONS.md row 249
+   * GUARD:     nest/src/modules/backtest/trade-config-effect.spec.ts
+   */
+  effect: string;
+  /**
+   * PROVENANCE — the column, the literal site, the issue. Kept in the payload for diagnosis and asserted
+   * by the specs, **not rendered**: a reader deciding whether a number is sound does not need a schema
+   * path, and showing one buried the behaviour under it.
+   */
   note: string;
   /** The bot's own value when it differs from what the run used, so the divergence is visible. */
   botValue?: number | string | null;
@@ -170,6 +194,42 @@ export const ENGINE_DEFAULTS = {
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
 /**
+ * Formatting for the BEHAVIOURAL sentences. Kept here rather than in the page so a wording change is one
+ * edit and every row stays consistent — `6` reads as "6%" and `2.5` as "2.5%", never "6.0%".
+ */
+const pct = (n: number): string => `${Number.isInteger(n) ? n : Number(n.toFixed(2))}%`;
+const hours = (n: number): string => `${Number.isInteger(n) ? n : Number(n.toFixed(2))} hour${n === 1 ? '' : 's'}`;
+const minutes = (n: number): string => `${Number.isInteger(n) ? n : Number(n.toFixed(0))} minute${n === 1 ? '' : 's'}`;
+const money = (n: number): string => n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/**
+ * `["us"]` → "the US session". An unreadable window is echoed rather than guessed: a sentence that
+ * invents a session name is worse than one that shows the stored string.
+ */
+const SESSION_NAME: Record<string, string> = {
+  asian: 'Asian',
+  frankfurt: 'Frankfurt',
+  london: 'London',
+  us: 'US',
+  ny: 'New York',
+  sydney: 'Sydney',
+};
+
+function sessionText(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  let ids: string[] = [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) ids = parsed.filter((x) => typeof x === 'string');
+    else if (typeof parsed === 'string') ids = [parsed];
+  } catch {
+    return raw;
+  }
+  if (!ids.length) return raw;
+  return ids.map((id) => SESSION_NAME[id.toLowerCase()] ?? id).join(' + ');
+}
+
+/**
  * Build the provenance table the page renders.
  *
  * `bot === null` is a REAL state and a common one: no stored bot names this protocol. Every value is
@@ -187,14 +247,24 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
   const botBar = num(bot?.minComposite);
   const botHold = num(bot?.maxHoldHours);
 
+  // One computation per value, so the `value` a reader sees and the sentence describing it cannot
+  // disagree about the number they are both talking about.
+  const sl = pick(request.slPct, botSl, ENGINE_DEFAULTS.slPct);
+  const tp = pick(request.tpPct, botTp, ENGINE_DEFAULTS.tpPct);
+  const bar = pick(request.minComposite, botBar, ENGINE_DEFAULTS.minComposite);
+  const hold = botHold ?? ENGINE_DEFAULTS.maxHoldHours;
+
   const rows: TradeConfigField[] = [
     {
       id: 'slPct',
       label: 'Stop loss',
-      value: pick(request.slPct, botSl, ENGINE_DEFAULTS.slPct),
+      value: sl,
       unit: '%',
       source: overridden(request.slPct, botSl),
       applied: true,
+      effect: sl > 0
+        ? `A losing trade is closed once it is ${pct(sl)} against you. This is the loss a bad entry costs.`
+        : 'No stop loss: a losing trade is only closed by a time stop or the session close, so one bad entry can run a long way.',
       note: bot ? 'trading_strategy.slPct' : 'a literal in BacktestService.run() — no bot names this protocol',
       botValue: botSl,
       editable: { control: 'number', unit: '%', min: 0, max: 100, step: 0.1, nullable: true },
@@ -202,10 +272,19 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
     {
       id: 'tpPct',
       label: 'Take profit',
-      value: pick(request.tpPct, botTp, ENGINE_DEFAULTS.tpPct),
+      value: tp,
       unit: '%',
       source: overridden(request.tpPct, botTp),
       applied: true,
+      /**
+       * ⚠️ THE OWNER'S OWN QUESTION, ANSWERED IN THE CELL. 2026-11-23: *"the current data suggests that
+       * our bot is configured to take profit. I think that needs to change."* The row now says what the
+       * target does to a winner, and what happens without one — a reader should not have to infer a
+       * trading decision from a percentage.
+       */
+      effect: tp > 0
+        ? `${pct(tp)} is banked and the trade closes there. It caps a winner: the rest of the move is given up.`
+        : 'No take-profit: a winner runs until the stop, the trail, the time stop or the session close — so an open profit can be given back.',
       note: bot ? 'trading_strategy.tpPct' : 'a literal in BacktestService.run() — no bot names this protocol',
       botValue: botTp,
       editable: { control: 'number', unit: '%', min: 0, max: 100, step: 0.1, nullable: true },
@@ -213,10 +292,11 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
     {
       id: 'minComposite',
       label: 'Entry bar',
-      value: pick(request.minComposite, botBar, ENGINE_DEFAULTS.minComposite),
+      value: bar,
       unit: '%',
       source: overridden(request.minComposite, botBar),
       applied: true,
+      effect: `A bar must score at least ${pct(bar)} to be traded at all. Raise it for fewer, better entries; lower it for more trades of weaker quality.`,
       note: bot
         ? 'trading_strategy.minComposite — the second, tighter gate after the protocol threshold'
         : 'a literal in BacktestService.run() — every signal the protocol emits is traded',
@@ -227,10 +307,13 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
     {
       id: 'maxHoldHours',
       label: 'Max hold',
-      value: botHold ?? ENGINE_DEFAULTS.maxHoldHours,
+      value: hold,
       unit: 'h',
       source: botHold !== null ? 'bot' : 'engine-default',
       applied: true,
+      effect: hold > 0
+        ? `An open position is closed after ${hours(hold)}, whatever its profit or loss — so no trade is carried indefinitely.`
+        : 'No time stop: a trade runs until its stop, its target or the session close.',
       // 0 = no limit, which is the engine's own documented default when the bot sets none.
       note: botHold !== null ? 'trading_strategy.maxHoldHours' : 'no time stop — the engine holds until stop, target or end of data',
       botValue: botHold,
@@ -246,6 +329,9 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       // (#936). A result therefore shows protection the live bot does not have, which is worse than a
       // missing feature because it reads as a safety net.
       applied: true,
+      effect: bot?.simTslEnabled
+        ? 'The stop is moved up behind the price as a trade runs, so a winner is protected instead of given back. Live, a trailing stop is only recorded, not applied.'
+        : 'The stop never moves: the entry stop is the only protection, so a pullback can return to it and close the trade at a loss.',
       note: 'The ENGINE moves the stop to the trail. The LIVE guardian only records the decision point (#936) — '
         + 'so a run with a trailing stop shows protection the live bot does not yet have.',
       botValue: bot?.simTslEnabled ? 'on' : 'off',
@@ -264,6 +350,11 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
        * the portfolio filter resolves that ambiguity the way live does (entry-to-entry, `|| 5`).
        */
       applied: request.admission === 'portfolio',
+      effect: (num(bot?.cooldownMinutes) ?? 0) > 0
+        ? (request.admission === 'portfolio'
+          ? `After a trade opens, no further entry for ${minutes(num(bot?.cooldownMinutes) ?? 0)} — it stops one move being entered over and over.`
+          : `This run does not apply the ${minutes(num(bot?.cooldownMinutes) ?? 0)} gap between entries, so overlapping trades are not filtered out.`)
+        : 'No cooldown: every qualifying bar can open another trade, so the same move can be entered repeatedly.',
       note: request.admission === 'portfolio'
         ? 'APPLIED by the portfolio admission filter: entries closer than this to the previous entry are refused, entry-to-entry as the live loop measures it (`cooldownMinutes || 5`).'
         : 'NOT APPLIED in independent mode — the engine has no cooldown, because overlapping hypothetical positions make the window ambiguous. Ask for `admission: "portfolio"` to apply it. See #1325.',
@@ -276,6 +367,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       value: num(bot?.maxPositions),
       source: 'bot',
       applied: false,
+      effect: `At most ${num(bot?.maxPositions) ?? 1} open position${(num(bot?.maxPositions) ?? 1) === 1 ? '' : 's'} at a time, so a new signal waits instead of stacking risk. Nothing reads this live either — the global open-position limit governs.`,
       note: 'NOT APPLIED — the engine has no concurrency model; it evaluates each bar against one position per symbol.',
       botValue: num(bot?.maxPositions),
       editable: { control: 'number', min: 1, max: 50, step: 1, integer: true },
@@ -286,6 +378,9 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       value: num(bot?.maxPyramidTiers),
       source: 'bot',
       applied: false,
+      effect: (num(bot?.maxPyramidTiers) ?? 1) <= 1
+        ? 'No adding to a winner: size stays at the entry lot for the whole trade, so the loss stays fixed too. This run opens one trade per signal, so it cannot show the effect.'
+        : `Up to ${num(bot?.maxPyramidTiers)} tiers: size may be added as a winner runs, which raises the reward and the loss if it reverses. This run opens one trade per signal, so it cannot show the effect.`,
       note: 'NOT APPLIED — averaging into a winner is enforced LIVE (pyramid-policy.service.ts, called by the automation loop). The engine opens one trade per signal and has no blended-entry model, so a run cannot show what adding size would have done. The decision itself is extracted to `pyramid-decision.ts` (#1242).',
       botValue: num(bot?.maxPyramidTiers),
       editable: { control: 'number', min: 1, max: 10, step: 1, integer: true },
@@ -296,6 +391,9 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       value: bot?.exitBeforeUtc ?? null,
       source: 'bot',
       applied: true,
+      effect: bot?.exitBeforeUtc
+        ? `Every position is flat by ${bot.exitBeforeUtc} UTC, so nothing is carried past the session close — it avoids being moved by an overnight gap.`
+        : 'No flat-by time: a trade can be carried past the session close into the next day.',
       note: 'trading_strategy.exitBeforeUtc — the FLAT-BY boundary, combined with max hold by the live `decideExitTrigger()`. The position closes at the first bar past it, at that bar\'s OPEN (reason SESSION). Absent = hold through any time.',
       botValue: bot?.exitBeforeUtc ?? null,
       editable: { control: 'time', nullable: true },
@@ -306,6 +404,9 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       value: num(bot?.takeProfitAmount),
       source: 'bot',
       applied: true,
+      effect: (num(bot?.takeProfitAmount) ?? 0) > 0
+        ? `The trade is closed once it is ${money(num(bot?.takeProfitAmount) ?? 0)} in profit — a money target rather than a percentage, so the percentage it needs depends on position size.`
+        : 'No money target: profit is never banked at a fixed amount — a winner is closed by the percentage target, the stop or the clock.',
       note: 'trading_strategy.takeProfitAmount — judged at each bar’s close against the trade’s own net-of-commission P&L, then closed at that close (exit reason TARGET; live `system:take-profit`). NULL/0 = no target, which is 77 of 78 bots.',
       botValue: num(bot?.takeProfitAmount),
       editable: { control: 'number', unit: '$', min: 0, step: 1, nullable: true },
@@ -316,6 +417,9 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       value: bot?.exhaustionObserveEnabled ? 'on' : 'off',
       source: 'bot',
       applied: false,
+      effect: bot?.exhaustionObserveEnabled
+        ? 'Watches for a move losing pace and records the moment it looks exhausted. Nothing is closed from it — it is a note for the reader.'
+        : 'Not watching for exhaustion: a fading move is not flagged, so nothing separates “still running” from “running out of buyers”.',
       note: 'NOT APPLIED — the live guardian records a decision point (#995) and acts on nothing; the engine has no observer.',
       botValue: bot?.exhaustionObserveEnabled ? 'on' : 'off',
       editable: { control: 'toggle' },
@@ -326,6 +430,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       value: typeof bot?.brokerId === 'string' ? bot.brokerId : null,
       source: 'bot',
       applied: false,
+      effect: 'Which account would place the order. A run places none, so the venue cannot change these numbers — only its spread would, and that is a separate cost setting.',
       note: 'NOT APPLIED — a run reads stored bars and places no order, so the venue cannot affect it. Its spread CAN, and that is the engine\'s own cost model, not this column.',
       botValue: typeof bot?.brokerId === 'string' ? bot.brokerId : null,
     },
@@ -335,6 +440,9 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       value: bot?.sessionWindow ?? null,
       source: bot?.sessionWindow ? 'bot' : 'engine-default',
       applied: true,
+      effect: sessionText(bot?.sessionWindow)
+        ? `Trades only during ${sessionText(bot?.sessionWindow)} hours. Outside them a signal is still scored, but no trade is opened.`
+        : 'No session gate: a signal can be traded at any hour of the day.',
       note: 'trading_strategy.sessionWindow — the bot\'s trading clock, applied by the LIVE predicate `checkSessionWindow()`. A bar outside it is scored (and flagged `sessionClosed`) but not traded. Absent = ungated.',
       botValue: bot?.sessionWindow ?? null,
     },
@@ -345,6 +453,9 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       unit: 'lot',
       source: 'bot',
       applied: false,
+      effect: num(bot?.baseSize) != null
+        ? `${num(bot?.baseSize)} lot per entry. It sets the money each trade risks and earns — not when or whether it opens. This run sizes in units instead, so its P&L does not carry across to this lot size.`
+        : 'The lot size of each entry, which sets the money risked per trade. This run sizes in units instead, so its P&L does not carry across.',
       note: 'NOT COMPARABLE — the live loop sends lots; this run sizes in units from an equity model (#843). P&L does not transfer.',
       botValue: num(bot?.baseSize),
       editable: { control: 'number', unit: 'lot', min: 0, step: 0.01, nullable: true },
@@ -356,6 +467,7 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       unit: '$',
       source: request.accountSize !== undefined ? 'request' : 'engine-default',
       applied: true,
+      effect: `The equity every position size is calculated from. At ${money(request.accountSize ?? ENGINE_DEFAULTS.accountSize)} a 1% risk is a different amount of money than it would be on a smaller account.`,
       note: 'the equity model every size is derived from',
     },
   ];
