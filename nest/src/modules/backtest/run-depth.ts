@@ -72,6 +72,13 @@ export interface DepthSeriesRow {
 
 /** A trade as the engine returned it, with the selection's verdict attached by the caller. */
 export interface DepthTrade {
+  /**
+   * ⚠️ THE SYMBOL TRAVELS WITH THE TRADE (2026-11-23). The detail is built per symbol, so every row in
+   * one panel is the same instrument — and that was left IMPLICIT, which made a table of executions read
+   * as "executions for one symbol, because the prices look alike". Carrying it means the table states
+   * which instrument the row belongs to, and a merged multi-symbol view is possible at all.
+   */
+  symbol?: string;
   entryDate: string;
   exitDate: string;
   entryPrice: number;

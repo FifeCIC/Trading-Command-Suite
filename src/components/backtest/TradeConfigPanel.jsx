@@ -250,12 +250,25 @@ export default function TradeConfigPanel({
       try {
         if (revert.count) {
           await apiPatch(`/api/trading/strategies/${encodeURIComponent(botId)}`, revert.body);
-          await onRetest();
         }
+        setDraft({});
+        /**
+         * ── THE REVERT TOUCHES THE SETTINGS AND NOTHING ELSE (owner, 2026-11-23) ──────────────────
+         * *"make sure that the reset only includes the settings so that I can actually see the reason why
+         * it reset i.e. the amount reduced."*
+         *
+         * ⚠️ IT DELIBERATELY DOES **NOT** RE-RUN. A second run replaces the results with the restored
+         * configuration's own figures, so the worse number that triggered the revert disappears — the
+         * page then reads "no change" and the reason is gone. The figures on screen stay as the EVIDENCE
+         * (a run made with the discarded setting), and the notice says exactly that plus both amounts.
+         */
         setAlert({
           code: 'TCS-TRADE-028',
-          title: `Reverted ${bot?.name ?? 'the bot'} to its previous settings`,
-          message: `Nothing kept: ${decision.because}. The values before this change are back in place.`,
+          title: `Reverted ${bot?.name ?? 'the bot'} — ${revert.count} setting${revert.count === 1 ? '' : 's'} restored`,
+          message:
+            `${decision.because}. The previous values are back. ` +
+            'The numbers on this page are from the run that was REJECTED — they describe the setting that '
+            + 'has just been removed. Re-run when you want the restored settings measured.',
           cause: decision.caveat,
           action: null,
         });
@@ -265,7 +278,12 @@ export default function TradeConfigPanel({
     }
   };
 
-  /** Put the cached settings back by hand — the same write path the save uses. */
+  /**
+   * Put the cached settings back by hand.
+   *
+   * ⚠️ SETTINGS ONLY, for the same reason as the automatic path: a re-run would overwrite the results
+   * that explain why anyone is reverting. The reader re-runs when they choose to.
+   */
   const revertNow = async () => {
     if (!botId || !snapshot || !onRetest) return;
     const revert = revertBody(snapshot, fields);
@@ -278,11 +296,12 @@ export default function TradeConfigPanel({
     try {
       await apiPatch(`/api/trading/strategies/${encodeURIComponent(botId)}`, revert.body);
       setDraft({});
-      await onRetest();
       setAlert({
         code: 'TCS-TRADE-028',
-        title: `Reverted ${bot?.name ?? 'the bot'} to its previous settings`,
-        message: `${revert.count} setting${revert.count === 1 ? '' : 's'} restored and the test re-run.`,
+        title: `Reverted ${bot?.name ?? 'the bot'} — ${revert.count} setting${revert.count === 1 ? '' : 's'} restored`,
+        message:
+          'The previous values are back. The numbers on this page are from the run that used the '
+          + 'settings just removed, so re-run when you want the restored settings measured.',
         cause: null,
         action: null,
       });

@@ -1,9 +1,8 @@
 /**
  * trade-config-revert.js — keep the PREVIOUS bot settings, and decide when to go back to them.
  * ================================================================================
- * Owner, 2026-11-23: *"cache settings for reverting back to the previous tests settings and an option to
- * automatically revert to the previous settings if clicking Retest results in less profit - it should
- * notify me if that happens."*
+ * Owner, 2026-11-23: cache the previous test's settings so they can be restored, and offer an option to
+ * revert automatically when a Retest makes less profit, notifying when it does.
  *
  * ⚠️ **A LOWER NET P&L ON ONE RE-RUN IS NOT PROOF THE CHANGE WAS BAD.** It is one sample of the same
  * days with one different number, and the repo's own rule (register row 23) says a maths change is

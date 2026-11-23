@@ -149,6 +149,73 @@ function exitPhrase(x) {
   return `${x.exitReason} closed ${x.direction} for ${fmtMoney(x.pnl)}`;
 }
 
+/**
+ * ExecutionsTable — the per-trade record, ONE implementation for two views.
+ *
+ * ⚠️ EXTRACTED 2026-11-23 so the per-symbol panel and the merged all-symbols table cannot drift. The
+ * owner's report was that the table showed executions that all looked like one instrument and did not
+ * say which — so every row now carries its SYMBOL, and a row without one falls back to the panel's own.
+ */
+export function ExecutionsTable({ trades, symbol }) {
+  if (!trades.length) {
+    return <p className="mvp-note">The engine opened no trade on this session.</p>;
+  }
+  return (
+    <div className="mvp-scroll mvp-depth-scroll">
+      <table className="mvp-table">
+        <thead>
+          <tr>
+            <th scope="col">Symbol</th>
+            <th scope="col">In</th>
+            <th scope="col" className="mvp-num">Price</th>
+            <th scope="col">Out</th>
+            <th scope="col" className="mvp-num">Price</th>
+            <th scope="col">Side</th>
+            <th scope="col" className="mvp-num">Bars</th>
+            <th scope="col">Exit</th>
+            <th scope="col" className="mvp-num">P/L</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[...trades]
+            .sort((a, b) => String(a.entryDate).localeCompare(String(b.entryDate)))
+            .map((t, i) => {
+              const span = Math.max(
+                0,
+                Math.round((new Date(t.exitDate) - new Date(t.entryDate)) / 300_000),
+              );
+              return (
+                <tr key={`${t.symbol ?? symbol ?? ''}-${t.entryDate}-${i}`} className={t.kept ? '' : 'mvp-config-row--ignored'}>
+                  <td className="mvp-nowrap">{t.symbol || symbol || '—'}</td>
+                  <td className="mvp-nowrap">{clock(t.entryDate)}</td>
+                  <td className="mvp-num">{fmtPrice(t.entryPrice)}</td>
+                  <td className="mvp-nowrap">{clock(t.exitDate)}</td>
+                  <td className="mvp-num">{fmtPrice(t.exitPrice)}</td>
+                  <td className="mvp-nowrap mvp-muted">
+                    {t.direction}
+                    {!t.kept && <span className="mvp-depth-pre" title="the selection refused this trade">refused</span>}
+                  </td>
+                  <td className="mvp-num">{span}</td>
+                  <td className="mvp-nowrap">
+                    <span
+                      className={`mvp-state mvp-state--${EXIT_TONE[t.exitReason] ?? 'none'}`}
+                      title={t.exitReason}
+                    >
+                      {exitReasonText(t.exitReason)}
+                    </span>
+                  </td>
+                  <td className={`mvp-num ${t.kept && t.pnl > 0 ? 'mvp-pos' : t.kept && t.pnl < 0 ? 'mvp-neg' : 'mvp-muted'}`}>
+                    {t.kept ? fmtMoney(t.pnl) : '—'}
+                  </td>
+                </tr>
+              );
+            })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function MoversDepthPanel({ symbol, day, detail }) {
   const [pinned, setPinned] = useState(null);
 
@@ -293,60 +360,7 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
         <h3 className="mvp-depth-title">
           Executions <span className="mvp-muted">({trades.length} the engine took · {trades.filter((t) => !t.kept).length} refused by the selection)</span>
         </h3>
-        {trades.length === 0 ? (
-          <p className="mvp-note">The engine opened no trade on this session.</p>
-        ) : (
-          <div className="mvp-scroll mvp-depth-scroll">
-            <table className="mvp-table">
-              <thead>
-                <tr>
-                  <th scope="col">In</th>
-                  <th scope="col" className="mvp-num">Price</th>
-                  <th scope="col">Out</th>
-                  <th scope="col" className="mvp-num">Price</th>
-                  <th scope="col">Side</th>
-                  <th scope="col" className="mvp-num">Bars</th>
-                  <th scope="col">Exit</th>
-                  <th scope="col" className="mvp-num">P/L</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...trades]
-                  .sort((a, b) => String(a.entryDate).localeCompare(String(b.entryDate)))
-                  .map((t, i) => {
-                    const span = Math.max(
-                      0,
-                      Math.round((new Date(t.exitDate) - new Date(t.entryDate)) / 300_000),
-                    );
-                    return (
-                      <tr key={`${t.entryDate}-${i}`} className={t.kept ? '' : 'mvp-config-row--ignored'}>
-                        <td className="mvp-nowrap">{clock(t.entryDate)}</td>
-                        <td className="mvp-num">{fmtPrice(t.entryPrice)}</td>
-                        <td className="mvp-nowrap">{clock(t.exitDate)}</td>
-                        <td className="mvp-num">{fmtPrice(t.exitPrice)}</td>
-                        <td className="mvp-nowrap mvp-muted">
-                          {t.direction}
-                          {!t.kept && <span className="mvp-depth-pre" title="the selection refused this trade">refused</span>}
-                        </td>
-                        <td className="mvp-num">{span}</td>
-                        <td className="mvp-nowrap">
-                          <span
-                            className={`mvp-state mvp-state--${EXIT_TONE[t.exitReason] ?? 'none'}`}
-                            title={t.exitReason}
-                          >
-                            {exitReasonText(t.exitReason)}
-                          </span>
-                        </td>
-                        <td className={`mvp-num ${t.kept && t.pnl > 0 ? 'mvp-pos' : t.kept && t.pnl < 0 ? 'mvp-neg' : 'mvp-muted'}`}>
-                          {t.kept ? fmtMoney(t.pnl) : '—'}
-                        </td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <ExecutionsTable trades={trades} symbol={symbol} />
       </section>
 
       {/* ── 4 · the decomposition of the pinned bar ────────────────────────────────────────────── */}

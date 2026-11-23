@@ -41,7 +41,7 @@ import StatCard from '../components/backtest/StatCard.jsx';
 // ⚠️ `StatCard` is styled by the shared backtest panel base, imported where it is used rather than
 // globally — `CurrentStrategyPage.jsx` does the same. Without it the tiles render as bare text.
 import '../components/backtest/backtest-panel-base.css';
-import MoversDepthPanel from '../components/backtest/MoversDepthPanel.jsx';
+import MoversDepthPanel, { ExecutionsTable } from '../components/backtest/MoversDepthPanel.jsx';
 import TradeConfigPanel from '../components/backtest/TradeConfigPanel.jsx';
 import LoadingSkeleton from '../components/LoadingSkeleton.jsx';
 import LoadingOrbit from '../components/LoadingOrbit.jsx';
@@ -453,6 +453,25 @@ export default function MoversStrategyBacktestPage() {
     [okRuns, datasetByName],
   );
   const focusedDepth = depthEntries.find((d) => d.key === focusKey) ?? depthEntries[0] ?? null;
+
+  /**
+   * ── THE DAY AS A WHOLE (owner, 2026-11-23) ──────────────────────────────────────────────────────
+   * The executions table showed one symbol at a time and did not name it, so a reader concluded the day
+   * had produced trades in a single instrument. The merged view concatenates every selected symbol's
+   * trades and keeps the symbol on each row, so the day can be read without clicking through the chips.
+   * ⚠️ Bars and the ladder stay per symbol — a merged price axis across instruments would be meaningless.
+   */
+  const isAllSymbols = typeof focusKey === 'string' && focusKey.startsWith('all:');
+  const allSymbolsDay = isAllSymbols ? focusKey.slice(4) : null;
+  const dayEntries = useMemo(
+    () => depthEntries.filter((e) => e.day === allSymbolsDay),
+    [depthEntries, allSymbolsDay],
+  );
+  const mergedTrades = useMemo(
+    () => dayEntries.flatMap((e) => (e.detail?.trades ?? []).map((t) => ({ ...t, symbol: t.symbol || e.symbol }))),
+    [dayEntries],
+  );
+  const daySymbols = useMemo(() => [...new Set(dayEntries.map((e) => e.symbol))], [dayEntries]);
 
   const selectedDaysLabel = useMemo(() => {
     const lines = daysForLeg.filter((d) => selected.includes(d.name)).map((d) => dayLabel(d.answerDate));
@@ -1039,12 +1058,30 @@ export default function MoversStrategyBacktestPage() {
               <h2 className="mvp-panel-title">Bar by bar</h2>
               {depthEntries.length > 1 && (
                 <div className="mvp-chips" role="group" aria-label="Symbol and day to scrutinise">
+                  {/*
+                    * ⚠️ "All symbols" COMES FIRST, PER DAY (owner, 2026-11-23): the table showed
+                    * executions that all looked like one instrument and did not say which. A merged view
+                    * answers "what happened on this day across the names it picked" without making the
+                    * reader click every chip and add up in their head.
+                    */}
+                  {[...new Set(depthEntries.map((e) => e.day))].map((day) => (
+                    <button
+                      key={`all:${day}`}
+                      type="button"
+                      className={`mvp-chip mvp-chip--tight${`all:${day}` === focusKey ? ' mvp-chip--on' : ''}`}
+                      aria-pressed={`all:${day}` === focusKey}
+                      onClick={() => setFocusKey(`all:${day}`)}
+                    >
+                      <span className="mvp-chip-day">All symbols</span>
+                      <span className="mvp-chip-meta">{dayLabel(day)}</span>
+                    </button>
+                  ))}
                   {depthEntries.map((e) => (
                     <button
                       key={e.key}
                       type="button"
-                      className={`mvp-chip mvp-chip--tight${e.key === focusedDepth?.key ? ' mvp-chip--on' : ''}`}
-                      aria-pressed={e.key === focusedDepth?.key}
+                      className={`mvp-chip mvp-chip--tight${e.key === focusedDepth?.key && !isAllSymbols ? ' mvp-chip--on' : ''}`}
+                      aria-pressed={e.key === focusedDepth?.key && !isAllSymbols}
                       onClick={() => setFocusKey(e.key)}
                     >
                       <span className="mvp-chip-day">{e.symbol}</span>
@@ -1055,7 +1092,20 @@ export default function MoversStrategyBacktestPage() {
               )}
             </div>
 
-            {focusedDepth ? (
+            {isAllSymbols ? (
+              <section id="mvp-sec-execution" aria-label="Executions">
+                <h3 className="mvp-depth-title">
+                  Executions — every symbol the day picked
+                  <span className="mvp-muted"> ({mergedTrades.length} row(s) across {daySymbols.length} symbol(s))</span>
+                </h3>
+                <ExecutionsTable trades={mergedTrades} />
+                <p className="mvp-note">
+                  The ladder and the per-bar table are per symbol — pick a chip above for those. This
+                  table is the day&apos;s whole set of executions so the prices can be read against the
+                  right ticker.
+                </p>
+              </section>
+            ) : focusedDepth ? (
               <MoversDepthPanel symbol={focusedDepth.symbol} day={focusedDepth.day} detail={focusedDepth.detail} />
             ) : (
               <p className="mvp-note">

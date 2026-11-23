@@ -407,6 +407,7 @@ export class SelectionRunService {
 
     const series = Array.isArray(r.scoreSeries) ? r.scoreSeries : [];
     const trades: DepthTrade[] = tagged.map((t) => ({
+      symbol: String(t.symbol ?? ''),
       entryDate: String(t.entryDate ?? ''),
       exitDate: String(t.exitDate ?? ''),
       entryPrice: Number(t.entryPrice ?? 0),
