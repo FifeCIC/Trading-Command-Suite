@@ -283,17 +283,6 @@ export default function MoversStrategyBacktestPage() {
   const okRuns = results.filter((r) => !r.notice);
   const failedRuns = results.filter((r) => r.notice);
 
-  // The cockpit skeleton reads the LAST run from session storage — one tab, no persistence, so a
-  // half-built surface cannot become a second source of truth for a run.
-  useEffect(() => {
-    if (!okRuns.length) return;
-    try {
-      window.sessionStorage.setItem('tcs:movers-cockpit:last-run', JSON.stringify(okRuns[okRuns.length - 1]));
-    } catch {
-      /* a full or blocked store is not a reason to break the page */
-    }
-  }, [okRuns]);
-
   const totals = useMemo(() => {
     const trades = okRuns.reduce((a, r) => a + Number(r.totals?.trades ?? 0), 0);
     const wins = okRuns.reduce((a, r) => a + Number(r.totals?.wins ?? 0), 0);
@@ -337,15 +326,23 @@ export default function MoversStrategyBacktestPage() {
   }, [okRuns]);
 
   /**
-   * ⚠️ `caveats` IS NO LONGER RENDERED (owner, 2026-11-23). The count is kept because step 2's header is
-   * the honest place to say "there are N things a reader should know" without printing all of them —
-   * and because abandoning the derived value would make it look as though the payload carried none.
+   * ⚠️ `caveats` IS NO LONGER RENDERED AS A LIST (owner requirement, 2026-11-23: too much to read), so this
+   * derivation is kept for ONE purpose: the count in step 2's header. Printing eleven sentences between
+   * the figures and the tables made the one caveat that changes an interpretation invisible among the
+   * other ten; a count says "there is something to know" without spending the whole screen saying it.
+   *
+   * ⚠️ THE DATA IS STILL ON EVERY RUN RESPONSE, so a TABLE version (one row per caveat, with the figure
+   * it touches) needs no re-run — tracked in #1342 as step 2's cheapest win.
+   *
+   * ⚠️ THE CAVEAT THAT MATTERS MOST SURVIVES ON THE PAGE ITSELF: "no bot names this protocol, so these
+   * are the ENGINE's literals" is carried by step 10's `meta`, which reads `no bot` when
+   * `tradeConfig.bot` is null. Removing the list did not remove the ability to notice it.
    */
-  const caveats = useMemo(() => {
+  const caveatCount = useMemo(() => {
     const gateSentences = new Set(
       (sessionGateView ? okRuns.map((r) => r.sessionGate?.because) : []).filter(Boolean),
     );
-    return [...new Set(okRuns.flatMap((r) => r.caveats ?? []))].filter((c) => !gateSentences.has(c));
+    return [...new Set(okRuns.flatMap((r) => r.caveats ?? []))].filter((c) => !gateSentences.has(c)).length;
   }, [okRuns, sessionGateView]);
 
   /**
@@ -521,14 +518,6 @@ export default function MoversStrategyBacktestPage() {
 
   return (
     <div className="mvp-page">
-      {/* The Cockpit link is page NAVIGATION, not a form input — it lives above the form so it cannot be
-          mistaken for a control and cannot run on from the Leg toggle into the Day field (owner report
-          2026-11-20: the form head read as one run-on line, "LongShort🧭 CockpitDay?"). */}
-      <div className="mvp-page-actions">
-        <a className="mvp-cockpit-btn" href="/lab/movers-cockpit">
-          🧭 Cockpit
-        </a>
-      </div>
       {/* ══ STEP 1 — THE FORM ═════════════════════════════════════════════════════════════════ */}
       {formOpen && (
       <StepAccordion
@@ -676,7 +665,7 @@ export default function MoversStrategyBacktestPage() {
               ) : datasetsQuery.isPending ? (
                 /**
                  * ── #1330 — THE WAIT IS DRAWN, NOT LEFT BLANK ────────────────────────────────────
-                 * Owner, 2026-11-23: the page opened with *"nothing to say [the day table] even
+                 * Owner, 2026-11-23: the page opened by saying there was nothing to report for the day table even
                  * existed"* for 2–3 s, and it read as broken. This field had TWO branches, so an
                  * in-flight query (`daysForLeg` still `[]`) fell through to the "no stored list is a
                  * long day" branch — asserting a fact about the DATA before anything had been read.
@@ -808,10 +797,25 @@ export default function MoversStrategyBacktestPage() {
           </p>
         )}
       </section>
-      </StepAccordion>
 
-          <StepAuditNote afterStep={MOVERS_STEP['mvp-step-settings'].step} ideas={MOVERS_STEP['mvp-step-settings'].audit} />
+      {/*
+        ── PREVIOUS TESTS MOVE INTO STEP 1 (owner, 2026-11-23) ──────────────────────────────────────
+        The stored runs of the SAME test belong beside the settings that define it: a reader about to
+        run a fresh test wants to see what this configuration has already produced, and it was two
+        accordions away from the form. Step 1 stays open by default so a fresh run is always one click.
+      */}
+      {okRuns.length > 0 && comparisonView?.profileKey && (
+        <SelectionHistory
+          profileKey={comparisonView.profileKey}
+          profileLabel={comparisonView.profileLabel}
+          semanticsVersion={comparisonView.semanticsVersion}
+          currentRunIds={okRuns.map((r) => r.selectionRun?.id).filter(Boolean)}
+        />
       )}
+      </StepAccordion>
+      )}
+
+      <StepAuditNote afterStep={MOVERS_STEP['mvp-step-settings'].step} ideas={MOVERS_STEP['mvp-step-settings'].audit} />
 
       {/* The progress panel and the .mvp-progress bar were removed 2026-11-20 (owner): they took a lot
           of space for little information, and there is no speed control yet to make a live progress
@@ -832,6 +836,7 @@ export default function MoversStrategyBacktestPage() {
                 />
                 <StepMeta value={totals.trades ?? 0} label="trades" />
                 <StepMeta value={totals.winRate == null ? '—' : `${totals.winRate.toFixed(1)}%`} label="win rate" />
+                {caveatCount > 0 && <StepMeta value={caveatCount} label="caveats" />}
               </>
             )}
           >
@@ -1010,8 +1015,8 @@ export default function MoversStrategyBacktestPage() {
             )}
 
             {/**
-              * ⚠️ THE CAVEAT LIST WAS REMOVED (owner, 2026-11-23: "there's no point in outputting this …
-              * it's too much to read"). It was eleven sentences of prose between the figures and the
+              * ⚠️ THE CAVEAT LIST WAS REMOVED (owner requirement, 2026-11-23: not worth printing, too
+              * much to read). It was eleven sentences of prose between the figures and the
               * tables, and a reader skims a wall — which is worse than not printing it, because the one
               * caveat that changes an interpretation is invisible inside the other ten.
               *
@@ -1028,20 +1033,6 @@ export default function MoversStrategyBacktestPage() {
             </>
             )}
           </div>
-
-          {/* #1328 — the stored runs of the SAME test, readable on demand rather than filling the
-              results pane. Its own component so the loading/failed/empty/loaded states cannot be
-              collapsed into one another here. ⚠️ INSIDE the summary step: it explains the delta
-              printed on the tiles beside it, and a reader who has to hunt for it in another accordion
-              reads the delta as unexplained. */}
-          {results.length > 0 && comparisonView?.profileKey && (
-            <SelectionHistory
-              profileKey={comparisonView.profileKey}
-              profileLabel={comparisonView.profileLabel}
-              semanticsVersion={comparisonView.semanticsVersion}
-              currentRunIds={okRuns.map((r) => r.selectionRun?.id).filter(Boolean)}
-            />
-          )}
           </StepAccordion>
 
           <StepAuditNote afterStep={MOVERS_STEP['mvp-step-summary'].step} ideas={MOVERS_STEP['mvp-step-summary'].audit} />

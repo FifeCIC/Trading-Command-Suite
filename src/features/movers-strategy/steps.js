@@ -163,4 +163,4 @@ export const MOVERS_STEP = Object.fromEntries(
 );
 
 /** The page id for stored open/closed state — one namespace per page, versioned with the step list. */
-export const MOVERS_PAGE_ID = 'movers-backtest-v1';
+export const MOVERS_PAGE_ID = 'movers-backtest-v2';

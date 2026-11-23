@@ -2,9 +2,9 @@
  * ScoringFunnelStep — SCORES → SIGNALS → TRADES, per symbol, with the speed rating beside them.
  *
  * ── WHY THIS STEP EXISTS ─────────────────────────────────────────────────────────────────────────
- * Owner, 2026-11-23: *"We need at least one scoring related step: a table showing scores, which create
- * signals, which of those are traded"* … and *"I don't see any sign of us rating the speed of price
- * change. I would consider that on this page."*
+ * Owner requirement, 2026-11-23: at least one scoring-related step showing scores, which of them create
+ * signals and which of those are traded; and a check on whether the speed of price change is rated at
+ * all, because the page showed no sign of it.
  *
  * ── ⚠️ THE SPEED RATING ALREADY EXISTS — IT WAS INVISIBLE ───────────────────────────────────────
  * Measured 2026-11-23: `speed-momentum` is a directive in BOTH movers protocols, carrying **120** of the
@@ -25,8 +25,7 @@
  *   entry / entry+exit → traded
  */
 import { useMemo } from 'react';
-
-const SPEED_DIRECTIVE = 'speed-momentum';
+import { funnelFor, funnelTotals, sharePct, SPEED_DIRECTIVE } from '../../core/movers-funnel.js';
 
 const BUCKETS = [
   { key: 'scored', label: 'Bars scored' },
@@ -37,61 +36,20 @@ const BUCKETS = [
   { key: 'entered', label: 'Traded' },
 ];
 
-const count = (bars, state) => bars.filter((b) => b.state === state).length;
-
-/** The `speed-momentum` reading for one symbol, or nulls when the run carried no breakdown. */
-function speedOf(bars) {
-  const values = bars
-    .map((b) => (b.directives ?? []).find((d) => d && d.directiveId === SPEED_DIRECTIVE))
-    .filter((d) => d && typeof d.score === 'number');
-  if (values.length === 0) return { present: false, mean: null, peak: null, maxScore: null, bars: 0 };
-  const scores = values.map((d) => d.score);
-  return {
-    present: true,
-    mean: scores.reduce((a, b) => a + b, 0) / scores.length,
-    peak: Math.max(...scores),
-    maxScore: values[0].maxScore ?? null,
-    bars: values.length,
-  };
-}
-
-/** Per-symbol funnel for one (day, symbol) detail. Pure, so it is testable without a browser. */
-export function funnelFor(symbol, detail, day = null) {
-  const bars = Array.isArray(detail?.bars) ? detail.bars : [];
-  const trades = Array.isArray(detail?.trades) ? detail.trades : [];
-  const entered = bars.filter((b) => b.state === 'entry' || b.state === 'entry+exit').length;
-  return {
-    symbol,
-    day: day ?? detail?.day ?? null,
-    scored: bars.length,
-    noData: count(bars, 'no-data'),
-    quiet: count(bars, 'quiet'),
-    barGate: count(bars, 'bar-gate'),
-    signalNotTraded: count(bars, 'signal-not-traded'),
-    // The engine's own entry bars; a symbol with none shows 0 rather than a dash, because "no trade
-    // opened on any bar" is a fact about the day, not a missing value.
-    entered,
-    trades: trades.length,
-    speed: speedOf(bars),
-  };
-}
-
-/** Totals across symbols — the funnel's own denominator, so no percentage is printed without one. */
-export function funnelTotals(rows) {
-  const sum = (k) => rows.reduce((a, r) => a + Number(r[k] ?? 0), 0);
-  return {
-    scored: sum('scored'),
-    noData: sum('noData'),
-    quiet: sum('quiet'),
-    barGate: sum('barGate'),
-    signalNotTraded: sum('signalNotTraded'),
-    entered: sum('entered'),
-    trades: sum('trades'),
-  };
-}
-
-const pct = (part, whole) => (whole > 0 ? `${((part / whole) * 100).toFixed(1)}%` : '—');
-
+/**
+ * ── DECISION (2026-11-23, primary) ─────────────────────────────────────────────────────────────
+ * WHAT:      the scoring step counts the ENGINE bar vocabulary, and prints the `speed-momentum`
+ *            directive score as the speed rating rather than computing a velocity of its own.
+ * WHY:       two implementations of one count is how a tile and a table end up disagreeing; and a
+ *            second speed metric beside a scored one would be two answers to one question. Measured
+ *            live: speed-momentum mean 86.0, peak 120 of a 120 ceiling on ELOG.
+ * INSTEAD OF: deriving "% change over 5 bars" here, which would have looked like a new capability
+ *            while the protocol already allocated 120 of its capacity to that exact measurement.
+ * REVERSE BY: add the derived velocity as a SECOND column and label it display-only; the counting
+ *            test still applies to the funnel buckets either way.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 267
+ * GUARD:     src/core/movers-funnel.test.js
+ */
 export default function ScoringFunnelStep({ entries }) {
   const rows = useMemo(
     () => (Array.isArray(entries) ? entries.map((e) => funnelFor(e.symbol, e.detail, e.day)) : []),
@@ -145,7 +103,7 @@ export default function ScoringFunnelStep({ entries }) {
                 <td className="mvp-num">{r.barGate}</td>
                 <td className="mvp-num">{r.signalNotTraded}</td>
                 <td className="mvp-num">{r.entered}</td>
-                <td className="mvp-num">{pct(r.entered, r.scored)}</td>
+                <td className="mvp-num">{sharePct(r.entered, r.scored)}</td>
               </tr>
             ))}
           </tbody>
@@ -158,7 +116,7 @@ export default function ScoringFunnelStep({ entries }) {
               <td className="mvp-num">{totals.barGate}</td>
               <td className="mvp-num">{totals.signalNotTraded}</td>
               <td className="mvp-num">{totals.entered}</td>
-              <td className="mvp-num">{pct(totals.entered, totals.scored)}</td>
+              <td className="mvp-num">{sharePct(totals.entered, totals.scored)}</td>
             </tr>
           </tfoot>
         </table>

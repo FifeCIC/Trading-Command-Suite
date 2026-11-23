@@ -79,6 +79,7 @@
     "test:backtest-totals": "node --test src/core/backtest-totals.test.js",
     "test:best-record": "node --test src/core/best-record.test.js",
     "test:movers-steps": "node --test src/features/movers-strategy/steps.test.js",
+    "test:movers-funnel": "node --test src/core/movers-funnel.test.js",
     "test:bridge-bounds": "node scripts/validate-bridge-recovery-bounds.cjs --self-test",
     "test:bridge-choke-point": "node ./scripts/validate-bridge-order-choke-point.cjs --self-test",
     "test:bridge-credential-binding": "python scripts/mt5-bridge/test_credential_binding.py",

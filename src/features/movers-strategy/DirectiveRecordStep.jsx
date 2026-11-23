@@ -2,9 +2,10 @@
  * DirectiveRecordStep — WHAT EACH DIRECTIVE HAS ACTUALLY SCORED AND PREDICTED.
  *
  * ── WHY THIS STEP EXISTS ─────────────────────────────────────────────────────────────────────────
- * Owner, 2026-11-23: *"add a protocol step: it will show statistics based on what the directives scores
- * as i think that data is recorded long term."* It is — `directiveoutcome` holds one row per directive
- * per prediction with the prices that followed, and `GET /api/scoring/edge/report` already summarises it.
+ * Owner requirement, 2026-11-23: a protocol step showing statistics built from what the directives
+ * score, on the understanding that the data is kept long term. It is — `directiveoutcome` holds one row
+ * per directive per prediction with the prices that followed, and `GET /api/scoring/edge/report`
+ * already summarises it.
  *
  * ── ⚠️ THREE HONESTY CONSTRAINTS, ALL OF THEM LOAD-BEARING ──────────────────────────────────────
  *
@@ -28,6 +29,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../../core/api/client';
 import NoticeBlock from '../../components/NoticeBlock.jsx';
 import { noticeFromError } from '../../core/notices/from-error.js';
+import { protocolDirectiveIds } from '../../core/movers-funnel.js';
 
 const pct = (v) => (typeof v === 'number' ? `${(v * 100).toFixed(1)}%` : '—');
 const ci = (e) => (e?.ci95 ? `${(e.ci95.low * 100).toFixed(0)}–${(e.ci95.high * 100).toFixed(0)}%` : '—');
@@ -37,19 +39,6 @@ const VERDICT_TONE = {
   insufficient: 'mvp-muted',
   negative: 'mvp-neg',
 };
-
-/** The directives this protocol actually scored, taken from the run's own bars. */
-export function protocolDirectiveIds(entries) {
-  const ids = new Set();
-  for (const e of Array.isArray(entries) ? entries : []) {
-    for (const b of e?.detail?.bars ?? []) {
-      for (const d of b?.directives ?? []) {
-        if (d?.directiveId) ids.add(d.directiveId);
-      }
-    }
-  }
-  return ids;
-}
 
 export default function DirectiveRecordStep({ entries, days: windowDays = 30 }) {
   const report = useQuery({
