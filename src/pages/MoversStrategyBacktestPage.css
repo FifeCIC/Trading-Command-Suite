@@ -797,6 +797,30 @@
   outline-offset: 2px;
 }
 
+/* ── datasets table loading (#1330) ───────────────────────────────────────────────────────────────
+   The canonical skeleton draws as flex rows, not a <table>, so it needs the same horizontal rhythm as
+   the table it replaces — otherwise the panel jumps when the data lands, which is the defect a
+   skeleton exists to prevent. Spacing is matched to `.mvp-table` rather than invented. */
+.mvp-ds-pending {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mvp-ds-pending .ls-table-row {
+  padding: 7px 0;
+}
+
+.mvp-ds-pending .mvp-note {
+  margin: 0;
+}
+
+/* The protocol check sits in the form foot as one quiet line — it replaces a note that read as a fault,
+   so it must not itself look like an alarm. */
+.mvp-leg-checking {
+  margin: 0;
+}
+
 /* ── trade-management provenance ───────────────────────────────────────────────────────────── */
 .mvp-config-summary {
   margin: 0;

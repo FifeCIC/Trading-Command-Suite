@@ -25,6 +25,7 @@
 import ThemePacksChooser from '../components/ThemePacksChooser';
 import PageInfoPopover from '../components/PageInfoPopover';
 import ModernEffectsLab from '../components/appearance/ModernEffectsLab';
+import LoadingLab from '../components/appearance/LoadingLab';
 import '../core/forms.css'; // the canonical form standard — the form specimen uses the real .ff-* classes
 import './appearance-area.css';
 
@@ -209,6 +210,9 @@ export default function AppearanceAreaPage() {
 
       {/* ══ MODERN EFFECTS — original animation & dynamic lighting, to judge before adopting ═══ */}
       <ModernEffectsLab />
+
+      {/* ══ LOADING STATES — three animations, one per situation ══════════════════════════════ */}
+      <LoadingLab />
 
       {/* ══ TINTED CONTAINERS — trial colours that make a table stand out ═════════════════════ */}
       <section className="appearance-section">

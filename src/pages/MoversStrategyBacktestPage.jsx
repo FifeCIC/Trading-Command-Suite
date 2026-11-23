@@ -43,6 +43,8 @@ import StatCard from '../components/backtest/StatCard.jsx';
 import '../components/backtest/backtest-panel-base.css';
 import MoversDepthPanel from '../components/backtest/MoversDepthPanel.jsx';
 import TradeConfigPanel from '../components/backtest/TradeConfigPanel.jsx';
+import LoadingSkeleton from '../components/LoadingSkeleton.jsx';
+import LoadingOrbit from '../components/LoadingOrbit.jsx';
 // #1328 — the "change vs the previous test" surfaces: the tile deltas, the refusal statement and the
 // profile history. The component owns its own scoped stylesheet, like every other backtest panel.
 import {
@@ -565,6 +567,27 @@ export default function MoversStrategyBacktestPage() {
                     operation: 'load the movers day lists',
                   })}
                 />
+              ) : datasetsQuery.isPending ? (
+                /**
+                 * ── #1330 — THE WAIT IS DRAWN, NOT LEFT BLANK ────────────────────────────────────
+                 * Owner, 2026-11-23: the page opened with *"nothing to say [the day table] even
+                 * existed"* for 2–3 s, and it read as broken. This field had TWO branches, so an
+                 * in-flight query (`daysForLeg` still `[]`) fell through to the "no stored list is a
+                 * long day" branch — asserting a fact about the DATA before anything had been read.
+                 *
+                 * ⚠️ TWO MEASUREMENTS, NOT ONE — kept separate on purpose: the handler answered in
+                 * 878–1079 ms over four calls, while the owner saw 2–3 s in the browser (first paint
+                 * and a cold dev-server transform are not in the server figure). The defect is real at
+                 * either duration, so neither number is used to size this skeleton.
+                 *
+                 * The skeleton is the SHAPE of the table that is coming (six columns, matching the
+                 * row rhythm below), so the panel does not jump when the data lands. `aria-busy`
+                 * carries the state for anyone who cannot see a shimmer.
+                 */
+                <div className="mvp-ds-pending" aria-busy="true">
+                  <LoadingSkeleton variant="table" rows={3} cols={6} />
+                  <p className="mvp-note">Loading the stored day lists…</p>
+                </div>
               ) : daysForLeg.length === 0 ? (
                 <p className="mvp-note">
                   No stored list is a <strong>{leg.side}</strong> day — a day without a list cannot be
@@ -664,7 +687,19 @@ export default function MoversStrategyBacktestPage() {
           </>
         )}
 
-        {currentLegState?.available === null && (
+        {protocolsQuery.isPending ? (
+          /**
+           * ── #1330 — "STILL CHECKING" IS NOT "COULD NOT CONFIRM" ──────────────────────────────
+           * Before the protocol list arrives, `legAvailability` has nothing to compare, so the
+           * `available === null` branch below fired and the page announced that it *could not confirm
+           * the protocol exists* — a conclusion drawn from a request that had not finished. Same defect
+           * as the blank day table: a wait rendered as a failure. The orbit is the honest effect here —
+           * an action in flight, with no layout to draw.
+           */
+          <p className="mvp-note mvp-leg-checking">
+            <LoadingOrbit label={`Checking the ${leg.label} protocol…`} size="sm" />
+          </p>
+        ) : currentLegState?.available === null && (
           <p className="mvp-note">
             Could not confirm the {leg.label} protocol exists — {currentLegState.why}. Run stays enabled
             so the server can answer, and a missing protocol is reported as an error rather than as zero
