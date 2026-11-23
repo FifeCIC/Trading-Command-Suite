@@ -350,7 +350,10 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
      */
     {
       id: 'stopGuard',
-      label: 'Stop guard',
+      // ⚠️ THE FULL NAME, NOT AN ABBREVIATION (2026-11-23). It was labelled "Stop guard" and the owner
+      // immediately asked whether that was the Stop Guardian — a one-word difference between the table
+      // and the service is exactly how a reader concludes they are two different things.
+      label: 'Stop Guardian',
       value: 'live only',
       source: 'engine-default',
       applied: false,

@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **615** backend source files (specs excluded). Two access paths, because one
+Scanned **616** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**615** source files · **3416** declarations · **402** ratio sites · **1795** nodes · **190** unreferenced
+**616** source files · **3417** declarations · **402** ratio sites · **1796** nodes · **190** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -124,9 +124,9 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
   - `result.maxPossible>0?(result.score/result.maxPossible)*100:0`
   - guarded by: `result.maxPossible>0`
-- `nest/src/modules/automation/stop-guardian.service.ts:2202` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:2194` — `observeExhaustion()`
   - `(recent/entry)*100`
-- `nest/src/modules/automation/stop-guardian.service.ts:2203` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:2195` — `observeExhaustion()`
   - `(prior/entry)*100`
 - `nest/src/modules/backtest/selection-run.service.ts:626` — `runSelection()`
   - `kept.length?(wins/kept.length)*100:0`
@@ -212,7 +212,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 7 sites — `((V1-V2)/V1)*100`
 
-- `nest/src/modules/automation/stop-guardian.service.ts:2179` — `observeExhaustion()` → `decelPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:2171` — `observeExhaustion()` → `decelPct`
   - `((prior-recent)/prior)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:37` — `calculate()` → `distance`
   - `((lastClose-shortExit)/lastClose)*100`
@@ -293,7 +293,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/common/trading/exit-guardian/simulated-tsl.ts:80` — `simulatedTslState()` → `profitPct`
   - `((isBuy?input.currentPrice-input.entryPrice:input.entryPrice-input.currentPrice)/input.entryPrice)*100`
   - conditions: `isBuy`
-- `nest/src/modules/automation/stop-guardian.service.ts:2188` — `observeExhaustion()` → `profitPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:2180` — `observeExhaustion()` → `profitPct`
   - `((isBuy?pos.priceCurrent-entry:entry-pos.priceCurrent)/entry)*100`
   - conditions: `isBuy`
 - `nest/src/modules/scoring/exit-consensus.service.ts:407` — `assessOne()` → `profitPct`
@@ -450,9 +450,9 @@ Identical after normalisation: variable names differ, the computation does not.
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
   - `result.maxPossible>0?(result.score/result.maxPossible)*100:0`
   - guarded by: `result.maxPossible>0`
-- `nest/src/modules/automation/stop-guardian.service.ts:2202` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:2194` — `observeExhaustion()`
   - `(recent/entry)*100`
-- `nest/src/modules/automation/stop-guardian.service.ts:2203` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:2195` — `observeExhaustion()`
   - `(prior/entry)*100`
 - `nest/src/modules/backtest/selection-run.service.ts:626` — `runSelection()`
   - `kept.length?(wins/kept.length)*100:0`
@@ -618,7 +618,7 @@ Identical after normalisation: variable names differ, the computation does not.
 
 ### 7 sites — `((V1-V2)/V1)*100`
 
-- `nest/src/modules/automation/stop-guardian.service.ts:2179` — `observeExhaustion()` → `decelPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:2171` — `observeExhaustion()` → `decelPct`
   - `((prior-recent)/prior)*100`
 - `nest/src/modules/directives/implementations/chandelier-exit.directive.ts:37` — `calculate()` → `distance`
   - `((lastClose-shortExit)/lastClose)*100`
@@ -644,7 +644,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 ### 41 sites — `((VN-VN)/VN)*N`
 
-- `nest/src/modules/automation/stop-guardian.service.ts:2179` — `observeExhaustion()` → `decelPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:2171` — `observeExhaustion()` → `decelPct`
   - `((prior-recent)/prior)*100`
 - `nest/src/modules/backtest/backtest.controller.ts:1034` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
@@ -694,9 +694,9 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
   - `result.maxPossible>0?(result.score/result.maxPossible)*100:0`
   - guarded by: `result.maxPossible>0`
-- `nest/src/modules/automation/stop-guardian.service.ts:2202` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:2194` — `observeExhaustion()`
   - `(recent/entry)*100`
-- `nest/src/modules/automation/stop-guardian.service.ts:2203` — `observeExhaustion()`
+- `nest/src/modules/automation/stop-guardian.service.ts:2195` — `observeExhaustion()`
   - `(prior/entry)*100`
 - `nest/src/modules/backtest/selection-run.service.ts:626` — `runSelection()`
   - `kept.length?(wins/kept.length)*100:0`
@@ -879,7 +879,7 @@ A difference and its mirror in one expression. **This is the tier that finds a c
 - `nest/src/common/trading/peak.ts:96` — `profitPctFor()` → `raw`
   - `isShort?(entry-px)/entry:(px-entry)/entry`
   - conditions: `isShort`
-- `nest/src/modules/automation/stop-guardian.service.ts:2188` — `observeExhaustion()` → `profitPct`
+- `nest/src/modules/automation/stop-guardian.service.ts:2180` — `observeExhaustion()` → `profitPct`
   - `((isBuy?pos.priceCurrent-entry:entry-pos.priceCurrent)/entry)*100`
   - conditions: `isBuy`
 - `nest/src/modules/scoring/exit-consensus.service.ts:407` — `assessOne()` → `profitPct`
@@ -930,8 +930,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/automation/automation-loop.service.ts:591 getWatchlistSymbols`
 - `nest/src/modules/automation/automation.controller.ts:731 safe`
 - `nest/src/modules/automation/experiment-review.service.ts:32 norm`
-- `nest/src/modules/automation/stop-guardian.service.ts:2163 progress`
-- `nest/src/modules/automation/stop-guardian.service.ts:637 flat`
+- `nest/src/modules/automation/stop-guardian.service.ts:2155 progress`
+- `nest/src/modules/automation/stop-guardian.service.ts:629 flat`
 - `nest/src/modules/backtest/affordable-size.ts:146 floorToStep`
 - `nest/src/modules/backtest/backtest-period.service.ts:910 countBars`
 - `nest/src/modules/backtest/backtest.controller.ts:929 mapResult`

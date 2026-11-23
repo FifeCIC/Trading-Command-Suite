@@ -50,6 +50,9 @@ import { NotificationService } from '../notifications/notifications.service';
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 import { PrismaService } from '../../database/prisma.service';
 import { CLOSE_REASONS } from '../../common/trading/close-reason';
+// The guardian's own rule, extracted 2026-11-23 so a backtest can call the same one (row 257).
+// ⚠️ Imported for USE as well as re-exported: a `export … from` does not put the names in scope.
+import { declaredStopDistance, trailDistanceFor, trailDistanceProblem } from '../../common/trading/exit-guardian/guardian-stop';
 // #1242 — THE simulated-trailing-stop decision, shared with the backtest. Live OBSERVES the moment and
 // the engine MOVES the stop to it; the arithmetic must be one implementation, and the strength
 // difference is written down beside it (`TRAIL_STRENGTH_NOTE`).
@@ -392,21 +395,18 @@ const STOP_GUARDIAN_DIRECTIVES = new Set([
  *
  * Keeping these as exported pure functions is deliberate: the tick calls them, and the spec
  * canaries them in both directions without a bridge, a position or a clock.
+ *
+ * ── DECISION (2026-11-23, primary) ───────────────────────────────────────────────────────────────
+ * WHAT:      the two helpers MOVED to `common/trading/exit-guardian/guardian-stop.ts` and are
+ *            re-exported here, so the live tick and any other driver call ONE implementation.
+ * WHY:       owner: *"backtesting should be using the existing pipeline"*. The rule is small, pure and
+ *            measurable; a second copy in the engine would drift and only one would get the next fix.
+ * INSTEAD OF: leaving them here and letting a backtest grow its own version beside them.
+ * REVERSE BY: deleting the re-export and pasting the two functions back.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 257
+ * GUARD:     guardian-stop.spec.ts (both directions, plus the 55 boundary and the never-loosen rule)
  */
-export function declaredStopDistance(entryPrice: number, slPct: number): number {
-  const pct = Number(slPct);
-  const safePct = Number.isFinite(pct) && pct > 0 ? pct : 1;
-  const entry = Number(entryPrice);
-  if (!Number.isFinite(entry) || entry <= 0) return 0;
-  return Math.abs(entry * (safePct / 100));
-}
-
-/** The distance a trailing tighten must leave between price and the stop (price units). */
-export function trailDistanceFor(atrValue: number, declaredDistance: number): number {
-  const atr = Number(atrValue);
-  const atrTrail = Number.isFinite(atr) && atr > 0 ? 3 * atr : 0;
-  return Math.max(atrTrail, declaredDistance);
-}
+export { declaredStopDistance, trailDistanceFor, trailDistanceProblem } from '../../common/trading/exit-guardian/guardian-stop';
 
   /**
    * stopAdjustmentReason() — the audit string written to `stop_adjustment.reason`.
@@ -453,15 +453,7 @@ export function trailDistanceFor(atrValue: number, declaredDistance: number): nu
    * makes the invariant checkable (and canaried) rather than implied by one `Math.max` nobody
    * re-reads.
    */
-  export function trailDistanceProblem(trailDistance: number, declaredDistance: number): string | null {
-  if (!(declaredDistance > 0)) return null; // no declared distance → nothing to enforce
-  if (trailDistance + 1e-9 >= declaredDistance) return null;
-  return (
-    `trail distance ${trailDistance.toFixed(5)} is inside the declared stop distance ` +
-    `${declaredDistance.toFixed(5)} — refusing to place a stop tighter than the position's own risk (#927)`
-  );
-}
-
+  
 /**
  * The BRIDGE's default magic — `DEFAULT_MAGIC` in `scripts/mt5-bridge/mt5_bridge_v2.py`.
  *
