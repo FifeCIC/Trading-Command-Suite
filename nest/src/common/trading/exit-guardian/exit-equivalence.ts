@@ -108,3 +108,82 @@ export function engineExitEquivalence(exitReason: string): ExitEquivalence | nul
 export function engineExitCloseReason(exitReason: string): string | null {
   return engineExitEquivalence(exitReason)?.closeReason ?? null;
 }
+
+/** What a run's exits could not reproduce live, aggregated. */
+export interface ExitDivergence {
+  trades: number;
+  /** Trades that exited on a TIGHTENED stop. Live records the trail decision and moves nothing (#936). */
+  trailExits: number;
+  trailPnl: number;
+  /** Trades that ended because the data ran out — a simulation artefact, not a real close. */
+  eodExits: number;
+  eodPnl: number;
+  /** Exit reasons with NO row in the map — a coverage defect. Reported, never swallowed. */
+  unmapped: string[];
+  /** One sentence a panel can print verbatim, or `null` when every exit maps exactly. */
+  note: string | null;
+}
+
+/**
+ * ── DECISION (2026-11-23, primary) ────────────────────────────────────────────────────────────────
+ * WHAT:      every run reports `exitDivergence` — how many of its exits live could not reproduce —
+ *            aggregated from the trades it already produced, on both the run response and the stored
+ *            read, and on the movers selection run over its ADMITTED population.
+ * WHY:       the per-trade `closeReason`/`closeReasonNote` fields marked `TRAIL` as `qualified` and
+ *            `EOD` as having no live counterpart, but only ONE TRADE AT A TIME. A reader looking at a
+ *            win rate, a Σ P&L or an equity curve had no way to see that part of the population could
+ *            never have happened in the account — and the owner tuned a bot toward "do not take
+ *            profit, let the trail work", which is precisely the direction where that gap is largest.
+ * ⚠️ WHAT IT DOES NOT DO: it does not re-map a `TRAIL` exit to a plain stop, and it does not remove
+ *            one from the P&L. The simulation really filled there; re-mapping would erase the very
+ *            distinction this file exists to preserve (#936). It is a report, not a re-decision.
+ * REVERSE BY: deleting the `summariseExitDivergence()` call sites in `backtest.service.ts` (both) and
+ *            `selection-run.service.ts`, plus the `exitDivergence` fields on both result types.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 251
+ * GUARD:     exit-equivalence.spec.ts (5 cases, both silent directions)
+ *
+ * ⚠️ THIS IS A REPORT, NOT A RE-DECISION. It changes no exit, no stop and no threshold: it counts what
+ * the run already did and names what live cannot reproduce.
+ */
+export function summariseExitDivergence(
+  trades: Array<{ exitReason?: string; pnl?: number }> | null | undefined,
+): ExitDivergence {
+  const list = Array.isArray(trades) ? trades : [];
+  const money = (n: number) => Math.round(n * 100) / 100;
+  let trailExits = 0;
+  let trailPnl = 0;
+  let eodExits = 0;
+  let eodPnl = 0;
+  const unmapped = new Set<string>();
+
+  for (const t of list) {
+    const reason = t?.exitReason;
+    const pnl = typeof t?.pnl === 'number' && Number.isFinite(t.pnl) ? t.pnl : 0;
+    if (reason === 'TRAIL') { trailExits += 1; trailPnl += pnl; }
+    else if (reason === 'EOD') { eodExits += 1; eodPnl += pnl; }
+    else if (reason && !engineExitEquivalence(reason)) unmapped.add(reason);
+  }
+
+  const parts: string[] = [];
+  if (trailExits > 0) {
+    parts.push(
+      `${trailExits} of ${list.length} trades exited on a TIGHTENED stop — the live guardian only RECORDS the trail decision and moves nothing (#936), so these exits would not have happened in the account`,
+    );
+  }
+  if (eodExits > 0) {
+    parts.push(`${eodExits} ended because the data ran out (not a real close)`);
+  }
+  if (unmapped.size > 0) {
+    parts.push(`${unmapped.size} exit reason(s) have no live equivalent recorded: ${[...unmapped].join(', ')}`);
+  }
+
+  return {
+    trades: list.length,
+    trailExits,
+    trailPnl: money(trailPnl),
+    eodExits,
+    eodPnl: money(eodPnl),
+    unmapped: [...unmapped],
+    note: parts.length ? parts.join('; ') + '.' : null,
+  };
+}

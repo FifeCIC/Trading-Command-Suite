@@ -4,7 +4,7 @@
  * ⚠️ THE CASES THAT MATTER ARE THE NON-EQUAL ONES. `TRAIL` and `EOD` are where a careless mapping
  * invents a live event that never happened.
  */
-import { ENGINE_EXIT_REASONS, engineExitEquivalence, engineExitCloseReason } from './exit-equivalence';
+import { ENGINE_EXIT_REASONS, engineExitEquivalence, engineExitCloseReason, summariseExitDivergence } from './exit-equivalence';
 import { CLOSE_REASONS } from '../close-reason';
 
 describe('engine exit → live close reason', () => {
@@ -54,5 +54,56 @@ describe('engine exit → live close reason', () => {
       const e = engineExitEquivalence(reason)!;
       if (e.closeReason) expect(canonical.has(e.closeReason)).toBe(true);
     }
+  });
+});
+
+describe('summariseExitDivergence — a run reports what live could not reproduce', () => {
+  it('▶ CANARY — a trail exit is counted and NOT re-mapped, and the note names #936', () => {
+    const s = summariseExitDivergence([
+      { exitReason: 'TRAIL', pnl: 12.345 },
+      { exitReason: 'TP', pnl: 4 },
+    ]);
+    expect(s.trades).toBe(2);
+    expect(s.trailExits).toBe(1);
+    expect(s.trailPnl).toBe(12.35);          // rounded to pennies, not truncated
+    expect(s.eodExits).toBe(0);
+    expect(s.note).toContain('1 of 2');
+    expect(s.note).toContain('#936');
+  });
+
+  it('▶ CANARY — a run with every exit mapped exactly reports NO note', () => {
+    const s = summariseExitDivergence([
+      { exitReason: 'TP', pnl: 1 },
+      { exitReason: 'SL', pnl: -1 },
+      { exitReason: 'TARGET', pnl: 2 },
+    ]);
+    expect(s.trailExits).toBe(0);
+    expect(s.eodExits).toBe(0);
+    expect(s.unmapped).toEqual([]);
+    expect(s.note).toBeNull();               // silence means "fully reproducible", not "not checked"
+  });
+
+  it('EOD is reported separately from the trail — a simulation artefact is not a missing mechanism', () => {
+    const s = summariseExitDivergence([
+      { exitReason: 'EOD', pnl: 5 },
+      { exitReason: 'TRAIL', pnl: 1 },
+    ]);
+    expect(s.eodExits).toBe(1);
+    expect(s.trailExits).toBe(1);
+    expect(s.note).toContain('data ran out');
+    expect(s.note).toContain('#936');
+  });
+
+  it('an unmapped exit reason is SURFACED, not dropped from the count', () => {
+    const s = summariseExitDivergence([{ exitReason: 'PARTIAL', pnl: 0 }]);
+    expect(s.unmapped).toEqual(['PARTIAL']);
+    expect(s.note).toContain('PARTIAL');
+    expect(s.trades).toBe(1);
+  });
+
+  it('no trades and no array are both "cannot judge", never a fabricated note', () => {
+    expect(summariseExitDivergence([]).note).toBeNull();
+    expect(summariseExitDivergence(undefined).note).toBeNull();
+    expect(summariseExitDivergence(null).trades).toBe(0);
   });
 });

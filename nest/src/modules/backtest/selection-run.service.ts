@@ -73,6 +73,7 @@ import { admitTrades } from './portfolio-admission';
 // #1282 — the ranker compares closes ACROSS symbols, so a blend of two publishers' price scales would
 // reorder the candidate list. One publisher, chosen and reported.
 import { chooseBarProvider } from './bar-provider';
+import { summariseExitDivergence, type ExitDivergence } from '../../common/trading/exit-guardian/exit-equivalence';
 import { APP_VERSION } from '../../version';
 
 /** The one numeric coercion this file needs, kept local (a `null` must not read as 0). */
@@ -266,6 +267,11 @@ export interface SelectionRunResult {
    * which of the two they are looking at.
    */
   admission: SelectionAdmission | null;
+  /**
+   * What this population could not reproduce in the live account — counted, not re-decided. `note:
+   * null` means every exit maps exactly. See `summariseExitDivergence()`.
+   */
+  exitDivergence: ExitDivergence;
   caveats: string[];
 }
 
@@ -875,6 +881,14 @@ export class SelectionRunService {
        */
       selectionRun: stored,
       admission,
+      /**
+       * ── WHAT THIS POPULATION COULD NOT REPRODUCE LIVE (2026-11-23) ──
+       * The same aggregate the single-symbol run reports, over the ADMITTED trades — i.e. exactly the
+       * population `totals` and `perSymbol` describe, so the count cannot disagree with the tile beside
+       * it. A movers run is where the trail matters most (the owner tuned toward letting the move run),
+       * and before this a per-day result gave no way to see that part of it was trail-dependent.
+       */
+      exitDivergence: summariseExitDivergence(admittedTrades),
       caveats,
     };
   }

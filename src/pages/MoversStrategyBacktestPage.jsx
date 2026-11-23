@@ -336,6 +336,27 @@ export default function MoversStrategyBacktestPage() {
   const comparisonView = useMemo(() => buildComparisonView(okRuns, totals), [okRuns, totals]);
 
   /**
+   * ── WHAT THESE DAYS COULD NOT REPRODUCE LIVE (2026-11-23) ──────────────────────────────────────
+   * Each day's server response carries `exitDivergence` over the population its tiles describe. A
+   * movers run is where the trail matters most — the strategy is tuned toward letting a move run — so
+   * the reader needs to know how much of the result would not have happened in the account, where the
+   * live guardian only RECORDS the trail decision (#936).
+   *
+   * ⚠️ REPORT ONLY. Nothing here re-decides an exit or hides a trade: the trail exits are real fills in
+   * the simulation and stay in every figure above. `null` when no day diverged — an absent note means
+   * "fully reproducible", and a zero-row block would imply a mechanism was checked and found fine.
+   */
+  const liveGapView = useMemo(() => {
+    const rows = okRuns.map((r) => r.exitDivergence).filter(Boolean);
+    const trailExits = rows.reduce((a, d) => a + (d.trailExits ?? 0), 0);
+    const trades = rows.reduce((a, d) => a + (d.trades ?? 0), 0);
+    const trailPnl = rows.reduce((a, d) => a + (d.trailPnl ?? 0), 0);
+    const withGap = rows.filter((d) => d.trailExits > 0).length;
+    if (!trailExits) return null;
+    return { trailExits, trades, trailPnl, withGap, days: rows.length };
+  }, [okRuns]);
+
+  /**
    * Config ids → the labels the trade-management table already uses. An id the page cannot label is
    * shown as the id itself, so a change is never rendered blank.
    */
@@ -853,6 +874,23 @@ export default function MoversStrategyBacktestPage() {
                   <NoticeBlock key={r.datasetName} notice={r.notice} compact />
                 ))}
               </div>
+            )}
+
+            {liveGapView && (
+              <p className="mvp-note mvp-note--warn">
+                <strong>
+                  {liveGapView.trailExits} of {liveGapView.trades} trade(s) exited on a tightened stop
+                </strong>{' '}
+                ({liveGapView.withGap === 1 ? '1 day' : `${liveGapView.withGap} of ${liveGapView.days} days`},
+                realised{' '}
+                {liveGapView.trailPnl.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+                ). The live guardian only <em>records</em> the trail decision and moves nothing (#936), so
+                those exits would not have happened in the account: a result leaning on the trail is an
+                upper bound, not a forecast.
+              </p>
             )}
 
             {caveats.length > 0 && (

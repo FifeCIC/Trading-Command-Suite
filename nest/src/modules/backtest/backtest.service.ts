@@ -65,7 +65,8 @@ import { createSessionChangeTracker } from './session-change';
 import { protectiveStopPrice } from '../../common/trading/exit-guardian/protective-stop';
 // #1242 — one translation between the engine's exit vocabulary and the live close reasons, so the two
 // can be read against each other instead of by hand.
-import { engineExitCloseReason, engineExitEquivalence } from '../../common/trading/exit-guardian/exit-equivalence';
+import { engineExitCloseReason, engineExitEquivalence, summariseExitDivergence, type ExitDivergence } from '../../common/trading/exit-guardian/exit-equivalence';
+import { summariseFillGap, type FillGapSummary } from '../../common/trading/exit-guardian/stop-fill-gap';
 // #1242 — the per-bar management rules (stop in force → target → time stop → tighten) now live in the
 // shared core, so the engine drives the same decisions a live close does instead of a copy of them.
 import { managePositionBar, PositionState } from '../../common/trading/exit-guardian/position-bar';
@@ -598,6 +599,14 @@ export interface TradeRecord {
   closeReason?: string | null;
   /** Set only where the equivalence is `qualified` — currently `TRAIL`, which live only records (#936). */
   closeReasonNote?: string;
+  /**
+   * The EXIT BAR's extremes (2026-11-23, #1335). Recorded so the fill gap can be measured: the engine
+   * books a stop exit at the stop level, and a bar whose adverse extreme is beyond that level is a fill
+   * a broker may not have given. Absent on runs made before this field existed — which
+   * `summariseFillGap()` reports as *not recorded*, never as *no gap*.
+   */
+  exitBarLow?: number;
+  exitBarHigh?: number;
   /**
    * #R14 — the stop and target the trade was measured against, or `undefined` for a run made
    * before they were recorded. Optional on purpose: an old run has no levels and must be able to
@@ -1153,6 +1162,21 @@ export interface BacktestResult extends BacktestResultBracketFields {
    * `GET /results/:id`, so the two surfaces cannot show different summaries of the same run.
    */
   tradeTotals?: TradeTotals;
+  /**
+   * What this run's exits could not reproduce in the live account (2026-11-23).
+   *
+   * ⚠️ IT COUNTS, IT DOES NOT RE-DECIDE. A `TRAIL` exit stays in the population and in the P&L — the
+   * simulation really did fill there — and this says how many of them live cannot act on, because the
+   * live guardian only records the trail decision (#936). Present on BOTH the `POST /run` response and
+   * `GET /results/:id`, so the fresh view and the stored view cannot disagree.
+   */
+  exitDivergence?: ExitDivergence;
+  /**
+   * How optimistic this run's stop fills are (2026-11-23, #1335): the engine books a stop at the stop
+   * LEVEL, and this counts the exits whose own bar had already traded past it. `measured: 0` means the
+   * run predates the exit-bar fields — **not recorded**, never *no gap*.
+   */
+  fillGap?: FillGapSummary;
   /**
    * The health verdict for the window this run measured, or null for a day-range run. Report-only —
    * see the note in `run()` for why the refusal waits for a session calendar.
@@ -2294,6 +2318,9 @@ export class BacktestService {
 
           let exitPrice = currentClose;
           let exitReason: TradeRecord['exitReason'] = 'EOD';
+          /** #1335 — the exit bar's extremes, filled at the exit and carried onto the trade. */
+          let exitBarLow: number | undefined;
+          let exitBarHigh: number | undefined;
           // ⚠️ #819 — this is an INSTANT, not a day bucket. It used to be
           // `...toISOString().split('T')[0]`, which forced EVERY persisted trade to 00:00:00 —
           // measured 2026-09-23: 556 of 556 trades at midnight, and on 5m runs entry == exit
@@ -2555,6 +2582,12 @@ export class BacktestService {
               exitPrice = decision.exit.price;
               exitReason = decision.exit.kind;
               exitDate = new Date(decision.exit.timeMs).toISOString();
+              // #1335 — the bar the exit happened ON, so the fill gap can be measured later. A
+              // SESSION exit prices at this bar's OPEN, and these are still this bar's extremes; that
+              // is stated rather than inferred, because a session exit is the one case where the fill
+              // reference and the bar's extremes are not the same instant.
+              exitBarLow = fb.low;
+              exitBarHigh = fb.high;
               break;
             }
           }
@@ -2655,6 +2688,9 @@ export class BacktestService {
             // but not where it was — "not recorded" wearing the face of "not applicable".
             stopLoss: Number(slPrice.toFixed(5)),
             takeProfit: Number(tpPrice.toFixed(5)),
+            // #1335 — the exit bar's own extremes, so the fill assumption can be measured per run.
+            ...(exitBarLow !== undefined ? { exitBarLow: Number(exitBarLow.toFixed(5)) } : {}),
+            ...(exitBarHigh !== undefined ? { exitBarHigh: Number(exitBarHigh.toFixed(5)) } : {}),
             score: Number(score.toFixed(1)),
             signal,
             protocolId: protocolId ?? 'unscoped',
@@ -3185,6 +3221,14 @@ export class BacktestService {
       // Costs come from THIS run's own request values, so the charge decomposing the gap is the one
       // that was actually applied — not a default reconstructed from a column.
       tradeTotals: tradeTotals((result as { trades?: TradeLike[] }).trades, { spread, slippage }),
+      /**
+       * ── HOW MUCH OF THIS RESULT LIVE COULD NOT REPRODUCE (2026-11-23) ──
+       * Attached on this path AND in `getResult()` for the same reason `tradeTotals` is: the fresh view
+       * and the stored view show the same trades, and a divergence count on only one of them reads as a
+       * difference between two runs. Comes from the trades already computed — it decides nothing.
+       */
+      exitDivergence: summariseExitDivergence((result as { trades?: TradeLike[] }).trades),
+      fillGap: summariseFillGap((result as { trades?: TradeLike[] }).trades),
       id: persistedRunId || result.id,
       // #1210 — the caller can now TELL whether a stored run exists. Without these two fields a
       // computed-but-unstored run was indistinguishable from a stored one.
@@ -3384,6 +3428,14 @@ export class BacktestService {
        * `null` in either column therefore makes `tradeTotals.costs` null, and the panel says so.
        */
       { spread: run.spread, slippage: run.slippage },
+    );
+
+    // Same field on the stored path as on the run response — see the note in `run()`.
+    (result as { exitDivergence?: unknown }).exitDivergence = summariseExitDivergence(
+      (result as { trades?: TradeLike[] }).trades,
+    );
+    (result as { fillGap?: unknown }).fillGap = summariseFillGap(
+      (result as { trades?: TradeLike[] }).trades,
     );
 
     return result;

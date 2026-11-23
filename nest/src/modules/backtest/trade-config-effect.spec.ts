@@ -1,10 +1,9 @@
 /**
  * trade-config-effect.spec.ts — THE COLUMN A READER READS MUST DESCRIBE BEHAVIOUR, NOT SCHEMA.
  *
- * ⚠️ Owner, 2026-11-23: *"That column is too much technical information. It can be stored in commenting
- * so we're not losing vital hints, but the information displayed in that column should be description of
- * what the value does and how it affects the trade or decisions made. Potentially even making some of it
- * dynamic based on the settings value."*
+ * ⚠️ Decided 2026-11-23: the column a reader reads must describe BEHAVIOUR, not schema. The hint text is
+ * kept in the note so nothing is lost, but the displayed value says what it does to the trade or the
+ * decision — and where it can, it reflects the actual settings value rather than a fixed sentence.
  *
  * So `effect` is a sentence about the TRADING, and `note` keeps the provenance. The guard has two jobs:
  *

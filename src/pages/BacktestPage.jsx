@@ -3783,6 +3783,66 @@ export default function BacktestPage({ subject: fixedSubject }) {
               </p>
             </div>
           )}
+          {/* ── WHAT THIS RUN CANNOT REPRODUCE LIVE (2026-11-23) ────────────────────────────────
+              The run's per-trade `closeReasonNote` says which exits live cannot match, but only one
+              trade at a time — a reader looking at a win rate had no way to see that part of the
+              population could never have happened in the account. The count comes from the API
+              (`exitDivergence`), computed in `summariseExitDivergence()`; nothing is re-decided here.
+              ⚠️ RENDERED ONLY WHEN SOMETHING DIVERGES — a run where every exit maps exactly gets no
+              panel, so its absence means "fully reproducible", which is information too. */}
+          {subject === 'strategy' && result?.exitDivergence?.note && (
+            <div className="bt-chart-section">
+              <h3>What this run cannot reproduce live</h3>
+              <div className="pb-info-row pb-info-row--warn">
+                <div className="pb-info-row-main">
+                  <strong>
+                    {result.exitDivergence.trailExits > 0
+                      ? `${result.exitDivergence.trailExits} exit(s) relied on a tightened stop`
+                      : 'Some exits have no live counterpart'}
+                  </strong>
+                  <span className="pb-info-badge">NOT LIVE-REPRODUCIBLE</span>
+                </div>
+                <p className="pb-info-note">{result.exitDivergence.note}</p>
+                {result.exitDivergence.trailExits > 0 && (
+                  <p className="pb-info-note">
+                    Those exits account for a realised{' '}
+                    <strong>{result.exitDivergence.trailPnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>.
+                    The stop is counted inside this run exactly as it filled — it is the <em>live</em> bot
+                    that would not have moved it, so a result tuned to rely on the trail is an upper
+                    bound, not a forecast.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── HOW OPTIMISTIC THE STOP FILLS ARE (2026-11-23, #1335) ─────────────────────────────
+              The engine books a stop at the stop LEVEL. A broker fills at the market. This counts the
+              exits whose own bar had already traded past the level, so the assumption is visible.
+              ⚠️ `measured: 0` means the run predates the exit-bar fields — "not recorded", which must
+              never render as "no gap". The percentage is the POTENTIAL gap: OHLC cannot order the path
+              inside a bar, so a bar beyond the stop may have traded smoothly through it. */}
+          {subject === 'strategy' && result?.fillGap?.note && (
+            <div className="bt-chart-section">
+              <h3>Stop-fill assumption</h3>
+              <div className="pb-info-row pb-info-row--warn">
+                <div className="pb-info-row-main">
+                  <strong>
+                    {result.fillGap.beyond} of {result.fillGap.measured} stop exit(s) had a bar extreme
+                    beyond the level
+                  </strong>
+                  <span className="pb-info-badge">POTENTIAL SLIPPAGE</span>
+                </div>
+                <p className="pb-info-note">
+                  Overshoot past the stop — median {result.fillGap.medianPct}%, p90{' '}
+                  {result.fillGap.p90Pct}%, worst {result.fillGap.worstPct}%. The engine fills at the
+                  level; a real broker stop fills at whatever the market offers when it triggers. These
+                  figures are the size of that assumption, not a charge against the P&amp;L above.
+                </p>
+              </div>
+            </div>
+          )}
+
           {subject === 'strategy' && outputs.trades !== false && result?.trades?.length > 0 && (
             <div className="bt-chart-section">
               <h3>Trades <span className="bt-measured-bars">· {Math.min(25, result.trades.length)} of {result.trades.length.toLocaleString()} shown, newest first</span></h3>
