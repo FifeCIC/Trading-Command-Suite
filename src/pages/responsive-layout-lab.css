@@ -51,7 +51,7 @@
 .rll-table-section h3, .rll-grid-section h3, .rll-sidebar-section h3, .rll-breakpoint-info h3 {
   margin: 0 0 0.4rem; font-size: 0.78rem;
 }
-.rll-hint { font-size: 0.62rem; color: var(--ink-soft); font-weight: 400; margin-left: 0.3rem; }
+
 
 /* ── Table ── */
 .rll-table-wrap {
@@ -66,7 +66,7 @@
   text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--line);
   white-space: nowrap; position: sticky; top: 0; z-index: 1;
 }
-.rll-th-pri-4, .rll-th-pri-5 { display: none; }
+
 .rll-table td {
   padding: 0.35rem 0.5rem; border-bottom: 1px solid rgba(128,128,128,0.05);
   white-space: nowrap;
@@ -302,3 +302,76 @@
 
 /* Live width readout so the reader can see the frame they are judging. */
 .rll-fluid-readout { font-size: 0.68rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+/* ── 2026-11-23 rewrite: reading strip + framed panels (named patterns from /development/theme) ── */
+
+.rll-summary {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.95rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+.rll-summary-item { display: flex; flex-direction: column; gap: 1px; }
+.rll-summary-item span {
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+}
+.rll-summary-item strong { font-family: var(--font-mono); font-size: var(--text-lg); }
+
+.rll-panel {
+  margin-bottom: 0.85rem;
+  padding: 0.85rem 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--bg-elev);
+}
+.rll-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+.rll-panel-head h2 { margin: 0; font-size: var(--text-md); font-weight: 700; }
+.rll-panel-meta {
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.rll-preview-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.rll-col-settings { margin-bottom: 0; }
+
+.rll-stats-row .rll-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+}
+.rll-stats-row .rll-stat span {
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+}
+.rll-stats-row .rll-stat strong { font-family: var(--font-mono); font-size: var(--text-lg); }
+
+.rll-fixed-panel h3 { margin: 0 0 0.6rem; font-size: var(--text-md); }

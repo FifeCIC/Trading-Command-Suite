@@ -19,6 +19,7 @@
  * scheme that happened to be active.
  */
 import { useUiStore } from '../stores/useUiStore';
+import './ThemePacksChooser.css';
 // ⚠️ From the shared module, NOT from App.jsx — App.jsx imports THIS component, so importing the
 // list back from App.jsx would be a cycle, and a cycle here resolves to `undefined` (a blank chooser
 // with no error). See the note at the top of src/core/theme-cards.js.

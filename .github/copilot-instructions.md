@@ -91,13 +91,19 @@ this here?* If yes, it belongs elsewhere.
 
 ## Where the full handbook lives
 
-The complete set — environment traps, pipeline invariants, UI and accessibility policy, database
-discipline, decision authority — is maintained with the project documentation outside this
-repository. This file is the part that applies to anyone reading the code.
+The complete set — environment traps, pipeline invariants, database discipline, decision authority —
+is maintained with the project documentation outside this repository. This file is the part that
+applies to anyone reading the code.
+
+⚠️ **The UI design rules were retired on 2026-11-23** (`ui-standards`, `page-design-methodology`).
+The owner's verdict was that the written rules produced conformity rather than a shared look, and
+that a *named* gallery is the better reference: build from `/development/theme`, which shows the
+approved specimens (Dotted Stat, Summary Strip, Dense Table, Spacious Table, Toolbar, Chip Bar,
+Detail Rail, Trade Card, Alert Card, Priority Panel). Accessibility policy still applies.
 
 ```
 …\Trading-Command-Suite-Documentation\agent-ops\
-    instructions\      the rule corpus (19 files) — read before structural work
+    instructions\      the rule corpus — read before structural work
     agents\            agent definitions
     skills\            reusable procedures
     AGENT-ATTENTION.md      current traps and standing directions

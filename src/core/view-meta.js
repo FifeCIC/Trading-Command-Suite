@@ -464,12 +464,10 @@ const VIEW_META = {
     css: 'src/pages/ui-review.css',
     api: ['GET /api/system/settings/ui-review', 'PUT /api/system/settings/ui-review'],
   },
-  // ⚠️ '/development/theme-lab' WAS HERE AND IS DELETED (2026-10-13, owner request). View: Theme Lab
-  // is retired; its sections are now the Appearance element groups, and the route redirects to
-  // /appearance/layout-guide. The shared stylesheet it was written against — src/pages/theme-lab.css —
-  // DID NOT MOVE: it is still what `.tl-section`, `.tl-hint` and friends are defined in, and the
-  // Appearance group pages import it. If it is ever renamed, those imports must follow, or every
-  // example renders unstyled (a failure that looks like broken components, not a missing stylesheet).
+  // ⚠️ '/development/theme-lab' WAS HERE AND IS DELETED (2026-10-13, owner request). Its examples
+  // became the Appearance element groups, which were themselves deleted on 2026-11-23 and replaced by
+  // `/development/theme`. `src/pages/theme-lab.css` went with them; the shared `.tl-*` styles no
+  // longer exist, so do not cite them. The route redirects to /development/theme.
   // A stale row here is not harmless: scripts/verify-view-meta-routes.cjs compares view-meta against
   // the live routes, and nav renders from the same list.
   // ⚠️ '/status/meta-stack-pipeline' WAS HERE AND IS DELETED (2026-10-08, requirement).
@@ -888,8 +886,8 @@ const VIEW_META = {
     css: 'src/pages/identity-map-lab.module.css',
     api: [],
   },
-  // MOVED to Settings 2026-10-02 (owner, Page Walkthrough) — a per-machine preference.
-  '/appearance/screen-assignment': {
+  // BACK IN SETTINGS 2026-11-23 — the Appearance area it moved through was deleted.
+  '/settings/screen-assignment': {
     tier: 'premium',
     review: 'approved',
     label: 'Screen Assignment',
@@ -897,12 +895,24 @@ const VIEW_META = {
     css: 'src/pages/screen-cockpit.css',
     api: [],
   },
-  '/appearance/responsive-layout-lab': {
+  // MOVED to Development 2026-11-23 (the Appearance area was deleted). Rewritten without the
+  // paragraph explainers that sat between every demo.
+  '/development/responsive-layout-lab': {
     tier: 'premium',
     review: 'approved',
     label: 'Responsive Layout Lab',
     file: 'src/pages/ResponsiveLayoutLabPage.jsx',
     css: 'src/pages/responsive-layout-lab.css',
+    api: [],
+  },
+  // The one replacement for the deleted Appearance area (owner, 2026-11-23). A gallery of NAMED
+  // design specimens; it reads nothing, so it works with the API down.
+  '/development/theme': {
+    tier: 'premium',
+    review: 'pending',
+    label: 'Theme',
+    file: 'src/pages/ThemePage.jsx',
+    css: 'src/pages/theme-page.css',
     api: [],
   },
   '/lab/charts-lab': {
@@ -1058,94 +1068,6 @@ const VIEW_META = {
     css: 'src/pages/settings-education.css',
     api: [],
   },
-  // Appearance area — NEW 2026-10-13 (owner request). One entry per view the area will host; the
-  // moved pages (Appearance, Screen Assignment, Responsive Layout Lab, Motion, Forms) land beside it.
-  // ⚠️ `tier` is REQUIRED and must be exactly 'free' or 'premium' — `scripts/generate-free-manifest.cjs`
-  // throws on anything else, which is how it caught this entry declaring "pro". The manifest is an
-  // ALLOW-LIST, so a page that omits a tier cannot leak into the free edition; it fails the generator
-  // instead. Set to 'premium': this is the advanced visual-options surface, not a free-edition view.
-  '/appearance/layout-guide': {
-    label: 'Layout Guide',
-    area: 'appearance',
-    tier: 'premium',
-    file: 'src/pages/AppearanceAreaPage.jsx',
-    api: [],
-    review: 'pending',
-  },
-  // Pattern Library — 2026-10-13. A static reading of the Page Walkthrough verdicts, so it fetches
-  // nothing and works with the API down.
-  '/appearance/patterns': {
-    label: 'Pattern Library',
-    area: 'appearance',
-    tier: 'premium',
-    file: 'src/pages/AppearancePatternsPage.jsx',
-    api: [],
-    review: 'pending',
-  },
-  // Motion and Forms — new 2026-10-13. Both are MOVES rather than new work: their sections were
-  // composed into Theme Lab and are now pages of their own in the Appearance area (owner request).
-  // No API — they render live app components and form controls, and fetch nothing.
-  // Information — 2026-10-30. The ONE reference for how a sentence is displayed (see InfoNote.jsx).
-  // Renders the app's own component, so it cannot drift from the pages that use it. Fetches nothing.
-  '/appearance/info': {
-    label: 'Information',
-    area: 'appearance',
-    tier: 'premium',
-    file: 'src/pages/AppearanceInfoPage.jsx',
-    api: [],
-    review: 'pending',
-  },
-  '/appearance/motion': {
-    label: 'Motion',
-    area: 'appearance',
-    tier: 'premium',
-    file: 'src/pages/AppearanceMotionPage.jsx',
-    api: [],
-    review: 'pending',
-  },
-  '/appearance/forms': {
-    label: 'Forms',
-    area: 'appearance',
-    tier: 'premium',
-    file: 'src/pages/AppearanceFormsPage.jsx',
-    api: [],
-    review: 'pending',
-  },
-  // Element groups — 2026-10-13. The four pages below carry the sections that used to make up
-  // View: Theme Lab, split by what a reader is trying to decide (colour, container, table, control).
-  // No API — they render static examples against the active theme tokens.
-  '/appearance/colour': {
-    label: 'Colour',
-    area: 'appearance',
-    tier: 'premium',
-    file: 'src/pages/AppearanceColourPage.jsx',
-    api: [],
-    review: 'pending',
-  },
-  '/appearance/surfaces': {
-    label: 'Surfaces & Cards',
-    area: 'appearance',
-    tier: 'premium',
-    file: 'src/pages/AppearanceSurfacesPage.jsx',
-    api: [],
-    review: 'pending',
-  },
-  '/appearance/data-display': {
-    label: 'Data Display',
-    area: 'appearance',
-    tier: 'premium',
-    file: 'src/pages/AppearanceDataDisplayPage.jsx',
-    api: [],
-    review: 'pending',
-  },
-  '/appearance/interactive': {
-    label: 'Interactive',
-    area: 'appearance',
-    tier: 'premium',
-    file: 'src/pages/AppearanceInteractivePage.jsx',
-    api: [],
-    review: 'pending',
-  },
   // ⚠️ '/settings/theme-packs' REMOVED 2026-10-13 (owner request). Its gallery duplicated the
   // shell rail's pack controls and the new Appearance area's chooser — three surfaces for one setting.
 
@@ -1170,7 +1092,7 @@ const VIEW_META = {
     ],
   },
   // ── Settings split (#617) — one page per META.Stack layer question ──
-  '/appearance/appearance': {
+  '/settings/appearance': {
     tier: 'free',
     review: 'approved',
     label: 'Appearance',
@@ -1399,3 +1321,4 @@ export function formatViewMeta(pathname) {
 }
 
 export default VIEW_META;
+

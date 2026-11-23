@@ -1,6 +1,6 @@
 {
   "name": "tradingcs",
-  "version": "0.172.1",
+  "version": "0.173.0",
   "releaseStage": "alpha",
   "private": true,
   "license": "AGPL-3.0",
@@ -75,7 +75,10 @@
     "roadmap:sync": "node ./scripts/roadmap-sync.cjs",
     "test:arch-docs": "node ./scripts/validate-architecture-docs.cjs --self-test",
     "test:backtest-compare": "node --test src/core/backtest-compare.test.js",
+    "test:backtest-unused-fields": "node --test src/core/backtest-unused-fields.test.js",
     "test:backtest-totals": "node --test src/core/backtest-totals.test.js",
+    "test:best-record": "node --test src/core/best-record.test.js",
+    "test:movers-steps": "node --test src/features/movers-strategy/steps.test.js",
     "test:bridge-bounds": "node scripts/validate-bridge-recovery-bounds.cjs --self-test",
     "test:bridge-choke-point": "node ./scripts/validate-bridge-order-choke-point.cjs --self-test",
     "test:bridge-credential-binding": "python scripts/mt5-bridge/test_credential_binding.py",

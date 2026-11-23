@@ -104,7 +104,7 @@ test('the duplicate-id trap: hiding /settings/settings-education leaves the /edu
 test('hide: true adds a route to the withheld set', () => {
   const routes = resolveHiddenRoutes({ entries: { '/lab/timeline': { hide: true } } });
   assert.ok(routes.has('/lab/timeline'));
-  assert.ok(routes.has('/appearance/forms'), 'defaults must survive a store read');
+  assert.ok(routes.has('/development/theme'), 'defaults must survive a store read');
 });
 
 test('an explicit hide: false overrides a default — hiding is not a one-way door', () => {
@@ -247,7 +247,7 @@ test('an explicit visibility wins over a stale hide value', () => {
 });
 
 test('undecided is not public when the route is in the curated withheld set', () => {
-  assert.equal(effectiveVisibility(null, '/appearance/forms'), VISIBILITY.WITHHELD);
+  assert.equal(effectiveVisibility(null, '/development/theme'), VISIBILITY.WITHHELD);
   assert.equal(effectiveVisibility(null, '/signals/signals-overview'), VISIBILITY.PUBLIC);
 });
 

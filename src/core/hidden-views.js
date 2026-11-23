@@ -65,19 +65,14 @@ import { EXPERIENCE_LEVELS, isNavVisible } from './experience-levels.js';
  * of these back, the walkthrough says so and this list must not overrule it.
  */
 export const DEFAULT_HIDDEN_ROUTES = new Set([
-  // ── Pack 1: the design-system guide (9 pages, none ever scored) ────────────────────────────────
-  // A style reference is a maintainer's tool, not a trader's. Nine sidebar entries describing our
-  // own CSS were the single largest block of noise in the nav, and they are the least risky pack to
-  // hold back — no behaviour, no data, nothing a first-run user can break.
-  '/appearance/layout-guide',
-  '/appearance/patterns',
-  '/appearance/info',
-  '/appearance/colour',
-  '/appearance/surfaces',
-  '/appearance/data-display',
-  '/appearance/interactive',
-  '/appearance/motion',
-  '/appearance/forms',
+  // ── Pack 1: the design-system guide — DELETED 2026-11-23 ───────────────────────────────────────
+  // The Appearance area was removed on the owner's instruction ("delete everything in the Appearance
+  // area … a fresh start"). Its nine element-group routes no longer exist, so there is nothing left to
+  // hide here. The one replacement is `/development/theme`, withheld below under Pack 8.
+  //
+  // ⚠️ Stale entries are pruned from `scripts/page-visibility-baseline.json` with
+  // `validate-page-visibility.cjs --write`; leaving a route here that the nav no longer has is
+  // harmless to the gate but misleading to the next reader.
 
   // ── Pack 2: Lab experiments (3 pages, scored 2–4) ──────────────────────────────────────────────
   // Snapshots / replay / chart scratchpad are investigative tools whose output is a picture, not a
@@ -115,6 +110,15 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   // appear in someone else's navigation.
   '/lab/movers-strategy-backtest',
   '/lab/movers-cockpit',
+
+  // ── Pack 8 (continued): the 2026-11-23 Appearance removal ─────────────────────────────────────
+  // `/development/theme` is the replacement design gallery. The other three are MOVED pages: their
+  // route paths are new even though the components are old, so the gate treats them as new. Withheld
+  // until the owner has looked at them; `OWNER_SEES_WITHHELD` keeps them in his rail.
+  '/development/theme',
+  '/development/responsive-layout-lab',
+  '/settings/appearance',
+  '/settings/screen-assignment',
 
   // ── Pack 5: too weak to show, kept for the requirement to finish (2026-11-06) ───────────────────────
   // Owner, Research walkthrough: hide these *from other users* while they are still being worked on.

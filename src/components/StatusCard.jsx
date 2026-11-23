@@ -5,13 +5,13 @@
  * Requirement (2026-11-18), on /development/movers-treatment:
  *   *"I do not like screen clutter - large blocks of information need to be displayed through the
  *   users desire to see it."* … *"some of the values within it could be status cards … and hovering
- *   over tells us more information. This should be a standard approach presented in the Appearance
- *   area to encourage it. Maybe a small icon in the top right corner of cards that have additional
+ *   over tells us more information. This should be a standard approach presented in the Theme
+ *   gallery to encourage it. Maybe a small icon in the top right corner of cards that have additional
  *   information would help users realise that there is more to read."*
  *
  * ── WHERE THIS SITS AMONG THE EXISTING PATTERNS ───────────────────────────────────────────────
- * `AppearanceInfoPage` already fixes how a SENTENCE about data is displayed (`InfoNote`), how a
- * FAILURE is displayed (`NoticeBlock`), and that an explanation of what a control IS lives behind ℹ
+ * `InfoNote` fixes how a SENTENCE about data is displayed, how a FAILURE is displayed
+ * (`NoticeBlock`), and that an explanation of what a control IS lives behind ℹ
  * (`PageInfoPopover`). This is the fourth case, and it was missing:
  *
  *   a NUMBER that can be read at a glance, whose justification is worth reading only sometimes.
@@ -34,7 +34,7 @@
  * no such trap — it positions against its own `position: relative` card.
  *
  * ── ⚠️ TONE COLOURS THE BORDER AND THE LABEL ONLY ─────────────────────────────────────────────
- * `AppearanceInfoPage` records why: the semantic tones fail WCAG AA as body text on a light panel.
+ * The deleted `AppearanceInfoPage` recorded why: the semantic tones fail WCAG AA as body text on a light panel.
  * `.app-notice--warning` predates that rule and colours its whole body amber; this does not repeat it.
  */
 
@@ -93,3 +93,4 @@ export default function StatusCard({ value, label, icon, detail, tone = 'neutral
     </div>
   );
 }
+

@@ -1,0 +1,101 @@
+/**
+ * ThemePacksChooser.css — the pack swatch grid, moved here 2026-11-23.
+ *
+ * The rules used to live in `src/pages/appearance-area.css`, the stylesheet of the deleted
+ * Appearance area. The chooser itself survived that deletion, so its styles travel WITH it now:
+ * a component that imports its own sheet cannot be left unstyled because another page's chunk has
+ * not loaded yet.
+ */
+
+.tp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.9rem;
+}
+
+/* A full coloured outline with corner-only accents — the project's requested card shape. */
+.theme-section-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.theme-section-card.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Corner-only accents — drawn with two pseudo-elements rather than an image. */
+.neon-lab-card::before,
+.neon-lab-card::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--accent);
+  opacity: 0.85;
+  pointer-events: none;
+}
+.neon-lab-card::before {
+  top: 4px;
+  left: 4px;
+  border-right: none;
+  border-bottom: none;
+}
+.neon-lab-card::after {
+  bottom: 4px;
+  right: 4px;
+  border-left: none;
+  border-top: none;
+}
+
+.tp-swatch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 3px;
+  height: 62px;
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.tp-swatch-bg { grid-row: span 2; }
+.tp-swatch-accent { border-radius: 2px; }
+.tp-swatch-line { opacity: 0.5; border-radius: 2px; }
+
+.tp-body { flex: 1; }
+.tp-name { margin: 0 0 0.2rem; font-size: var(--text-md); color: var(--ink); }
+.tp-desc { margin: 0 0 0.5rem; font-size: var(--text-sm); line-height: 1.45; color: var(--ink-soft); }
+.tp-bars { display: flex; gap: 4px; }
+.tp-bar { width: 18px; height: 8px; border-radius: 2px; border: 1px solid var(--line); }
+
+/* ⚠️ 44px — the app's tap-target minimum. Stated because this control sits in a card and is easy
+   to shrink by accident. */
+.tp-choose {
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.tp-choose:hover,
+.tp-choose:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tp-choose.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}

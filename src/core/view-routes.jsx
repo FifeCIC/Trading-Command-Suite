@@ -74,29 +74,10 @@ const ProtocolTrailPage = lazy(() => import('../pages/ProtocolTrailPage.jsx'));
 const SinglesMonitorPage = lazy(() => import('../pages/SinglesMonitorPage.jsx'));
 const ProtocolsLadderPage = lazy(() => import('../pages/ProtocolsLadderPage.jsx'));
 const SymbolsLadderPage = lazy(() => import('../pages/SymbolsLadderPage.jsx'));
-// ⚠️ `ThemePage` import REMOVED 2026-10-13 with the page itself (owner request) — it was the Theme
-// Packs gallery, whose pack chooser now lives in the Appearance area. Leaving the import would have
-// broken the build the moment the file was deleted, which is the correct order: route, then file.
-const AppearanceAreaPage = lazy(() => import('../pages/AppearanceAreaPage.jsx'));
-// ⚠️ THESE TWO IMPORTS WERE MISSING ON FIRST ATTEMPT (2026-10-13) and the BUILD PASSED WITHOUT THEM.
-// The route map below referenced `AppearanceMotionPage` / `AppearanceFormsPage` while nothing imported
-// them, so the map held two undefined identifiers. Vite does not fail on that — it is a runtime
-// ReferenceError, and the whole app rendered "App Failed to Load" with the name of the missing
-// identifier as the only clue. The lesson is not "be careful": it is that **a green build does not
-// prove a view works**, and this page pair was only caught by opening the route in the browser.
-const AppearanceMotionPage = lazy(() => import('../pages/AppearanceMotionPage.jsx'));
-// Element groups — the sections of the retired Theme Lab, split by what a reader is deciding.
-// They all render ONE component (`ThemeLabSections`) with a different `group` prop, so the examples
-// exist once. A missing import here is the failure mode this repo keeps re-finding: the route map
-// references an identifier that was never imported, Vite still builds, and the app renders
-// "<Name> is not defined" at runtime. Verify new routes in the browser, not by a green build.
-const AppearanceColourPage = lazy(() => import('../pages/AppearanceColourPage.jsx'));
-const AppearanceSurfacesPage = lazy(() => import('../pages/AppearanceSurfacesPage.jsx'));
-const AppearanceDataDisplayPage = lazy(() => import('../pages/AppearanceDataDisplayPage.jsx'));
-const AppearanceInteractivePage = lazy(() => import('../pages/AppearanceInteractivePage.jsx'));
-const AppearancePatternsPage = lazy(() => import('../pages/AppearancePatternsPage.jsx'));
-const AppearanceInfoPage = lazy(() => import('../pages/AppearanceInfoPage.jsx'));
-const AppearanceFormsPage = lazy(() => import('../pages/AppearanceFormsPage.jsx'));
+// ⚠️ `ThemePage` RETURNED 2026-11-23 (owner request) — the Appearance area was deleted and ONE
+// Development page called "Theme" replaced it. It is a gallery of named design specimens, not the old
+// Theme Packs gallery, so the name is reused deliberately and the file is new (`./ThemePage.jsx`).
+const ThemePage = lazy(() => import('../pages/ThemePage.jsx'));
 const ProtocolsPerformancePage = lazy(() => import('../pages/ProtocolsPerformancePage.jsx'));
 // MetaStackPipelinePage import REMOVED 2026-10-08 — the view was merged into Pipeline Graph Lab,
 // which imports the board directly. The file still exists as that board.
@@ -237,8 +218,7 @@ const PositionLifecyclePage = lazy(() => import('../pages/PositionLifecyclePage.
 const ResponsiveLayoutLabPage = lazy(() => import('../pages/ResponsiveLayoutLabPage.jsx'));
 const ChartsLabPage = lazy(() => import('../pages/ChartsLabPage.jsx'));
 // ⚠️ REMOVED 2026-10-13: `import ThemeLabPage from '../pages/ThemeLabPage.jsx';` — the page is
-// retired and deleted. If you are here because a route stopped resolving, the redirect lives in App.jsx
-// (/development/theme-lab → /appearance/layout-guide); do not re-add the import.
+// retired and deleted. Its old route now redirects to `/development/theme`; do not re-add the import.
 const PipelineGraphLabPage = lazy(() => import('../pages/PipelineGraphLabPage.jsx'));
 const IdentityMapLabPage = lazy(() => import('../pages/IdentityMapLabPage.jsx'));
 const FeatureLabPage = lazy(() => import('../pages/FeatureLabPage.jsx'));
@@ -259,10 +239,10 @@ const RegisteredMoversPage = lazy(() => import('../pages/RegisteredMoversPage.js
 // ── Other ──
 const DailyBriefingPage = lazy(() => import('../pages/DailyBriefingPage.jsx'));
 const RiskControlsPage = lazy(() => import('../pages/RiskControlsPage.jsx'));
-// ⚠️ `ThemePage` (the Theme Packs gallery) was imported here until 2026-10-13, when the page was
-// retired (owner request) and its pack chooser moved to the Appearance area. The ORDER matters:
-// unregister the route, drop the import, THEN delete the file — deleting the file first leaves a stale
-// import, so the build fails and the repository looks broken rather than moved.
+// ⚠️ `ThemePage` (the old Theme Packs gallery) was imported here until 2026-10-13. The name was
+// reused 2026-11-23 for the design gallery at `/development/theme`, imported near the top.
+// The ORDER matters: unregister the route, drop the import, THEN delete the file — deleting the file
+// first leaves a stale import, so the build fails and the repository looks broken rather than moved.
 const ScoringOverviewPage = lazy(() => import('../pages/ScoringOverviewPage.jsx'));
 const SnapshotLibraryPage = lazy(() => import('../pages/SnapshotLibraryPage.jsx'));
 const PersonalFinancesPage = lazy(() => import('../pages/PersonalFinancesPage.jsx'));
@@ -446,8 +426,8 @@ export const VIEW_COMPONENTS = {
   'screen-assignment': ScreenCockpitPage,
   'responsive-layout-lab': ResponsiveLayoutLabPage,
   'charts-lab': ChartsLabPage,
-  // ⚠️ 'theme-lab' REMOVED 2026-10-13 — the page is retired; its sections are the Appearance element
-  // groups above. The route redirects rather than 404s.
+  // ⚠️ 'theme-lab' REMOVED 2026-10-13 — the page is retired; `/development/theme` is the design
+  // gallery now. The old route redirects rather than 404s.
   'pipeline-graph-lab': PipelineGraphLabPage,
   // Temporary diagnostic — see IdentityMapLabPage.jsx header. Remove once the identity
   // question is settled, or promote it to a permanent System page.
@@ -474,18 +454,10 @@ export const VIEW_COMPONENTS = {
 
   // Other
   // ⚠️ 'theme-packs' REMOVED 2026-10-13 — the ThemePage gallery is retired (owner request); pack
-  // selection lives in the Appearance area's chooser. Its route redirects there.
-  // Appearance area — new 2026-10-13 (owner request). One entry per view the area will host; the
-  // moved pages (Appearance, Screen Assignment, Responsive Layout Lab, Motion, Forms) land beside it.
-  'layout-guide': AppearanceAreaPage,
-  'patterns': AppearancePatternsPage,
-  'info': AppearanceInfoPage,
-  'motion': AppearanceMotionPage,
-  'forms': AppearanceFormsPage,
-  'colour': AppearanceColourPage,
-  'surfaces': AppearanceSurfacesPage,
-  'data-display': AppearanceDataDisplayPage,
-  'interactive': AppearanceInteractivePage,
+  // selection lives in the Settings area's Appearance chooser.
+  // ⚠️ THE APPEARANCE AREA WAS DELETED 2026-11-23 (owner request). Its nine element-group pages are
+  // gone with it; `/development/theme` is the one replacement and it carries the named designs.
+  'theme': ThemePage,
   'monitoring': MonitoringPage,
   'roadmap': RoadmapPage,
   'personal-finances': PersonalFinancesPage,

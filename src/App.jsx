@@ -1257,16 +1257,17 @@ export default function App() {
               ⚠️ DIRECTION IS PER VIEW and the NAV TREE decides it, not a neighbouring redirect.
               Reading one case backwards is how an agent would re-open this. */}
           <Route path="/protocols/symbols-ladder" element={<Navigate to="/scoring/symbols-ladder" replace />} />
-          {/* ⚠️ APPEARANCE AREA MOVES (2026-10-13, owner request). The three views below moved into
-              the new Appearance area, and the Theme Packs page was retired into its chooser. */}
-          <Route path="/settings/appearance" element={<Navigate to="/appearance/appearance" replace />} />
-          <Route path="/settings/screen-assignment" element={<Navigate to="/appearance/screen-assignment" replace />} />
-          <Route path="/development/responsive-layout-lab" element={<Navigate to="/appearance/responsive-layout-lab" replace />} />
-          <Route path="/settings/theme-packs" element={<Navigate to="/appearance/layout-guide" replace />} />
-          {/* Theme Lab retired 2026-10-13 (owner request). Its sections became the Appearance element
-              groups; this redirect keeps `/development/theme-lab` resolving rather than showing a
-              blank view to anyone following an older link or handoff. */}
-          <Route path="/development/theme-lab" element={<Navigate to="/appearance/layout-guide" replace />} />
+          {/* ⚠️ THE APPEARANCE AREA WAS DELETED 2026-11-23 (owner request: "delete everything in the
+              Appearance area … we'll have a single page in the Development area called Theme instead").
+              Its three surviving pages are REAL routes again — /settings/appearance,
+              /settings/screen-assignment and /development/responsive-layout-lab — so those redirects are
+              gone. Every retired /appearance/* path lands on the Theme gallery rather than a blank view,
+              because a bookmark written before the move should still resolve. */}
+          <Route path="/appearance" element={<Navigate to="/development/theme" replace />} />
+          <Route path="/appearance/*" element={<Navigate to="/development/theme" replace />} />
+          {/* Pack selection moved onto the Settings Appearance page with the same change. */}
+          <Route path="/settings/theme-packs" element={<Navigate to="/settings/appearance" replace />} />
+          <Route path="/development/theme-lab" element={<Navigate to="/development/theme" replace />} />
           <Route path="/protocols/singles-monitor" element={<Navigate to="/scoring/singles-monitor" replace />} />
           {/* ⚠️ PHANTOM VIEW-META ENTRIES REMOVED 2026-10-15 — these five paths had a view-meta entry
               but no route, because routes are generated from the NAV TREE and the nav moved these

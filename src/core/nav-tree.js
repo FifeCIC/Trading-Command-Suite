@@ -471,15 +471,11 @@ export const NAV_TREE = {
       { kind: 'section-header', id: 'settings-app', label: 'Application', icon: '' },
       { id: 'settings', label: 'General', icon: '⚙' },
       { id: 'monitoring', label: 'Monitoring', icon: '🛰' },
-      // ⚠️ `appearance` MOVED to the Appearance area 2026-10-13 (owner request) — the whole visual
-      // surface now lives in one place instead of being split across two menus. Its old route
-      // `/settings/appearance` redirects, so links keep working.
-      //
-      // ⚠️ `screen-assignment` also MOVED to the Appearance area on the same day. It was moved here
-      // from Development on 2026-10-02 for a good reason — assigning a board to a monitor is a
-      // per-machine preference, not engineering tooling. It has now moved again for a different good
-      // reason: it is a VISUAL option, and the requirement is assembling the visual options in one area.
-      // Two moves is not indecision; the area it belongs to was only created today.
+      // ⚠️ RETURNED HERE 2026-11-23 when the Appearance area was deleted (owner request: "delete
+      // everything in the Appearance area … a fresh start"). Both are per-machine preferences, which
+      // is the question this group answers. The design vocabulary now lives at /development/theme.
+      { id: 'appearance', label: 'Appearance', icon: '🌈' },
+      { id: 'screen-assignment', label: 'Screen Assignment', icon: '🖥️' },
       // ── Reference — the full lists, not the everyday surfaces ──
       { kind: 'section-header', id: 'settings-reference', label: 'Reference', icon: '' },
       { id: 'user-preferences', label: 'User Preferences', icon: '⚙' },
@@ -488,54 +484,6 @@ export const NAV_TREE = {
       // one setting. Its route redirects to the chooser rather than 404-ing.
       { id: 'settings-database', label: 'Database', icon: '⊞' },
       { id: 'settings-education', label: 'Education', icon: '◉' },
-    ],
-  },
-  // ── Appearance area (/appearance/ prefix) — NEW 2026-10-13 (owner request) ──
-  // Purpose, in the project's words: *"I'm using this project to establish a theme package that can be
-  // carried forward to other projects... a gallery of visual options for users to fine-tune their UI."*
-  // It holds layout GUIDANCE (so an agent building a page can choose a structure that suits it) and
-  // the colour schemes, which are deliberately separate concerns — see the note in App.jsx about the
-  // deleted `ai-original` pack, which changed structure and colour together.
-  //
-  // ⚠️ Sits immediately before `development` because the requirement is for it "beside Development".
-  // ⚠️ PLACEMENT MATTERS HERE, AND I GOT IT WRONG ONCE: the first version of this block was inserted
-  // directly above `development: {`, which put it BETWEEN Development's comments and its declaration —
-  // so Development's explanatory notes appeared to describe Appearance. A comment block and the entry
-  // it explains must stay adjacent.
-  //
-  // ⚠️ SAMPLE VIEWS MUST USE THIS APP'S OWN REAL DATA. Requirement (2026-10-13): I sometimes mention using
-  // dummy/demo data. I don't want that applied actually. Only use this apps own real data to create
-  // examples but when we update React Stack Core (my boilerplate) we will convert them to a variety of
-  // topics with demo data. So a gallery example renders a REAL view of this app — never a fixture.
-  // Invented content here would be indistinguishable from a working feature, which is the defect this
-  // repo has already paid for more than once.
-  //
-  // Views moved here from Settings and Development (owner request, same day): Appearance, Screen
-  // Assignment and Responsive Layout Lab. Their old routes redirect, so links and bookmarks survive.
-  appearance: {
-    label: 'Appearance',
-    views: [
-      { id: 'layout-guide', label: 'Layout Guide', icon: '🎨' },
-      // The register of patterns the requirement specifies, read from the Page Walkthrough. It sits beside
-      // Layout Guide because they answer the same question at different depths: Layout Guide is a
-      // handful of decisions, this is the full evidence-backed list of what to build a sample from.
-      { id: 'patterns', label: 'Pattern Library', icon: '🧩' },
-      // The one reference for how a SENTENCE is displayed (2026-10-30). It sits beside Pattern Library
-      // because both are libraries, but the split matters: Pattern Library is what to BUILD from, this is
-      // the component every annotating sentence must use.
-      { id: 'info', label: 'Information', icon: '💬' },
-      // Element groups — 2026-10-13. These were the sections of View: Theme Lab, which is retired:
-      // a reader looking for "what colour for a panel" wants a Colour page, not a 300-line sandbox
-      // mixing colour, cards, motion and tables. Each group is a page of its own.
-      { id: 'colour', label: 'Colour', icon: '🖌️' },
-      { id: 'surfaces', label: 'Surfaces & Cards', icon: '🃏' },
-      { id: 'data-display', label: 'Data Display', icon: '📊' },
-      { id: 'interactive', label: 'Interactive', icon: '🖱️' },
-      { id: 'appearance', label: 'Appearance', icon: '🌈' },
-      { id: 'motion', label: 'Motion', icon: '🎬' },
-      { id: 'forms', label: 'Forms', icon: '📝' },
-      { id: 'screen-assignment', label: 'Screen Assignment', icon: '🖥️' },
-      { id: 'responsive-layout-lab', label: 'Responsive Layout Lab', icon: '📐' },
     ],
   },
   // ── Development — engineering tooling and experimental prototypes ──
@@ -603,12 +551,17 @@ export const NAV_TREE = {
       // it calls two endpoints that only query the database.
       { id: 'performance-change', label: 'Performance Change', icon: '📈' },
       // ── Theme engineering ──
-      // ⚠️ View: Theme Lab was RETIRED 2026-10-13 (owner request) and nothing replaces it here. Its
-      // examples were one long page mixing colour, cards, motion and tables, reachable from Development
-      // because that is where sandboxes live. They are now element groups in the APPEARANCE area, which
-      // is where someone choosing a colour would look. The route redirects to /appearance/layout-guide,
-      // so `/development/theme-lab` still resolves — a retired route with no redirect is a blank view
-      // that reads as a broken build rather than as a move.
+      // ⚠️ THE APPEARANCE AREA WAS DELETED 2026-11-23 (owner request: "delete everything in the
+      // Appearance area … we'll have a single page in the Development area called Theme instead").
+      // `theme` is that page: a GALLERY OF NAMED DESIGN SPECIMENS — Dotted Stat, Summary Strip, Dense
+      // Table, Spacious Table, Toolbar, Chip Bar, Detail Rail, Trade Card, Alert Card, Priority Panel.
+      // It is the vocabulary a new page should be built from, and the only visual reference now.
+      //
+      // `responsive-layout-lab` came with it: the old copy explained itself in paragraphs between every
+      // demo, which the owner called "too overwhelming". It is labels and specimens now.
+      { kind: 'section-header', id: 'dev-theme', label: 'Theme', icon: '🎨' },
+      { id: 'theme', label: 'Theme', icon: '🎨' },
+      { id: 'responsive-layout-lab', label: 'Responsive Layout Lab', icon: '📐' },
       // ── META.Stack internals ──
       { kind: 'section-header', id: 'dev-metastack', label: 'META.Stack Internals', icon: '🔗' },
       { id: 'meta-stack-cockpit', label: 'META.Stack Cockpit', icon: '🧭' },
@@ -665,3 +618,4 @@ export function resolveArea(viewId) {
   }
   return null;
 }
+

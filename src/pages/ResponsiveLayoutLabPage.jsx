@@ -1,9 +1,24 @@
+/**
+ * ResponsiveLayoutLabPage — /development/responsive-layout-lab
+ * ===========================================================
+ * Moved from the deleted Appearance area (owner, 2026-11-23) and REWRITTEN. The previous version
+ * explained itself in paragraphs between every demo; the owner's verdict was:
+ *
+ *   "remove all the sentences which I hate … update the page with some of the designs above that
+ *    I've chosen, remove paragraphs it's all too overwhelming"
+ *
+ * So the page is now LABELS + SPECIMENS only. The teaching lives in the artefact: pick a device,
+ * toggle a column and watch the table reflow. No prose, no hint paragraphs.
+ *
+ * Patterns borrowed from the named gallery at `/development/theme`: "Toolbar" for the controls,
+ * "Summary Strip" for the readings, "Spacious Table" for the specimen and "Chip Bar" for the
+ * device selector.
+ */
 import { useState, useCallback } from 'react';
 import { motion } from 'motion/react';
-import './responsive-layout-lab.css';
 import { PageInfoSlotContent } from '../core/top-row-slot';
+import './responsive-layout-lab.css';
 
-// ── Sample data ──
 const ALL_COLUMNS = [
   { id: 'symbol', label: 'Symbol', priority: 1, minWidth: '60px' },
   { id: 'score', label: 'Score', priority: 1, minWidth: '50px' },
@@ -18,13 +33,13 @@ const ALL_COLUMNS = [
 ];
 
 const SAMPLE_ROWS = [
-  { symbol: 'NVDA', score: 92, signal: 'BUY', confidence: 85, rarity: 'Exceptional', protocol: 'tech-titans-v1', riskGate: '0.85×', directives: '12/14', lastScored: '2m ago', provider: 'MT5' },
-  { symbol: 'AAPL', score: 78, signal: 'BUY', confidence: 72, rarity: 'Strong', protocol: 'tech-titans-v1', riskGate: '0.92×', directives: '10/14', lastScored: '5m ago', provider: 'T212' },
-  { symbol: 'MSFT', score: 65, signal: 'HOLD', confidence: 58, rarity: 'Standard', protocol: 'kitchen-sink-v1', riskGate: '0.70×', directives: '8/12', lastScored: '8m ago', provider: 'MT5' },
-  { symbol: 'XAUUSD', score: 88, signal: 'BUY', confidence: 90, rarity: 'Cyclical', protocol: 'gold-hedge-v1', riskGate: '0.95×', directives: '14/16', lastScored: '1m ago', provider: 'MT5' },
-  { symbol: 'TSLA', score: 42, signal: 'SELL', confidence: 35, rarity: 'Standard', protocol: 'meme-stock-v1', riskGate: '0.40×', directives: '4/10', lastScored: '12m ago', provider: 'T212' },
-  { symbol: 'EURUSD', score: 55, signal: 'HOLD', confidence: 48, rarity: 'Standard', protocol: 'forex-session-v1-long', riskGate: '0.65×', directives: '6/10', lastScored: '15m ago', provider: 'MT5' },
-  { symbol: 'SPY', score: 71, signal: 'BUY', confidence: 68, rarity: 'Strong', protocol: 'spy-day-v1-long', riskGate: '0.82×', directives: '11/14', lastScored: '3m ago', provider: 'T212' },
+  { symbol: 'NVDA', score: 92, signal: 'BUY', confidence: 85, rarity: 'Exceptional', protocol: 'tech-titans-v1', riskGate: '0.85×', directives: '12/14', lastScored: '2m', provider: 'MT5' },
+  { symbol: 'AAPL', score: 78, signal: 'BUY', confidence: 72, rarity: 'Strong', protocol: 'tech-titans-v1', riskGate: '0.92×', directives: '10/14', lastScored: '5m', provider: 'T212' },
+  { symbol: 'MSFT', score: 65, signal: 'HOLD', confidence: 58, rarity: 'Standard', protocol: 'kitchen-sink-v1', riskGate: '0.70×', directives: '8/12', lastScored: '8m', provider: 'MT5' },
+  { symbol: 'XAUUSD', score: 88, signal: 'BUY', confidence: 90, rarity: 'Cyclical', protocol: 'gold-hedge-v1', riskGate: '0.95×', directives: '14/16', lastScored: '1m', provider: 'MT5' },
+  { symbol: 'TSLA', score: 42, signal: 'SELL', confidence: 35, rarity: 'Standard', protocol: 'meme-stock-v1', riskGate: '0.40×', directives: '4/10', lastScored: '12m', provider: 'T212' },
+  { symbol: 'EURUSD', score: 55, signal: 'HOLD', confidence: 48, rarity: 'Standard', protocol: 'forex-session-v1-long', riskGate: '0.65×', directives: '6/10', lastScored: '15m', provider: 'MT5' },
+  { symbol: 'SPY', score: 71, signal: 'BUY', confidence: 68, rarity: 'Strong', protocol: 'spy-day-v1-long', riskGate: '0.82×', directives: '11/14', lastScored: '3m', provider: 'T212' },
 ];
 
 const BREAKPOINTS = [
@@ -35,143 +50,149 @@ const BREAKPOINTS = [
   { name: 'Mobile', width: 480, cols: '1-2' },
 ];
 
+function Panel({ id, title, meta, children }) {
+  return (
+    <section className="rll-panel" id={id}>
+      <div className="rll-panel-head">
+        <h2>{title}</h2>
+        {meta ? <span className="rll-panel-meta">{meta}</span> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export default function ResponsiveLayoutLabPage() {
   const [device, setDevice] = useState('Desktop');
   const [hiddenCols, setHiddenCols] = useState(() => {
     const h = {};
-    ALL_COLUMNS.filter(c => c.priority >= 4).forEach(c => { h[c.id] = true; });
+    ALL_COLUMNS.filter((c) => c.priority >= 4).forEach((c) => { h[c.id] = true; });
     return h;
   });
-  const [scrollDemo, setScrollDemo] = useState(false);
 
   const toggleCol = useCallback((colId) => {
-    setHiddenCols(prev => ({ ...prev, [colId]: !prev[colId] }));
+    setHiddenCols((prev) => ({ ...prev, [colId]: !prev[colId] }));
   }, []);
 
-  const visibleCols = ALL_COLUMNS.filter(c => !hiddenCols[c.id]);
-  const bp = BREAKPOINTS.find(b => b.name === device) || BREAKPOINTS[1];
-
-  const deviceWidth = bp.width;
+  const visibleCols = ALL_COLUMNS.filter((c) => !hiddenCols[c.id]);
+  const bp = BREAKPOINTS.find((b) => b.name === device) || BREAKPOINTS[1];
 
   return (
-    <div className="rll-page" style={{ '--demo-width': deviceWidth + 'px' }}>
-      <motion.header className="rll-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <div>
-          <h1>Responsive Layout Lab
+    <div className="rll-page" style={{ '--demo-width': `${bp.width}px` }}>
+      <motion.header className="rll-header" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
+        <h1>
+          Responsive Layout Lab
           <PageInfoSlotContent>
-            Reference patterns for tables, grids, and layouts that adapt to device sizes. Pick a device to preview.
+            Device widths, column priority and table behaviour.
           </PageInfoSlotContent>
         </h1>
-        </div>
       </motion.header>
 
-      {/* ── Device Selector ── */}
-      <motion.div className="rll-device-bar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }}>
-        {BREAKPOINTS.map(b => (
+      <div className="rll-summary">
+        <div className="rll-summary-item"><span>Device</span><strong>{device}</strong></div>
+        <div className="rll-summary-item"><span>Width</span><strong>{bp.width}px</strong></div>
+        <div className="rll-summary-item"><span>Columns</span><strong>{visibleCols.length} / {ALL_COLUMNS.length}</strong></div>
+        <div className="rll-summary-item"><span>Breakpoint</span><strong>{bp.cols}</strong></div>
+        <div className="rll-summary-item"><span>Rows</span><strong>{SAMPLE_ROWS.length}</strong></div>
+      </div>
+
+      <div className="rll-device-bar" role="group" aria-label="Device width">
+        {BREAKPOINTS.map((b) => (
           <button
             key={b.name}
+            type="button"
             className={`rll-device-btn ${device === b.name ? 'active' : ''}`}
             onClick={() => setDevice(b.name)}
           >
-            {b.name} <span className="rll-device-size">({b.width}px)</span>
+            {b.name} <span className="rll-device-size">{b.width}px</span>
           </button>
         ))}
-      </motion.div>
+      </div>
 
-      {/* ── Preview Frame ── */}
       <motion.div
         className="rll-preview"
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.08 }}
-        style={{ maxWidth: deviceWidth }}
+        transition={{ delay: 0.05 }}
+        style={{ maxWidth: bp.width }}
       >
-        <div className="rll-frame-label">{device} ({deviceWidth}px) — {visibleCols.length} of {ALL_COLUMNS.length} columns visible</div>
-
-        {/* ── Column Settings ── */}
-        <div className="rll-col-settings">
-          <span className="rll-col-settings-label">Toggle columns:</span>
-          {ALL_COLUMNS.map(c => (
-            <label key={c.id} className={`rll-col-toggle pri-${c.priority}`}>
-              <input type="checkbox" checked={!hiddenCols[c.id]} onChange={() => toggleCol(c.id)} />
-              <span>{c.label}</span>
-            </label>
-          ))}
-          <button className="rll-col-reset" onClick={() => setHiddenCols({})}>Show all</button>
-          <button className="rll-col-reset" onClick={() => {
-            const h = {};
-            ALL_COLUMNS.filter(c => c.priority >= 3).forEach(c => { h[c.id] = true; });
-            setHiddenCols(h);
-          }}>Compact</button>
+        <div className="rll-preview-rail">
+          <span className="rll-frame-label">{device} · {bp.width}px</span>
+          <div className="rll-col-settings">
+            <span className="rll-col-settings-label">Columns</span>
+            {ALL_COLUMNS.map((c) => (
+              <label key={c.id} className={`rll-col-toggle pri-${c.priority}`}>
+                <input type="checkbox" checked={!hiddenCols[c.id]} onChange={() => toggleCol(c.id)} />
+                <span>{c.label}</span>
+              </label>
+            ))}
+            <button type="button" className="rll-col-reset" onClick={() => setHiddenCols({})}>All</button>
+            <button
+              type="button"
+              className="rll-col-reset"
+              onClick={() => {
+                const h = {};
+                ALL_COLUMNS.filter((c) => c.priority >= 3).forEach((c) => { h[c.id] = true; });
+                setHiddenCols(h);
+              }}
+            >
+              Compact
+            </button>
+          </div>
         </div>
 
-        {/* ── Responsive Table ── */}
-        <div className="rll-table-section">
-          <h3>Responsive Table <span className="rll-hint">— priority-based column hiding + horizontal scroll</span></h3>
-          <div className={`rll-table-wrap ${scrollDemo ? 'rll-scroll-hint' : ''}`} onScroll={() => setScrollDemo(true)}>
+        <Panel title="Responsive Table" meta="priority-based column hiding">
+          <div className="rll-table-wrap">
             <table className="rll-table">
               <colgroup>
-                {visibleCols.map(c => <col key={c.id} style={{ width: c.minWidth, minWidth: c.minWidth }} />)}
+                {visibleCols.map((c) => <col key={c.id} style={{ width: c.minWidth, minWidth: c.minWidth }} />)}
               </colgroup>
               <thead>
                 <tr>
-                  {visibleCols.map(c => (
-                    <th key={c.id} className={`rll-th-pri-${c.priority}`}>{c.label}</th>
-                  ))}
+                  {visibleCols.map((c) => <th key={c.id} className={`rll-th-pri-${c.priority}`}>{c.label}</th>)}
                 </tr>
               </thead>
               <tbody>
-                {SAMPLE_ROWS.map((row, i) => (
-                  <motion.tr key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.02 * i }}>
-                    {visibleCols.map(c => (
-                      <td key={c.id} className={c.id === 'signal' ? `rll-signal rll-signal-${(row[c.id] || '').toLowerCase()}` : ''}>
-                        {c.id === 'signal' ? (
-                          <span className={`rll-signal-badge rll-sig-${(row[c.id] || '').toLowerCase()}`}>{row[c.id]}</span>
-                        ) : c.id === 'score' ? (
-                          <strong style={{ color: row.signal === 'BUY' ? '#22c55e' : row.signal === 'SELL' ? '#ef4444' : '#94a3b8' }}>{row[c.id]}</strong>
-                        ) : row[c.id]}
+                {SAMPLE_ROWS.map((row) => (
+                  <tr key={row.symbol}>
+                    {visibleCols.map((c) => (
+                      <td key={c.id} className={c.id === 'signal' ? 'rll-signal' : ''}>
+                        {c.id === 'signal'
+                          ? <span className={`rll-signal-badge rll-sig-${row[c.id].toLowerCase()}`}>{row[c.id]}</span>
+                          : c.id === 'score'
+                            ? <strong className={`rll-sig-${row.signal.toLowerCase()}`}>{row[c.id]}</strong>
+                            : row[c.id]}
                       </td>
                     ))}
-                  </motion.tr>
+                  </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div className="rll-scroll-indicator">← Scroll horizontally for more columns →</div>
-        </div>
+        </Panel>
 
-        {/* ── Card Grid ── */}
-        <div className="rll-grid-section">
-          <h3>Card Grid <span className="rll-hint">— 4→3→2→1 columns with container queries</span></h3>
+        <Panel title="Card Grid" meta="4 → 3 → 2 → 1 columns">
           <div className="rll-card-grid">
-            {SAMPLE_ROWS.map((row, i) => (
-              <motion.div
-                key={i}
-                className="rll-card"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 * i }}
-              >
+            {SAMPLE_ROWS.map((row) => (
+              <div className="rll-card" key={row.symbol}>
                 <div className="rll-card-top">
                   <span className="rll-card-symbol">{row.symbol}</span>
                   <span className={`rll-card-score rll-sig-${row.signal.toLowerCase()}`}>{row.score}</span>
                 </div>
                 <div className="rll-card-meta">
-                  <span>Conf: {row.confidence}%</span>
+                  <span>Conf {row.confidence}%</span>
                   <span>{row.rarity}</span>
                 </div>
                 <div className="rll-card-footer">
                   <span>{row.protocol}</span>
-                  <span className="rll-card-gate">Risk: {row.riskGate}</span>
+                  <span className="rll-card-gate">{row.riskGate}</span>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
-        </div>
+        </Panel>
 
-        {/* ── Sidebar Layout ── */}
-        <div className="rll-sidebar-section">
-          <h3>Sidebar Layout <span className="rll-hint">— collapses to top on narrow screens</span></h3>
+        <Panel title="Sidebar Layout" meta="collapses to top">
           <div className="rll-sidebar-layout">
             <aside className="rll-sidebar">
               <div className="rll-sidebar-item active">Dashboard</div>
@@ -179,47 +200,40 @@ export default function ResponsiveLayoutLabPage() {
               <div className="rll-sidebar-item">Risk</div>
               <div className="rll-sidebar-item">Research</div>
             </aside>
-            <main className="rll-main-content">
-              <p>This content area adapts based on available space. On narrow screens, the sidebar collapses to a horizontal nav bar above the content.</p>
+            <div className="rll-main-content">
               <div className="rll-stats-row">
-                <div className="rll-stat">7 positions</div>
-                <div className="rll-stat">85% BUY</div>
-                <div className="rll-stat">Circuit: READY</div>
+                <div className="rll-stat"><span>Positions</span><strong>7</strong></div>
+                <div className="rll-stat"><span>Buy share</span><strong>85%</strong></div>
+                <div className="rll-stat"><span>Circuit</span><strong>READY</strong></div>
               </div>
-            </main>
+              <div className="rll-fill-content">
+                <div className="rll-fill-card">NVDA <strong>92</strong> <span className="rll-sig-buy">BUY</span></div>
+                <div className="rll-fill-card">AAPL <strong>78</strong> <span className="rll-sig-buy">BUY</span></div>
+                <div className="rll-fill-card">XAUUSD <strong>88</strong> <span className="rll-sig-buy">BUY</span></div>
+                <div className="rll-fill-card">MSFT <strong>65</strong> <span className="rll-sig-hold">HOLD</span></div>
+                <div className="rll-fill-card">TSLA <strong>42</strong> <span className="rll-sig-sell">SELL</span></div>
+              </div>
+            </div>
           </div>
-        </div>
+        </Panel>
 
-        {/* ── Breakpoint indicators ── */}
-        <div className="rll-breakpoint-info">
-          <h3>Active breakpoints for {device} ({deviceWidth}px)</h3>
+        <Panel title="Breakpoints" meta={`active for ${bp.width}px`}>
           <div className="rll-bp-list">
-            {BREAKPOINTS.map(b => (
-              <span key={b.name} className={`rll-bp-tag ${b.name === device ? 'active' : ''} ${b.width <= deviceWidth ? 'rll-bp-active' : 'rll-bp-inactive'}`}>
-                {b.name} ({b.width}px)
+            {BREAKPOINTS.map((b) => (
+              <span
+                key={b.name}
+                className={`rll-bp-tag ${b.name === device ? 'active' : ''} ${b.width <= bp.width ? 'rll-bp-active' : 'rll-bp-inactive'}`}
+              >
+                {b.name} {b.width}px
               </span>
             ))}
           </div>
-          <p className="rll-hint">
-            Strategy: columns with priority ≥4 hide at &lt;1024px, priority ≥3 at &lt;768px, priority ≥2 at &lt;480px.
-            Users can override via column toggle settings above.
-          </p>
-        </div>
+        </Panel>
 
-        {/* ── Content Width Patterns ── */}
-        <div className="rll-content-width-section">
-          <h3>Content Width Patterns <span className="rll-hint">— when the sidebar hides, how should content behave?</span></h3>
-          <p className="rll-hint" style={{ marginBottom: '0.6rem' }}>
-            When the left sidebar collapses on narrow screens, content can either <strong>fill 100%</strong> (dashboards, data tables)
-            or stay <strong>fixed-width + left-aligned</strong> (documentation, settings forms). These two patterns demonstrate both.
-          </p>
-
+        <Panel title="Content Width" meta="fill vs fixed">
           <div className="rll-width-demos">
-            {/* ── Full-Width Fill ── */}
             <div className="rll-width-demo">
-              <div className="rll-width-demo-label">Full-width fill
-                <span className="rll-hint"> — content expands to 100% of available space. Best for data-heavy views.</span>
-              </div>
+              <div className="rll-width-demo-label">Full-width fill <code>width: 100%</code></div>
               <div className="rll-fill-container">
                 <div className="rll-fill-bar">
                   <span className="rll-fill-bar-label">📊 Dashboard</span>
@@ -227,75 +241,47 @@ export default function ResponsiveLayoutLabPage() {
                     <span className="rll-fill-metric">7 positions</span>
                     <span className="rll-fill-metric">+$1,240</span>
                     <span className="rll-fill-metric">85% BUY</span>
-                    <span className="rll-fill-metric">Circuit: READY</span>
                   </div>
                 </div>
                 <div className="rll-fill-content">
                   <div className="rll-fill-card">NVDA <strong>92</strong> <span className="rll-sig-buy">BUY</span></div>
                   <div className="rll-fill-card">AAPL <strong>78</strong> <span className="rll-sig-buy">BUY</span></div>
                   <div className="rll-fill-card">XAUUSD <strong>88</strong> <span className="rll-sig-buy">BUY</span></div>
-                  <div className="rll-fill-card">MSFT <strong>65</strong> <span className="rll-sig-hold">HOLD</span></div>
-                  <div className="rll-fill-card">TSLA <strong>42</strong> <span className="rll-sig-sell">SELL</span></div>
                 </div>
               </div>
-              <p className="rll-hint">Rule: <code>width: 100%</code> — no max-width constraint. Content stretches edge-to-edge.</p>
             </div>
 
-            {/* ── Fixed-Width, Left-Aligned ── */}
             <div className="rll-width-demo">
-              <div className="rll-width-demo-label">Fixed-width, left-aligned
-                <span className="rll-hint"> — optimal reading width, anchored left. Best for docs &amp; forms.</span>
-              </div>
+              <div className="rll-width-demo-label">Fixed width <code>max-width: 640px</code></div>
               <div className="rll-fixed-container">
                 <div className="rll-fixed-panel">
-                  <h4>Strategy Settings</h4>
+                  <h3>Strategy Settings</h3>
                   <div className="rll-fixed-field">
-                    <label>Protocol name</label>
-                    <input type="text" defaultValue="tech-titans-v1" readOnly />
+                    <label htmlFor="rll-fixed-name">Protocol name</label>
+                    <input id="rll-fixed-name" type="text" defaultValue="tech-titans-v1" readOnly />
                   </div>
                   <div className="rll-fixed-field">
-                    <label>Max position size</label>
-                    <input type="text" defaultValue="$5,000" readOnly />
+                    <label htmlFor="rll-fixed-size">Max position size</label>
+                    <input id="rll-fixed-size" type="text" defaultValue="$5,000" readOnly />
                   </div>
                   <div className="rll-fixed-field">
-                    <label>Stop-loss (%)</label>
-                    <input type="text" defaultValue="2.5%" readOnly />
+                    <label htmlFor="rll-fixed-sl">Stop-loss (%)</label>
+                    <input id="rll-fixed-sl" type="text" defaultValue="2.5%" readOnly />
                   </div>
                   <div className="rll-fixed-field">
-                    <label>Description</label>
-                    <textarea defaultValue="Tech Titans v1 — buys mega-cap tech on institutional accumulation signals with a 2.5% stop-loss and 5% take-profit target. Activated Mon–Fri 09:30–16:00 ET." readOnly rows={3} />
+                    <label htmlFor="rll-fixed-note">Description</label>
+                    <textarea id="rll-fixed-note" defaultValue="Tech Titans v1 — mega-cap tech on accumulation signals." readOnly rows={3} />
                   </div>
                 </div>
               </div>
-              <p className="rll-hint">Rule: <code>max-width: 640px; margin-left: 0</code> — content stays at a readable width, anchored left.</p>
             </div>
           </div>
-        </div>
+        </Panel>
 
-        {/* ── Fluid vs Stepped Sizing (owner report, 2026-11-06) ──
-            ⚠️ THE FIRST VERSION OF THIS DEMO WAS WRONG and is corrected here. It claimed
-            `flex: 1 1 140px` fixed the jump. RE-MEASURED after building it on the real page: the tile
-            width still oscillated 140 → 156 → 148 → 161 → 147 → 163 … because flex wraps at the same
-            items-per-row threshold as `auto-fill`. What actually changes the behaviour is WHO DECIDES
-            THE COLUMN COUNT: the browser (wherever the floor stops fitting) or the designer (declared
-            breakpoints). Both demos hold the same six figures. */}
-        <div className="rll-fluid-section">
-          <h3>Fluid vs Stepped Sizing <span className="rll-hint">— who decides how many figures fit in a row?</span></h3>
-          <p className="rll-hint" style={{ marginBottom: '0.6rem' }}>
-            Both rows hold the same six figures and both shrink their tiles as the space narrows. The
-            difference is <strong>where the column count changes</strong>: in the stepped row the browser
-            drops a column at whatever width the 140px floor stops fitting, so tiles jump wider by a
-            different amount every time. In the fluid row the count changes only at the widths written
-            in the stylesheet, so the jumps are predictable and a lone last tile keeps its column
-            instead of stretching across the row.
-            <span className="rll-fluid-readout"> Measured on /trading212/t212-portfolio at 1600 → 640px: tile width 148 → 147 → 162 → 178 → 205 → 141.</span>
-          </p>
-
+        <Panel title="Fluid vs Stepped" meta="who decides the column count">
           <div className="rll-fluid-demos">
             <div className="rll-fluid-demo">
-              <div className="rll-fluid-demo-label">
-                ❌ Browser decides — <code>repeat(auto-fill, minmax(140px, 1fr))</code>
-              </div>
+              <div className="rll-fluid-demo-label">Browser decides <code>auto-fill minmax(140px, 1fr)</code></div>
               <div className="rll-fluid-body">
                 <div className="rll-tiles rll-tiles--stepped">
                   <div className="rll-tile"><span className="rll-tile-label">All accounts</span><span className="rll-tile-value">£10,125.44</span></div>
@@ -306,18 +292,10 @@ export default function ResponsiveLayoutLabPage() {
                   <div className="rll-tile"><span className="rll-tile-label">Positions</span><span className="rll-tile-value">18</span></div>
                 </div>
               </div>
-              <p className="rll-hint">
-                The count is an accident of the available width. Narrowing the container therefore
-                removes a whole column at an arbitrary point, and each surviving column gets
-                <strong> wider</strong> before the next drop — widths go <strong>up</strong> as the
-                window goes down.
-              </p>
             </div>
 
             <div className="rll-fluid-demo">
-              <div className="rll-fluid-demo-label">
-                ✅ Designer decides — <code>@container</code> breakpoints + <code>repeat(N, minmax(0, 1fr))</code>
-              </div>
+              <div className="rll-fluid-demo-label">Designer decides <code>@container</code></div>
               <div className="rll-fluid-body">
                 <div className="rll-tiles rll-tiles--fluid">
                   <div className="rll-tile"><span className="rll-tile-label">All accounts</span><span className="rll-tile-value">£10,125.44</span></div>
@@ -328,21 +306,9 @@ export default function ResponsiveLayoutLabPage() {
                   <div className="rll-tile"><span className="rll-tile-label">Positions</span><span className="rll-tile-value">18</span></div>
                 </div>
               </div>
-              <p className="rll-hint">
-                The count is a decision (5 → 4 → 3 → 2 at declared widths). Between breakpoints every
-                tile shrinks continuously with the container, <code>1fr</code> tracks stay equal, and a
-                tile that lands alone keeps its column width instead of filling the row.
-              </p>
             </div>
           </div>
-
-          <p className="rll-hint">
-            Where it landed: <code>/trading212/t212-portfolio</code> now uses the container-query form
-            for its money tiles (8 → 7 → 6 → 5 → 4 → 3 → 2 columns). Neither form is perfectly smooth —
-            a discrete column count always jumps when it changes. The difference is whether the jump
-            happens at a width you chose.
-          </p>
-        </div>
+        </Panel>
       </motion.div>
     </div>
   );

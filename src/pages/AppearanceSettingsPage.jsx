@@ -11,13 +11,16 @@
  * Grouping them by the question they answer is what makes General's remaining contents
  * (API / Queue / Performance / Security / Health) make sense as a set.
  *
- * ⚠️ This page OVERLAPS deliberately with two existing views:
- *   - `theme-packs` is the full preview gallery (it exists to try packs before committing).
+ * ⚠️ This page OVERLAPS deliberately with one existing view:
  *   - `user-preferences` is the complete preference table (every key, with its default).
  *   This page is the curated, everyday surface. Seeing the same value in two places is
  *   intended — it is how the link between "the page I use" and "the page that lists
- *   everything" stays discoverable — but there is ONE store behind all three
+ *   everything" stays discoverable — but there is ONE store behind both
  *   (`usePreferences` / `useUiStore`), so the copies cannot disagree.
+ *
+ * ⚠️ PACK SELECTION LIVES HERE SINCE 2026-11-23. `ThemePacksChooser` was the centrepiece of the
+ * deleted Appearance area's landing page; without this it would have had no surface at all, and
+ * `/settings/theme-packs` is a retired route that redirects to this page.
  *
  * ⚠️ The `id` attributes are deep-link anchors and are load-bearing: the market tape's ⚙
  * button navigates to `/settings/appearance?section=market-tape`. Renaming an id silently
@@ -30,6 +33,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useUiStore } from '../stores/useUiStore';
 import { usePreferences } from '../core/hooks/usePreferences';
 import { ALL_SECTIONS } from '../components/MarketTape';
+import ThemePacksChooser from '../components/ThemePacksChooser';
 import { SettingRow, SettingsSection, TogglePair, MovedNote } from '../components/SettingsControls';
 import './settings.css';
 
@@ -129,9 +133,13 @@ export default function AppearanceSettingsPage() {
             </button>
           </div>
         </SettingRow>
-        <SettingRow label="Pack" hint="Active theme pack ID. Theme Packs is the full preview gallery.">
+        <SettingRow label="Pack" hint="Pick a colour pack. The swatch IS the decision — a pack carries colours only, never structure.">
           <code>{themePack}</code>
         </SettingRow>
+        {/* ⚠️ THE CHOOSER LIVES HERE NOW (2026-11-23). It was the centrepiece of the deleted
+            Appearance area's landing page; without this it would have had no surface at all, and
+            `/settings/theme-packs` is a retired route. */}
+        <ThemePacksChooser />
         <SettingRow label="Navigation Icons" hint="Show category icons on the right side of sidebar menu items.">
           <TogglePair
             value={showNavIcons}
@@ -141,8 +149,7 @@ export default function AppearanceSettingsPage() {
           />
         </SettingRow>
         <MovedNote>
-          Browse and preview packs on <a href="/settings/theme-packs">Theme Packs</a>. Accessibility
-          options (contrast, font scale, focus rings, colour-blind mode) are on{' '}
+          Accessibility options (contrast, font scale, focus rings, colour-blind mode) are on{' '}
           <a href="/settings/user-preferences">User Preferences</a>.
         </MovedNote>
       </SettingsSection>
