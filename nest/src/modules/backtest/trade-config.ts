@@ -114,6 +114,20 @@ export interface TradeConfigField {
    */
   effect: string;
   /**
+   * ── THE SENTENCE MUST FOLLOW THE BOX (owner, 2026-11-23) ───────────────────────────────────────
+   * *"as I changed the value to 5 the 2.5 didn't change"* — `effect` is computed server-side from the
+   * STORED column, so the moment a reader types in the input the value and its description disagree.
+   *
+   * So the server also sends the SAME sentence as a template, with `{value}` where the number goes, and
+   * the panel substitutes the value currently in the box. One place still owns the wording: a client
+   * that wrote its own sentence would drift from this file and only one would get the next fix.
+   *
+   * ⚠️ TWO BRANCHES BECAUSE THE SENTENCES BRANCH. `slPct: 0` says "no stop loss" while `slPct: 5` says
+   * how far the stop sits, so one template could not describe both. `zero` is omitted where the
+   * sentence does not change with the value.
+   */
+  effectTemplate?: { positive?: string; zero?: string };
+  /**
    * PROVENANCE — the column, the literal site, the issue. Kept in the payload for diagnosis and asserted
    * by the specs, **not rendered**: a reader deciding whether a number is sound does not need a schema
    * path, and showing one buried the behaviour under it.
@@ -244,6 +258,26 @@ function sessionText(raw: string | null | undefined): string | null {
  * then `engine-default`, and the caveat says the numbers describe no deployed configuration.
  */
 export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfigRequest = {}): TradeConfigField[] {
+  /**
+   * ── THE SENTENCES, AS TEMPLATES (owner, 2026-11-23) ─────────────────────────────────────────────
+   * *"as I changed the value to 5 the 2.5 didn't change."* Each sentence is declared ONCE with
+   * `{value}` where the number goes: the stored value renders `effect`, and the panel substitutes the
+   * number currently in the box into `effectTemplate`. A client writing its own sentence would drift;
+   * a second copy here would too. These constants ARE the wording.
+   *
+   * ⚠️ A `_ZERO` variant exists only where the sentence genuinely changes at zero — "no stop loss" is a
+   * different fact from "closed 5% against you", not a small number.
+   */
+  const SL_POSITIVE = 'A losing trade is closed once it is {value} against you. This is the loss a bad entry costs.';
+  const SL_ZERO = 'No stop loss: a losing trade is only closed by a time stop or the session close, so one bad entry can run a long way.';
+  const TP_POSITIVE = '{value} is banked and the trade closes there. It caps a winner: the rest of the move is given up.';
+  const TP_ZERO = 'No take-profit: a winner runs until the stop, the trail, the time stop or the session close — so an open profit can be given back.';
+  const BAR_POSITIVE = 'A bar must score at least {value} to be traded at all. Raise it for fewer, better entries; lower it for more trades of weaker quality.';
+  const HOLD_POSITIVE = 'An open position is closed after {value}, whatever its profit or loss — so no trade is carried indefinitely.';
+  const HOLD_ZERO = 'No time stop: a trade runs until its stop, its target or the session close.';
+  const SIZE_POSITIVE = '{value} lot per entry. It sets the money each trade risks and earns — not when or whether it opens. This run sizes in units instead, so its P&L does not carry across to this lot size.';
+  const SIZE_ZERO = 'The lot size of each entry, which sets the money risked per trade. This run sizes in units instead, so its P&L does not carry across.';
+
   const overridden = (requested: number | undefined, fromBot: number | null): TradeConfigSource =>
     requested !== undefined ? 'request' : fromBot !== null ? 'bot' : 'engine-default';
 
@@ -282,7 +316,8 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       applied: true,
       effect: sl > 0
         ? `A losing trade is closed once it is ${pct(sl)} against you. This is the loss a bad entry costs.`
-        : 'No stop loss: a losing trade is only closed by a time stop or the session close, so one bad entry can run a long way.',
+        : SL_ZERO,
+      effectTemplate: { positive: SL_POSITIVE, zero: SL_ZERO },
       note: bot ? 'trading_strategy.slPct' : 'a literal in BacktestService.run() — no bot names this protocol',
       botValue: botSl,
       editable: { control: 'number', unit: '%', min: 0, max: 100, step: 0.1, nullable: true },
@@ -379,9 +414,8 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
        * target does to a winner, and what happens without one — a reader should not have to infer a
        * trading decision from a percentage.
        */
-      effect: tp > 0
-        ? `${pct(tp)} is banked and the trade closes there. It caps a winner: the rest of the move is given up.`
-        : 'No take-profit: a winner runs until the stop, the trail, the time stop or the session close — so an open profit can be given back.',
+      effect: tp > 0 ? TP_POSITIVE.replace('{value}', pct(tp)) : TP_ZERO,
+      effectTemplate: { positive: TP_POSITIVE, zero: TP_ZERO },
       note: bot ? 'trading_strategy.tpPct' : 'a literal in BacktestService.run() — no bot names this protocol',
       botValue: botTp,
       editable: { control: 'number', unit: '%', min: 0, max: 100, step: 0.1, nullable: true },
@@ -393,7 +427,8 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       unit: '%',
       source: overridden(request.minComposite, botBar),
       applied: true,
-      effect: `A bar must score at least ${pct(bar)} to be traded at all. Raise it for fewer, better entries; lower it for more trades of weaker quality.`,
+      effect: BAR_POSITIVE.replace('{value}', pct(bar)),
+      effectTemplate: { positive: BAR_POSITIVE },
       note: bot
         ? 'trading_strategy.minComposite — the second, tighter gate after the protocol threshold'
         : 'a literal in BacktestService.run() — every signal the protocol emits is traded',
@@ -408,9 +443,8 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       unit: 'h',
       source: botHold !== null ? 'bot' : 'engine-default',
       applied: true,
-      effect: hold > 0
-        ? `An open position is closed after ${hours(hold)}, whatever its profit or loss — so no trade is carried indefinitely.`
-        : 'No time stop: a trade runs until its stop, its target or the session close.',
+      effect: hold > 0 ? HOLD_POSITIVE.replace('{value}', hours(hold)) : HOLD_ZERO,
+      effectTemplate: { positive: HOLD_POSITIVE, zero: HOLD_ZERO },
       // 0 = no limit, which is the engine's own documented default when the bot sets none.
       note: botHold !== null ? 'trading_strategy.maxHoldHours' : 'no time stop — the engine holds until stop, target or end of data',
       botValue: botHold,
@@ -533,8 +567,9 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       source: 'bot',
       applied: false,
       effect: num(bot?.baseSize) != null
-        ? `${num(bot?.baseSize)} lot per entry. It sets the money each trade risks and earns — not when or whether it opens. This run sizes in units instead, so its P&L does not carry across to this lot size.`
-        : 'The lot size of each entry, which sets the money risked per trade. This run sizes in units instead, so its P&L does not carry across.',
+        ? SIZE_POSITIVE.replace('{value}', String(num(bot?.baseSize)))
+        : SIZE_ZERO,
+      effectTemplate: { positive: SIZE_POSITIVE, zero: SIZE_ZERO },
       note: 'NOT COMPARABLE — the live loop sends lots; this run sizes in units from an equity model (#843). P&L does not transfer.',
       botValue: num(bot?.baseSize),
       editable: { control: 'number', unit: 'lot', min: 0, step: 0.01, nullable: true },

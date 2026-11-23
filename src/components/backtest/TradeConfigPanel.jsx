@@ -46,7 +46,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiPatch } from '../../core/api/client';
 import { noticeFromError } from '../../core/notices/from-error.js';
-import { collectChanges, sameFieldValue, storedRaw } from '../../core/trade-config-edit.js';
+import { collectChanges, parseFieldValue, sameFieldValue, storedRaw } from '../../core/trade-config-edit.js';
+import {
+  snapshotOf,
+  revertBody,
+  netPnlOf,
+  autoRevertDecision,
+} from '../../core/trade-config-revert.js';
 import WhyPopover from '../WhyPopover.jsx';
 
 const SOURCE_LABEL = {
@@ -70,7 +76,17 @@ const fmt = (v, unit) => {
   return String(v);
 };
 
-export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = false }) {
+export default function TradeConfigPanel({
+  tradeConfig,
+  onRetest,
+  retestBusy = false,
+  /**
+   * The page's running totals, read BEFORE a change is saved. A getter rather than a value because
+   * `totals` is recomputed the moment the re-run lands — a prop captured at render would already be the
+   * NEW figure by the time the comparison happens, and every change would look neutral.
+   */
+  getBaselineNetPnl,
+}) {
   const [showIgnored, setShowIgnored] = useState(true);
   const [draft, setDraft] = useState({});
   const [saving, setSaving] = useState(false);
@@ -83,6 +99,50 @@ export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = f
 
   const bot = tradeConfig?.bot ?? null;
   const botId = bot?.id ?? null;
+
+  /**
+   * ── THE PREVIOUS SETTINGS, CACHED (owner, 2026-11-23) ───────────────────────────────────────────
+   * The snapshot is the values the bot held BEFORE the last save from this panel, so "revert" is one
+   * click rather than a memory exercise. Kept in `localStorage` per bot because a revert is wanted after
+   * a reload as often as straight after the retest — and it is a CACHE, not a record: the durable history
+   * of every configuration is the stored selection runs (`/api/backtest/selection-history`).
+   */
+  const snapKey = botId ? `tcs:trade-config:snapshot:${botId}` : null;
+  const autoKey = botId ? `tcs:trade-config:autoRevert:${botId}` : null;
+  const readStore = (key, fallback) => {
+    if (!key) return fallback;
+    try {
+      const raw = window.localStorage.getItem(key);
+      return raw === null ? fallback : JSON.parse(raw);
+    } catch {
+      return fallback;
+    }
+  };
+  const [snapshot, setSnapshot] = useState(() => readStore(snapKey, null));
+  const [autoRevert, setAutoRevert] = useState(() => Boolean(readStore(autoKey, false)));
+
+  useEffect(() => {
+    setSnapshot(readStore(snapKey, null));
+    setAutoRevert(Boolean(readStore(autoKey, false)));
+  }, [snapKey, autoKey]);
+
+  const keepSnapshot = (snap) => {
+    setSnapshot(snap);
+    try {
+      if (snapKey) window.localStorage.setItem(snapKey, JSON.stringify(snap));
+    } catch {
+      /* a blocked store must not break a save that already happened */
+    }
+  };
+  const toggleAutoRevert = () => {
+    const next = !autoRevert;
+    setAutoRevert(next);
+    try {
+      if (autoKey) window.localStorage.setItem(autoKey, JSON.stringify(next));
+    } catch {
+      /* same */
+    }
+  };
 
   /**
    * A new run object is a new configuration, so unsaved edits are DROPPED rather than carried over.
@@ -136,17 +196,98 @@ export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = f
     }
     setSaving(true);
     setAlert(null);
+    /**
+     * Capture BOTH halves of "before" before anything is written: the values (so a revert has something
+     * to send back) and the profit figure (so the comparison is against the run the reader was looking
+     * at, not against the re-run that has not happened yet).
+     */
+    const beforeSnapshot = snapshotOf(fields, changes.body);
+    const beforePnl = typeof getBaselineNetPnl === 'function' ? getBaselineNetPnl() : null;
+    if (Object.keys(beforeSnapshot).length) keepSnapshot(beforeSnapshot);
+
+    /**
+     * ── THE SAVE AND THE RE-RUN FAIL DIFFERENTLY, SO THEY ARE CAUGHT SEPARATELY (2026-11-23) ───────
+     * MEASURED: the owner set Take profit to 100 and saw *"Bot settings were not saved"* — while the
+     * value HAD been written (the row read 100 afterwards). The re-run threw, and one `try` around both
+     * calls reported a **failed re-run as a failed save**, which sends the reader back to retype a value
+     * that is already stored.
+     */
     try {
       await apiPatch(`/api/trading/strategies/${encodeURIComponent(botId)}`, changes.body);
-      setDraft({});
-      await onRetest();
     } catch (err) {
       // A registry notice, not the raw string: the code is the message's stable identity, and a
       // refusal (the active-bot ceiling, a running A/B comparison) arrives as the server's own
       // wording in `cause`. Paraphrasing it would drop the only part a reader can act on.
-      setAlert(
-        noticeFromError(err, 'TCS-TRADE-026', { name: bot?.name ?? 'this bot' }),
-      );
+      setAlert(noticeFromError(err, 'TCS-TRADE-026', { name: bot?.name ?? 'this bot' }));
+      setSaving(false);
+      return;
+    }
+
+    setDraft({});
+    let runs = null;
+    try {
+      runs = await onRetest();
+    } catch (err) {
+      setAlert(noticeFromError(err, 'TCS-TRADE-027', { name: bot?.name ?? 'this bot' }));
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
+
+    /**
+     * ── AUTOMATIC REVERT (owner, 2026-11-23) ─────────────────────────────────────────────────────
+     * The decision is a PURE function (`trade-config-revert.js`) so "cannot judge" can never trigger a
+     * rollback: a failed re-run has no P&L and the comparison returns `revert: false` with a reason.
+     * ⚠️ The notice ALWAYS carries the caveat — one re-run is a sample, not a verdict.
+     */
+    const decision = autoRevertDecision({
+      enabled: autoRevert,
+      beforePnl,
+      afterPnl: netPnlOf(runs),
+    });
+    if (decision.revert) {
+      const revert = revertBody(beforeSnapshot, fields);
+      try {
+        if (revert.count) {
+          await apiPatch(`/api/trading/strategies/${encodeURIComponent(botId)}`, revert.body);
+          await onRetest();
+        }
+        setAlert({
+          code: 'TCS-TRADE-028',
+          title: `Reverted ${bot?.name ?? 'the bot'} to its previous settings`,
+          message: `Nothing kept: ${decision.because}. The values before this change are back in place.`,
+          cause: decision.caveat,
+          action: null,
+        });
+      } catch (err) {
+        setAlert(noticeFromError(err, 'TCS-TRADE-026', { name: bot?.name ?? 'this bot' }));
+      }
+    }
+  };
+
+  /** Put the cached settings back by hand — the same write path the save uses. */
+  const revertNow = async () => {
+    if (!botId || !snapshot || !onRetest) return;
+    const revert = revertBody(snapshot, fields);
+    if (!revert.count) {
+      setAlert({ title: 'Nothing to revert', message: 'The cached settings are empty.', cause: null, action: null });
+      return;
+    }
+    setSaving(true);
+    setAlert(null);
+    try {
+      await apiPatch(`/api/trading/strategies/${encodeURIComponent(botId)}`, revert.body);
+      setDraft({});
+      await onRetest();
+      setAlert({
+        code: 'TCS-TRADE-028',
+        title: `Reverted ${bot?.name ?? 'the bot'} to its previous settings`,
+        message: `${revert.count} setting${revert.count === 1 ? '' : 's'} restored and the test re-run.`,
+        cause: null,
+        action: null,
+      });
+    } catch (err) {
+      setAlert(noticeFromError(err, 'TCS-TRADE-026', { name: bot?.name ?? 'this bot' }));
     } finally {
       setSaving(false);
     }
@@ -192,6 +333,25 @@ export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = f
         )}
       </span>
     );
+  };
+
+  /**
+   * ── THE SENTENCE FOLLOWS THE BOX (owner, 2026-11-23) ────────────────────────────────────────────
+   * *"as I changed the value to 5 the 2.5 didn't change."* `f.effect` is computed server-side from the
+   * STORED column, so it described the old number the moment a reader typed.
+   *
+   * The SERVER still owns the wording (`f.effectTemplate`) — a client that wrote its own sentence would
+   * drift from `trade-config.ts` and only one would get the next fix. This only substitutes the value
+   * currently in the box, and picks the zero branch when the box holds a zero or an empty nullable.
+   */
+  const effectFor = (f) => {
+    const tmpl = f.effectTemplate;
+    if (!tmpl) return f.effect;
+    const parsed = parseFieldValue(f, rawFor(f));
+    const v = parsed.ok ? parsed.value : null;
+    const usePositive = typeof v === 'number' ? v > 0 : v !== null && v !== '';
+    const text = usePositive ? (tmpl.positive ?? f.effect) : (tmpl.zero ?? f.effect);
+    return text.replace('{value}', fmt(v, f.unit));
   };
 
   return (
@@ -300,7 +460,7 @@ export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = f
                       technical information" — the column now says what the value DOES to a trade, and the
                       provenance (`f.note`: the column name, the literal site, the issue) stays in the API
                       payload for diagnosis. Do not put it back here; it buried the sentence a reader needs. */}
-                  <td className="mvp-config-note">{f.effect}</td>
+                  <td className="mvp-config-note">{effectFor(f)}</td>
                 </tr>
               );
             })}
@@ -315,6 +475,19 @@ export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = f
               ? `${changes.count} setting${changes.count === 1 ? '' : 's'} changed · saves to ${bot?.name} and re-runs`
               : 'No changes'}
           </span>
+          {/**
+            * ⚠️ OFF BY DEFAULT. It rolls a bot back without being asked, so it is only ever enabled
+            * deliberately — and the notice it raises carries the caveat that one re-run is a sample.
+            */}
+          <label className="mvp-cfg-auto">
+            <input
+              type="checkbox"
+              checked={autoRevert}
+              onChange={toggleAutoRevert}
+              aria-label={`Revert ${bot?.name ?? 'this bot'} automatically if the re-run makes less profit`}
+            />
+            Auto-revert if profit falls
+          </label>
           <button
             type="button"
             className="mvp-cfg-save"
@@ -323,6 +496,11 @@ export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = f
           >
             {saving ? 'Saving…' : retestBusy ? 'Retesting…' : 'Retest'}
           </button>
+          {snapshot && Object.keys(snapshot).length > 0 && (
+            <button type="button" className="mvp-link-btn" onClick={revertNow} disabled={busy}>
+              Revert to previous settings
+            </button>
+          )}
           {changes.count > 0 && !busy && (
             <button type="button" className="mvp-link-btn" onClick={discard}>
               Discard
@@ -338,6 +516,15 @@ export default function TradeConfigPanel({ tradeConfig, onRetest, retestBusy = f
             <strong>{alert.title}</strong>
           </span>
           <span className="mvp-cfg-error-msg">{alert.message}</span>
+          {/**
+            * ⚠️ `cause` IS RENDERED — it was collected and never shown (2026-11-23). For a failed save it
+            * is the SERVER'S own refusal (the active-bot ceiling, a running A/B comparison), which is the
+            * only part a reader can act on; for an automatic revert it is the caveat that stops the
+            * rollback being read as a verdict. Carrying text nobody renders is the same as dropping it.
+            */}
+          {typeof alert.cause === 'string' && alert.cause ? (
+            <span className="mvp-cfg-error-msg">{alert.cause}</span>
+          ) : null}
           {alert.cause && <span className="mvp-cfg-error-cause">{alert.cause}</span>}
           {alert.action && <span className="mvp-cfg-error-action">{alert.action}</span>}
         </div>

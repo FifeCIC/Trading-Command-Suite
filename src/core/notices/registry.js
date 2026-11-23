@@ -434,6 +434,43 @@ export const NOTICES = {
     refs: ['#1329'],
   },
 
+  /**
+   * ⚠️ 027 EXISTS BECAUSE 026 WAS BLAMING THE WRONG THING (2026-11-23). The panel wrapped the PATCH and
+   * the re-run in ONE try, so a failed re-run was reported as *"settings were not saved"* — and the
+   * values HAD been written (measured: a bot refused to show 100 and then read 100 in the database).
+   * Two failures with two identities: this one says the write landed and only the measurement did not.
+   */
+  'TCS-TRADE-027': {
+    severity: 'warning',
+    area: 'TRADE',
+    title: 'Saved — but the re-run failed',
+    message: '\u201c{name}\u201d now holds the new values. The days could not be measured again.',
+    cause: '{detail}',
+    action:
+      'The numbers on this page still describe the PREVIOUS configuration. Do not retype the values — ' +
+      'they are stored. Re-run the test from the controls above, and if it fails again the cause is in ' +
+      'the run, not in your edit.',
+    params: ['name', 'detail'],
+    refs: [],
+  },
+
+  /**
+   * The automatic revert. ⚠️ It says what it did and NOT that the change was wrong: one re-run is a
+   * sample, and the caveat in `cause` is the sentence that keeps it honest.
+   */
+  'TCS-TRADE-028': {
+    severity: 'warning',
+    area: 'TRADE',
+    title: 'Settings reverted to the previous configuration',
+    message: '{detail}',
+    cause: '{caveat}',
+    action:
+      'Nothing was kept. If you want to try the change again, judge it against a copied configuration ' +
+      'rather than a single before/after — that is the only comparison this app treats as a verdict.',
+    params: ['detail', 'caveat'],
+    refs: [],
+  },
+
   // ── Integrations ─────────────────────────────────────────
   'TCS-INTEG-001': {
     severity: 'critical',

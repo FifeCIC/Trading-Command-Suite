@@ -79,8 +79,10 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-TRADE-024` | warning | TRADE | Bot not activated — its protocol never reaches the bar |
 | `TCS-TRADE-025` | warning | TRADE | Bot not activated — the active-bot limit for your level |
 | `TCS-TRADE-026` | error | TRADE | Bot settings were not saved |
+| `TCS-TRADE-027` | warning | TRADE | Saved — but the re-run failed |
+| `TCS-TRADE-028` | warning | TRADE | Settings reverted to the previous configuration |
 
-**58 codes** — 3 critical, 28 error, 16 warning, 5 info, 6 success.
+**60 codes** — 3 critical, 28 error, 18 warning, 5 info, 6 success.
 
 ## Codes by area
 
@@ -344,6 +346,26 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Params:** `name`, `detail`
 - **Call:** `notice('TCS-TRADE-026', { name, detail })`
 - **Related:** #1329
+
+#### `TCS-TRADE-027` — Saved — but the re-run failed
+
+- **Severity:** warning
+- **Message:** “{name}” now holds the new values. The days could not be measured again.
+- **Cause:** {detail}
+- **Action:** The numbers on this page still describe the PREVIOUS configuration. Do not retype the values — they are stored. Re-run the test from the controls above, and if it fails again the cause is in the run, not in your edit.
+- **Params:** `name`, `detail`
+- **Call:** `notice('TCS-TRADE-027', { name, detail })`
+- **Related:** *none*
+
+#### `TCS-TRADE-028` — Settings reverted to the previous configuration
+
+- **Severity:** warning
+- **Message:** {detail}
+- **Cause:** {caveat}
+- **Action:** Nothing was kept. If you want to try the change again, judge it against a copied configuration rather than a single before/after — that is the only comparison this app treats as a verdict.
+- **Params:** `detail`, `caveat`
+- **Call:** `notice('TCS-TRADE-028', { detail, caveat })`
+- **Related:** *none*
 
 ### SCORE — Scoring and signals
 

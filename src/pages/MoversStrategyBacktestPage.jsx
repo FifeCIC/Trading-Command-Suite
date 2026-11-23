@@ -263,6 +263,12 @@ export default function MoversStrategyBacktestPage() {
       }
     }
     setProgress((p) => (p ? { ...p, current: null, done: Math.max(p.done, collected.length), stopped: stopRef.current } : p));
+    /**
+     * ⚠️ THE RUNS ARE RETURNED, not only set into state (2026-11-23). The trade-config panel compares
+     * the re-run's profit against the figure the reader was looking at, for the automatic revert — and a
+     * value it had to read from state would still be the OLD totals at the moment it asked.
+     */
+    return collected;
   }
 
   const okRuns = results.filter((r) => !r.notice);
@@ -286,6 +292,14 @@ export default function MoversStrategyBacktestPage() {
     const selections = okRuns.reduce((a, r) => a + Number(r.totals?.selections ?? 0), 0);
     return { trades, wins, netPnl, selections, winRate: trades ? (wins / trades) * 100 : null };
   }, [okRuns]);
+
+  /**
+   * The totals as they stood at the LAST RENDER, readable from a callback without re-binding.
+   * The trade-config panel asks for the pre-change profit at the instant it saves; a prop would carry
+   * whichever figure happened to be current when the panel last rendered.
+   */
+  const totalsRef = useRef(null);
+  totalsRef.current = totals;
 
   /**
    * ── #1242 — THE SESSION GATE HAS THREE STATES, AND THEY MUST NOT LOOK ALIKE ────────────────────
@@ -1058,6 +1072,12 @@ export default function MoversStrategyBacktestPage() {
             tradeConfig={okRuns[0]?.tradeConfig}
             onRetest={runQueue.length ? runAll : undefined}
             retestBusy={running}
+            /**
+             * Read AT THE MOMENT of the save, through a getter: `totals` is recomputed as soon as the
+             * re-run lands, so a prop captured at render would already be the new figure and the
+             * automatic revert would compare the change against itself.
+             */
+            getBaselineNetPnl={() => totalsRef.current?.netPnl ?? null}
           />
           </>
           )}

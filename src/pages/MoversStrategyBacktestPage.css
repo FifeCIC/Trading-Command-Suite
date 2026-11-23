@@ -969,6 +969,24 @@
   color: var(--ink-soft);
 }
 
+/* The auto-revert switch sits with the Retest button because it changes what Retest DOES.
+ * A native checkbox on purpose: no custom control to keep accessible, and the label is the hit target. */
+.mvp-cfg-auto {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  min-height: 24px;
+}
+.mvp-cfg-auto input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent, #3b82f6);
+  cursor: pointer;
+}
+
 .mvp-cfg-save {
   min-height: 44px;
   padding: 0 18px;

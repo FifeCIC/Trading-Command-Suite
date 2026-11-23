@@ -165,3 +165,32 @@ describe('trade-config — the stop rows read as one group (2026-11-23)', () => 
     expect(g.note).toContain('stop_adjustment');
   });
 });
+
+describe('trade-config — the description follows the box (2026-11-23)', () => {
+  /**
+   * ⚠️ MEASURED: the owner changed Stop loss to 5 and the sentence still read "closed once it is 2.5%
+   * against you". `effect` is computed from the STORED column, so it described the old number from the
+   * moment a value was typed. The panel now substitutes the box's value into `effectTemplate`, and these
+   * cases hold the two halves the panel depends on.
+   */
+  it('▶ CANARY — every value-embedding row carries a {value} template, and the stored sentence IS that template rendered', () => {
+    const rows = buildTradeConfig(BOT);
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    for (const id of ['slPct', 'tpPct', 'minComposite', 'maxHoldHours', 'baseSize']) {
+      const r = byId.get(id);
+      expect(r?.effectTemplate?.positive).toContain('{value}');
+    }
+    const sl = byId.get('slPct')!;
+    // The stored effect and the template must be the SAME sentence, or the page would change wording the
+    // instant someone typed — which is worse than not following the value at all.
+    expect(sl.effect).toBe(sl.effectTemplate!.positive!.replace('{value}', '2.5%'));
+  });
+
+  it('▶ CANARY — a zero value selects the ZERO sentence, and it is the same string both ways', () => {
+    const sl = buildTradeConfig({ ...BOT, slPct: 0 }).find((r) => r.id === 'slPct')!;
+    expect(sl.effect).toMatch(/No stop loss/);
+    expect(sl.effectTemplate!.zero).toBe(sl.effect);
+    const tp = buildTradeConfig({ ...BOT, tpPct: 0 }).find((r) => r.id === 'tpPct')!;
+    expect(tp.effectTemplate!.zero).toBe(tp.effect);
+  });
+});
