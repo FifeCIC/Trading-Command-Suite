@@ -169,10 +169,8 @@ const BacktestStrategiesPage = lazy(() => import('../pages/BacktestStrategiesPag
 // #1319 — a strategy that chooses its instrument each day. Its own route because the result shape is
 // a per-day ranking matrix, not one symbol's curve.
 const MoversStrategyBacktestPage = lazy(() => import('../pages/MoversStrategyBacktestPage.jsx'));
-// #1319 — the cockpit SKELETON for the same strategy: one column per META.Stack phase, sharing the
-// phase list with the backtest page. Registered now so the layout can be judged on a real monitor
-// before any renderer is built.
-const MoversCockpitPage = lazy(() => import('../pages/MoversCockpitPage.jsx'));
+// ⚠️ `MoversCockpitPage` WAS HERE AND IS DELETED (2026-11-23, owner request). The cockpit route was a
+// second view of the same run and added no control the backtest page lacks.
 const ScenarioAnalysisPage = lazy(() => import('../pages/ScenarioAnalysisPage.jsx'));
 
 // ── Status / System ──
@@ -376,7 +374,7 @@ export const VIEW_COMPONENTS = {
   'backtest': BacktestProtocolsPage,
   'backtest-strategies': BacktestStrategiesPage,
   'movers-strategy-backtest': MoversStrategyBacktestPage,
-  'movers-cockpit': MoversCockpitPage,
+  // ⚠️ 'movers-cockpit' removed 2026-11-23 — the page is deleted; the backtest page is the one view.
   // ⚠️ ADDED 2026-11-04 (requirement). The A/B reference panels moved OFF the strategies page
   // (*"results displayed twice"*) onto this one, which is about a single strategy and its accepted
   // reference. It reads stored runs only — it never runs a backtest.

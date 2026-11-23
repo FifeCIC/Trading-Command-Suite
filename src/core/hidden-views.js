@@ -109,7 +109,7 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   // removed from this list only once the owner has looked at it. A page nobody has reviewed must not
   // appear in someone else's navigation.
   '/lab/movers-strategy-backtest',
-  '/lab/movers-cockpit',
+  // ⚠️ '/lab/movers-cockpit' removed 2026-11-23 — the page was deleted, so there is nothing to hide.
 
   // ── Pack 8 (continued): the 2026-11-23 Appearance removal ─────────────────────────────────────
   // `/development/theme` is the replacement design gallery. The other three are MOVED pages: their

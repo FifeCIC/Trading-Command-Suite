@@ -1297,6 +1297,9 @@ export default function App() {
               user on the catch-all. */}
           <Route path="/lab/scoring-debug-lab" element={<Navigate to="/protocols/dual-protocol-inspector" replace />} />
           <Route path="/lab/meta-stack-explorer" element={<Navigate to="/status/meta-stack-explorer" replace />} />
+          {/* ⚠️ THE MOVERS COCKPIT WAS DELETED 2026-11-23 (owner request). Its route lands on the
+              backtest page that produced its runs rather than showing a blank view. */}
+          <Route path="/lab/movers-cockpit" element={<Navigate to="/lab/movers-strategy-backtest" replace />} />
           {/* ⚠️ This redirected to /status/meta-stack-pipeline, which was MERGED into this lab
               (2026-10-08). The old URL now lands on the graph itself rather than 404ing — a bookmark
               or a link in an older issue keeps working. */}

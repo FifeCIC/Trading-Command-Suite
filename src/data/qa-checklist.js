@@ -799,13 +799,13 @@ const QA_CHECKLIST = [
   {
     id: 'qa-pipeline-phases-001',
     area: 'UI',
-    system: 'src/core/pipeline-phases.js · src/core/cockpit/column-spec.js · src/components/WhyPopover.jsx · /lab/movers-strategy-backtest · /lab/movers-cockpit',
+    system: 'src/core/pipeline-phases.js · src/core/cockpit/column-spec.js · src/components/WhyPopover.jsx · /lab/movers-strategy-backtest',
     name: 'A bespoke page cannot silently omit a pipeline stage, and a cockpit column cannot render blank',
-    procedure: '`node --test src/core/pipeline-phases.test.js src/core/cockpit/column-spec.test.js`. Then open `/lab/movers-strategy-backtest`, run a day, and open `/lab/movers-cockpit`.',
-    expected: '**7 + 6 cases** pass. Every phase maps to a section id or declares itself absent WITH a reason, and must be a node on the pipeline graph or an explicit extension — otherwise the build fails. The backtest page shows ONE form that folds to a summary line on Run, one panel per stage, and a `?` beside the cutoff, the day field and the directive rows. The cockpit shows columns with `ready` / `skeleton` / `absent` states, three or four populated from the last run in the tab, and a header counting how many are unbuilt.',
+    procedure: '`node --test src/core/pipeline-phases.test.js src/core/cockpit/column-spec.test.js`. Then open `/lab/movers-strategy-backtest` and run a day.',
+    expected: '**7 + 6 cases** pass. Every phase maps to a section id or declares itself absent WITH a reason, and must be a node on the pipeline graph or an explicit extension — otherwise the build fails. The backtest page shows ONE form that folds to a summary line on Run, one panel per stage, and a `?` beside the cutoff, the day field and the directive rows.',
     category: 'Guard',
     priority: 'high',
-    versionNote: '2026-11-20 — #1326, register rows 234-236. ⚠️ The cockpit is a SPEC, not a page: a column that cannot render fails rather than showing an empty box. ⚠️ The pipeline graph is adopted as a stage checklist ONLY — its node text is measurably stale ("99 Directives · 32 Protocols" against 60 registered) and it is not a layout engine or a data source.',
+    versionNote: '2026-11-20 — #1326, register rows 234-236. ⚠️ The cockpit is a SPEC, not a page: a column that cannot render fails rather than showing an empty box. ⚠️ The cockpit PAGE was deleted 2026-11-23 (owner request); `column-spec.js` and its test remain as the phase→column contract. ⚠️ The pipeline graph is adopted as a stage checklist ONLY — its node text is measurably stale ("99 Directives · 32 Protocols" against 60 registered) and it is not a layout engine or a data source.',
   },
 
   // ═══════════════════════════════════════════════════
