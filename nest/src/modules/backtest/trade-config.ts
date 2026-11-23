@@ -148,6 +148,14 @@ export interface TradeConfigBot {
   sessionWindow?: string | null;
   baseSize?: number | null;
   simTslEnabled?: number | boolean | null;
+  /**
+   * The trail's two percentages (2026-11-23). They are read HERE rather than only mapped, because the
+   * switch alone does not describe behaviour: measured on `Movers V1 Long Bot`, `simTslEnabled = 1`
+   * with **both** percentages NULL, so `simTslPlan()` returns null and the engine applies **no trail at
+   * all** — while the table said "the stop is moved up behind the price".
+   */
+  simTslActivationPct?: number | null;
+  simTslDistancePct?: number | null;
   maxPyramidTiers?: number | null;
   /**
    * ⚠️ THERE IS NO `sessionTags` COLUMN. `settings-inventory.ts` listed it as an ignored bot field for
@@ -247,6 +255,16 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
   const botBar = num(bot?.minComposite);
   const botHold = num(bot?.maxHoldHours);
 
+  /**
+   * The trail needs BOTH percentages, exactly as `simTslPlan()` does. Computed once here so the row's
+   * value, its sentence and its note cannot disagree about whether a trail exists.
+   */
+  const tslPct = (v: unknown): number | null => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  const tslConfigured = tslPct(bot?.simTslActivationPct) !== null && tslPct(bot?.simTslDistancePct) !== null;
+
   // One computation per value, so the `value` a reader sees and the sentence describing it cannot
   // disagree about the number they are both talking about.
   const sl = pick(request.slPct, botSl, ENGINE_DEFAULTS.slPct);
@@ -268,6 +286,82 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       note: bot ? 'trading_strategy.slPct' : 'a literal in BacktestService.run() — no bot names this protocol',
       botValue: botSl,
       editable: { control: 'number', unit: '%', min: 0, max: 100, step: 0.1, nullable: true },
+    },
+    /**
+     * ── ORDER IS PART OF THE MEANING (owner, 2026-11-23) ─────────────────────────────────────────
+     * "Trailing stop" sat several rows below "Stop loss", with take-profit and the score bar between
+     * them, so the three things that decide where a loss stops being taken did not read as a group.
+     * The two stop rows now sit together, in the order they act: the fixed stop first, then what moves it.
+     */
+    {
+      id: 'simTslEnabled',
+      label: 'Trailing stop',
+      /**
+       * ── A SWITCH THAT IS ON IS NOT A TRAIL THAT EXISTS (2026-11-23) ───────────────────────────
+       * `simTslPlan()` needs THREE columns: the switch, an activation % and a distance %. Measured on
+       * `Movers V1 Long Bot`: `simTslEnabled = 1` with **both percentages NULL**, so the plan was null
+       * and the engine applying nothing — while this row read *"the stop is moved up behind the price"*.
+       * A result showed a flat stop and the table claimed protection, which is the worse direction to
+       * be wrong in: the owner was told the protection existed.
+       */
+      // ⚠️ `value` IS THE TOGGLE'S ACTUAL STATE, always `'on'`/`'off'` — `trade-config-editability.spec.ts`
+      // holds that contract, and it is right to: the control shows a switch, so its value must be one the
+      // switch can display. The "nothing is applied" fact belongs in the SENTENCE, which is the column the
+      // reader was asked to read for behaviour.
+      value: bot?.simTslEnabled ? 'on' : 'off',
+      source: 'bot',
+      // ⚠️ `applied: true` FOR THE ENGINE AND A WARNING FOR THE READER — both facts at once. The engine
+      // really does move the stop to the trail; the live guardian only records the decision point
+      // (#936). A result therefore shows protection the live bot does not have, which is worse than a
+      // missing feature because it reads as a safety net.
+      applied: true,
+      effect: !bot?.simTslEnabled
+        ? 'The stop never moves: the entry stop is the only protection, so a pullback can return to it and close the trade at a loss.'
+        : tslConfigured
+          ? 'The stop is moved up behind the price as a trade runs, so a winner is protected instead of given back. Live, a trailing stop is only recorded, not applied.'
+          : 'NO trailing stop is applied: the switch is on, but the activation and distance percentages are empty, so there is nothing to apply and the stop never moves. The entry stop is the only protection.',
+      note: !bot?.simTslEnabled
+        ? 'The LIVE guardian only records the decision point (#936) — and this bot has the trail off.'
+        : tslConfigured
+          ? 'The ENGINE moves the stop to the trail. The LIVE guardian only records the decision point (#936) — '
+            + 'so a run with a trailing stop shows protection the live bot does not yet have.'
+          : '⚠️ `simTslEnabled` is on but `simTslActivationPct` / `simTslDistancePct` are NULL — '
+            + '`simTslPlan()` returns null for a half-configured trail. Fill both to make the switch mean something.',
+      botValue: bot?.simTslEnabled ? 'on' : 'off',
+      editable: { control: 'toggle' },
+    },
+    /**
+     * ── THE STOP THE LIVE ACCOUNT ACTUALLY MOVES, AND THE ENGINE DOES NOT HAVE (2026-11-23) ──────
+     *
+     * Measured: `stop_adjustment` holds **5,328 rows**, last written today, with reasons of the form
+     * `Consensus 62 | ATR=0.00033 | dist=1.000% | slPct=1 | Wick=50`. That is the Stop Guardian
+     * (`modules/automation/stop-guardian.service.ts`): it tightens the **broker's** stop when a
+     * directive consensus clears **55**, places it **3 × ATR** away, and has a **wick filter** that can
+     * judge a move a fakeout and deliberately leave the stop alone (`wick-fakeout`).
+     *
+     * ⚠️ THAT IS THE THING THE OWNER CALLED THE "SIMULATED STOP LOSS — applied by the app when it
+     * decides the move was not a premature trigger". It exists and it runs. What does NOT exist is any
+     * per-bot column or setting for it: **55, 3×ATR and the wick rule are code constants**, which is why
+     * there is no "starting distance" field to fill in.
+     *
+     * ⚠️ AND THE ENGINE HAS NO EQUIVALENT. A run reports the fixed `slPct` stop and nothing that the
+     * guardian would have done to it, so a live account and a backtest of the same bot do not share a
+     * stop policy. This row exists so the gap is on the page instead of in a reader's head.
+     */
+    {
+      id: 'stopGuard',
+      label: 'Stop guard',
+      value: 'live only',
+      source: 'engine-default',
+      applied: false,
+      effect:
+        'In the live account the stop keeps tightening while the trade runs: once the directives agree, the broker stop is moved in to about three times the average bar range, and a move judged to be a wick is deliberately ignored. A backtest does not do any of this — the stop it tests is the fixed one above.',
+      note:
+        '⚠️ NOT APPLIED IN THIS RUN — the engine has no Stop Guardian. Live: '
+        + '`modules/automation/stop-guardian.service.ts`, consensus >= 55 over its directive set, '
+        + 'trail = 3 * ATR, wick filter can leave the stop unchanged; every move is recorded in '
+        + '`stop_adjustment` (5,328 rows measured 2026-11-23). None of those three numbers is a bot '
+        + 'column or a setting — they are constants, so there is no value to show here and nothing to edit.',
     },
     {
       id: 'tpPct',
@@ -318,24 +412,6 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       note: botHold !== null ? 'trading_strategy.maxHoldHours' : 'no time stop — the engine holds until stop, target or end of data',
       botValue: botHold,
       editable: { control: 'number', unit: 'h', min: 0, max: 720, step: 1, integer: true, nullable: true },
-    },
-    {
-      id: 'simTslEnabled',
-      label: 'Trailing stop',
-      value: bot?.simTslEnabled ? 'on' : 'off',
-      source: 'bot',
-      // ⚠️ `applied: true` FOR THE ENGINE AND A WARNING FOR THE READER — both facts at once. The engine
-      // really does move the stop to the trail; the live guardian only records the decision point
-      // (#936). A result therefore shows protection the live bot does not have, which is worse than a
-      // missing feature because it reads as a safety net.
-      applied: true,
-      effect: bot?.simTslEnabled
-        ? 'The stop is moved up behind the price as a trade runs, so a winner is protected instead of given back. Live, a trailing stop is only recorded, not applied.'
-        : 'The stop never moves: the entry stop is the only protection, so a pullback can return to it and close the trade at a loss.',
-      note: 'The ENGINE moves the stop to the trail. The LIVE guardian only records the decision point (#936) — '
-        + 'so a run with a trailing stop shows protection the live bot does not yet have.',
-      botValue: bot?.simTslEnabled ? 'on' : 'off',
-      editable: { control: 'toggle' },
     },
     {
       id: 'cooldownMinutes',

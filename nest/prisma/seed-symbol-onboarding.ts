@@ -149,7 +149,7 @@ const SYMBOLS: Array<{ ticker: string; name: string; type: string; exchange?: st
 // given broker. Record the evidence (feed quality, availability) — not just the
 // fact. A future reader has to be able to re-verify the choice, so name the
 // measurement, e.g. "verified tradeMode=4 on :5001; absent from :5000".
-const ROUTES: Array<{ symbol: string; brokerId: number; note: string; provider?: string; brokerSymbol?: string | null }> = [
+const ROUTES: Array<{ symbol: string; brokerId: number; note: string; provider?: string; brokerSymbol?: string | null; enabled?: boolean }> = [
   // ⚠️ #1009 — EVERY MT5 ROUTE PINS `brokerSymbol`, AND IT IS NOT COSMETIC.
   //
   // Measured 2026-10-01 against the live bridges: all six tickers below are EXACT matches on
@@ -169,6 +169,36 @@ const ROUTES: Array<{ symbol: string; brokerId: number; note: string; provider?:
   // ⚠️ Verified against the bridge's own `/symbols`, NOT assumed (#760 / INV-PROVIDER-REACHABLE):
   //   (Invoke-RestMethod http://localhost:5001/symbols).symbols | ? name -eq GER40   # tradeMode 4
   { symbol: 'UK100', brokerId: 3, brokerSymbol: 'UK100', note: 'FTSE 100 — Pepperstone feed current; MetaQuotes stale since 2026-05' },
+  /**
+   * ⚠️ NVDA HAD NO ROUTE AT ALL UNTIL 2026-11-23, and the symptom was silence.
+   *
+   * Measured that day: `marketbar` held NVDA `1m/5m/15m/1h/4h/1d` for the whole of November but stopped
+   * at **2026-11-20 21:00** while VIX was current to the minute — because the symbol was **unrouted**,
+   * which the refresh path treats as "nothing to do".
+   *
+   * ⚠️ AND THE FIRST FIX WAS WRONG, WHICH IS WHY THIS ROW IS ON BROKER 3. `broker_symbol` also lists
+   * `NVDA` on **broker 2** (`Nasdaq\Stock\NVDA`, registered, last seen that morning), so broker 2 was
+   * tried first. Asked directly, the bridge answered:
+   *
+   *   :5000 /candles?symbol=NVDA             → last bar **2026-11-20T20:50**, close **127.24**  (STALE)
+   *   :5001 /candles?symbol=NVDA.US          → last bar **2026-11-23T17:00**, close **166.62**  (LIVE)
+   *
+   * Broker 2's MetaQuotes feed is frozen — the same staleness this file already records for `UK100`
+   * and `FRA40`. A route to it would keep the bars old while looking correct.
+   *
+   * ⚠️ THE TWO PRICES ARE **NOT** A SCALE MISMATCH, and that was checked before switching: the stored
+   * daily closes read `11-19 145.98 → 11-20 125.53 → 11-23 166.07`, so 127 vs 166 is the real move
+   * (**+32.3% from Friday's close**), not two venues quoting different instruments. The `1.31×` ratio is
+   * a price move, which is exactly the case where a ratio check would have lied about a stale feed.
+   */
+  { symbol: 'NVDA', brokerId: 3, brokerSymbol: 'NVDA.US', note: 'NVIDIA — had NO route until 2026-11-23 (bars stopped 2026-11-20 while VIX stayed current). broker 2 (NVDA) is STALE at 2026-11-20T20:50 close 127.24; broker 3 NVDA.US is LIVE 2026-11-23T17:00 close 166.62 — a real +32.3% move, not a scale mismatch' },
+  /**
+   * ⚠️ THE ROUTE THAT MUST STAY OFF. Broker 2's `NVDA` exists in `broker_symbol` and looks usable, which
+   * is how it got chosen first; asked directly its feed answers with a **2026-11-20** bar. Two enabled
+   * routes for one symbol leaves the resolver picking by broker order, so the stale one can win — the
+   * only reliable expression of "use broker 3" is to RETIRE broker 2's row and say why.
+   */
+  { symbol: 'NVDA', brokerId: 2, brokerSymbol: 'NVDA', enabled: false, note: 'RETIRED 2026-11-23 — MetaQuotes feed frozen at 2026-11-20T20:50 (close 127.24) while broker 3 NVDA.US was live at 166.62. Kept disabled rather than deleted so the reason stays visible.' },
   { symbol: 'GER40', brokerId: 3, brokerSymbol: 'GER40', note: 'DAX 40 — Pepperstone has a real GER40 feed. ⚠️ :5000 calls this DE40 and disables it, so a fallback here resolves to nothing (#1009)' },
   // ⚠️ FRA40 RE-POINTED 2 -> 3 on 2026-09-15. The previous note ("Pepperstone returns 0")
   // was measured on 2026-09-10 and is NO LONGER TRUE: :5001 now feeds FRA40 live
@@ -468,7 +498,14 @@ async function main() {
     await prisma.symbolRoute.upsert({
       where: { symbol_brokerId: { symbol: r.symbol, brokerId: r.brokerId } },
       update: {
-        enabled: true,
+        /**
+         * ⚠️ `enabled` IS DECLARED, NOT ASSUMED (2026-11-23). It was hardcoded `true`, so a route that a
+         * re-seed needed to RETIRE was re-enabled on every run — and a retired route is exactly what
+         * NVDA needed (broker 2 is stale, broker 3 is live). An entry may now say `enabled: false` and
+         * the seeder will hold it that way, because "re-seeding is additive only" means the DB row can
+         * never be deleted by this file.
+         */
+        enabled: r.enabled ?? true,
         note: r.note,
         provider: r.provider ?? ROUTE_DEFAULT_PROVIDER,
         brokerSymbol: r.brokerSymbol ?? undefined,
@@ -476,7 +513,7 @@ async function main() {
       create: {
         symbol: r.symbol,
         brokerId: r.brokerId,
-        enabled: true,
+        enabled: r.enabled ?? true,
         note: r.note,
         provider: r.provider ?? ROUTE_DEFAULT_PROVIDER,
         brokerSymbol: r.brokerSymbol ?? null,

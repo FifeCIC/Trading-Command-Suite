@@ -327,7 +327,7 @@ function levelRatio(samples) {
  * ⚠️ `not-run` IS A THIRD OUTCOME, NOT A PASS. With no daily close for the answer day there is
  * nothing to compare, and "consistent" would be a guard passing because it never ran.
  */
-function seriesAgreement(pct5m, pct1d, tolerancePp) {
+function seriesAgreement(pct5m, pct1d, tolerancePp, directionMode = 'strict') {
   // ⚠️ `Number(null)` IS `0`, NOT `NaN` — the same trap `alignBarTimestamp` documents for `new Date(null)`.
   // Without this guard a missing daily close reads as a 0% daily move and a −10% session looks like a
   // 10pp disagreement with "the daily series", i.e. a confident verdict computed from nothing.
@@ -340,6 +340,33 @@ function seriesAgreement(pct5m, pct1d, tolerancePp) {
     return { status: 'not-run', deltaPp: null, reason: 'no daily close for the answer day to compare against' };
   }
   const deltaPp = Math.abs(five - one);
+  /**
+   * ⚠️ DIRECTION IS CHECKED SEPARATELY FROM MAGNITUDE, AND IT IS NOT THE SAME TEST (2026-11-23).
+   *
+   * Measured on 2026-11-17: `RBLX` reported **5m −4.6% vs daily +7.5%** — a **12.1pp** gap, which
+   * passed the default 25pp tolerance and was ACCEPTED as a loser. Two series disagreeing on SIGN are
+   * not describing the same session by any reading, and the candidate list then carries a move that is
+   * the opposite direction to the one the adjusted series recorded.
+   *
+   * The tolerance is deliberately loose for magnitude (it is tuned to catch a split, which diverges by
+   * ~50pp), so magnitude alone can never catch this. Both legs must be MATERIAL before direction is
+   * judged: a +0.05% / −0.02% pair is a flat session, not a disagreement.
+   */
+  const MATERIAL_PCT = 1;
+  if (
+    directionMode === 'strict' &&
+    Math.abs(five) >= MATERIAL_PCT &&
+    Math.abs(one) >= MATERIAL_PCT &&
+    Math.sign(five) !== Math.sign(one)
+  ) {
+    return {
+      status: 'mismatch',
+      deltaPp,
+      reason:
+        `the two series disagree on DIRECTION for this session: 5m ${five.toFixed(1)}% vs daily ` +
+        `${one.toFixed(1)}% — one of them is not describing the session being screened`,
+    };
+  }
   if (deltaPp > tolerancePp) {
     return {
       status: 'mismatch',
@@ -350,6 +377,34 @@ function seriesAgreement(pct5m, pct1d, tolerancePp) {
     };
   }
   return { status: 'ok', deltaPp, reason: null };
+}
+
+/**
+ * screenVerdict() — is the accepted set actually a movers list? (#1336)
+ *
+ * ⚠️ PURE ON PURPOSE. The rule it enforces — "a list whose weakest member has barely moved is not a
+ * movers day" — used to live inline in `main()`, where no self-test could reach it. A guard that
+ * cannot be made to fail is a decoration, so the decision is here and the exit is at the call site.
+ *
+ * ⚠️ THE BOUNDARY IS INCLUSIVE: a move exactly at `--min-move` passes. Stated because `>=` and `>` are
+ * a real decision and a later reader must not have to infer which one was meant.
+ */
+function screenVerdict(accepted, minMove) {
+  if (!Array.isArray(accepted) || accepted.length === 0) {
+    return { ok: false, weakest: null, reason: 'no candidate passed the per-symbol checks' };
+  }
+  const weakest = Math.min(...accepted.map((a) => Math.abs(Number(a.pct))));
+  if (!Number.isFinite(weakest)) {
+    return { ok: false, weakest: null, reason: 'a candidate carries no numeric move, so the list cannot be judged' };
+  }
+  if (weakest < minMove) {
+    return {
+      ok: false,
+      weakest,
+      reason: `the weakest accepted move is ${weakest.toFixed(1)}%, below --min-move ${minMove}%`,
+    };
+  }
+  return { ok: true, weakest, reason: null };
 }
 
 /**
@@ -380,7 +435,7 @@ function evaluateCandidate(c, opts) {
       detail: `close ${c.close} < --min-price ${opts.minPrice}`,
     };
   }
-  const agree = seriesAgreement(c.pct, c.pct1d, opts.seriesTolerance);
+  const agree = seriesAgreement(c.pct, c.pct1d, opts.seriesTolerance, opts.seriesDirection ?? 'strict');
   if (agree.status === 'mismatch') {
     return { accepted: false, rule: 'scale-mismatch', detail: agree.reason };
   }
@@ -441,7 +496,8 @@ function buildNote(input) {
 
 /** Every flag this tool accepts. Anything else is refused, so a typo cannot be read as a default. */
 const KNOWN_FLAGS = [
-  '--side', '--date', '--top', '--examine', '--min-price', '--series-tolerance',
+  '--side', '--date', '--top', '--examine', '--min-price', '--series-tolerance', '--series-direction',
+  '--min-move', '--max-sessions-back',
   '--universe', '--active-only', '--dry-run', '--no-import', '--prune', '--base-url',
   '--lookback-days', '--self-test', '--help',
 ];
@@ -478,6 +534,22 @@ function parseArgs(argv) {
   const examine = num('--examine', Math.max(top * 3, top + 10));
   const minPrice = num('--min-price', 0);
   const seriesTolerance = num('--series-tolerance', 25);
+  /**
+   * ⚠️ `strict` BY DEFAULT (2026-11-23). The stored `1d` series is stamped on a rolling 24h boundary,
+   * so its "answer day" close can be the PREVIOUS session's — which means a genuine sign disagreement
+   * is sometimes caused by the offset rather than by a bad series. That is why `tolerant` still exists.
+   * It is not the default because a candidate list built on a move the adjusted series contradicts is
+   * the one thing this tool must never write; shrinking the list is the cheaper error.
+   */
+  const seriesDirection = val('--series-direction', 'strict');
+  /**
+   * ⚠️ `--min-move` AND `--max-sessions-back` EXIST BECAUSE THE BUILDER WROTE MEANINGLESS LISTS
+   * (measured 2026-11-23): `movers-winners-2026-11-13` headed by **AAPL +0.4%** with four symbols that
+   * fell below it, and `movers-losers-2026-11-16` containing moves measured **3–4 sessions back**.
+   * Both were flagged in the note and both were written. A refusal is the correct output.
+   */
+  const minMove = num('--min-move', 5);
+  const maxSessionsBack = num('--max-sessions-back', 1);
   const universe = val('--universe', 'stocks');
   const lookbackDays = num('--lookback-days', DEFAULT_LOOKBACK_DAYS);
 
@@ -489,6 +561,9 @@ function parseArgs(argv) {
   if (Number.isNaN(minPrice) || minPrice < 0) return { ok: false, reason: `--min-price must be >= 0, got '${val('--min-price', '')}'`, plan: null };
   if (Number.isNaN(seriesTolerance) || seriesTolerance < 0) return { ok: false, reason: `--series-tolerance must be >= 0 (percentage points), got '${val('--series-tolerance', '')}'`, plan: null };
   if (universe !== 'stocks' && universe !== 'all') return { ok: false, reason: `--universe must be stocks or all, got '${universe}'`, plan: null };
+  if (seriesDirection !== 'strict' && seriesDirection !== 'tolerant') return { ok: false, reason: `--series-direction must be strict or tolerant, got '${seriesDirection}'`, plan: null };
+  if (Number.isNaN(minMove) || minMove < 0) return { ok: false, reason: `--min-move must be >= 0 (percent), got '${val('--min-move', '')}'`, plan: null };
+  if (Number.isNaN(maxSessionsBack) || maxSessionsBack < 1) return { ok: false, reason: `--max-sessions-back must be >= 1, got '${val('--max-sessions-back', '')}'`, plan: null };
   if (Number.isNaN(lookbackDays) || lookbackDays < 10) return { ok: false, reason: `--lookback-days must be >= 10, got '${val('--lookback-days', '')}'`, plan: null };
 
   let name;
@@ -509,6 +584,9 @@ function parseArgs(argv) {
       examine,
       minPrice,
       seriesTolerance,
+      seriesDirection,
+      minMove,
+      maxSessionsBack,
       universe,
       activeOnly: argv.includes('--active-only'),
       dryRun: argv.includes('--dry-run'),
@@ -635,7 +713,11 @@ function selfTest() {
   // The measured stamping offset shifts WHICH session each side measures, so ordinary day-over-day
   // differences must not be read as a split. Measured: NVDA's whole-window price ratio was 1.03x.
   t('agreement is not fooled by a one-session offset between the series', () =>
-    seriesAgreement(-4.3, -5.5, 25).status === 'ok' && seriesAgreement(9.1, -8.0, 25).status === 'ok');
+    // ⚠️ `tolerant` is now REQUIRED here, and that is the record of a real change: the stored `1d`
+    // series is stamped on a rolling 24h boundary, so a sign flip can be caused by the offset. The
+    // DEFAULT is nevertheless `strict`, because a candidate list built on a move the adjusted series
+    // contradicts is worse than a shorter list (#1336).
+    seriesAgreement(-4.3, -5.5, 25).status === 'ok' && seriesAgreement(9.1, -8.0, 25, 'tolerant').status === 'ok');
   t('agreement says NOT-RUN when there is no daily close — it does not pass', () => {
     const v = seriesAgreement(-4.3, null, 25);
     return v.status === 'not-run' && /no daily close/.test(v.reason);
@@ -665,6 +747,51 @@ function selfTest() {
     const r = evaluateCandidate({ ...good, pct1d: null }, opts);
     return r.accepted === true && /NOT RUN/.test(r.scale);
   });
+  /**
+   * ⚠️ MEASURED CASE, 2026-11-17: `RBLX` at 5m −4.6% vs daily +7.5% passed the 25pp tolerance and was
+   * accepted as a loser. Direction is a separate question from magnitude, and this is the case that
+   * proves it can fail.
+   */
+  t('▶ CANARY — rejects a SIGN disagreement even when the gap is inside the tolerance', () => {
+    const r = evaluateCandidate({ ...good, pct: -4.6, pct1d: 7.5 }, opts);
+    return !r.accepted && r.rule === 'scale-mismatch' && /DIRECTION/.test(r.detail);
+  });
+  t('a flat session whose two series straddle zero is NOT a direction disagreement', () => {
+    const v = seriesAgreement(0.05, -0.02, 25);
+    return v.status === 'ok';
+  });
+  t('a material move against a flat one is still judged on magnitude alone', () => {
+    // 1.2% vs 0% — one leg is not material, so the direction rule must not fire.
+    const v = seriesAgreement(1.2, 0, 25);
+    return v.status === 'ok';
+  });
+  t('▶ CANARY — `tolerant` mode restores the offset behaviour so the flag is not decorative', () => {
+    return seriesAgreement(9.1, -8.0, 25, 'tolerant').status === 'ok'
+      && seriesAgreement(9.1, -8.0, 25, 'strict').status === 'mismatch';
+  });
+  t('refuses an unknown --series-direction rather than guessing one', () =>
+    parseArgs(['--side', 'losers', '--date', '2026-11-10', '--series-direction', 'lenient']).ok === false);
+  // #1336 — the two dataset-level gates, asserted on the plan they are read from.
+  t('defaults --min-move to 5% and --max-sessions-back to 1', () => {
+    const p = parseArgs(['--side', 'winners', '--date', '2026-11-13']).plan;
+    return p.minMove === 5 && p.maxSessionsBack === 1;
+  });
+  t('accepts an explicit --min-move 0 so a flat-day study is possible and deliberate', () =>
+    parseArgs(['--side', 'winners', '--date', '2026-11-13', '--min-move', '0']).plan.minMove === 0);
+  t('refuses a nonsensical --max-sessions-back', () =>
+    parseArgs(['--side', 'losers', '--date', '2026-11-16', '--max-sessions-back', '0']).ok === false);
+  // ▶ CANARY — the measured 2026-11-13 winners list: AAPL +0.4%, MSFT +0.2%, and four that FELL.
+  t('▶ CANARY — refuses a "winners" list whose headline is +0.4%', () => {
+    const v = screenVerdict([{ pct: 0.4 }, { pct: 0.2 }, { pct: -0.3 }, { pct: -2.6 }], 5);
+    // The WEAKEST by magnitude is +0.2%, not the headline +0.4% — the gate reads the whole list.
+    return v.ok === false && /weakest accepted move is 0\.2%/.test(v.reason);
+  });
+  t('accepts a list whose weakest member lands exactly on --min-move (inclusive boundary)', () =>
+    screenVerdict([{ pct: -18.6 }, { pct: -5 }], 5).ok === true);
+  t('refuses an empty accepted set with its own reason, not a move comparison', () =>
+    screenVerdict([], 5).ok === false && /no candidate passed/.test(screenVerdict([], 5).reason));
+  t('--min-move 0 lets a deliberately flat-day study through', () =>
+    screenVerdict([{ pct: 0.4 }, { pct: 0.2 }], 0).ok === true);
   t('applies --min-price only when it is set', () => {
     const low = { ...good, close: 0.02 };
     return evaluateCandidate(low, opts).accepted === true && evaluateCandidate(low, { ...opts, minPrice: 0.05 }).rule === 'below-min-price';
@@ -889,6 +1016,57 @@ async function main() {
     const marketDays = sessionDaysBefore(bySymbol, calendarIds, plan.answerDate);
     for (const a of accepted) {
       a.sessionsBack = sessionsBackOf(a.prevDay, plan.answerDate, marketDays);
+    }
+    /**
+     * ── #1336 — A MOVE THAT SPANS MORE THAN ONE SESSION IS NOT A SINGLE-DAY MOVER ────────────────
+     * MEASURED 2026-11-23: the 2026-11-16 screen offered `RKDA -18.6% (3 sessions back)`,
+     * `SKYQ -17.1% (4)`, `DOMH -11.4% (4)` — the note flagged them and the dataset was written
+     * anyway. The selection run treats the day list as *that day's* movers, and the backtest measures
+     * only the answer day, so a four-session collapse counted as one day's move puts a symbol in the
+     * list for a move it did not make on the day being measured.
+     *
+     * They are EXCLUDED with a named rule rather than dropped quietly, and `--max-sessions-back`
+     * exists for the study that deliberately wants a wider definition.
+     */
+    const spanLimit = plan.maxSessionsBack ?? 1;
+    const spanDropped = accepted.filter((a) => (a.sessionsBack ?? 1) > spanLimit);
+    if (spanDropped.length) {
+      for (const a of spanDropped) {
+        const idx = accepted.indexOf(a);
+        if (idx >= 0) accepted.splice(idx, 1);
+        excluded.push({
+          ...a,
+          rule: 'move-spans-multiple-sessions',
+          detail:
+            `${a.pct.toFixed(1)}% measured from ${a.prevDay}, ${a.sessionsBack} session(s) back — ` +
+            `not a single-day move (limit ${spanLimit})`,
+        });
+      }
+    }
+
+    /**
+     * ── #1336 — A LIST WITH NO MOVER IN IT IS NOT A MOVERS DATASET ───────────────────────────────
+     * MEASURED 2026-11-23: `movers-winners-2026-11-13` screened clean and its headline was
+     * **AAPL +0.4%**, followed by `MSFT +0.2%` and four symbols that FELL. On a 13–35 symbol universe
+     * a "top 10 winners" is arithmetic, not a screen — and a strategy measured against it would be
+     * measured against flat days while the note called it an "EXTREME-GAINER DAY".
+     *
+     * So the weakest accepted move must reach `--min-move` (default 5%). If it does not, NOTHING is
+     * written and the reason is a refusal, because the alternative is a dataset that looks normal in
+     * the list and is meaningless.
+     */
+    const minMove = plan.minMove ?? 5;
+    const verdict = screenVerdict(accepted, minMove);
+    if (!verdict.ok) {
+      console.error(`\n[build-movers] ✖ refusing to write ${plan.name}`);
+      console.error(`    ${verdict.reason}.`);
+      console.error(
+        `    ${moves.length} symbol(s) could be ranked on ${plan.answerDate}` +
+          (excluded.length ? `; ${excluded.length} candidate(s) were examined and excluded` : '') +
+          '.',
+      );
+      console.error('    A list this flat is not a movers day — capture more of the universe (#1321) or pick another day.');
+      process.exit(1);
     }
     const daysBefore = sessionDaysBefore(bySymbol, accepted.map((a) => a.symbolId), plan.answerDate);
     const window = warmupStart(daysBefore, plan.answerDate);

@@ -87,13 +87,31 @@ describe('buildTradeConfig', () => {
   it('▶ CANARY — a trailing stop is reported applied BY THE ENGINE and flagged as absent live', () => {
     // Two facts, both required. Collapsing them either hides a real mechanism from the reader or
     // implies live protection that does not exist.
-    const on = get(buildTradeConfig({ ...BOT, simTslEnabled: 1 }), 'simTslEnabled');
+    const on = get(buildTradeConfig({ ...BOT, simTslEnabled: 1, simTslActivationPct: 2, simTslDistancePct: 1 }), 'simTslEnabled');
     expect(on).toMatchObject({ value: 'on', applied: true });
     expect(on.note).toMatch(/LIVE guardian only records/);
     expect(on.note).toContain('#936');
 
     const off = get(buildTradeConfig({ ...BOT, simTslEnabled: 0 }), 'simTslEnabled');
     expect(off.value).toBe('off');
+  });
+
+  /**
+   * ⚠️ MEASURED, 2026-11-23 — `Movers V1 Long Bot` has `simTslEnabled = 1` with BOTH percentages NULL.
+   * `simTslPlan()` returns null for that, so the engine applied no trail at all, while this row said
+   * "the stop is moved up behind the price". A reader was told the protection existed.
+   */
+  it('▶ CANARY — a switch with empty percentages says NO trail is applied, not that one is', () => {
+    const inert = get(buildTradeConfig({ ...BOT, simTslEnabled: 1 }), 'simTslEnabled');
+    expect(inert.value).toBe('on');
+    expect(inert.effect).toMatch(/NO trailing stop is applied/);
+    expect(inert.effect).not.toMatch(/moved up behind the price/);
+    expect(inert.note).toContain('simTslDistancePct');
+  });
+
+  it('a half-configured trail (activation only) is still reported as no trail', () => {
+    const half = get(buildTradeConfig({ ...BOT, simTslEnabled: 1, simTslActivationPct: 2 }), 'simTslEnabled');
+    expect(half.effect).toMatch(/NO trailing stop is applied/);
   });
 
   it('the summary names the bot and lists what it could not apply', () => {
@@ -113,5 +131,37 @@ describe('buildTradeConfig', () => {
     const rows = buildTradeConfig({ ...BOT, slPct: undefined, cooldownMinutes: undefined });
     expect(get(rows, 'slPct').value).toBe(ENGINE_DEFAULTS.slPct);
     expect(get(rows, 'cooldownMinutes').value).toBeNull();
+  });
+});
+
+describe('trade-config — the stop rows read as one group (2026-11-23)', () => {
+  /**
+   * ⚠️ ORDER IS THE REQUEST. "Trailing stop" sat below take-profit and the entry bar, so the three
+   * things that decide where a loss stops being taken did not read as a group. This asserts the order
+   * so a later tidy cannot silently separate them again.
+   */
+  it('▶ CANARY — the fixed stop, then what moves it, then what live does that the engine does not', () => {
+    const rows = buildTradeConfig(BOT);
+    const iSl = rows.findIndex((r) => r.id === 'slPct');
+    const iTrail = rows.findIndex((r) => r.id === 'simTslEnabled');
+    const iGuard = rows.findIndex((r) => r.id === 'stopGuard');
+    expect(iSl).toBeGreaterThanOrEqual(0);
+    expect(iTrail).toBe(iSl + 1);
+    expect(iGuard).toBe(iTrail + 1);
+  });
+
+  /**
+   * ⚠️ MEASURED 2026-11-23: `stop_adjustment` holds 5,328 rows written by the Stop Guardian
+   * (consensus >= 55, trail = 3 x ATR, wick filter can leave the stop alone). The engine has none of it,
+   * and none of the three numbers is a bot column or a setting — so there is nothing to edit and the
+   * absence of a value is correct, not a missing field.
+   */
+  it('▶ CANARY — the live-only stop guard says NOT APPLIED and names its three constants', () => {
+    const g = get(buildTradeConfig(BOT), 'stopGuard');
+    expect(g.applied).toBe(false);
+    expect(g.note).toContain('NOT APPLIED');
+    expect(g.note).toContain('55');
+    expect(g.note).toContain('ATR');
+    expect(g.note).toContain('stop_adjustment');
   });
 });

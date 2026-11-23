@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**615** source files · **3415** declarations · **402** ratio sites · **1795** nodes · **190** unreferenced
+**615** source files · **3416** declarations · **402** ratio sites · **1795** nodes · **190** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -128,10 +128,10 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:2203` — `observeExhaustion()`
   - `(prior/entry)*100`
-- `nest/src/modules/backtest/selection-run.service.ts:623` — `runSelection()`
+- `nest/src/modules/backtest/selection-run.service.ts:626` — `runSelection()`
   - `kept.length?(wins/kept.length)*100:0`
   - guarded by: `kept.length`
-- `nest/src/modules/backtest/selection-run.service.ts:707` — `runSelection()` → `winRate`
+- `nest/src/modules/backtest/selection-run.service.ts:710` — `runSelection()` → `winRate`
   - `totalTrades?(totalWins/totalTrades)*100:0`
   - guarded by: `totalTrades`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
@@ -454,10 +454,10 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:2203` — `observeExhaustion()`
   - `(prior/entry)*100`
-- `nest/src/modules/backtest/selection-run.service.ts:623` — `runSelection()`
+- `nest/src/modules/backtest/selection-run.service.ts:626` — `runSelection()`
   - `kept.length?(wins/kept.length)*100:0`
   - guarded by: `kept.length`
-- `nest/src/modules/backtest/selection-run.service.ts:707` — `runSelection()` → `winRate`
+- `nest/src/modules/backtest/selection-run.service.ts:710` — `runSelection()` → `winRate`
   - `totalTrades?(totalWins/totalTrades)*100:0`
   - guarded by: `totalTrades`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
@@ -698,10 +698,10 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:2203` — `observeExhaustion()`
   - `(prior/entry)*100`
-- `nest/src/modules/backtest/selection-run.service.ts:623` — `runSelection()`
+- `nest/src/modules/backtest/selection-run.service.ts:626` — `runSelection()`
   - `kept.length?(wins/kept.length)*100:0`
   - guarded by: `kept.length`
-- `nest/src/modules/backtest/selection-run.service.ts:707` — `runSelection()` → `winRate`
+- `nest/src/modules/backtest/selection-run.service.ts:710` — `runSelection()` → `winRate`
   - `totalTrades?(totalWins/totalTrades)*100:0`
   - guarded by: `totalTrades`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
@@ -961,8 +961,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/backtest/score-maths.ts:76 r4`
 - `nest/src/modules/backtest/score-maths.ts:874 bucketKey`
 - `nest/src/modules/backtest/score-maths.ts:89 collect`
-- `nest/src/modules/backtest/selection-run.service.ts:427 num`
-- `nest/src/modules/backtest/selection-run.service.ts:80 num`
+- `nest/src/modules/backtest/selection-run.service.ts:430 num`
+- `nest/src/modules/backtest/selection-run.service.ts:81 num`
 - `nest/src/modules/directives/directives.service.ts:1039 refreshActiveStatuses`
 - `nest/src/modules/directives/directives.service.ts:264 prepare`
 - `nest/src/modules/directives/directives.service.ts:517 mean`
@@ -981,10 +981,10 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/directives/implementations/three-soldiers-pattern.directive.ts:98 openInPrevBody`
 - `nest/src/modules/directives/implementations/volatility-envelope.directive.ts:98 percentile`
 - `nest/src/modules/directives/utils/indicators.ts:322 smooth`
-- `nest/src/modules/market-data/bar-refresh.service.ts:537 getProviderAdapter`
-- `nest/src/modules/market-data/bar-refresh.service.ts:569 newestOf`
-- `nest/src/modules/market-data/bar-refresh.service.ts:574 isStaleSet`
-- `nest/src/modules/market-data/bar-refresh.service.ts:614 fetchBridgeCandles`
+- `nest/src/modules/market-data/bar-refresh.service.ts:586 getProviderAdapter`
+- `nest/src/modules/market-data/bar-refresh.service.ts:618 newestOf`
+- `nest/src/modules/market-data/bar-refresh.service.ts:623 isStaleSet`
+- `nest/src/modules/market-data/bar-refresh.service.ts:663 fetchBridgeCandles`
 - `nest/src/modules/market-data/market-data.service.ts:33 evaluateFreshness`
 - `nest/src/modules/paper-trading/paper-trading.service.ts:72 setStartingBalance`
 - `nest/src/modules/paper-trading/paper-trading.service.ts:79 updateQuote`

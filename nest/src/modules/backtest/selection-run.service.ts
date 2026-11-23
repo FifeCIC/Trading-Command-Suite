@@ -74,6 +74,7 @@ import { admitTrades } from './portfolio-admission';
 // reorder the candidate list. One publisher, chosen and reported.
 import { chooseBarProvider } from './bar-provider';
 import { summariseExitDivergence, type ExitDivergence } from '../../common/trading/exit-guardian/exit-equivalence';
+import { summariseFillGap, type FillGapSummary } from '../../common/trading/exit-guardian/stop-fill-gap';
 import { APP_VERSION } from '../../version';
 
 /** The one numeric coercion this file needs, kept local (a `null` must not read as 0). */
@@ -272,6 +273,8 @@ export interface SelectionRunResult {
    * null` means every exit maps exactly. See `summariseExitDivergence()`.
    */
   exitDivergence: ExitDivergence;
+  /** #1335 — how optimistic the stop fills in this population are. `measured: 0` = not recorded. */
+  fillGap: FillGapSummary;
   caveats: string[];
 }
 
@@ -889,6 +892,8 @@ export class SelectionRunService {
        * and before this a per-day result gave no way to see that part of it was trail-dependent.
        */
       exitDivergence: summariseExitDivergence(admittedTrades),
+      /** #1335 — the same fill-assumption report, over the same population. */
+      fillGap: summariseFillGap(admittedTrades),
       caveats,
     };
   }

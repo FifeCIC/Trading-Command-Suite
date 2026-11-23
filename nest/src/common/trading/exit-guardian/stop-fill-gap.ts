@@ -6,8 +6,8 @@
  * unconditionally). A real broker's resting stop fills at whatever the market offers when it triggers,
  * and on a thin small-cap moving 60% in a day that is not the level.
  *
- * Owner, 2026-11-23: *"I can't believe after all this time we're only just realising that the broker
- * stop loss is not being simulated."* Half right, and the distinction is the substance:
+ * Owner, 2026-11-23: the broker stop loss was not being simulated, and that had gone unnoticed.
+ * Half right, and the distinction is the substance:
  *
  *   · the stop **LEVEL** is fully simulated — the engine calls the same `protectiveStopPrice()`, to
  *     the same 5 decimal places, that the guardian sends to the broker;

@@ -364,7 +364,56 @@ export class BarRefreshService {
           `(no position, no active bot) — skipped. Core set via symbol.active (#R37).`,
         );
       }
-      return filtered;
+
+      /**
+       * ── #1337 — AN ACTIVE, ROUTED SYMBOL WAS NEVER REFRESHED, AND THE SYMPTOM WAS SILENCE ──────
+       * The block above INTERSECTS `resolved` with the active/protected set, so a symbol that is
+       * active and routable but absent from `getSymbolsForFeature('bar-refresh')` is never fetched, no
+       * matter what `symbol.active` says. The comment beside it claims the opposite ("Core set via
+       * symbol.active"), which is how the gap stayed invisible.
+       *
+       * MEASURED 2026-11-23: `bars/refresh/status` reported `lastSymbols: 1` while the starvation
+       * diagnostic named **11 symbols 68 hours stale** — QQQ, MSTR, MSFT, RBLX, NVDA and the rest of
+       * the US equity set, all frozen at 2026-11-20 21:00. VIX kept updating (it is on broker 3), so
+       * the feed looked alive. A request to "store NVDA's month permanently" cannot be met while the
+       * only writer of its bars does not consider it a target.
+       *
+       * The union is bounded on purpose: `active = 1` **AND** an enabled `symbol_route` row. A symbol
+       * with no route cannot be fetched anyway, and including it would turn a silent skip into a
+       * permanent error line every five minutes.
+       */
+      const routed = await (async () => {
+        // ⚠️ ITS OWN TRY/CATCH, DELIBERATELY. A failure to read routes must not fall through to the
+        // outer FAIL-OPEN branch, which would let every resolved symbol through — the opposite of
+        // conservative. No routes read means no ADDITIONS, i.e. exactly the previous behaviour.
+        try {
+          return await (this.prisma as any).symbolRoute.findMany({
+            where: { enabled: true },
+            select: { symbol: true },
+          });
+        } catch (err: any) {
+          this.logger.warn(
+            `Bar refresh: could not read symbol_route (${err?.message ?? err}) — no active symbols ` +
+            `added this cycle (#1337).`,
+          );
+          return [] as Array<{ symbol: string }>;
+        }
+      })();
+      const routedSet = new Set(
+        (routed as Array<{ symbol: string }>).map((r) => String(r.symbol).toUpperCase()),
+      );
+      const activeRouted = activeRows
+        .map((r) => String(r.ticker).toUpperCase())
+        .filter((t) => routedSet.has(t));
+      const union = [...new Set([...filtered, ...activeRouted])];
+      const added = union.length - filtered.length;
+      if (added > 0) {
+        this.logger.log(
+          `Bar refresh: ${added} active+routed symbol(s) added to the ${filtered.length} resolved ` +
+          `from bar-refresh/automation — ${union.length} total (#1337).`,
+        );
+      }
+      return union;
     } catch (err: any) {
       // ⚠️ FAIL OPEN, and log it loudly. A failure to read `active` must not stop the feed for a
       // symbol we are trading — a starved feed breaks the stop guardian, and that is worse than

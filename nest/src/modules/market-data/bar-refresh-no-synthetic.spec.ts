@@ -213,5 +213,36 @@ describe('BarRefreshService — only bars the BRIDGE SERVED may be stored', () =
 
       await expect(service.resolveRefreshSymbols()).resolves.toEqual(['XAUUSD', 'BTC']);
     });
+
+    /**
+     * ⚠️ #1337 — MEASURED 2026-11-23: `bars/refresh/status` reported `lastSymbols: 1` while 11 symbols
+     * sat **68 hours** stale (QQQ, MSTR, MSFT, RBLX, NVDA …), all frozen at a Friday close, because this
+     * method INTERSECTED the resolved list with the active set instead of adding to it. An active,
+     * routable symbol that `getSymbolsForFeature('bar-refresh')` did not name was never fetched — and a
+     * refresh that skips a symbol is silent.
+     */
+    it('▶ CANARY — ADDS an active symbol that has a route but is not in the resolved list', async () => {
+      resolverMock.getSymbolsForFeature = jest.fn(async (f: string) =>
+        ({ symbols: f === 'automation' ? [] : ['XAUUSD'] }));
+      prismaMock.symbol.findMany = jest.fn(async () => [{ ticker: 'XAUUSD' }, { ticker: 'NVDA' }]);
+      (service as unknown as { prisma: Record<string, unknown> }).prisma.symbolRoute = {
+        findMany: jest.fn(async () => [{ symbol: 'NVDA' }, { symbol: 'OIL' }]),
+      };
+
+      const out = await service.resolveRefreshSymbols();
+      expect(out).toContain('NVDA');       // active + routed → must be refreshed
+      expect(out).not.toContain('OIL');    // routed but not active → not added
+    });
+
+    it('a route-read failure adds nothing rather than letting everything through', async () => {
+      resolverMock.getSymbolsForFeature = jest.fn(async (f: string) =>
+        ({ symbols: f === 'automation' ? [] : ['XAUUSD', 'SOMETHING'] }));
+      prismaMock.symbol.findMany = jest.fn(async () => [{ ticker: 'XAUUSD' }]);
+      (service as unknown as { prisma: Record<string, unknown> }).prisma.symbolRoute = {
+        findMany: jest.fn(async () => { throw new Error('no such model'); }),
+      };
+
+      await expect(service.resolveRefreshSymbols()).resolves.toEqual(['XAUUSD']);
+    });
   });
 });
