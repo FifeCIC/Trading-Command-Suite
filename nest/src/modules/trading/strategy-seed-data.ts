@@ -191,6 +191,17 @@ export interface SeedTradingStrategy {
    */
   maxHoldHours?: number | null;
   /**
+   * `HH:MM` UTC — be flat by this time every day (`position-time-stop.service.ts`).
+   *
+   * ⚠️ DECLARED HERE BECAUSE A GENERATED SEED EMITTED IT AND THIS TYPE REFUSED IT (2026-11-24).
+   * `strategy-seed-generated.local.ts` writes every column the A/B copy carries, so a field the type
+   * does not know is a `tsc` error rather than a silent omission — which is the good direction, and it
+   * caught this the first time the field was used. Absent/NULL means "no boundary", and that is not
+   * the same as a boundary at midnight: NULL is the state that produces an all-end-of-data run
+   * (`backtest-viability.ts` → `mark-only`), so it must be expressible.
+   */
+  exitBeforeUtc?: string | null;
+  /**
    * Capital the bot may use, in account currency (#894) — the base for the rating's risk
    * condition (drawdown <= 25% OF THIS), and the denominator for its realised return.
    *

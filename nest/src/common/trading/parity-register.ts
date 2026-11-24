@@ -272,20 +272,40 @@ export const PARITY_REGISTER: readonly ParityRow[] = [
     id: 'sim-tsl',
     mechanism: 'Simulated trailing stop (per bot)',
     affectsOutcome: true,
-    verdict: 'gap',
+    /**
+     * ── CORRECTED 2026-11-24: `gap` → `divergent`, and the way it was wrong is the lesson ──────────
+     * The gap was never measured, only INFERRED from a probe token — and the token was the name of the
+     * SHARED decision function (`simulatedTslState`) while the engine's own wiring is `simTslPlan()` in
+     * `./sim-tsl`, which `backtest.service.ts` imports and applies as `StopPlan`. So the engine was
+     * doing the mechanism while the row said it could not, and no build could see it because the
+     * absence half of the gate was satisfied by a name the engine never used.
+     *
+     * Proved behaviourally rather than by reading: same bot, same session, only `simTslActivationPct`
+     * and `simTslDistancePct` filled — 18 of 22 trades exited `TRAIL` and P&L fell 1,628.73 → 379.28
+     * (11-19), 222.69 → 182.08 (11-20). A mechanism that changes 18 of 22 exits is not absent.
+     *
+     * ⚠️ THE DIVERGENCE RUNS IN THE DANGEROUS DIRECTION. The ENGINE moves the stop. The LIVE guardian
+     * only RECORDS the moment (#936: `action` hardcoded `'recorded'`, moves nothing) — so a run with a
+     * trail configured shows protection the account does not have, which reads as a safety net.
+     */
+    verdict: 'divergent',
     backtest: {
-      label: 'not modelled',
+      label: 'applied — bot fields become a StopPlan (lockAtPct, trailPct)',
       files: ['nest/src/modules/backtest/backtest.service.ts'],
-      probe: 'simulatedTslState',
+      probe: 'simTslPlan',
     },
     live: {
-      label: 'simulatedTslState(), observed by the guardian',
+      label: 'simulatedTslState(), observed by the guardian — moves no stop',
       files: ['nest/src/modules/automation/stop-guardian.service.ts'],
       probe: 'simulatedTslState',
     },
     note:
-      '⚠️ The live side only OBSERVES (#936): it records that the moment occurred and moves no stop. '
-      + '`sim_tsl_event` held 0 rows at last measurement, so it has never fired.',
+      'The engine tightens the stop behind the price; the live guardian only records the decision point '
+      + '(#936) and places nothing. Measured 2026-11-24: both movers bots carry `simTslEnabled = 1` with '
+      + 'BOTH percentages NULL, so neither applies a trail at all — a switch that is on is not a trail '
+      + 'that exists. When it IS configured a 2%/1% trail costs ~70% of the P&L (1,851.42 → 561.36 over '
+      + '11-19/11-20), so those two empty percentages are the most outcome-sensitive values on this '
+      + 'strategy and they are unset.',
     issue: 936,
   },
   {

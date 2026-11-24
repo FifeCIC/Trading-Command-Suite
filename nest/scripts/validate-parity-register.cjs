@@ -102,6 +102,46 @@ function probeFound(files, probe) {
   return { found: where.length > 0, where, onlyComment: where.length > 0 && onlyComment };
 }
 
+/** Every `.ts` directly under a module directory — so a `gap` row is judged on the WHOLE engine side. */
+function directoryFiles(relDir) {
+  const abs = path.join(ROOT, relDir);
+  if (!fs.existsSync(abs)) return [];
+  return fs.readdirSync(abs)
+    .filter((f) => f.endsWith('.ts') && !f.endsWith('.spec.ts'))
+    .map((f) => path.join(relDir, f).replace(/\\/g, '/'));
+}
+
+/**
+ * ⚠️ A `gap` ROW MUST NOT BE BROKEN BY A NAME IT DID NOT THINK OF (measured 2026-11-24) ─────────────
+ *
+ * The absence half used to rest entirely on a probe token. `sim-tsl`'s token was `simulatedTslState` —
+ * the name of the SHARED function — while the engine's own wiring was `simTslPlan()` in `./sim-tsl`.
+ * So the probe was absent from the engine and the row reported `gap` while the engine was doing the
+ * mechanism, and no build could see it. Proved behaviourally: the same session returned 18 `TRAIL`
+ * exits of 22 trades once two bot columns were filled.
+ *
+ * ⇒ A `gap` row is now also judged on the row's OWN ID, which cannot go stale the way a hand-chosen
+ * token can: if any engine file imports a module whose basename spells the mechanism, the absence is
+ * unproven and the row must say so. Narrow on purpose — it reads imports, not words, so it fires on
+ * `import { simTslPlan } from './sim-tsl'` and on nothing in a comment.
+ */
+function importsMechanism(files, id) {
+  const target = String(id).replace(/[^a-z0-9]/gi, '').toLowerCase();
+  const hits = [];
+  for (const rel of files) {
+    const abs = path.join(ROOT, rel);
+    if (!fs.existsSync(abs)) continue;
+    const code = fs.readFileSync(abs, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|[^:])\/\/.*$/gm, '$1');
+    for (const m of code.matchAll(/(?:from\s*|require\(\s*)['"]([^'"]+)['"]/g)) {
+      const base = m[1].split('/').pop().replace(/[^a-z0-9]/gi, '').toLowerCase();
+      if (base === target) hits.push(`${rel} → '${m[1]}'`);
+    }
+  }
+  return hits;
+}
+
 /** Apply the rules to one row. Returns a list of failure strings. */
 function checkRow(row, probeFoundImpl = probeFound) {
   const errors = [];
@@ -114,6 +154,18 @@ function checkRow(row, probeFoundImpl = probeFound) {
   } else if (row.verdict === 'gap') {
     if (!l.found) errors.push(`gap: LIVE does not reference '${row.live?.probe}' — the gap cannot be demonstrated, so the row is unproven`);
     if (b.found) errors.push(`gap CLOSED: the ENGINE now references '${row.backtest?.probe}' in ${b.where.join(', ')} — update the register to 'shared' (or 'population') and say so`);
+    // Judged on the row's own ID, not on the hand-chosen probe token — see `importsMechanism()`.
+    const byName = importsMechanism(
+      [...new Set([...(row.backtest?.files ?? []), ...directoryFiles('nest/src/modules/backtest')])],
+      row.id,
+    );
+    if (byName.length) {
+      errors.push(
+        `gap ROT: the ENGINE imports a module named after '${row.id}' (${byName.join(', ')}) — the absence is `
+        + 'unproven, because the mechanism may exist under a name the probe does not know. Prove it absent, '
+        + 'or change the verdict and cite the measurement.',
+      );
+    }
   } else if (row.verdict === 'divergent') {
     // Both sides do it. A row that claimed a divergence and had a MISSING side would actually be a
     // `gap`, reported as a subtler problem than it is.
@@ -231,6 +283,33 @@ function selfTest(rows) {
       expectFail: true,
     },
     {
+      name: 'gap row: the engine imports a module named after the row id (the probe guessed the wrong name)',
+      // The REAL `sim-tsl` row as it stood before 2026-11-24: probe `simulatedTslState` (the shared
+      // function) while the engine's wiring was `simTslPlan()` in `./sim-tsl`. Nothing caught it.
+      row: {
+        id: 'sim-tsl',
+        verdict: 'gap',
+        affectsOutcome: true,
+        backtest: { files: ['nest/src/modules/backtest/backtest.service.ts'], probe: 'simulatedTslState' },
+        live: { files: ['nest/src/modules/automation/stop-guardian.service.ts'], probe: 'simulatedTslState' },
+      },
+      impl: pass,
+      expectFail: true,
+    },
+    {
+      name: 'gap row: an id no engine module is named after still passes — the rule is narrow, not broad',
+      // NEGATIVE CONTROL. `pyramid` is a genuine gap: the engine imports no module spelled `pyramid`.
+      row: {
+        id: 'pyramid',
+        verdict: 'gap',
+        affectsOutcome: true,
+        backtest: { files: ['nest/src/modules/backtest/backtest.service.ts'], probe: "from '../../modules/trading/pyramid-policy.service'" },
+        live: { files: ['nest/src/modules/automation/automation-loop.service.ts'], probe: 'pyramid' },
+      },
+      impl: pass,
+      expectFail: false,
+    },
+    {
       name: 'a probe satisfied ONLY by a comment is refused',
       row: { id: 'x', verdict: 'shared', affectsOutcome: true, backtest: { files: ['.parity-selftest-comment.ts'], probe: 'ONLY_IN_A_COMMENT_TOKEN' }, live: { files: ['package.json'], probe: 'name' } },
       impl: pass,
@@ -287,4 +366,4 @@ function selfTest(rows) {
 }
 
 if (require.main === module) main(process.argv.slice(2));
-module.exports = { parseRegister, probeFound, checkRow };
+module.exports = { parseRegister, probeFound, checkRow, importsMechanism };
