@@ -79,6 +79,10 @@ import { admitTrades } from './portfolio-admission';
 import { chooseBarProvider } from './bar-provider';
 import { summariseExitDivergence, type ExitDivergence } from '../../common/trading/exit-guardian/exit-equivalence';
 import { summariseFillGap, type FillGapSummary } from '../../common/trading/exit-guardian/stop-fill-gap';
+// #1335 — how much of THIS run rode on a mechanism live would not reproduce.
+import { parityExposure, type ParityExposure } from '../../common/trading/parity-exposure';
+// #1345 — can this run close a trade at all? The answer is arithmetic, not a hunch.
+import { viabilityOf, sessionSpanMinutes, type Viability } from '../../common/trading/backtest-viability';
 import { APP_VERSION } from '../../version';
 
 /** The one numeric coercion this file needs, kept local (a `null` must not read as 0). */
@@ -285,6 +289,18 @@ export interface SelectionRunResult {
    * ⚠️ ALWAYS PRESENT. A missing field would leave the page to render "no record", which is a claim
    * about history the page is not in a position to make.
    */
+  /**
+   * #1335 — how many of THIS run's trades exited on a mechanism the live account does not reproduce,
+   * and how much P/L that carried. ⚠️ Always present: a missing field would leave the page to assume
+   * full parity, which is the claim this change exists to stop making.
+   */
+  parityExposure: ParityExposure;
+  /**
+   * #1345 — whether this run could produce a CLOSED trade, and why not when it could not.
+   * ⚠️ Always present. `mark-only` means every figure on the page is a mark of a position still open
+   * when the data ended — the state both movers days were in, at 100%.
+   */
+  viability: Viability;
   best: BestRecord;
   caveats: string[];
 }
@@ -888,6 +904,16 @@ export class SelectionRunService {
       caveats.push(`No candidate could be ranked on ${decl.value.answerDate}.`);
     }
 
+    /**
+     * ⚠️ THE SPAN IS MEASURED FROM THE DATABASE, NOT FROM THE BREAKDOWN. `perSymbol[].detail.bars` only
+     * exists when `includeBreakdown` is set, so the first version reported `timeStopReachable: true`
+     * ("cannot judge") on a run that is provably un-closeable — a silent "fine" where the truth was the
+     * opposite, which is the failure this repo designs against. One aggregate over the selected symbols'
+     * own 5m bars costs a single query, and it comes from the SAME `tradeConfig.fields` the result
+     * reports rather than a literal.
+     */
+    const spanMinutes = await this.sessionSpanFor(picked.day.selected, decl.value.answerDate);
+
     return {
       datasetName,
       protocolId: request.protocolId,
@@ -946,6 +972,19 @@ export class SelectionRunService {
       /** #1335 — the same fill-assumption report, over the same population. */
       fillGap: summariseFillGap(admittedTrades),
       /** #1341 — the best ever for this test, and whether this run is the new one. */
+      /**
+       * #1335 — how many of THIS run's trades exited on a mechanism the live account does not
+       * reproduce, and how much P/L that carried. Same population as `totals` and `exitDivergence`,
+       * so the three cannot describe different sets of trades.
+       */
+      parityExposure: parityExposure(admittedTrades as Array<{ exitReason?: string; pnl?: number }>),
+      viability: viabilityOf({
+        trades: admittedTrades.length,
+        endOfDataTrades: admittedTrades.filter((t) => (t as { exitReason?: string }).exitReason === 'EOD').length,
+        maxHoldHours: Number(appliedConfig.find((f) => f.id === 'maxHoldHours')?.value ?? NaN),
+        exitBeforeUtc: (appliedConfig.find((f) => f.id === 'exitBeforeUtc')?.value as string | null) ?? null,
+        sessionSpanMinutes: spanMinutes,
+      }),
       best,
       caveats,
     };
@@ -1003,6 +1042,47 @@ export class SelectionRunService {
         createdAt: r.createdAt.toISOString(),
       })),
     };
+  }
+
+  /**
+   * #1345 — how long the day's own bars run, in minutes, for the symbols this run selected.
+   *
+   * ⚠️ RETURNS `null` WHEN IT CANNOT MEASURE, AND THE CALLER MUST TREAT THAT AS "cannot judge". A
+   * zero or a guess here would let a 10-hour hold look fine against a 6.5-hour session — the exact
+   * arithmetic that made both movers days 100% end-of-data exits.
+   *
+   * ⚠️ `5m` is the movers datasets' own cadence; a different timeframe would measure a different span,
+   * so the timeframe is the run's, not a constant.
+   */
+  private async sessionSpanFor(symbols: readonly string[], answerDate: string): Promise<number | null> {
+    try {
+      const ids = await this.prisma.symbol.findMany({
+        where: { ticker: { in: symbols.map((s) => s.toUpperCase()) } },
+        select: { id: true },
+      });
+      if (ids.length === 0) return null;
+      const dayStart = new Date(`${answerDate}T00:00:00Z`);
+      const dayEnd = new Date(`${answerDate}T23:59:59.999Z`);
+      const agg = await this.prisma.marketBar.aggregate({
+        where: {
+          symbolId: { in: ids.map((s) => s.id) },
+          timeframe: '5m',
+          timestamp: { gte: dayStart, lte: dayEnd },
+        } as any,
+        _min: { timestamp: true },
+        _max: { timestamp: true },
+      } as any);
+      const first = agg?._min?.timestamp;
+      const last = agg?._max?.timestamp;
+      if (!first || !last) return null;
+      const minutes = (new Date(last).getTime() - new Date(first).getTime()) / 60000;
+      return Number.isFinite(minutes) && minutes > 0 ? minutes : null;
+    } catch (err) {
+      // A span that cannot be read is REPORTED and then treated as unknown — never as "fine".
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Session span unreadable for ${answerDate}: ${message}`);
+      return null;
+    }
   }
 
   /**

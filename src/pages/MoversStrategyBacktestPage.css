@@ -1488,3 +1488,12 @@
   font-weight: 650;
   color: var(--ink);
 }
+/* #1345 — the mark-only banner. No left bar: the repo has rejected that styling everywhere as notice
+   chrome, so this uses a uniform border plus a tint like every other warning on the page. */
+.mvp-viability {
+  border: 1px solid var(--color-warning);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 0 0 10px;
+  background: color-mix(in srgb, var(--color-warning) 8%, var(--panel));
+}

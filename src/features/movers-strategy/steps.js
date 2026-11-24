@@ -126,8 +126,19 @@ export const MOVERS_STEPS = [
     ],
   },
   {
-    id: 'mvp-step-bars',
+    id: 'mvp-step-parity',
     step: 8,
+    title: 'Backtest vs live',
+    purpose: 'Which mechanisms this run shares with the account, and what it cannot reproduce.',
+    defaultOpen: false,
+    audit: [
+      'Wiring a divergent mechanism is a maths change: copy the configuration and compare, never edit in place.',
+      'A run could state its own exposure — how many of its trades touched a mechanism that differs.',
+    ],
+  },
+  {
+    id: 'mvp-step-bars',
+    step: 9,
     title: 'Bar by bar',
     purpose: 'Every bar’s score and every decision, down to the directive that moved it.',
     defaultOpen: false,
@@ -137,7 +148,7 @@ export const MOVERS_STEPS = [
   },
   {
     id: 'mvp-step-inventory',
-    step: 9,
+    step: 10,
     title: 'Recorded, not shown',
     purpose: 'What this run already knows and no table above uses — with this run’s own values.',
     defaultOpen: false,
@@ -147,7 +158,7 @@ export const MOVERS_STEPS = [
   },
   {
     id: 'mvp-step-config',
-    step: 10,
+    step: 11,
     title: 'Trade configuration',
     purpose: 'The stop, target, entry bar and hold time these numbers were produced under.',
     defaultOpen: false,

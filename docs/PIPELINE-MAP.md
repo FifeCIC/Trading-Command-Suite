@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **617** backend source files (specs excluded). Two access paths, because one
+Scanned **620** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**617** source files · **3426** declarations · **402** ratio sites · **1797** nodes · **190** unreferenced
+**620** source files · **3434** declarations · **402** ratio sites · **1799** nodes · **190** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -95,9 +95,9 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 31 sites — `((V1-V2)/V2)*100`
 
-- `nest/src/modules/backtest/backtest.controller.ts:1065` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:1088` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:1073` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:1096` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
 - `nest/src/modules/backtest/backtest.service.ts:4506` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
@@ -128,10 +128,10 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:2195` — `observeExhaustion()`
   - `(prior/entry)*100`
-- `nest/src/modules/backtest/selection-run.service.ts:645` — `runSelection()`
+- `nest/src/modules/backtest/selection-run.service.ts:661` — `runSelection()`
   - `kept.length?(wins/kept.length)*100:0`
   - guarded by: `kept.length`
-- `nest/src/modules/backtest/selection-run.service.ts:729` — `runSelection()` → `winRate`
+- `nest/src/modules/backtest/selection-run.service.ts:745` — `runSelection()` → `winRate`
   - `totalTrades?(totalWins/totalTrades)*100:0`
   - guarded by: `totalTrades`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
@@ -421,9 +421,9 @@ Identical after normalisation: variable names differ, the computation does not.
 
 ### 31 sites — `((V1-V2)/V2)*100`
 
-- `nest/src/modules/backtest/backtest.controller.ts:1065` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:1088` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:1073` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:1096` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
 - `nest/src/modules/backtest/backtest.service.ts:4506` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
@@ -454,10 +454,10 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:2195` — `observeExhaustion()`
   - `(prior/entry)*100`
-- `nest/src/modules/backtest/selection-run.service.ts:645` — `runSelection()`
+- `nest/src/modules/backtest/selection-run.service.ts:661` — `runSelection()`
   - `kept.length?(wins/kept.length)*100:0`
   - guarded by: `kept.length`
-- `nest/src/modules/backtest/selection-run.service.ts:729` — `runSelection()` → `winRate`
+- `nest/src/modules/backtest/selection-run.service.ts:745` — `runSelection()` → `winRate`
   - `totalTrades?(totalWins/totalTrades)*100:0`
   - guarded by: `totalTrades`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
@@ -646,9 +646,9 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 - `nest/src/modules/automation/stop-guardian.service.ts:2171` — `observeExhaustion()` → `decelPct`
   - `((prior-recent)/prior)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:1065` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:1088` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:1073` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:1096` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
 - `nest/src/modules/backtest/backtest.service.ts:4506` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
@@ -698,10 +698,10 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:2195` — `observeExhaustion()`
   - `(prior/entry)*100`
-- `nest/src/modules/backtest/selection-run.service.ts:645` — `runSelection()`
+- `nest/src/modules/backtest/selection-run.service.ts:661` — `runSelection()`
   - `kept.length?(wins/kept.length)*100:0`
   - guarded by: `kept.length`
-- `nest/src/modules/backtest/selection-run.service.ts:729` — `runSelection()` → `winRate`
+- `nest/src/modules/backtest/selection-run.service.ts:745` — `runSelection()` → `winRate`
   - `totalTrades?(totalWins/totalTrades)*100:0`
   - guarded by: `totalTrades`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
@@ -934,7 +934,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/automation/stop-guardian.service.ts:629 flat`
 - `nest/src/modules/backtest/affordable-size.ts:146 floorToStep`
 - `nest/src/modules/backtest/backtest-period.service.ts:910 countBars`
-- `nest/src/modules/backtest/backtest.controller.ts:960 mapResult`
+- `nest/src/modules/backtest/backtest.controller.ts:983 mapResult`
 - `nest/src/modules/backtest/backtest.service.ts:1005 labelled`
 - `nest/src/modules/backtest/backtest.service.ts:1977 providerCounts`
 - `nest/src/modules/backtest/backtest.service.ts:4782 chartTime`
@@ -961,8 +961,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/backtest/score-maths.ts:76 r4`
 - `nest/src/modules/backtest/score-maths.ts:874 bucketKey`
 - `nest/src/modules/backtest/score-maths.ts:89 collect`
-- `nest/src/modules/backtest/selection-run.service.ts:449 num`
-- `nest/src/modules/backtest/selection-run.service.ts:85 num`
+- `nest/src/modules/backtest/selection-run.service.ts:465 num`
+- `nest/src/modules/backtest/selection-run.service.ts:89 num`
 - `nest/src/modules/directives/directives.service.ts:1039 refreshActiveStatuses`
 - `nest/src/modules/directives/directives.service.ts:264 prepare`
 - `nest/src/modules/directives/directives.service.ts:517 mean`

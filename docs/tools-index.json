@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 208,
+  "count": 209,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1639,6 +1639,17 @@
       "selfTest": true,
       "reaches": [
         "prebuild"
+      ]
+    },
+    {
+      "name": "validate-parity-register.cjs",
+      "where": "nest",
+      "category": "validator",
+      "purpose": "DOES THE BACKTEST RUN THE SAME MECHANISMS AS LIVE?",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
       ]
     },
     {

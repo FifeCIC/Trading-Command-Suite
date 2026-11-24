@@ -13,7 +13,7 @@ line counts change on every edit and a guard that fires during normal work gets 
 ## The rule this file exists for
 
 > "The only time I like seeing a 3000 line file of code is when it's well commented/documented and
-> the code is very well separated into functions and clear arguments." — Requirement (2026-11-07)
+> the code is very well separated into functions and clear arguments." — requirement, 2026-11-07
 
 | Band | Lines | Meaning |
 |---|---|---|
@@ -33,24 +33,24 @@ it is expensive to review and risky to change.
 
 | File | Lines | Comments | Longest fn | Fns over 60 |
 |---|---|---|---|---|
-| `nest/src/modules/backtest/backtest.service.ts` | 4,869 | 41.1% | 1310 | 5 |
-| `nest/src/modules/trading/trading-strategy.service.ts` | 3,716 | 35.6% | 218 | 7 |
+| `nest/src/modules/backtest/backtest.service.ts` | 5,687 | 44.7% | 1588 | 5 |
+| `nest/src/modules/trading/trading-strategy.service.ts` | 3,748 | 35.9% | 218 | 7 |
 | `nest/src/modules/automation/automation-loop.service.ts` | 3,421 | 37.4% | 430 | 4 |
 
 ### `high`
 
 | File | Lines | Comments | Longest fn | Fns over 60 |
 |---|---|---|---|---|
-| `nest/src/modules/automation/stop-guardian.service.ts` | 2,463 | 50.8% | 484 | 2 |
-| `nest/src/modules/signals/signal-envelope.service.ts` | 2,390 | 35.0% | 233 | 3 |
+| `nest/src/modules/automation/stop-guardian.service.ts` | 2,451 | 51.9% | 484 | 2 |
+| `nest/src/modules/signals/signal-envelope.service.ts` | 2,441 | 35.9% | 263 | 3 |
 | `nest/src/modules/scoring/protocol-gating.service.ts` | 2,290 | 49.2% | 65 | 1 |
-| `src/pages/DiagramsPage.jsx` | 2,097 | 2.4% | 204 | 1 |
+| `src/pages/DiagramsPage.jsx` | 2,105 | 2.4% | 211 | 1 |
 
 ### `warn`
 
 | File | Lines | Comments | Longest fn | Fns over 60 |
 |---|---|---|---|---|
-| `src/pages/ViewStrategyPage.jsx` | 1,788 | 20.0% | 807 | 1 |
+| `src/pages/ViewStrategyPage.jsx` | 1,823 | 19.7% | 841 | 1 |
 | `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts` | 1,770 | 26.2% | 87 | 3 |
 | `src/pages/MetaStackExplorerPage.jsx` | 1,695 | 15.0% | 1381 | 1 |
 | `nest/src/modules/trading/trade-history.controller.ts` | 1,542 | 27.4% | 413 | 4 |
@@ -61,23 +61,24 @@ it is expensive to review and risky to change.
 
 | File | Lines | Comments | Longest fn | Fns over 60 |
 |---|---|---|---|---|
-| `src/pages/BacktestPage.jsx` | 3,874 | 25.9% | 16 | 0 |
+| `src/pages/BacktestPage.jsx` | 3,966 | 26.1% | 16 | 0 |
 
 
-## Unreferenced modules (6)
+## Unreferenced modules (7)
 
 ⚠️ **A name-reference scan, not a module graph.** A file loaded through `import.meta.glob` or a
 registry string that does not contain its filename reads as unreferenced here and is not. Treat each
 line as a QUESTION — delete / wire up / keep and explain — never as a delete list. Owner: #1228.
 
 - `nest/src/modules/auth/guards/api-key.guard.ts`
+- `src/components/LoadingSteps.jsx`
 - `src/data/external-urls.js`
 - `src/hooks/useKeyboardShortcuts.js`
 - `src/hooks/useSpeedTradingKeys.js`
 - `src/pages/AdvancedResearchPage.jsx`
 - `src/pages/directives-manager.seed.js`
 
-## Named only in commentary (6)
+## Named only in commentary (7)
 
 ⚠️ **Discussed somewhere, named by no code.** These are NOT in the list above, because a name-reference
 scan sees them mentioned — usually by the very documentation that makes them look intentional. That is
@@ -90,8 +91,9 @@ wire up / keep and explain. Owner: #1228.
 - `nest/src/modules/scoring/rarity.service.ts`
 - `src/components/DetachableWidget.jsx`
 - `src/components/SeesScoringPanel.jsx`
-- `src/components/backtest/ProtocolScoreDetail.jsx`
+- `src/components/StickyHeader.jsx`
 - `src/core/phase-gates.js`
+- `src/data/ui-patterns.js`
 - `src/pages/SymbolFocusPage.jsx`
 
 ## How to act on this

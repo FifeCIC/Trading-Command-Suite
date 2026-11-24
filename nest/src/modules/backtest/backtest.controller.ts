@@ -18,6 +18,8 @@ import type { BacktestRunRequest } from './backtest.service';
 import { SelectionRunService } from './selection-run.service';
 // #1341 — the best result per test, so the page can ask before a run as well as after one.
 import { BestRunService } from './best-run.service';
+// #1335 — the parity register: the same data the build gate checks, so the page cannot drift from it.
+import { PARITY_REGISTER, paritySummary } from '../../common/trading/parity-register';
 import type { SelectionRunRequest } from './selection-run.service';
 // #1319 — ONE parser for "which day is this movers list a screen of", shared by the list endpoint and
 // the run so the page can never offer a dataset the run would refuse.
@@ -239,6 +241,27 @@ export class BacktestController {
       records: await this.bestRun.list(s),
     })));
     return { scopes };
+  }
+
+  /**
+   * #1335 / #1345 — WHAT A RUN CANNOT REPRODUCE OF LIVE.
+   *
+   * ⚠️ A READ OF THE REGISTER, NOT A COMPUTATION. The mechanisms are declared once in
+   * `common/trading/parity-register.ts` and checked against the source by
+   * `validate-parity-register.cjs` on every build. An endpoint that re-derived the list would be the
+   * second copy this repo keeps paying for.
+   *
+   * ⚠️ ONE HONESTY FIELD: `summary.outcomeGaps` counts mechanisms that move money and are NOT shared
+   * verbatim. It is the number a reader should carry away from a profitable run, so it is computed here
+   * rather than left to the page.
+   */
+  @Get('parity')
+  @ApiOperation({ summary: 'Every mechanism that changes a trade outcome, and whether the engine shares it with live' })
+  async parity() {
+    return {
+      summary: paritySummary(),
+      rows: PARITY_REGISTER,
+    };
   }
 
   /**

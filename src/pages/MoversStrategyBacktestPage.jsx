@@ -64,6 +64,8 @@ import ResultByDayStep from '../features/movers-strategy/ResultByDayStep.jsx';
 import ResultBySymbolStep from '../features/movers-strategy/ResultBySymbolStep.jsx';
 import ScoringFunnelStep from '../features/movers-strategy/ScoringFunnelStep.jsx';
 import DirectiveRecordStep from '../features/movers-strategy/DirectiveRecordStep.jsx';
+// #1335 — what this run cannot reproduce of the live account, read from the build-gated register.
+import ParityStep from '../features/movers-strategy/ParityStep.jsx';
 import { dayLabel, fmtMoney, fmtPct } from '../features/movers-strategy/format.js';
 // The margin annotation between two steps: what the step above does not yet show, from data we already have.
 import StepAuditNote from '../components/StepAuditNote.jsx';
@@ -480,6 +482,9 @@ export default function MoversStrategyBacktestPage() {
     return { scored, entered };
   }, [depthEntries]);
 
+  /** #1345 — the engine's own verdict on whether the run could close a trade at all. */
+  const runViability = okRuns[okRuns.length - 1]?.viability ?? null;
+
   /** The directive ids this protocol actually scored, from the run's own bars (never from a name list). */
   const protocolDirectives = useMemo(() => {
     const ids = new Set();
@@ -876,6 +881,22 @@ export default function MoversStrategyBacktestPage() {
 
             {results.length > 0 && (
             <>
+            {/**
+              * ── #1345 — THIS SITS ABOVE THE TOTALS ON PURPOSE ─────────────────────────────────────
+              * A warning eight accordions down cannot protect a headline number. When every trade in the
+              * run was still open when the data ended, the four tiles below are marks of open positions —
+              * and the only honest place to say so is between the reader and the number.
+              *
+              * ⚠️ `mark-only` IS THE ENGINE'S OWN VERDICT, computed from the run's own exit reasons and
+              * the dataset's MEASURED span. It is not a page heuristic: `backtest-viability.ts` decides it
+              * and `backtest-viability.spec.ts` canaries both directions, including that an unmeasurable
+              * span is "cannot judge" rather than a claim.
+              */}
+            {runViability?.verdict === 'mark-only' && (
+              <p className="mvp-note mvp-note--warn mvp-viability">
+                <strong>These totals are not a result.</strong> {runViability.why}
+              </p>
+            )}
             <div className="mvp-tallies">
               <StatCard
                 value={String(okRuns.length)}
@@ -1145,6 +1166,15 @@ export default function MoversStrategyBacktestPage() {
               day — do not re-add a paragraph or note here. */}
 
           {/* ── step 6 · bar by bar ── */}
+          <StepAccordion
+            pageId={MOVERS_PAGE_ID}
+            {...MOVERS_STEP['mvp-step-parity']}
+          >
+            <ParityStep runs={okRuns} />
+          </StepAccordion>
+
+          <StepAuditNote afterStep={MOVERS_STEP['mvp-step-parity'].step} ideas={MOVERS_STEP['mvp-step-parity'].audit} />
+
           <StepAccordion
             pageId={MOVERS_PAGE_ID}
             {...MOVERS_STEP['mvp-step-bars']}
