@@ -1224,6 +1224,12 @@ model Position {
   // Broker traceability (#616) — the 64-bit broker ticket is a STRING.
   // MT5 position tickets exceed the 32-bit Int range, so we store them here
   // as text and never rely on the legacy Int column for MT5.
+  //
+  // ⚠️ JOIN ON `brokerTicket`, NOT `ticket` (measured 2026-11-25). `ticket` (bigint) is populated on
+  // 15 of 991 rows; `brokerTicket` on 695 of 991, and every value is numeric. An audit that read
+  // `ticket` reported the whole decision chain as "not joinable" when via `brokerTicket` it joins at
+  // 94.5% to `decision_log.ticket` and 100% to `stop_adjustment.tradeTicket`. Two columns, one of them
+  // legacy — reading the wrong one produces a confident "no data" answer with no error.
   brokerTicket String?  @db.VarChar(100)
   side         String?  @db.VarChar(10)  // buy | sell
   magic        Int?
