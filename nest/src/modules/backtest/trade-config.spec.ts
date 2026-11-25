@@ -107,11 +107,18 @@ describe('buildTradeConfig', () => {
     expect(inert.effect).toMatch(/NO trailing stop is applied/);
     expect(inert.effect).not.toMatch(/moved up behind the price/);
     expect(inert.note).toContain('simTslDistancePct');
+    /**
+     * ⚠️ THE BOOLEAN MUST AGREE WITH THE SENTENCE (2026-11-25). It was hardcoded `true`, so this row
+     * said "applied" and "NO trailing stop is applied" at the same time — a reader taking the column
+     * was told the run had protection it did not have.
+     */
+    expect(inert.applied).toBe(false);
   });
 
   it('a half-configured trail (activation only) is still reported as no trail', () => {
     const half = get(buildTradeConfig({ ...BOT, simTslEnabled: 1, simTslActivationPct: 2 }), 'simTslEnabled');
     expect(half.effect).toMatch(/NO trailing stop is applied/);
+    expect(half.applied).toBe(false);
   });
 
   it('the summary names the bot and lists what it could not apply', () => {

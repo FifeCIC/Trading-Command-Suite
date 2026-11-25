@@ -76,12 +76,25 @@ describe('trade-config covers the whole bot', () => {
     expect(missing).toEqual([]);
   });
 
-  it('▶ CANARY — every field the engine HONOURS is on the result as applied', () => {
+  it('▶ CANARY — every field the engine HONOURS is on the result as applied, or says why not', () => {
+    /**
+     * ⚠️ "HONOURED" IS A FACT ABOUT THE ENGINE, NOT ABOUT THIS BOT (corrected 2026-11-25).
+     * The assertion used to demand `applied === true` for every honoured field. But `applied` means
+     * "this run applies it", and two honoured fields legitimately do not: `simTslEnabled` when the
+     * switch is OFF, or when `simTslPlan()` cannot build a trail because a percentage is missing (the
+     * fixture bot has `simTslEnabled: 0`). Demanding `true` there forced the row to claim protection
+     * that did not exist — the very lie the row's own `effect` had to contradict.
+     *
+     * The guard is not weakened: the row must still EXIST, and if it is not applied it must say
+     * `NOT APPLIED` — which the next test enforces for every row. A field that silently stopped being
+     * honoured would fail here (no row) or there (no explanation).
+     */
     const missing = BOT_FIELDS
       .filter((f) => f.applied === 'honoured' && !IDENTITY_EXEMPT[f.key])
       .filter((f) => {
         const row = byId.get(ROW_ID[f.key] ?? f.key);
-        return !row || row.applied !== true;
+        if (!row) return true;
+        return row.applied !== true && !/NOT APPLIED/.test(row.note);
       })
       .map((f) => f.key);
 

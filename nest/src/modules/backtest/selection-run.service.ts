@@ -382,6 +382,18 @@ export class SelectionRunService {
       takeProfitAmount: true,
       brokerId: true,
       simTslEnabled: true,
+      /**
+       * ⚠️ BOTH TRAIL PERCENTAGES ARE REQUIRED (measured 2026-11-25). They were absent from this
+       * projection, so `trade-config.ts` read them as `undefined`, decided the trail was NOT configured
+       * for every bot, and told the reader *"NO trailing stop is applied"* — including for a bot with
+       * `simTslActivationPct: 2` / `simTslDistancePct: 1` whose run then produced **18 `TRAIL` exits of
+       * 22**. The engine was right (it fetches the bot by id separately); only this table lied, and it
+       * lied about the one mechanism the reader opens the table to check.
+       * ⇒ A column missing HERE is a column the config table cannot read. Add a bot field to
+       * `TradeConfigBot` and it must be added here in the same change.
+       */
+      simTslActivationPct: true,
+      simTslDistancePct: true,
     } as const;
 
     if (explicit === null) return { bot: null, resolvedBy: 'none' };

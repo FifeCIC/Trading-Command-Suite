@@ -345,23 +345,32 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       // reader was asked to read for behaviour.
       value: bot?.simTslEnabled ? 'on' : 'off',
       source: 'bot',
-      // ⚠️ `applied: true` FOR THE ENGINE AND A WARNING FOR THE READER — both facts at once. The engine
-      // really does move the stop to the trail; the live guardian only records the decision point
-      // (#936). A result therefore shows protection the live bot does not have, which is worse than a
-      // missing feature because it reads as a safety net.
-      applied: true,
+      /**
+       * ── `applied` AGREES WITH THE SENTENCE NOW (corrected 2026-11-25) ─────────────────────────────
+       * It was hardcoded `true` with a comment arguing "the engine really does move the stop to the
+       * trail" — which is only true when the plan can be BUILT. For `simTslEnabled = 1` with both
+       * percentages NULL, `simTslPlan()` returns null and the engine applies nothing, while this row
+       * said `applied: true` and its own `effect` said "NO trailing stop is applied". One row asserting
+       * two opposite things is the defect class this repo keeps paying for: a reader who reads the
+       * column instead of the paragraph is told the run had protection it did not have.
+       *
+       * A setting is APPLIED when the mechanism it switches actually runs. The switch is not the
+       * mechanism — `simTslPlan()` cannot express a trail without both percentages.
+       */
+      applied: tslConfigured,
       effect: !bot?.simTslEnabled
         ? 'The stop never moves: the entry stop is the only protection, so a pullback can return to it and close the trade at a loss.'
         : tslConfigured
           ? 'The stop is moved up behind the price as a trade runs, so a winner is protected instead of given back. Live, a trailing stop is only recorded, not applied.'
           : 'NO trailing stop is applied: the switch is on, but the activation and distance percentages are empty, so there is nothing to apply and the stop never moves. The entry stop is the only protection.',
       note: !bot?.simTslEnabled
-        ? 'The LIVE guardian only records the decision point (#936) — and this bot has the trail off.'
+        ? 'NOT APPLIED — the trail is switched off on this bot. The LIVE guardian only records the sim-TSL decision point (#936) and moves nothing.'
         : tslConfigured
           ? 'The ENGINE moves the stop to the trail. The LIVE guardian only records the decision point (#936) — '
             + 'so a run with a trailing stop shows protection the live bot does not yet have.'
-          : '⚠️ `simTslEnabled` is on but `simTslActivationPct` / `simTslDistancePct` are NULL — '
-            + '`simTslPlan()` returns null for a half-configured trail. Fill both to make the switch mean something.',
+          : 'NOT APPLIED — `simTslEnabled` is on but `simTslActivationPct` / `simTslDistancePct` are NULL, so '
+            + '`simTslPlan()` returns null for a half-configured trail and the engine moves no stop. Fill both '
+            + 'to make the switch mean something.',
       botValue: bot?.simTslEnabled ? 'on' : 'off',
       editable: { control: 'toggle' },
     },
