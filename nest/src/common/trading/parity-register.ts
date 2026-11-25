@@ -225,13 +225,30 @@ export const PARITY_REGISTER: readonly ParityRow[] = [
       probe: 'state.stop',
     },
     live: {
-      label: 'the Stop Guardian, which only RECORDS the decision',
+      /**
+       * ── CORRECTED 2026-11-24: THIS LABEL SAID "ONLY RECORDS THE DECISION", AND IT IS FALSE ─────
+       * The Stop Guardian **moves the broker's stop**. `applyModify()` calls `modifyStop(pos, newSl)`
+       * and only records + notifies *on success*; `stop_adjustment` holds **5,678 rows**, of which
+       * **5,673** carry a `Consensus …` reason (measured 2026-11-24). The "records only" behaviour
+       * belongs to the SEPARATE sim-TSL observer (`observeSimulatedTsl`, `sim_tsl_event`, 0 rows).
+       *
+       * ⚠️ The error ran in the UNDERSTATING direction, which is the one that costs a reader their
+       * caution: told the live side is inert, they read a run's trail as *more* protection than the
+       * account has. In fact the guardian is the most active stop mechanism on the account.
+       */
+      label: 'the Stop Guardian — consensus over 4 directives, then a real broker stop move',
       files: ['nest/src/modules/automation/stop-guardian.service.ts'],
       probe: 'exit-guardian/guardian-stop',
     },
     note:
-      'The rule is shared (`guardian-stop.ts`), but the engine cannot compute the directive consensus the '
-      + 'guardian needs — the protocol supplies 1 of its 4 inputs. #1339.',
+      'The live guardian tightens the BROKER stop; the engine tightens a SIMULATED one on its own bars. '
+      + 'What the engine cannot reproduce is the guardian\'s INPUT: it needs a consensus over four '
+      + 'directives (`atr-trailing-stop`, `supertrend`, `chandelier-exit`, `wick-filter`), and the '
+      + 'movers protocols carry 1 of the 4, so reading a protocol breakdown would apply a threshold '
+      + 'calibrated for four to a consensus over one. #1339. '
+      + '⚠️ `guardianStopDecision()` — the composed rule built so "a backtest can call the same one" — '
+      + 'is called by NOTHING but its own spec: the live service imports the three helpers and composes '
+      + 'them inline. A shared rule with no production caller is a demonstration, not parity.',
     issue: 1339,
   },
   {

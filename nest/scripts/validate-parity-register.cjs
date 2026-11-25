@@ -75,7 +75,18 @@ function parseRegister(source) {
         // A probe written with double quotes (an import path inside a string literal).
         ?? /probe:\s*"([^"]*)"/.exec(body)?.[1]
         ?? null;
-      sides[s[1]] = { files, probe };
+      /**
+       * ⚠️ `label` IS PARSED BECAUSE IT IS CHECKED (measured 2026-11-24, the hard way).
+       * The `inertClaimContradicted()` rule reads `row.live.label`. It was written, self-tested with
+       * FABRICATED rows that supplied a label, and then observed to pass against the REAL register —
+       * because this parser never captured a label, so the rule's input was always `undefined`. The
+       * canary landed (`canary landed: true`) and the gate stayed green: a rule blind in the only
+       * state that matters. The self-test now also asserts the parse carries labels.
+       */
+      const label = /label:\s*'((?:[^'\\]|\\.)*)'/.exec(body)?.[1]
+        ?? /label:\s*"([^"]*)"/.exec(body)?.[1]
+        ?? null;
+      sides[s[1]] = { files, probe, label };
     }
     rows.push({ id, mechanism, verdict, affectsOutcome, backtest: sides.backtest, live: sides.live });
   }
@@ -142,6 +153,42 @@ function importsMechanism(files, id) {
   return hits;
 }
 
+/**
+ * ⚠️ "ONLY RECORDS" IS A CLAIM OF INERTNESS, AND IT NEEDS AN OBSERVATION (measured 2026-11-24) ─────
+ *
+ * The `trail` row's live label read *"the Stop Guardian, which only RECORDS the decision"* while
+ * `stop-guardian.service.ts` calls `modifyStop()` from `applyModify()` and had written **5,673**
+ * `Consensus …` rows to `stop_adjustment`. The record-only behaviour belongs to the separate sim-TSL
+ * observer. Nothing could see the contradiction because a label is not a probe.
+ *
+ * The error ran in the UNDERSTATING direction: a reader told the live side is inert concludes a run's
+ * output is the safer of the two, when in fact the account is the one with the moving stop.
+ *
+ * ⇒ If a live label claims the side only records/observes/displays, the live files must contain no
+ * BROKER-MUTATING call. Narrow on purpose: it reads a small named list of mutation calls, so it fires
+ * on `modifyStop(` and not on the word "stop".
+ */
+const INERT_CLAIM = /\bonly\b[^.]*\b(record|observ|display|log)/i;
+const BROKER_MUTATORS = ['modifyStop(', 'applyModify(', 'modifyPosition(', 'sendOrder(', 'placeOrder('];
+
+function inertClaimContradicted(row, readImpl = (rel) => {
+  const abs = path.join(ROOT, rel);
+  return fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : null;
+}) {
+  const label = row.live?.label ?? '';
+  if (!INERT_CLAIM.test(label)) return [];
+  const hits = [];
+  for (const rel of row.live?.files ?? []) {
+    const src = readImpl(rel);
+    if (src == null) continue;
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+    for (const m of BROKER_MUTATORS) {
+      if (code.includes(m)) hits.push(`${rel} calls ${m})`);
+    }
+  }
+  return hits;
+}
+
 /** Apply the rules to one row. Returns a list of failure strings. */
 function checkRow(row, probeFoundImpl = probeFound) {
   const errors = [];
@@ -183,6 +230,15 @@ function checkRow(row, probeFoundImpl = probeFound) {
       errors.push(`${side}: '${side === 'engine' ? row.backtest?.probe : row.live?.probe}' appears ONLY IN A COMMENT — a comment is not a call (this is the pyramid trap)`);
     }
   }
+
+  const contradicted = inertClaimContradicted(row);
+  if (contradicted.length) {
+    errors.push(
+      `live label claims the side ONLY records/observes, but ${contradicted.join(', ')} — the label `
+      + 'understates the live mechanism, which is the direction that makes a reader trust the run over '
+      + 'the account. Describe what the live side DOES.',
+    );
+  }
   return errors;
 }
 
@@ -209,6 +265,21 @@ function main(argv) {
       console.error(`[parity] ❌ row '${r.id}' has no probe on one side — it would guard nothing.`);
       process.exit(1);
     }
+  }
+
+  /**
+   * ⚠️ THE PARSE MUST CARRY THE LABELS THE RULES READ (2026-11-24).
+   * A rule that reads a field the parser drops is blind in the only state that matters, and a
+   * self-test built on fabricated rows will happily report it working. Measured: that is exactly
+   * what happened to the "only records" rule before this assertion existed.
+   */
+  const labelless = rows.filter((r) => !r.backtest?.label || !r.live?.label).map((r) => r.id);
+  if (labelless.length) {
+    console.error(
+      `[parity] ❌ CANNOT JUDGE — ${labelless.length} row(s) parsed with NO label (${labelless.slice(0, 6).join(', ')}). `
+      + 'The label rules would be blind on those rows.',
+    );
+    process.exit(2);
   }
 
   if (argv.includes('--self-test')) {
@@ -310,6 +381,42 @@ function selfTest(rows) {
       expectFail: false,
     },
     {
+      name: 'a live label claiming "only records" is refused when the file moves the stop (the trail trap)',
+      // The REAL `trail` row as it stood before 2026-11-24: label claimed the guardian only recorded,
+      // while `applyModify()` calls `modifyStop()` and 5,673 `Consensus …` rows were written.
+      row: {
+        id: 'trail',
+        verdict: 'divergent',
+        affectsOutcome: true,
+        backtest: { files: ['nest/src/common/trading/exit-guardian/position-bar.ts'], probe: 'state.stop' },
+        live: {
+          label: 'the Stop Guardian, which only RECORDS the decision',
+          files: ['nest/src/modules/automation/stop-guardian.service.ts'],
+          probe: 'exit-guardian/guardian-stop',
+        },
+      },
+      impl: pass,
+      expectFail: true,
+    },
+    {
+      name: 'the same label is accepted when the file only records (negative control)',
+      // `sim_tsl_event.action` is hardcoded `recorded` and `observeSimulatedTsl()` places nothing —
+      // so a claim of inertness is TRUE about that method. The rule must not fire on the file alone.
+      row: {
+        id: 'sim-tsl',
+        verdict: 'divergent',
+        affectsOutcome: true,
+        backtest: { files: ['nest/src/modules/backtest/backtest.service.ts'], probe: 'simTslPlan' },
+        live: {
+          label: 'simulatedTslState(), observed by the guardian — only records',
+          files: ['nest/src/common/trading/exit-guardian/simulated-tsl.ts'],
+          probe: 'simulatedTslState',
+        },
+      },
+      impl: pass,
+      expectFail: false,
+    },
+    {
       name: 'a probe satisfied ONLY by a comment is refused',
       row: { id: 'x', verdict: 'shared', affectsOutcome: true, backtest: { files: ['.parity-selftest-comment.ts'], probe: 'ONLY_IN_A_COMMENT_TOKEN' }, live: { files: ['package.json'], probe: 'name' } },
       impl: pass,
@@ -339,6 +446,51 @@ function selfTest(rows) {
   // modified is worse than no canary.
   const fixture = path.join(ROOT, '.parity-selftest-comment.ts');
   let failed = 0;
+
+  /**
+   * ⚠️ THE PARSER IS NOW CANARIED TOO, because the label rule was blind for exactly one reason:
+   * `parseRegister()` did not capture `label`, so every fabricated self-test row passed while the real
+   * register could never fire the rule. A canary built on fabricated input does not prove the real
+   * input is read — this proves the parse carries the field, and that its absence is detectable.
+   */
+  const FABRICATED = [
+    'export const REG = [',
+    '  {',
+    "    id: 'x',",
+    "    mechanism: 'X',",
+    '    affectsOutcome: true,',
+    "    verdict: 'shared',",
+    '    backtest: {',
+    "      label: 'engine label here',",
+    "      files: ['a.ts'],",
+    "      probe: 'p1',",
+    '    },',
+    '    live: {',
+    "      label: 'live label here',",
+    "      files: ['b.ts'],",
+    "      probe: 'p2',",
+    '    },',
+    '  },',
+    '];',
+  ].join('\n');
+  // ⚠️ The fixture mirrors the REAL file's layout (multi-line side blocks), because a fixture that is
+  // easier to write than the input proves nothing about the input. The first version of this case was
+  // single-line and parsed to `undefined` — the assertion caught it, which is the only reason it is
+  // right now.
+  const NO_LABEL = FABRICATED.replace("      label: 'live label here',\n", '');
+  const parserCases = [
+    { name: 'parseRegister captures the labels the rules read', got: parseRegister(FABRICATED)[0]?.live?.label, want: 'live label here' },
+    { name: 'a side with no label parses as null, so “cannot judge” is reachable', got: parseRegister(NO_LABEL)[0]?.live?.label, want: null },
+  ];
+  for (const c of parserCases) {
+    if (c.got === c.want) {
+      console.log(`[parity:self-test] ✅ ${c.name}`);
+    } else {
+      failed += 1;
+      console.error(`[parity:self-test] ✖ ${c.name} — expected ${JSON.stringify(c.want)}, got ${JSON.stringify(c.got)}`);
+    }
+  }
+
   try {
     fs.writeFileSync(fixture, '// ONLY_IN_A_COMMENT_TOKEN — a comment is not a call\nexport const nothing = 1;\n');
     for (const c of cases) {
@@ -361,9 +513,9 @@ function selfTest(rows) {
     console.error(`[parity:self-test] ❌ ${failed} case(s) did not behave — the guard does not guard.`);
     process.exit(1);
   }
-  console.log(`[parity:self-test] ✅ ${cases.length} cases, both directions, every rule observed to fail.`);
+  console.log(`[parity:self-test] ✅ ${cases.length + 2} cases, both directions, every rule observed to fail.`);
   process.exit(0);
 }
 
 if (require.main === module) main(process.argv.slice(2));
-module.exports = { parseRegister, probeFound, checkRow, importsMechanism };
+module.exports = { parseRegister, probeFound, checkRow, importsMechanism, inertClaimContradicted };
