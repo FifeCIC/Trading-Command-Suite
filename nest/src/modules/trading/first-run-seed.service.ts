@@ -107,7 +107,7 @@ export class FirstRunSeedService implements OnModuleInit {
     let protocolsSeeded: number | null = null;
     let botsCreated: number | null = null;
 
-    const protocolCount = await (this.prisma as any).protocol.count();
+    const protocolCount = await this.prisma.protocol.count();
     if (protocolCount === 0) {
       const r = await this.protocolDb.seedProtocolsToDatabase();
       protocolsSeeded = r.seeded;
@@ -117,9 +117,9 @@ export class FirstRunSeedService implements OnModuleInit {
       );
     }
 
-    const botCount = await (this.prisma as any).tradingStrategy.count();
+    const botCount = await this.prisma.tradingStrategy.count();
     if (botCount === 0) {
-      const hasProtocols = (await (this.prisma as any).protocol.count()) > 0;
+      const hasProtocols = (await this.prisma.protocol.count()) > 0;
       if (!hasProtocols) {
         // ⚠️ REFUSES rather than seeding a bot whose protocol does not exist — the same rule
         // `split-seed-packaging.cjs` enforces at seed time, applied at install time.

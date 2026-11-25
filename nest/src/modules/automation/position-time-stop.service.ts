@@ -704,7 +704,7 @@ export class PositionTimeStopService {
   }> {
     let tests: any[] = [];
     try {
-      tests = (await (this.prisma as any)?.abTest?.findMany?.({
+      tests = (await this.prisma?.abTest?.findMany?.({
         where: { name: { startsWith: arm.testName } },
         orderBy: { createdAt: 'desc' },
         take: 5,
@@ -726,7 +726,7 @@ export class PositionTimeStopService {
     const stackId = arm.side === 'A' ? test.controlStackId : test.variantStackId;
     let cfg: any = null;
     try {
-      const snap = await (this.prisma as any)?.metaStackSnapshot?.findUnique?.({ where: { id: stackId } });
+      const snap = await this.prisma?.metaStackSnapshot?.findUnique?.({ where: { id: stackId } });
       cfg = snap?.snapshot ?? null;
     } catch {
       return { strategyId: null, strategyName: null, maxHoldDuration: null, reason: 'ab_arm_config_unreadable' };

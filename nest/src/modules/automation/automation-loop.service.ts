@@ -1154,7 +1154,7 @@ export class AutomationLoopService implements OnModuleInit {
   private async persistPendingAction(action: PendingAction): Promise<void> {
     if (!this.prisma.isAvailable) return;
     try {
-      await (this.prisma as any).pendingAction.create({
+      await this.prisma.pendingAction.create({
         data: {
           id: action.id, strategyId: action.strategyId, symbol: action.symbol,
           brokerId: action.brokerId, side: action.side, quantity: action.quantity,
@@ -1172,7 +1172,7 @@ export class AutomationLoopService implements OnModuleInit {
   private async removePendingAction(id: string): Promise<void> {
     if (!this.prisma.isAvailable) return;
     try {
-      await (this.prisma as any).pendingAction.update({
+      await this.prisma.pendingAction.update({
         where: { id }, data: { status: 'executed' },
       });
     } catch { /* may not exist */ }
@@ -1182,7 +1182,7 @@ export class AutomationLoopService implements OnModuleInit {
   private async restorePendingActions(): Promise<void> {
     if (!this.prisma.isAvailable) return;
     try {
-      const rows = await (this.prisma as any).pendingAction.findMany({
+      const rows = await this.prisma.pendingAction.findMany({
         where: { status: 'pending', expiresAt: { gt: new Date() } },
       });
       for (const r of rows) {
@@ -1207,7 +1207,7 @@ export class AutomationLoopService implements OnModuleInit {
     if (!this.prisma.isAvailable) return;
     try {
       // Restore lastAnyTradeAt from most recent EXECUTED decision
-      const lastExec = await (this.prisma as any).decisionLog.findFirst({
+      const lastExec = await this.prisma.decisionLog.findFirst({
         where: { decision: 'EXECUTED' },
         orderBy: { timestamp: 'desc' },
         select: { timestamp: true },
@@ -1217,7 +1217,7 @@ export class AutomationLoopService implements OnModuleInit {
       }
 
       // Restore per-symbol last trade times
-      const recentTrades = await (this.prisma as any).decisionLog.findMany({
+      const recentTrades = await this.prisma.decisionLog.findMany({
         where: { decision: 'EXECUTED' },
         orderBy: { timestamp: 'desc' },
         select: { symbol: true, timestamp: true },
@@ -1797,7 +1797,7 @@ export class AutomationLoopService implements OnModuleInit {
         for (const slug of activeProtocols) {
           const st = scoringStatus.get(slug);
           if (!st) continue;
-          await (this.prisma as any).$queryRawUnsafe(
+          await this.prisma.$queryRawUnsafe(
             `INSERT INTO protocol_score_status
                (protocolId, state, reason, symbolsResolved, symbolsScored, lastTickAt, updatedAt)
              VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -1816,7 +1816,7 @@ export class AutomationLoopService implements OnModuleInit {
         // Prune rows for protocols that are no longer active.
         if (activeProtocols.length > 0) {
           const placeholders = activeProtocols.map(() => '?').join(',');
-          await (this.prisma as any).$queryRawUnsafe(
+          await this.prisma.$queryRawUnsafe(
             `DELETE FROM protocol_score_status WHERE protocolId NOT IN (${placeholders})`,
             ...activeProtocols,
           );
@@ -2394,7 +2394,7 @@ export class AutomationLoopService implements OnModuleInit {
       // 'pending' and re-offered. Bounded and non-fatal — a queue that cannot be
       // drained must not take the tick down with it.
       try {
-        await (this.prisma as any).$executeRawUnsafe(
+        await this.prisma.$executeRawUnsafe(
           `UPDATE strategy_signal_queue
               SET status = 'pending', updatedAt = UTC_TIMESTAMP()
             WHERE status = 'executing'
@@ -2402,7 +2402,7 @@ export class AutomationLoopService implements OnModuleInit {
         );
       } catch { /* recovery is best-effort */ }
 
-      const pendingRows: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const pendingRows = await this.prisma.$queryRawUnsafe<any[]>(
         `SELECT q.id, q.strategyId, q.symbol, q.protocolId, q.direction, q.\`signal\`,
                 CAST(q.compositePct AS DECIMAL(10,4)) AS compositePct,
                 CAST(q.combinedStrength AS DECIMAL(10,4)) AS combinedStrength,
@@ -2465,7 +2465,7 @@ export class AutomationLoopService implements OnModuleInit {
         const maxAgeMin = getMaxSignalAgeMinutes();
         const ageMin = signalAgeMinutes(head.updatedAt);
         if (ageMin > maxAgeMin) {
-          await (this.prisma as any).$executeRawUnsafe(
+          await this.prisma.$executeRawUnsafe(
             `UPDATE strategy_signal_queue SET status = 'expired', updatedAt = UTC_TIMESTAMP() WHERE id = ? AND status = 'pending'`,
             head.id,
           ).catch(() => {});
@@ -2688,7 +2688,7 @@ export class AutomationLoopService implements OnModuleInit {
           // claimed ("BLOCKED and FAILED entries stay pending"). Only a real
           // EXECUTED consumes the entry.
           if (last.decision === 'EXECUTED') {
-            await (this.prisma as any).$executeRawUnsafe(
+            await this.prisma.$executeRawUnsafe(
               `UPDATE strategy_signal_queue SET status = 'executed', updatedAt = UTC_TIMESTAMP() WHERE id = ? AND status = 'pending'`,
               head.id,
             ).catch(() => {});
@@ -2701,7 +2701,7 @@ export class AutomationLoopService implements OnModuleInit {
             // every non-queue path — absence, not a zero. Best-effort: never blocks dispatch.
             const executedTicket = typeof last.ticket === 'number' ? last.ticket : null;
             if (executedTicket != null) {
-              await (this.prisma as any).$executeRawUnsafe(
+              await this.prisma.$executeRawUnsafe(
                 `UPDATE trade SET signalAgeAtExecutionMinutes = ? WHERE provider = ? AND brokerTicket = ?`,
                 ageMin, strategy.brokerId || 'mt5', String(executedTicket),
               ).catch(() => {});
@@ -2912,7 +2912,7 @@ export class AutomationLoopService implements OnModuleInit {
       const sl = side === 'BUY' ? entryPrice * (1 - slPct / 100) : entryPrice * (1 + slPct / 100);
       const tp = side === 'BUY' ? entryPrice * (1 + tpPct / 100) : entryPrice * (1 - tpPct / 100);
       const id = `pt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      await (this.prisma as any).$executeRawUnsafe(
+      await this.prisma.$executeRawUnsafe(
         `INSERT INTO paper_trade (id, strategyId, symbol, side, composite, entryPrice, sl, tp, baseSize, protocolId, tickNumber, createdAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
         id, strategyId, symbol, side, Math.round(composite), entryPrice || null, sl, tp, baseSize, protocolId ?? null, this.state.tickCount,
@@ -3180,7 +3180,7 @@ export class AutomationLoopService implements OnModuleInit {
     const cached = this.legRoleCache.get(key);
     if (cached && Date.now() - cached.at < 60_000) return cached.role ?? undefined;
     try {
-      const rows = await (this.prisma as any).$queryRawUnsafe(
+      const rows = await this.prisma.$queryRawUnsafe<Array<{ role: string | null; requireDirection: string | null }>>(
         `SELECT sp.role, ts.requireDirection
            FROM strategy_protocol sp
            JOIN trading_strategy ts ON ts.id = sp.strategyId
@@ -3242,7 +3242,7 @@ export class AutomationLoopService implements OnModuleInit {
   private async restoreBrokerTradingFlags(): Promise<void> {
     if (!this.prisma.isAvailable) return;
     try {
-      const rows: any[] = await (this.prisma as any).globalSetting.findMany({
+      const rows: any[] = await this.prisma.globalSetting.findMany({
         where: { key: { startsWith: 'automation.brokerTrading.' } },
       });
       const stored = new Map<string, boolean>();
@@ -3296,7 +3296,7 @@ export class AutomationLoopService implements OnModuleInit {
     if (!this.prisma.isAvailable) return;
     const key = `automation.brokerTrading.${brokerId}`;
     try {
-      await (this.prisma as any).globalSetting.upsert({
+      await this.prisma.globalSetting.upsert({
         where: { key },
         create: { key, value: String(enabled) },
         update: { value: String(enabled) },

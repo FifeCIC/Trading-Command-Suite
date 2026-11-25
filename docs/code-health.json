@@ -68,9 +68,9 @@
     },
     {
       "path": "nest/src/modules/scoring/protocol-gating.service.ts",
-      "lines": 2290,
+      "lines": 2300,
       "verdict": "high",
-      "commentRatio": 0.492,
+      "commentRatio": 0.495,
       "maxFunctionLines": 65
     },
     {
@@ -152,10 +152,10 @@
     },
     {
       "path": "nest/src/modules/symbols/symbols.service.ts",
-      "lines": 1449,
+      "lines": 1452,
       "verdict": "ok",
-      "commentRatio": 0.358,
-      "maxFunctionLines": 325
+      "commentRatio": 0.36,
+      "maxFunctionLines": 328
     },
     {
       "path": "src/data/strategy-library.js",
@@ -179,6 +179,20 @@
       "maxFunctionLines": 13
     },
     {
+      "path": "nest/src/modules/trading/strategy-seed-generated.local.ts",
+      "lines": 1314,
+      "verdict": "ok",
+      "commentRatio": 0.024,
+      "maxFunctionLines": 0
+    },
+    {
+      "path": "src/pages/MoversStrategyBacktestPage.jsx",
+      "lines": 1303,
+      "verdict": "ok",
+      "commentRatio": 0.193,
+      "maxFunctionLines": 1171
+    },
+    {
       "path": "nest/src/modules/directives/implementations/mt5-indicators.directives.ts",
       "lines": 1295,
       "verdict": "ok",
@@ -191,20 +205,6 @@
       "verdict": "ok",
       "commentRatio": 0.157,
       "maxFunctionLines": 674
-    },
-    {
-      "path": "nest/src/modules/trading/strategy-seed-generated.local.ts",
-      "lines": 1288,
-      "verdict": "ok",
-      "commentRatio": 0.024,
-      "maxFunctionLines": 0
-    },
-    {
-      "path": "src/pages/MoversStrategyBacktestPage.jsx",
-      "lines": 1284,
-      "verdict": "ok",
-      "commentRatio": 0.187,
-      "maxFunctionLines": 1152
     },
     {
       "path": "nest/src/modules/alerts/alert-trigger.service.ts",
@@ -242,6 +242,13 @@
       "maxFunctionLines": 92
     },
     {
+      "path": "nest/src/modules/backtest/selection-run.service.ts",
+      "lines": 1204,
+      "verdict": "ok",
+      "commentRatio": 0.313,
+      "maxFunctionLines": 528
+    },
+    {
       "path": "nest/src/modules/backtest/backtest.controller.ts",
       "lines": 1151,
       "verdict": "ok",
@@ -275,13 +282,6 @@
       "verdict": "ok",
       "commentRatio": 0.192,
       "maxFunctionLines": 97
-    },
-    {
-      "path": "nest/src/modules/backtest/selection-run.service.ts",
-      "lines": 1096,
-      "verdict": "ok",
-      "commentRatio": 0.292,
-      "maxFunctionLines": 490
     },
     {
       "path": "src/pages/T212PortfolioPage.jsx",
@@ -425,9 +425,9 @@
     },
     {
       "path": "nest/src/modules/providers/mt5.controller.ts",
-      "lines": 836,
+      "lines": 839,
       "verdict": "ok",
-      "commentRatio": 0.224,
+      "commentRatio": 0.227,
       "maxFunctionLines": 78
     },
     {
@@ -564,6 +564,13 @@
       "maxFunctionLines": 231
     },
     {
+      "path": "nest/src/modules/backtest/trade-config.ts",
+      "lines": 716,
+      "verdict": "ok",
+      "commentRatio": 0.419,
+      "maxFunctionLines": 16
+    },
+    {
       "path": "src/components/WidgetBoard.jsx",
       "lines": 712,
       "verdict": "ok",
@@ -655,11 +662,11 @@
       "maxFunctionLines": 33
     },
     {
-      "path": "nest/src/modules/backtest/trade-config.ts",
-      "lines": 637,
+      "path": "src/core/nav-tree.js",
+      "lines": 628,
       "verdict": "ok",
-      "commentRatio": 0.394,
-      "maxFunctionLines": 16
+      "commentRatio": 0.636,
+      "maxFunctionLines": 8
     },
     {
       "path": "nest/src/modules/directives/directive-fixtures.ts",
@@ -667,13 +674,6 @@
       "verdict": "ok",
       "commentRatio": 0.264,
       "maxFunctionLines": 392
-    },
-    {
-      "path": "src/core/nav-tree.js",
-      "lines": 622,
-      "verdict": "ok",
-      "commentRatio": 0.634,
-      "maxFunctionLines": 8
     },
     {
       "path": "src/pages/Mt5TradingPage.jsx",
@@ -1068,18 +1068,18 @@
       "maxFunctionLines": 5
     },
     {
+      "path": "src/core/hidden-views.js",
+      "lines": 463,
+      "verdict": "ok",
+      "commentRatio": 0.672,
+      "maxFunctionLines": 39
+    },
+    {
       "path": "nest/src/modules/diversification/global-diversification.service.ts",
       "lines": 460,
       "verdict": "ok",
       "commentRatio": 0.149,
       "maxFunctionLines": 90
-    },
-    {
-      "path": "src/core/hidden-views.js",
-      "lines": 457,
-      "verdict": "ok",
-      "commentRatio": 0.671,
-      "maxFunctionLines": 39
     },
     {
       "path": "src/pages/DataAreaLandingPage.jsx",
@@ -1115,6 +1115,13 @@
       "verdict": "ok",
       "commentRatio": 0.386,
       "maxFunctionLines": 107
+    },
+    {
+      "path": "nest/src/common/trading/parity-register.ts",
+      "lines": 445,
+      "verdict": "ok",
+      "commentRatio": 0.264,
+      "maxFunctionLines": 10
     },
     {
       "path": "nest/src/modules/scoring/scoring.controller.ts",
@@ -1159,6 +1166,20 @@
       "maxFunctionLines": 35
     },
     {
+      "path": "nest/src/modules/trading/strategy-seed-data.ts",
+      "lines": 435,
+      "verdict": "ok",
+      "commentRatio": 0.679,
+      "maxFunctionLines": 10
+    },
+    {
+      "path": "nest/src/modules/watchlists/watchlists.controller.ts",
+      "lines": 435,
+      "verdict": "ok",
+      "commentRatio": 0.141,
+      "maxFunctionLines": 38
+    },
+    {
       "path": "src/components/widgets/builtin-widgets.jsx",
       "lines": 434,
       "verdict": "ok",
@@ -1171,6 +1192,13 @@
       "verdict": "ok",
       "commentRatio": 0.293,
       "maxFunctionLines": 34
+    },
+    {
+      "path": "nest/src/modules/symbols/symbol-resolver.service.ts",
+      "lines": 434,
+      "verdict": "ok",
+      "commentRatio": 0.245,
+      "maxFunctionLines": 21
     },
     {
       "path": "nest/src/modules/scoring/edge-statistics.service.ts",
@@ -1208,13 +1236,6 @@
       "maxFunctionLines": 6
     },
     {
-      "path": "nest/src/modules/watchlists/watchlists.controller.ts",
-      "lines": 429,
-      "verdict": "ok",
-      "commentRatio": 0.127,
-      "maxFunctionLines": 38
-    },
-    {
       "path": "src/components/SpeedChart.jsx",
       "lines": 428,
       "verdict": "ok",
@@ -1243,25 +1264,11 @@
       "maxFunctionLines": 135
     },
     {
-      "path": "nest/src/modules/symbols/symbol-resolver.service.ts",
-      "lines": 428,
-      "verdict": "ok",
-      "commentRatio": 0.233,
-      "maxFunctionLines": 21
-    },
-    {
       "path": "src/pages/TradingSettingsPage.jsx",
       "lines": 424,
       "verdict": "ok",
       "commentRatio": 0.272,
       "maxFunctionLines": 93
-    },
-    {
-      "path": "nest/src/modules/trading/strategy-seed-data.ts",
-      "lines": 424,
-      "verdict": "ok",
-      "commentRatio": 0.673,
-      "maxFunctionLines": 10
     },
     {
       "path": "src/pages/DailyBriefingPage.jsx",
@@ -1458,13 +1465,6 @@
       "verdict": "data",
       "commentRatio": 0.243,
       "maxFunctionLines": 16
-    },
-    {
-      "path": "nest/src/common/trading/parity-register.ts",
-      "lines": 383,
-      "verdict": "ok",
-      "commentRatio": 0.22,
-      "maxFunctionLines": 10
     },
     {
       "path": "nest/src/modules/trading/execution-feasibility.service.ts",
@@ -1712,6 +1712,13 @@
       "maxFunctionLines": 30
     },
     {
+      "path": "nest/src/database/database.controller.ts",
+      "lines": 341,
+      "verdict": "ok",
+      "commentRatio": 0.431,
+      "maxFunctionLines": 32
+    },
+    {
       "path": "src/components/DetachableWidget.jsx",
       "lines": 338,
       "verdict": "ok",
@@ -1824,6 +1831,13 @@
       "maxFunctionLines": 39
     },
     {
+      "path": "nest/src/modules/backtest/directive-preview.service.ts",
+      "lines": 321,
+      "verdict": "ok",
+      "commentRatio": 0.326,
+      "maxFunctionLines": 21
+    },
+    {
       "path": "nest/src/modules/market-data/freshness.service.ts",
       "lines": 321,
       "verdict": "ok",
@@ -1871,13 +1885,6 @@
       "verdict": "ok",
       "commentRatio": 0.121,
       "maxFunctionLines": 194
-    },
-    {
-      "path": "nest/src/modules/backtest/directive-preview.service.ts",
-      "lines": 314,
-      "verdict": "ok",
-      "commentRatio": 0.31,
-      "maxFunctionLines": 21
     },
     {
       "path": "nest/src/modules/trading/mt5-trading.service.spec.ts",
@@ -2090,6 +2097,13 @@
       "maxFunctionLines": 101
     },
     {
+      "path": "nest/src/modules/system/retention.config.ts",
+      "lines": 290,
+      "verdict": "ok",
+      "commentRatio": 0.838,
+      "maxFunctionLines": 5
+    },
+    {
       "path": "src/core/experience-levels.js",
       "lines": 289,
       "verdict": "ok",
@@ -2300,13 +2314,6 @@
       "maxFunctionLines": 0
     },
     {
-      "path": "nest/src/modules/system/retention.config.ts",
-      "lines": 273,
-      "verdict": "ok",
-      "commentRatio": 0.831,
-      "maxFunctionLines": 5
-    },
-    {
       "path": "nest/src/modules/trend/trend-read.math.spec.ts",
       "lines": 272,
       "verdict": "data",
@@ -2475,13 +2482,6 @@
       "maxFunctionLines": 17
     },
     {
-      "path": "src/pages/DatabaseTablesPage.jsx",
-      "lines": 256,
-      "verdict": "ok",
-      "commentRatio": 0.182,
-      "maxFunctionLines": 200
-    },
-    {
       "path": "src/data/broker-catalogue.js",
       "lines": 255,
       "verdict": "ok",
@@ -2571,6 +2571,13 @@
       "verdict": "ok",
       "commentRatio": 0.42,
       "maxFunctionLines": 56
+    },
+    {
+      "path": "src/pages/DatabaseTablesPage.jsx",
+      "lines": 247,
+      "verdict": "ok",
+      "commentRatio": 0.103,
+      "maxFunctionLines": 8
     },
     {
       "path": "nest/src/modules/scoring/protocol-consensus.service.ts",
@@ -2676,6 +2683,13 @@
       "verdict": "ok",
       "commentRatio": 0.25,
       "maxFunctionLines": 44
+    },
+    {
+      "path": "nest/src/database/table-usage.data.ts",
+      "lines": 237,
+      "verdict": "ok",
+      "commentRatio": 0.251,
+      "maxFunctionLines": 0
     },
     {
       "path": "nest/src/modules/directives/implementations/hurst-memory.directive.ts",
@@ -3021,6 +3035,13 @@
       "maxFunctionLines": 27
     },
     {
+      "path": "nest/src/common/trading/parity-exposure.ts",
+      "lines": 213,
+      "verdict": "ok",
+      "commentRatio": 0.375,
+      "maxFunctionLines": 3
+    },
+    {
       "path": "nest/src/modules/portfolio/correlation.service.ts",
       "lines": 213,
       "verdict": "ok",
@@ -3033,6 +3054,13 @@
       "verdict": "ok",
       "commentRatio": 0.299,
       "maxFunctionLines": 19
+    },
+    {
+      "path": "nest/src/common/trading/backtest-viability.ts",
+      "lines": 212,
+      "verdict": "ok",
+      "commentRatio": 0.523,
+      "maxFunctionLines": 49
     },
     {
       "path": "nest/src/modules/strategies/strategy-prerequisites.ts",
@@ -3140,6 +3168,13 @@
       "maxFunctionLines": 5
     },
     {
+      "path": "src/features/movers-strategy/ParityStep.jsx",
+      "lines": 205,
+      "verdict": "ok",
+      "commentRatio": 0.12,
+      "maxFunctionLines": 1
+    },
+    {
       "path": "src/pages/EarningsWhispersPage.jsx",
       "lines": 205,
       "verdict": "ok",
@@ -3166,6 +3201,13 @@
       "verdict": "ok",
       "commentRatio": 0.037,
       "maxFunctionLines": 165
+    },
+    {
+      "path": "nest/src/modules/backtest/trade-config.spec.ts",
+      "lines": 204,
+      "verdict": "data",
+      "commentRatio": 0.27,
+      "maxFunctionLines": 115
     },
     {
       "path": "nest/src/modules/directives/implementations/gold-session-profile.directive.ts",
@@ -3224,13 +3266,6 @@
       "maxFunctionLines": 34
     },
     {
-      "path": "nest/src/database/database.controller.ts",
-      "lines": 201,
-      "verdict": "ok",
-      "commentRatio": 0.446,
-      "maxFunctionLines": 17
-    },
-    {
       "path": "nest/src/modules/automation/ab-arms-can-differ.spec.ts",
       "lines": 201,
       "verdict": "data",
@@ -3285,13 +3320,6 @@
       "verdict": "ok",
       "commentRatio": 0.217,
       "maxFunctionLines": 104
-    },
-    {
-      "path": "nest/src/modules/backtest/trade-config.spec.ts",
-      "lines": 197,
-      "verdict": "data",
-      "commentRatio": 0.253,
-      "maxFunctionLines": 108
     },
     {
       "path": "nest/src/modules/scoring/adaptive-target.ts",
@@ -3910,6 +3938,13 @@
       "maxFunctionLines": 81
     },
     {
+      "path": "nest/src/modules/backtest/trade-config-coverage.spec.ts",
+      "lines": 171,
+      "verdict": "data",
+      "commentRatio": 0.283,
+      "maxFunctionLines": 12
+    },
+    {
       "path": "nest/src/modules/directives/implementations/volume-confirmation.directive.ts",
       "lines": 171,
       "verdict": "ok",
@@ -3950,13 +3985,6 @@
       "verdict": "ok",
       "commentRatio": 0.197,
       "maxFunctionLines": 79
-    },
-    {
-      "path": "nest/src/modules/scoring/rarity.service.ts",
-      "lines": 170,
-      "verdict": "ok",
-      "commentRatio": 0.233,
-      "maxFunctionLines": 29
     },
     {
       "path": "src/components/ThresholdRangeMap.jsx",
@@ -4890,6 +4918,13 @@
       "maxFunctionLines": 44
     },
     {
+      "path": "nest/src/common/trading/backtest-viability.spec.ts",
+      "lines": 143,
+      "verdict": "data",
+      "commentRatio": 0.156,
+      "maxFunctionLines": 0
+    },
+    {
       "path": "nest/src/common/utils/building-bar-duplicate.ts",
       "lines": 143,
       "verdict": "ok",
@@ -5135,6 +5170,13 @@
       "maxFunctionLines": 122
     },
     {
+      "path": "nest/src/common/trading/parity-exposure.spec.ts",
+      "lines": 134,
+      "verdict": "data",
+      "commentRatio": 0.137,
+      "maxFunctionLines": 1
+    },
+    {
       "path": "nest/src/modules/providers/adapter-factory.rate-limit.spec.ts",
       "lines": 134,
       "verdict": "data",
@@ -5366,13 +5408,6 @@
       "maxFunctionLines": 1
     },
     {
-      "path": "src/features/movers-strategy/ParityStep.jsx",
-      "lines": 128,
-      "verdict": "ok",
-      "commentRatio": 0.171,
-      "maxFunctionLines": 85
-    },
-    {
       "path": "nest/src/modules/directives/implementations/regime-shift-exit.directive.ts",
       "lines": 128,
       "verdict": "ok",
@@ -5392,6 +5427,13 @@
       "verdict": "ok",
       "commentRatio": 0.177,
       "maxFunctionLines": 52
+    },
+    {
+      "path": "nest/src/modules/scoring/rarity-bands.ts",
+      "lines": 128,
+      "verdict": "ok",
+      "commentRatio": 0.471,
+      "maxFunctionLines": 12
     },
     {
       "path": "src/core/sw/dev-unregister.test.js",
@@ -5567,13 +5609,6 @@
       "verdict": "data",
       "commentRatio": 0.064,
       "maxFunctionLines": 1
-    },
-    {
-      "path": "nest/src/modules/scoring/rarity-bands.ts",
-      "lines": 124,
-      "verdict": "ok",
-      "commentRatio": 0.452,
-      "maxFunctionLines": 12
     },
     {
       "path": "src/components/SeasonalityHeatmap.jsx",
@@ -5791,6 +5826,13 @@
       "verdict": "ok",
       "commentRatio": 0.106,
       "maxFunctionLines": 12
+    },
+    {
+      "path": "nest/src/database/database.controller.spec.ts",
+      "lines": 119,
+      "verdict": "data",
+      "commentRatio": 0.365,
+      "maxFunctionLines": 0
     },
     {
       "path": "nest/src/modules/directives/implementations/adx.directive.ts",
@@ -6423,13 +6465,6 @@
       "maxFunctionLines": 2
     },
     {
-      "path": "nest/src/modules/backtest/trade-config-coverage.spec.ts",
-      "lines": 103,
-      "verdict": "data",
-      "commentRatio": 0.25,
-      "maxFunctionLines": 0
-    },
-    {
       "path": "nest/src/modules/scoring/exit-consensus.controller.ts",
       "lines": 103,
       "verdict": "ok",
@@ -7023,13 +7058,6 @@
       "verdict": "ok",
       "commentRatio": 0.711,
       "maxFunctionLines": 1
-    },
-    {
-      "path": "nest/src/database/database.controller.spec.ts",
-      "lines": 83,
-      "verdict": "data",
-      "commentRatio": 0.356,
-      "maxFunctionLines": 0
     },
     {
       "path": "nest/src/modules/automation/automation-loop-queue-freshness.spec.ts",

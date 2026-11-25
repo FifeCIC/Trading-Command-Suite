@@ -119,7 +119,7 @@ export class SymbolProtocolAuthorityService {
    */
   private async buildProtocolIndex(): Promise<Map<string, ProtocolIndexEntry>> {
     const index = new Map<string, ProtocolIndexEntry>();
-    const rows: any[] = await (this.prisma as any).protocol.findMany({
+    const rows: any[] = await this.prisma.protocol.findMany({
       select: {
         id: true,
         slug: true,
@@ -196,7 +196,7 @@ export class SymbolProtocolAuthorityService {
 
     // ── rank 1 — explicit assignment (rows hold UUIDs or slugs; both resolve above) ──
     await runSource('assignment', async () => {
-      const rows: any[] = await (this.prisma as any).symbolProtocolAssignment.findMany({
+      const rows: any[] = await this.prisma.symbolProtocolAssignment.findMany({
         where: { symbol },
         select: { protocolId: true },
       });
@@ -206,7 +206,7 @@ export class SymbolProtocolAuthorityService {
     // ── rank 2 — an ACTIVE bot trades this symbol under this protocol (`active: true` only:
     //    an inactive bot is not evidence that a protocol applies) ──
     await runSource('bot', async () => {
-      const rows: any[] = await (this.prisma as any).tradingStrategy.findMany({
+      const rows: any[] = await this.prisma.tradingStrategy.findMany({
         where: { symbol, active: true },
         select: { protocolId: true },
       });
@@ -219,7 +219,7 @@ export class SymbolProtocolAuthorityService {
     //    fails to an empty list in any install where that path is absent. The DB row is the
     //    durable one; #926 tracks moving `/focus` onto this authority.
     await runSource('watchlist', async () => {
-      const rows: any[] = await (this.prisma as any).watchlist.findMany({
+      const rows: any[] = await this.prisma.watchlist.findMany({
         where: { protocolId: { not: null } },
         select: { protocolId: true, symbols: true },
       });
@@ -244,7 +244,7 @@ export class SymbolProtocolAuthorityService {
     //    which is why it can catch `gold-macro-v1-long` — a protocol in no table for XAUUSD that was
     //    nonetheless scoring and trading it. ⚠️ `score_snapshot.protocolId` holds a SLUG. ──
     await runSource('observed', async () => {
-      const rows: any[] = await (this.prisma as any).scoreSnapshot.findMany({
+      const rows: any[] = await this.prisma.scoreSnapshot.findMany({
         where: { symbol },
         select: { protocolId: true },
         distinct: ['protocolId'],
@@ -358,7 +358,7 @@ export class SymbolProtocolAuthorityService {
 
     // ── rank 1 — explicit assignment rows ──
     await runSource('assignment', async () => {
-      const rows: any[] = await (this.prisma as any).symbolProtocolAssignment.findMany({
+      const rows: any[] = await this.prisma.symbolProtocolAssignment.findMany({
         where: { symbol: { in: wanted } },
         select: { symbol: true, protocolId: true },
       });
@@ -367,7 +367,7 @@ export class SymbolProtocolAuthorityService {
 
     // ── rank 2 — an ACTIVE bot trades it (`active: true` only, as in resolve()) ──
     await runSource('bot', async () => {
-      const rows: any[] = await (this.prisma as any).tradingStrategy.findMany({
+      const rows: any[] = await this.prisma.tradingStrategy.findMany({
         where: { symbol: { in: wanted }, active: true },
         select: { symbol: true, protocolId: true },
       });
@@ -377,7 +377,7 @@ export class SymbolProtocolAuthorityService {
     // ── rank 3 — the protocol's FK-linked watchlist holds the symbol. Read from the DB, not the
     //    JSON files on disk, matching resolve() (#926 tracks moving /focus onto this authority). ──
     await runSource('watchlist', async () => {
-      const rows: any[] = await (this.prisma as any).watchlist.findMany({
+      const rows: any[] = await this.prisma.watchlist.findMany({
         where: { protocolId: { not: null } },
         select: { protocolId: true, symbols: true },
       });
@@ -403,7 +403,7 @@ export class SymbolProtocolAuthorityService {
     //    the one source that reads the large table, hence the `in` filter AND `distinct` in the
     //    query rather than de-duplicating rows in memory after fetching them. ──
     await runSource('observed', async () => {
-      const rows: any[] = await (this.prisma as any).scoreSnapshot.findMany({
+      const rows: any[] = await this.prisma.scoreSnapshot.findMany({
         where: { symbol: { in: wanted } },
         select: { symbol: true, protocolId: true },
         distinct: ['symbol', 'protocolId'],

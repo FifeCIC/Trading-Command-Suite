@@ -43,7 +43,7 @@ it is expensive to review and risky to change.
 |---|---|---|---|---|
 | `nest/src/modules/automation/stop-guardian.service.ts` | 2,451 | 51.9% | 484 | 2 |
 | `nest/src/modules/signals/signal-envelope.service.ts` | 2,441 | 35.9% | 263 | 3 |
-| `nest/src/modules/scoring/protocol-gating.service.ts` | 2,290 | 49.2% | 65 | 1 |
+| `nest/src/modules/scoring/protocol-gating.service.ts` | 2,300 | 49.5% | 65 | 1 |
 | `src/pages/DiagramsPage.jsx` | 2,105 | 2.4% | 211 | 1 |
 
 ### `warn`
@@ -78,7 +78,7 @@ line as a QUESTION — delete / wire up / keep and explain — never as a delete
 - `src/pages/AdvancedResearchPage.jsx`
 - `src/pages/directives-manager.seed.js`
 
-## Named only in commentary (7)
+## Named only in commentary (6)
 
 ⚠️ **Discussed somewhere, named by no code.** These are NOT in the list above, because a name-reference
 scan sees them mentioned — usually by the very documentation that makes them look intentional. That is
@@ -88,7 +88,6 @@ per-bar drill-down in three documents while nothing imported it.
 A prose mention, in a comment **or a string**, is not a reference. Same QUESTION per file — delete /
 wire up / keep and explain. Owner: #1228.
 
-- `nest/src/modules/scoring/rarity.service.ts`
 - `src/components/DetachableWidget.jsx`
 - `src/components/SeesScoringPanel.jsx`
 - `src/components/StickyHeader.jsx`

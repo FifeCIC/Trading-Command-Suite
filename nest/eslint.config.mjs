@@ -51,4 +51,25 @@ export default tseslint.config(
       'prettier/prettier': 'off',
     },
   },
+  /**
+   * ── SPECS HOLD JUNK ON PURPOSE (option C, owner 2026-11-25) ─────────────────────────────────────
+   * The `no-unsafe-*` family measures whether PRODUCTION code type-checks its inputs. A test double
+   * does not: `jest.fn()` returns `any`, a fake broker payload is a literal object, and a stub
+   * deliberately omits fields the real type requires. Erroring there reports the test's SHAPE, not the
+   * product's correctness — and it produced **2,782 of the 11,215** findings.
+   *
+   * ⚠️ This is not a blanket exemption for tests: every other rule still applies to them, including
+   * `no-unused-vars`, `require-await` and `prefer-const`. Only the family whose premise ("this value
+   * has a declared type") is false for a mock is switched off.
+   */
+  {
+    files: ['**/*.spec.ts', '**/*.e2e-spec.ts', 'test/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+    },
+  },
 );

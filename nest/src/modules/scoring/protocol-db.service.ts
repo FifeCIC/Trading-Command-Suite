@@ -233,7 +233,7 @@ export class ProtocolDbService implements OnModuleInit {
     let protoUuid: string | null = null;
     let protoSlug: string | null = null;
     try {
-      const proto = await (this.prisma as any).protocol.findFirst({
+      const proto = await this.prisma.protocol.findFirst({
         where: { OR: [{ slug: protocolId }, { id: protocolId }] },
         select: { id: true, slug: true },
       });
@@ -246,7 +246,7 @@ export class ProtocolDbService implements OnModuleInit {
 
     // Path 1: DB — SymbolProtocolAssignment records
     try {
-      const assignments = await (this.prisma as any).symbolProtocolAssignment.findMany({
+      const assignments = await this.prisma.symbolProtocolAssignment.findMany({
         where: { protocolId: { in: idCandidates } },
         select: { symbol: true },
       });
@@ -276,7 +276,7 @@ export class ProtocolDbService implements OnModuleInit {
     // survives renames. If a protocol has no linked watchlist, that is a real state
     // and it falls through to the (loud) derivation fallback below.
     try {
-      const wls: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const wls: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT symbols FROM watchlist
           WHERE protocolId IN (${idCandidates.map(() => '?').join(',')})
           ORDER BY (id REGEXP '^[0-9a-f]{8}-[0-9a-f]{4}-') DESC, id ASC`,
@@ -345,7 +345,7 @@ export class ProtocolDbService implements OnModuleInit {
    */
   private async getWatchlistSymbols(name: string): Promise<string[]> {
     try {
-      const wl: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const wl: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT symbols FROM watchlist
           WHERE LOWER(REPLACE(REPLACE(name, '-', ' '), '_', ' ')) = LOWER(REPLACE(REPLACE(?, '-', ' '), '_', ' '))
           ORDER BY (id REGEXP '^[0-9a-f]{8}-[0-9a-f]{4}-') DESC, id ASC
@@ -377,7 +377,7 @@ export class ProtocolDbService implements OnModuleInit {
         return undefined;
       }
 
-      const protocol = await (this.prisma as any).protocol.findUnique({
+      const protocol = await this.prisma.protocol.findUnique({
         where: { slug },
         include: {
           directiveGroups: {
@@ -470,7 +470,7 @@ export class ProtocolDbService implements OnModuleInit {
 
       // #689 — `theory` is not in the Prisma client model yet; read via raw SQL.
       try {
-        const row: any[] = await (this.prisma as any).$queryRawUnsafe(
+        const row: any[] = await this.prisma.$queryRawUnsafe(
           `SELECT theory FROM protocol WHERE slug = ?`, slug,
         );
         if (row.length > 0) (config as any).theory = row[0].theory ?? null;
@@ -491,7 +491,7 @@ export class ProtocolDbService implements OnModuleInit {
   async getAllSlugs(): Promise<string[]> {
     try {
       if (!this.prisma.isAvailable) return [];
-      const protocols = await (this.prisma as any).protocol.findMany({ select: { slug: true } });
+      const protocols = await this.prisma.protocol.findMany({ select: { slug: true } });
       return protocols.map((p: any) => p.slug);
     } catch {
       return [];
@@ -509,7 +509,7 @@ export class ProtocolDbService implements OnModuleInit {
     const base = `${sourceSlug}-copy`;
     for (let n = 1; n < 100; n++) {
       const candidate = n === 1 ? base : `${base}-${n}`;
-      const hit = await (this.prisma as any).protocol.findUnique({ where: { slug: candidate }, select: { id: true } });
+      const hit = await this.prisma.protocol.findUnique({ where: { slug: candidate }, select: { id: true } });
       if (!hit) return candidate;
     }
     throw new Error(`Could not find a free copy slug for "${sourceSlug}" after 99 attempts`);
@@ -555,7 +555,7 @@ export class ProtocolDbService implements OnModuleInit {
     assignments: number;
     watchlists: Array<{ id: string; name: string }>;
   }> {
-    const source: any = await (this.prisma as any).protocol.findUnique({
+    const source: any = await this.prisma.protocol.findUnique({
       where: { slug: sourceSlug },
       include: {
         directiveGroups: { orderBy: { sortOrder: 'asc' }, include: { directives: true } },
@@ -564,7 +564,7 @@ export class ProtocolDbService implements OnModuleInit {
     if (!source) throw new Error(`Cannot copy protocol "${sourceSlug}" — no such protocol row`);
 
     const name = opts.name ?? `${source.name} (copy)`;
-    const created: any = await (this.prisma as any).protocol.create({
+    const created: any = await this.prisma.protocol.create({
       data: {
         slug: opts.slug,
         name,
@@ -617,12 +617,12 @@ export class ProtocolDbService implements OnModuleInit {
     // Path 1 — explicit per-symbol assignments (protocolId is the protocol UUID here).
     let assignments = 0;
     try {
-      const rows: any[] = await (this.prisma as any).symbolProtocolAssignment.findMany({
+      const rows: any[] = await this.prisma.symbolProtocolAssignment.findMany({
         where: { protocolId: source.id },
         select: { symbol: true, priority: true },
       });
       for (const r of rows) {
-        await (this.prisma as any).symbolProtocolAssignment.create({
+        await this.prisma.symbolProtocolAssignment.create({
           data: { symbol: r.symbol, protocolId: created.id, priority: r.priority },
         });
         assignments += 1;
@@ -636,13 +636,13 @@ export class ProtocolDbService implements OnModuleInit {
     // watchlist pointing at itself and the copy with nothing.
     const watchlists: Array<{ id: string; name: string }> = [];
     try {
-      const rows: any[] = await (this.prisma as any).watchlist.findMany({
+      const rows: any[] = await this.prisma.watchlist.findMany({
         where: { protocolId: { in: [source.slug, source.id] } },
         select: { name: true, symbols: true, source: true, userId: true, kind: true },
       });
       for (const wl of rows) {
         const wlName = `${wl.name} (B)`;
-        const createdWl: any = await (this.prisma as any).watchlist.create({
+        const createdWl: any = await this.prisma.watchlist.create({
           data: {
             name: wlName,
             symbols: wl.symbols,
@@ -715,7 +715,7 @@ export class ProtocolDbService implements OnModuleInit {
      */
     scoreSnapshots: number;
   } | null> {
-    const row: any = await (this.prisma as any).protocol.findFirst({
+    const row: any = await this.prisma.protocol.findFirst({
       where: { OR: [{ slug: ref }, { id: ref }] },
       select: { id: true, slug: true },
     });
@@ -728,25 +728,25 @@ export class ProtocolDbService implements OnModuleInit {
     // ⚠️ Matched on BOTH the slug and the id: `score_snapshot.protocolId` normally holds a SLUG,
     // but a raw UUID was measured in it for XAUUSD (507 rows). Counting only the slug would
     // under-report exactly the rows that are hardest to find again.
-    const scoreSnapshots = await (this.prisma as any).scoreSnapshot
+    const scoreSnapshots = await this.prisma.scoreSnapshot
       .count({ where: { protocolId: { in: [row.slug, row.id] } } })
       .catch(() => 0);
 
-    const groups: any[] = await (this.prisma as any).protocolDirectiveGroup.findMany({
+    const groups: any[] = await this.prisma.protocolDirectiveGroup.findMany({
       where: { protocolId: row.id },
       select: { id: true },
     });
     const groupIds = groups.map((g) => g.id);
     const entries = groupIds.length
-      ? await (this.prisma as any).protocolDirectiveEntry.deleteMany({ where: { groupId: { in: groupIds } } })
+      ? await this.prisma.protocolDirectiveEntry.deleteMany({ where: { groupId: { in: groupIds } } })
       : { count: 0 };
-    const groupDel = await (this.prisma as any).protocolDirectiveGroup.deleteMany({ where: { protocolId: row.id } });
-    const assignments = await (this.prisma as any).symbolProtocolAssignment.deleteMany({ where: { protocolId: row.id } });
+    const groupDel = await this.prisma.protocolDirectiveGroup.deleteMany({ where: { protocolId: row.id } });
+    const assignments = await this.prisma.symbolProtocolAssignment.deleteMany({ where: { protocolId: row.id } });
     // Only the copy's own watchlists reference the copy slug, so this cannot remove a shared list.
-    const watchlists = await (this.prisma as any).watchlist.deleteMany({
+    const watchlists = await this.prisma.watchlist.deleteMany({
       where: { protocolId: { in: [row.slug, row.id] } },
     });
-    await (this.prisma as any).protocol.delete({ where: { id: row.id } });
+    await this.prisma.protocol.delete({ where: { id: row.id } });
 
     this.clearCache();
     void this.preloadAll().catch(() => { /* background refresh only */ });
@@ -776,7 +776,7 @@ export class ProtocolDbService implements OnModuleInit {
   async getAllProtocols(): Promise<Record<string, ProtocolConfig>> {
     try {
       if (!this.prisma.isAvailable) return {};
-      const dbProtocols = await (this.prisma as any).protocol.findMany({
+      const dbProtocols = await this.prisma.protocol.findMany({
         include: {
           directiveGroups: {
             orderBy: { sortOrder: 'asc' },
@@ -791,7 +791,7 @@ export class ProtocolDbService implements OnModuleInit {
       let noteMap: Record<string, string | null> = {};
       let theoryMap: Record<string, string | null> = {};
       try {
-        const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+        const rows: any[] = await this.prisma.$queryRawUnsafe(
           `SELECT slug, active, note, theory FROM protocol`
         );
         for (const r of rows) {
@@ -876,7 +876,7 @@ export class ProtocolDbService implements OnModuleInit {
         // Fallback: all cached protocols
         return Object.keys(this.getAllCached());
       }
-      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT slug FROM protocol WHERE active = 1`
       );
       return rows.map((r: any) => r.slug);
@@ -924,7 +924,7 @@ export class ProtocolDbService implements OnModuleInit {
       // mistake "I seeded 2" for "the seed is in sync".
       if (onlySlugs && !onlySlugs.includes(slug)) continue;
       try {
-        const proto = await (this.prisma as any).protocol.upsert({
+        const proto = await this.prisma.protocol.upsert({
           where: { slug },
           create: {
             slug,
@@ -985,7 +985,7 @@ export class ProtocolDbService implements OnModuleInit {
         protocols++;
 
         for (const [idx, group] of config.groups.entries()) {
-          const dg = await (this.prisma as any).protocolDirectiveGroup.upsert({
+          const dg = await this.prisma.protocolDirectiveGroup.upsert({
             where: { protocolId_groupId: { protocolId: proto.id, groupId: group.id } },
             create: {
               protocolId: proto.id,
@@ -1083,7 +1083,7 @@ export class ProtocolDbService implements OnModuleInit {
     maxScore: number,
     declaredParams: Record<string, number | boolean> | null | undefined,
   ): Promise<void> {
-    await (this.prisma as any).protocolDirectiveEntry.upsert({
+    await this.prisma.protocolDirectiveEntry.upsert({
       where: {
         groupId_directiveId_instanceLabel: { groupId, directiveId, instanceLabel },
       },

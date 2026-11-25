@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**620** source files · **3437** declarations · **402** ratio sites · **1799** nodes · **190** unreferenced
+**620** source files · **3432** declarations · **402** ratio sites · **1799** nodes · **190** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -1035,7 +1035,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/protocol-db.service.ts:491 getAllSlugs`
 - `nest/src/modules/scoring/protocol-gating.controller.ts:768 isIncluded`
 - `nest/src/modules/scoring/protocol-gating.controller.ts:773 effectiveMax`
-- `nest/src/modules/scoring/protocol-gating.service.ts:1691 worker`
+- `nest/src/modules/scoring/protocol-gating.service.ts:1695 worker`
 - `nest/src/modules/scoring/protocol-health.service.ts:652 getLast`
 - `nest/src/modules/scoring/protocols.controller.ts:70 recordActivity`
 - `nest/src/modules/scoring/protocols.controller.ts:924 norm`
@@ -1063,9 +1063,9 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:283 observedOnly`
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:328 note`
 - `nest/src/modules/symbols/symbol-protocol-authority.service.ts:342 runSource`
-- `nest/src/modules/symbols/symbols.service.ts:1017 parseLatest`
-- `nest/src/modules/symbols/symbols.service.ts:1024 num`
-- `nest/src/modules/symbols/symbols.service.ts:1173 readWatchlist`
+- `nest/src/modules/symbols/symbols.service.ts:1020 parseLatest`
+- `nest/src/modules/symbols/symbols.service.ts:1027 num`
+- `nest/src/modules/symbols/symbols.service.ts:1176 readWatchlist`
 - `nest/src/modules/trading/bot-performance.service.ts:362 empty`
 - `nest/src/modules/trading/bot-performance.service.ts:438 readAll`
 - `nest/src/modules/trading/duplicate-guard.service.ts:200 isBlocked`
@@ -1096,5 +1096,5 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/trend/trend-read.math.ts:186 isNum`
 - `nest/src/modules/trend/trend-read.math.ts:330 last`
 - `nest/src/modules/trend/trend-read.math.ts:405 correctSide`
-- `nest/src/modules/watchlists/watchlists.controller.ts:381 has`
+- `nest/src/modules/watchlists/watchlists.controller.ts:387 has`
 

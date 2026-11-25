@@ -185,7 +185,7 @@ export class AutomationController {
     // Automation loop ticks
     const events: any[] = [];
     try {
-      const ticks = await (this.prisma as any).automationEvent.findMany({
+      const ticks = await this.prisma.automationEvent.findMany({
         orderBy: { timestamp: 'desc' },
         take: type === 'automation' ? take : Math.ceil(take / 2),
       });
@@ -200,7 +200,7 @@ export class AutomationController {
 
     // Trade decisions
     try {
-      const decisions = await (this.prisma as any).decisionLog.findMany({
+      const decisions = await this.prisma.decisionLog.findMany({
         orderBy: { timestamp: 'desc' },
         take: type === 'decision' ? take : Math.ceil(take / 2),
       });
@@ -253,7 +253,7 @@ export class AutomationController {
       if (symbol) where.symbol = symbol.toUpperCase();
       if (tickNumber) where.tickNumber = parseInt(tickNumber, 10);
 
-      const trails = await (this.prisma as any).decisionTrail.findMany({
+      const trails = await this.prisma.decisionTrail.findMany({
         where,
         orderBy: { timestamp: 'desc' },
         take,
@@ -333,7 +333,7 @@ export class AutomationController {
     // JSON-path GROUP BY would be a second, database-specific description of the same shape.
     // The row count is bounded by the retention window, so this stays cheap.
     const rows: Array<{ symbol: string | null; detail: string | null; timestamp: Date }> =
-      await (this.prisma as any).automationEvent.findMany({
+      await this.prisma.automationEvent.findMany({
         where: { step: 'pre_trade_blocked', timestamp: { gte: since } },
         select: { symbol: true, detail: true, timestamp: true },
         orderBy: { timestamp: 'desc' },
@@ -461,7 +461,7 @@ export class AutomationController {
     const activeStrategies: any[] = [];
     if (this.prisma.isAvailable) {
       try {
-        const strategies = await (this.prisma as any).tradingStrategy.findMany({
+        const strategies = await this.prisma.tradingStrategy.findMany({
           where: { active: true },
           include: { evaluations: { orderBy: { evaluatedAt: 'desc' }, take: 1 } },
         });
@@ -715,14 +715,14 @@ export class AutomationController {
   @Get('paper')
   async getPaperTrades() {
     try {
-      const recent: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const recent: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT id, strategyId, symbol, side,
                 CAST(composite AS SIGNED) AS composite,
                 entryPrice, sl, tp, baseSize, protocolId,
                 CAST(tickNumber AS SIGNED) AS tickNumber, createdAt
          FROM paper_trade ORDER BY createdAt DESC LIMIT 100`,
       );
-      const summary: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const summary: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT strategyId, symbol, side, CAST(COUNT(*) AS SIGNED) AS n,
                 CAST(MAX(composite) AS SIGNED) AS maxComposite, MAX(createdAt) AS lastAt
          FROM paper_trade GROUP BY strategyId, symbol, side ORDER BY lastAt DESC LIMIT 20`,
@@ -852,7 +852,7 @@ export class AutomationController {
   @Get('scoring-strategies')
   async getScoringStrategies() {
     try {
-      return await (this.prisma as any).scoringStrategy.findMany({ orderBy: { createdAt: 'asc' } });
+      return await this.prisma.scoringStrategy.findMany({ orderBy: { createdAt: 'asc' } });
     } catch {
       return [];
     }
@@ -902,7 +902,7 @@ export class AutomationController {
   /** POST /api/automation/scoring-strategies/:id/toggle */
   @Post('scoring-strategies/:id/toggle')
   async toggleScoringStrategy(@Param('id') id: string, @Body() body: { enabled?: boolean; tradingEnabled?: boolean }) {
-    const rows: any[] = await (this.prisma as any).scoringStrategy.findMany({ where: { id } });
+    const rows: any[] = await this.prisma.scoringStrategy.findMany({ where: { id } });
     const s = rows[0];
     if (!s) return { error: 'Not found' };
     if (body.enabled !== undefined) s.enabled = body.enabled;

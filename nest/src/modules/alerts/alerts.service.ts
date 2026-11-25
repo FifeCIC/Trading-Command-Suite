@@ -68,7 +68,7 @@ export class AlertsService {
   async getActiveAsync() {
     if (!this.prisma.isAvailable) return [];
     try {
-      return await (this.prisma as any).alert.findMany({
+      return await this.prisma.alert.findMany({
         where: {
           dismissed: false,
           OR: [
@@ -97,7 +97,7 @@ export class AlertsService {
   async getHistory(limit = 50): Promise<any[]> {
     if (!this.prisma.isAvailable) return [];
     try {
-      return await (this.prisma as any).alert.findMany({
+      return await this.prisma.alert.findMany({
         where: { dismissed: true },
         orderBy: { lastSeenAt: 'desc' },
         take: Math.min(Math.max(Number(limit) || 50, 1), 500),
@@ -111,7 +111,7 @@ export class AlertsService {
   async acknowledge(id: string): Promise<boolean> {
     if (!this.prisma.isAvailable) return false;
     try {
-      await (this.prisma as any).alert.update({
+      await this.prisma.alert.update({
         where: { id },
         data: { acknowledged: true, readAt: new Date() },
       });
@@ -122,7 +122,7 @@ export class AlertsService {
   async dismiss(id: string): Promise<boolean> {
     if (!this.prisma.isAvailable) return false;
     try {
-      await (this.prisma as any).alert.update({
+      await this.prisma.alert.update({
         where: { id },
         data: { dismissed: true },
       });
@@ -167,8 +167,8 @@ export class AlertsService {
         ],
       };
       const [active, critical] = await Promise.all([
-        (this.prisma as any).alert.count({ where: base }),
-        (this.prisma as any).alert.count({ where: { ...base, severity: 'critical' } }),
+        this.prisma.alert.count({ where: base }),
+        this.prisma.alert.count({ where: { ...base, severity: 'critical' } }),
       ]);
       return { active, critical };
     } catch { return { active: 0, critical: 0 }; }
@@ -196,7 +196,7 @@ export class AlertsService {
       const days = this.notifSettings.autoDismissDays;
       if (!days || days <= 0) return 0;
       const cutoff = new Date(Date.now() - days * 86400000);
-      const result = await (this.prisma as any).alert.updateMany({
+      const result = await this.prisma.alert.updateMany({
         where: {
           dismissed: false,
           OR: [
@@ -220,7 +220,7 @@ export class AlertsService {
   async dismissAll(): Promise<number> {
     if (!this.prisma.isAvailable) return 0;
     try {
-      const result = await (this.prisma as any).alert.updateMany({
+      const result = await this.prisma.alert.updateMany({
         where: { dismissed: false },
         data: { dismissed: true },
       });
@@ -237,7 +237,7 @@ export class AlertsService {
     if (!this.prisma.isAvailable) return 0;
     try {
       const cutoff = new Date(Date.now() - retainDays * 86400000);
-      const result = await (this.prisma as any).alert.deleteMany({
+      const result = await this.prisma.alert.deleteMany({
         where: { createdAt: { lt: cutoff } },
       });
       this.logger.log(`Cleaned up ${result.count} alerts older than ${retainDays} days`);

@@ -39,7 +39,7 @@ export class WeekendGapRiskService {
 
     try {
       // Get 1d candles filtered by symbol ticker via relation
-      const bars = await (this.prisma as any).marketBar.findMany({
+      const bars = await this.prisma.marketBar.findMany({
         where: {
           symbol: { ticker: symbol.toUpperCase() },
           timeframe: '1d',

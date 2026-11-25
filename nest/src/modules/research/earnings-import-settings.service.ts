@@ -156,7 +156,7 @@ export class EarningsImportSettingsService {
           }
         }
         try {
-          const items = await (this.prisma as any).watchlistItem.findMany({
+          const items = await this.prisma.watchlistItem.findMany({
             select: { ticker: true },
           });
           for (const it of items) symbols.add(String(it.ticker).toUpperCase());

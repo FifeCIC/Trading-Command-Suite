@@ -257,7 +257,7 @@ export class BrokerSymbolDiscoveryService implements OnModuleInit {
    * is NOT the same as `NULL` = never measured.
    */
   async captureSpreads(brokerId: number): Promise<number> {
-    const routes = await (this.prisma as any).symbolRoute.findMany({
+    const routes = await this.prisma.symbolRoute.findMany({
       where: { brokerId, enabled: true },
       select: { symbol: true, brokerSymbol: true },
     });
@@ -276,7 +276,7 @@ export class BrokerSymbolDiscoveryService implements OnModuleInit {
       if (!Number.isFinite(bid) || !Number.isFinite(ask) || bid <= 0 || ask <= 0) continue;
       const mid = (bid + ask) / 2;
       const spreadPct = ((ask - bid) / mid) * 100;
-      await (this.prisma as any).brokerSymbol.updateMany({
+      await this.prisma.brokerSymbol.updateMany({
         where: { brokerId, name },
         // ⚠️ BOTH forms are stored. The percent alone is what made a 17-tick VIX spread read as
         // "expensive": 0.17 points on an 18-point index is 0.93%, while 0.40 points on US500 is 0.005%.

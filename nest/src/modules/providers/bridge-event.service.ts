@@ -24,7 +24,7 @@ export class BridgeEventService {
 
   async log(event: BridgeEventLog): Promise<void> {
     try {
-      await (this.prisma as any).bridgeEvent.create({
+      await this.prisma.bridgeEvent.create({
         data: {
           eventType: event.eventType,
           account: event.account,
@@ -43,7 +43,7 @@ export class BridgeEventService {
   /** Get recent bridge events for the notification disc / status page */
   async getRecent(limit = 50): Promise<any[]> {
     try {
-      return await (this.prisma as any).bridgeEvent.findMany({
+      return await this.prisma.bridgeEvent.findMany({
         orderBy: { createdAt: 'desc' },
         take: limit,
       });

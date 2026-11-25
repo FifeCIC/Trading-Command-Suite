@@ -196,9 +196,9 @@ export class AppController {
 
     if (this.prisma.isAvailable) {
       try {
-        protocolCount = await (this.prisma as any).protocol.count();
-        strategyCount = await (this.prisma as any).tradingStrategy.count();
-        watchlistCount = await (this.prisma as any).watchlist.count();
+        protocolCount = await this.prisma.protocol.count();
+        strategyCount = await this.prisma.tradingStrategy.count();
+        watchlistCount = await this.prisma.watchlist.count();
       } catch { /* DB unavailable — counts stay 0 */ }
     }
 

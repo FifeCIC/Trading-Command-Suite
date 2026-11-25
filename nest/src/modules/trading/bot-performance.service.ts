@@ -446,7 +446,7 @@ export class BotPerformanceService {
     const lookupFailures: string[] = [];
 
     const bots = await readAll('trading_strategy', () =>
-      (this.prisma as any).tradingStrategy.findMany({
+      this.prisma.tradingStrategy.findMany({
         select: {
           id: true, name: true, protocolId: true, shortProtocolId: true, symbol: true,
           brokerId: true, timeframe: true, slPct: true, tpPct: true, mode: true,
@@ -486,7 +486,7 @@ export class BotPerformanceService {
     }
 
     const protocols = await readAll('protocol', () =>
-      (this.prisma as any).protocol.findMany({ select: { slug: true } }), lookupFailures);
+      this.prisma.protocol.findMany({ select: { slug: true } }), lookupFailures);
     const knownSlugs = new Set<string>(protocols.map((p: any) => p.slug));
 
     // ─────────────────────────────────────────────────────────────────────────────────

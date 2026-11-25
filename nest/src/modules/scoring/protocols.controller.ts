@@ -107,7 +107,7 @@ export class ProtocolsController {
     if (this.prisma.isAvailable) {
       try {
         // Phase D.3: Read from Protocol DB model (replaces hardcoded PROTOCOL_REGISTRY)
-        const dbProtocols = await (this.prisma as any).protocol.findMany({
+        const dbProtocols = await this.prisma.protocol.findMany({
           include: {
             directiveGroups: {
               include: { directives: true },
@@ -233,7 +233,7 @@ export class ProtocolsController {
       return { slug, enabled: false, peak: null, samples: 0, since: null,
                configuredMax: 0, denominator: 0, applied: false, reasonText: 'Database unavailable.' };
     }
-    const proto = await (this.prisma as any).protocol.findUnique({
+    const proto = await this.prisma.protocol.findUnique({
       where: { slug },
       select: {
         adaptiveTargetEnabled: true, adaptiveTargetMax: true,
@@ -283,7 +283,7 @@ export class ProtocolsController {
     if (typeof body?.enabled !== 'boolean') {
       throw new BadRequestException('Body must be { enabled: boolean }');
     }
-    const proto = await (this.prisma as any).protocol.findUnique({
+    const proto = await this.prisma.protocol.findUnique({
       where: { slug },
       select: { adaptiveTargetEnabled: true, adaptiveTargetSamples: true, adaptiveTargetMax: true },
     });
@@ -302,7 +302,7 @@ export class ProtocolsController {
       }
     }
 
-    await (this.prisma as any).$executeRawUnsafe(
+    await this.prisma.$executeRawUnsafe(
       `UPDATE protocol SET adaptiveTargetEnabled = ? WHERE slug = ?`,
       body.enabled ? 1 : 0,
       slug,
@@ -370,7 +370,7 @@ export class ProtocolsController {
       return { slug, directives, totalWeight: 0 };
     }
 
-    const proto = await (this.prisma as any).protocol.findUnique({
+    const proto = await this.prisma.protocol.findUnique({
       where: { slug },
       include: { directiveGroups: { include: { directives: true } } },
     });
@@ -490,7 +490,7 @@ export class ProtocolsController {
       return { success: false, error: 'Database not available' };
     }
     try {
-      const existing = await (this.prisma as any).protocol.findUnique({ where: { slug: body.slug } });
+      const existing = await this.prisma.protocol.findUnique({ where: { slug: body.slug } });
 
       // ── DECISION (2026-11-01, directives area) ──
       // WHAT:      the install endpoint REFUSES a `directiveIds` entry no registered class answers to.
@@ -559,7 +559,7 @@ export class ProtocolsController {
 
       let protocolId: string;
       if (existing) {
-        await (this.prisma as any).protocol.update({
+        await this.prisma.protocol.update({
           where: { slug: body.slug },
           data: {
             name: body.name,
@@ -571,7 +571,7 @@ export class ProtocolsController {
         });
         protocolId = existing.id;
       } else {
-        const created = await (this.prisma as any).protocol.create({
+        const created = await this.prisma.protocol.create({
           data: {
             slug: body.slug,
             name: body.name,
@@ -588,7 +588,7 @@ export class ProtocolsController {
       if (body.groups && body.groups.length > 0) {
         for (let i = 0; i < body.groups.length; i++) {
           const g = body.groups[i];
-          const dg = await (this.prisma as any).protocolDirectiveGroup.upsert({
+          const dg = await this.prisma.protocolDirectiveGroup.upsert({
             where: { protocolId_groupId: { protocolId, groupId: g.groupId } },
             create: {
               protocolId,
@@ -617,7 +617,7 @@ export class ProtocolsController {
           // re-creates it, so a tuned `params` value — and any second configuration of a directive —
           // would be silently destroyed by an unrelated edit to the group's composition. Both are
           // read BEFORE the delete and re-applied afterwards.
-          const priorRows = await (this.prisma as any).protocolDirectiveEntry.findMany({
+          const priorRows = await this.prisma.protocolDirectiveEntry.findMany({
             where: { groupId: dg.id },
             select: { directiveId: true, instanceLabel: true, params: true, maxScore: true },
           });
@@ -629,10 +629,10 @@ export class ProtocolsController {
           }
 
           // Delete old directive entries, re-insert
-          await (this.prisma as any).protocolDirectiveEntry.deleteMany({ where: { groupId: dg.id } });
+          await this.prisma.protocolDirectiveEntry.deleteMany({ where: { groupId: dg.id } });
           for (const directiveId of g.directiveIds) {
             const carried = prior.get(`${directiveId}\u0000`);
-            await (this.prisma as any).protocolDirectiveEntry.create({
+            await this.prisma.protocolDirectiveEntry.create({
               data: {
                 groupId: dg.id,
                 directiveId,
@@ -659,7 +659,7 @@ export class ProtocolsController {
             const [directiveId, instanceLabel] = key.split('\u0000');
             const carried = prior.get(key);
             const declared = namedFromBody.get(key);
-            await (this.prisma as any).protocolDirectiveEntry.create({
+            await this.prisma.protocolDirectiveEntry.create({
               data: {
                 groupId: dg.id,
                 directiveId,
@@ -688,7 +688,7 @@ export class ProtocolsController {
   async getProtocolUsage(@Param('slug') slug: string) {
     if (!this.prisma.isAvailable) return { inUse: false, strategyIds: [], strategyNames: [] };
     try {
-      const strategies = await (this.prisma as any).scoringStrategy.findMany({
+      const strategies = await this.prisma.scoringStrategy.findMany({
         where: { enabled: true, OR: [{ protocolId: slug }, { shortProtocolId: slug }] },
         select: { id: true, name: true },
       });
@@ -715,7 +715,7 @@ export class ProtocolsController {
     }
 
     try {
-      const protocol = await (this.prisma as any).protocol.findUnique({
+      const protocol = await this.prisma.protocol.findUnique({
         where: { slug },
         include: {
           directiveGroups: {
@@ -819,11 +819,11 @@ export class ProtocolsController {
   ) {
     if (!this.prisma.isAvailable) return { success: false, error: 'Database not available' };
     try {
-      const protocol = await (this.prisma as any).protocol.findUnique({ where: { slug } });
+      const protocol = await this.prisma.protocol.findUnique({ where: { slug } });
       if (!protocol) return { success: false, error: `Protocol "${slug}" not found` };
       // #1165 — removing a NAMED instance must not remove the directive. Absent ⇒ the primary
       // instance, which is every entry that existed before instances were possible.
-      const entry = await (this.prisma as any).protocolDirectiveEntry.findFirst({
+      const entry = await this.prisma.protocolDirectiveEntry.findFirst({
         where: { directiveId, instanceLabel: instanceLabel ?? '', group: { protocolId: protocol.id } },
       });
       if (!entry) {
@@ -835,7 +835,7 @@ export class ProtocolsController {
               : `Directive "${directiveId}" has no instance "${instanceLabel}" in "${slug}"`,
         };
       }
-      await (this.prisma as any).protocolDirectiveEntry.delete({ where: { id: entry.id } });
+      await this.prisma.protocolDirectiveEntry.delete({ where: { id: entry.id } });
       // Group membership changed — the scorer's cached config must not keep serving the old list.
       this.protocolDb.clearCache();
       return { success: true, directiveId, instanceLabel: instanceLabel ?? '', protocolSlug: slug, message: 'Directive removed from protocol' };
@@ -880,13 +880,13 @@ export class ProtocolsController {
     }
 
     try {
-      const protocol = await (this.prisma as any).protocol.findUnique({
+      const protocol = await this.prisma.protocol.findUnique({
         where: { slug },
         include: { directiveGroups: { include: { directives: { select: { directiveId: true, maxScore: true } } } } },
       });
       if (!protocol) return { success: false, error: `Protocol "${slug}" not found` };
 
-      const primary = await (this.prisma as any).protocolDirectiveEntry.findFirst({
+      const primary = await this.prisma.protocolDirectiveEntry.findFirst({
         where: { directiveId, instanceLabel: '', group: { protocolId: protocol.id } },
         include: { group: true },
       });
@@ -942,7 +942,7 @@ export class ProtocolsController {
       // key on (groupId, directiveId, instanceLabel) is the real guard; this only makes the refusal
       // readable. Measured 2026-11-01: without this, a repeated label returned the raw
       // `PrismaClientKnownRequestError … Unique constraint failed` text to the caller.
-      const existing = await (this.prisma as any).protocolDirectiveEntry.findFirst({
+      const existing = await this.prisma.protocolDirectiveEntry.findFirst({
         where: { directiveId, instanceLabel, groupId: primary.groupId },
         select: { id: true },
       });
@@ -953,7 +953,7 @@ export class ProtocolsController {
         };
       }
 
-      const created = await (this.prisma as any).protocolDirectiveEntry.create({
+      const created = await this.prisma.protocolDirectiveEntry.create({
         data: {
           groupId: primary.groupId,
           directiveId,
@@ -1006,7 +1006,7 @@ export class ProtocolsController {
     const instanceLabel = body.instanceLabel ?? '';
 
     try {
-      const protocol = await (this.prisma as any).protocol.findUnique({
+      const protocol = await this.prisma.protocol.findUnique({
         where: { slug },
       });
 
@@ -1017,7 +1017,7 @@ export class ProtocolsController {
       // Find the CONFIGURED INSTANCE across all groups of this protocol (#1165).
       // A directive may hold several instances, so the selector must name WHICH one — otherwise this
       // would silently edit the first match, which is the same class of defect as the id collapse.
-      const entry = await (this.prisma as any).protocolDirectiveEntry.findFirst({
+      const entry = await this.prisma.protocolDirectiveEntry.findFirst({
         where: {
           directiveId,
           instanceLabel,
@@ -1028,7 +1028,7 @@ export class ProtocolsController {
 
       if (!entry) {
         // Directive not linked to this protocol — return an informative error
-        const others = await (this.prisma as any).protocolDirectiveEntry.findMany({
+        const others = await this.prisma.protocolDirectiveEntry.findMany({
           where: { directiveId, group: { protocolId: protocol.id } },
           select: { instanceLabel: true },
         });
@@ -1077,7 +1077,7 @@ export class ProtocolsController {
         }
       }
 
-      await (this.prisma as any).protocolDirectiveEntry.update({
+      await this.prisma.protocolDirectiveEntry.update({
         where: { id: entry.id },
         data: updateData,
       });

@@ -126,19 +126,19 @@ export class PositionSyncService {
             lastQuotedAt: new Date(),
         };
         if (pos.brokerTicket) {
-          await (this.prisma as any).position.upsert({
+          await this.prisma.position.upsert({
             where: { provider_brokerTicket: { provider, brokerTicket: pos.brokerTicket } },
             create: data,
             update,
           });
         } else {
-          const existing = await (this.prisma as any).position.findFirst({
+          const existing = await this.prisma.position.findFirst({
             where: { provider, accountId: positionAccountId, symbol: pos.symbol, brokerTicket: null },
           });
           if (existing) {
-            await (this.prisma as any).position.update({ where: { id: existing.id }, data: update });
+            await this.prisma.position.update({ where: { id: existing.id }, data: update });
           } else {
-            await (this.prisma as any).position.create({ data });
+            await this.prisma.position.create({ data });
           }
         }
         synced++;
@@ -174,7 +174,7 @@ export class PositionSyncService {
       // in both columns. Scoping this scan by accountId hid them from closure
       // detection forever, so a closed position kept living on as a phantom
       // "open" row (it also blocked the duplicate guard for that symbol).
-      const dbPositions = await (this.prisma as any).position.findMany({
+      const dbPositions = await this.prisma.position.findMany({
         where: accountId
           ? { provider, OR: [{ accountId }, { accountId: null }] }
           : { provider },
@@ -241,7 +241,7 @@ export class PositionSyncService {
     if (pos.currentPrice == null || !Number.isFinite(price) || price <= 0) return;
 
     try {
-      const row: any = await (this.prisma as any).position.findFirst({
+      const row: any = await this.prisma.position.findFirst({
         where: pos.brokerTicket
           ? { provider, brokerTicket: pos.brokerTicket }
           : { provider, symbol: pos.symbol, brokerTicket: null },
@@ -256,7 +256,7 @@ export class PositionSyncService {
       const pctMoved = peakProfitPct != null && peakProfitPct !== row.peakProfitPct;
       if (!priceMoved && !pctMoved) return;
 
-      await (this.prisma as any).position.update({
+      await this.prisma.position.update({
         where: { id: row.id },
         data: {
           ...(priceMoved ? { peakPrice } : {}),
@@ -328,7 +328,7 @@ export class PositionSyncService {
       // Measured 2026-09-18: **5** such rows against 5 live positions (10 open trades total) — and
       // growing. The issue recorded 3; two further VIX orphans were added the same day it was
       // written, which is the argument for fixing the class rather than the rows.
-      const stranded: any[] = await (this.prisma as any).trade.findMany({
+      const stranded: any[] = await this.prisma.trade.findMany({
         where: { provider, status: 'open' },
         select: {
           id: true, symbol: true, openedAt: true,
@@ -392,7 +392,7 @@ export class PositionSyncService {
         // No ticket at all — a legacy phantom with no broker record ever, which is why `pnl: 0`
         // here is the truthful value rather than a placeholder for one we failed to fetch.
         if (liveSymbols.has(String(t.symbol).toUpperCase())) continue;
-        const updated = await (this.prisma as any).trade.updateMany({
+        const updated = await this.prisma.trade.updateMany({
           where: { id: t.id, status: 'open', brokerTicket: null },
           data: {
             status: 'closed',
@@ -444,7 +444,7 @@ export class PositionSyncService {
     bySymbol: Array<{ symbol: string; n: number }>;
     sample: Array<{ id: string; symbol: string; closedAt: Date | null; closeReason: string | null }>;
   }> {
-    const rows: any[] = await (this.prisma as any).trade
+    const rows: any[] = await this.prisma.trade
       .findMany({
         where: { provider, status: 'closed', OR: [{ closeReason: null }, { closeReason: CLOSE_REASONS.BROKER_UNKNOWN }] },
         select: { id: true, symbol: true, closeReason: true, closedAt: true },
@@ -512,7 +512,7 @@ export class PositionSyncService {
       status: 'closed',
       OR: [{ closeReason: null }, { closeReason: CLOSE_REASONS.BROKER_UNKNOWN }],
     };
-    const rows: any[] = await (this.prisma as any).trade
+    const rows: any[] = await this.prisma.trade
       .findMany({
         where: {
           ...gapWhere,
@@ -574,7 +574,7 @@ export class PositionSyncService {
     // own "plausible output, no error" signature. So the count is re-READ from the rows, and the
     // read-back is also what supplies the honest remainder below.
     const after: any[] = reFinalised.length
-      ? await (this.prisma as any).trade
+      ? await this.prisma.trade
           .findMany({ where: { id: { in: reFinalised } }, select: { id: true, closeReason: true } })
           .catch(() => [])
       : [];
@@ -585,7 +585,7 @@ export class PositionSyncService {
     const recovered = gapClosed;
     // Rows that cannot be chased at all — no ticket means no terminal can be asked about them.
     // Counted so the note can reconcile with the (larger) number the gap notice shows.
-    const unticketed: number = await (this.prisma as any).trade
+    const unticketed: number = await this.prisma.trade
       .count({
         where: {
           ...gapWhere,
@@ -665,7 +665,7 @@ export class PositionSyncService {
     accountId: string | null = null,
     limit = 200,
   ): Promise<{ examined: number; repaired: number; notRepairable: number }> {
-    const candidates: any[] = await (this.prisma as any).trade
+    const candidates: any[] = await this.prisma.trade
       .findMany({
         where: { provider, status: 'closed', pnlInvalid: 1 },
         select: {
@@ -869,7 +869,7 @@ export class PositionSyncService {
 
     // 2c. No matching trade — this position was opened outside the app.
     //     Record it as a first-class Trade so the journal/timeline see it.
-    const created = await (this.prisma as any).trade.create({
+    const created = await this.prisma.trade.create({
       data: {
         symbol: pos.symbol,
         side,
@@ -1448,7 +1448,7 @@ export class PositionSyncService {
     // "0 reaped". Its spec passed because `position.delete` is a jest mock that accepts any argument,
     // so the one case that mattered (a synthesised object) was never exercised.
     if (dbPos.id != null) {
-      await (this.prisma as any).position.delete({ where: { id: dbPos.id } }).catch((err: Error) => {
+      await this.prisma.position.delete({ where: { id: dbPos.id } }).catch((err: Error) => {
         // A failed cleanup must not undo a recorded close, but it must not be silent either.
         this.logger.warn(`[${provider}] could not remove position row ${dbPos.id}: ${err.message}`);
       });

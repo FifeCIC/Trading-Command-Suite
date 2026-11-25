@@ -116,7 +116,7 @@ export class EventRiskService {
   private async getDbEvents(now: Date, lookahead: Date): Promise<RiskEvent[]> {
     if (!this.prisma.isAvailable) return [];
     try {
-      const rows = await (this.prisma as any).timelineEvent.findMany({
+      const rows = await this.prisma.timelineEvent.findMany({
         where: {
           startsAt: { gte: now, lte: lookahead },
         },

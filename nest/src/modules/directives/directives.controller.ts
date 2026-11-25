@@ -128,7 +128,7 @@ export class DirectivesController {
     // Falls back to 0 if DB unavailable — this is UI enrichment only.
     const protocolCounts = new Map<string, number>();
     try {
-      const entries = await (this.prisma as any).protocolDirectiveEntry.findMany({
+      const entries = await this.prisma.protocolDirectiveEntry.findMany({
         select: { directiveId: true, group: { select: { protocolId: true } } },
       });
       // Count distinct protocols per directive (not groups)
@@ -737,7 +737,7 @@ export class DirectivesController {
     // Persist to DB if available (raw SQL — directive table has many required fields)
     if (this.prisma.isAvailable) {
       try {
-        await (this.prisma as any).$executeRawUnsafe(
+        await this.prisma.$executeRawUnsafe(
           `INSERT INTO directive (id, name, type, weight, active, readiness) VALUES (?, ?, 'scoring', 1.0, 0, 'alpha') ON DUPLICATE KEY UPDATE active = 0, readiness = 'alpha'`,
           id, directive.name || id,
         );

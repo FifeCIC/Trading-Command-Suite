@@ -102,7 +102,7 @@ export class ApiActivityService {  private readonly logger = new Logger(ApiActiv
     }
 
     try {
-      await (this.prisma as any).apiActivityLog.create({ data: record });
+      await this.prisma.apiActivityLog.create({ data: record });
     } catch (error) {
       this.logger.debug(`Could not persist API activity: ${String(error)}`);
       this.fallbackRecords.unshift(record);
@@ -121,7 +121,7 @@ export class ApiActivityService {  private readonly logger = new Logger(ApiActiv
     }
 
     try {
-      const records = await (this.prisma as any).apiActivityLog.findMany({
+      const records = await this.prisma.apiActivityLog.findMany({
         where: filters.provider ? { provider: filters.provider } : undefined,
         orderBy: { timestamp: 'desc' },
         take: limit,

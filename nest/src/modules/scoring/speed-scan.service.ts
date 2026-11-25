@@ -330,7 +330,7 @@ export class SpeedScanService {
         // ── Priority-log if protocol has no watchlist assigned ──
         if (this.prisma.isAvailable) {
           try {
-            const linked = await (this.prisma as any).scoringStrategy.findFirst({
+            const linked = await this.prisma.scoringStrategy.findFirst({
               where: { protocolId: protocol, watchlistId: { not: null }, enabled: true },
             });
             if (!linked) {

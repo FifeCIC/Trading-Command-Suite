@@ -260,10 +260,17 @@ export class DirectivePreviewService {
     let to: Date | undefined;
 
     if (periodId) {
-      const period = await (this.prisma as any).backtestPeriod.findUnique({ where: { id: periodId } });
+      const period = await this.prisma.backtestPeriod.findUnique({ where: { id: periodId } });
       if (!period) throw new NotFoundException(`no stored period "${periodId}"`);
-      from = period.from;
-      to = period.to;
+      /**
+       * ⚠️ WAS `period.from` / `period.to` UNTIL 2026-11-25, AND THEY ARE NOT COLUMNS (#1320).
+       * `backtest_period` declares `fromDate` / `toDate`. The two properties were `undefined` at runtime,
+       * so the `if (from && to)` guard below was always false and **the requested period was silently
+       * ignored** — a preview asked for one date range returned the whole dataset. The old
+       * `(this.prisma as any)` cast on the client is what let it compile; removing the cast surfaced it.
+       */
+      from = period.fromDate;
+      to = period.toDate;
     }
 
     const where: Record<string, unknown> = { symbol: { ticker: symbol }, timeframe };

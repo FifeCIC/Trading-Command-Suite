@@ -180,7 +180,7 @@ export class SymbolResolverService {
     const set = new Set<string>();
     try {
       if (!this.prisma.isAvailable) return [];
-      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT id, slug FROM protocol WHERE active = 1`,
       );
       const slugs: string[] = rows.map((r: any) => r.slug).filter(Boolean);
@@ -194,7 +194,7 @@ export class SymbolResolverService {
 
       // Path 1 — symbol-protocol assignments
       try {
-        const assigns: any[] = await (this.prisma as any).$queryRawUnsafe(
+        const assigns: any[] = await this.prisma.$queryRawUnsafe(
           `SELECT symbol FROM symbol_protocol_assignment WHERE protocolId IN (${ph})`,
           ...candidates,
         );
@@ -207,7 +207,7 @@ export class SymbolResolverService {
       // assignment written against any other key silently drops out and the
       // symbol stops being refreshed while still being scored (#761).
       try {
-        const allActive: any[] = await (this.prisma as any).$queryRawUnsafe(
+        const allActive: any[] = await this.prisma.$queryRawUnsafe(
           `SELECT DISTINCT a.symbol
              FROM symbol_protocol_assignment a
              JOIN protocol p ON p.id = a.protocolId
@@ -218,7 +218,7 @@ export class SymbolResolverService {
 
       // Path 2 — watchlist linked via watchlist.protocolId
       try {
-        const wls: any[] = await (this.prisma as any).$queryRawUnsafe(
+        const wls: any[] = await this.prisma.$queryRawUnsafe(
           `SELECT symbols FROM watchlist WHERE protocolId IN (${ph})`,
           ...candidates,
         );
@@ -229,7 +229,7 @@ export class SymbolResolverService {
       // Preferred over the name-guessing hints below: an FK relationship cannot be
       // ambiguous, cannot rot on a rename, and does not depend on storage order (#763).
       try {
-        const linked: any[] = await (this.prisma as any).$queryRawUnsafe(
+        const linked: any[] = await this.prisma.$queryRawUnsafe(
           `SELECT w.symbols
              FROM watchlist w
              JOIN protocol p ON p.id = w.protocolId
@@ -274,7 +274,7 @@ export class SymbolResolverService {
    */
   private async collectNamedWatchlist(name: string, set: Set<string>): Promise<void> {
     try {
-      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT symbols FROM watchlist
           WHERE LOWER(REPLACE(REPLACE(name, '-', ' '), '_', ' ')) = LOWER(REPLACE(REPLACE(?, '-', ' '), '_', ' '))
           ORDER BY (id REGEXP '^[0-9a-f]{8}-[0-9a-f]{4}-') DESC, id ASC
@@ -303,7 +303,7 @@ export class SymbolResolverService {
   private async resolveActiveStrategies(): Promise<string[]> {
     try {
       if (!this.prisma.isAvailable) return [];
-      const strategies = await (this.prisma as any).tradingStrategy.findMany({
+      const strategies = await this.prisma.tradingStrategy.findMany({
         where: { active: true },
         select: { symbol: true },
       });
@@ -319,7 +319,7 @@ export class SymbolResolverService {
     try {
       if (!this.prisma.isAvailable) return [];
       // symbol-protocol assignments
-      const assignments = await (this.prisma as any).symbolProtocolAssignment.findMany({
+      const assignments = await this.prisma.symbolProtocolAssignment.findMany({
         select: { symbol: true },
         distinct: ['symbol'],
       });
@@ -363,8 +363,14 @@ export class SymbolResolverService {
       if (!this.prisma.isAvailable) return [];
 
       // Get watchlist names from active scoring strategies
-      const strats = await (this.prisma as any).scoringStrategy.findMany({
-        where: { active: true },
+      /**
+       * ⚠️ WAS `where: { active: true }` UNTIL 2026-11-25 — `scoring_strategy` has no `active` column
+       * (#1320). Prisma rejects an unknown field, so this threw on every call and the `catch` below
+       * returned an empty list: *"which watchlists are starred"* silently answered "none", always. The
+       * column is `enabled`, which is what `scoring-strategy.service.ts` filters on.
+       */
+      const strats = await this.prisma.scoringStrategy.findMany({
+        where: { enabled: true },
         select: { watchlistName: true },
       });
       const wlNames = [...new Set(strats.map((s: any) => s.watchlistName).filter(Boolean))];

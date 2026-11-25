@@ -719,7 +719,7 @@ export class ProtocolGatingController {
     // than a second round trip for a field that only orders a list.
     const focusBySlug = new Map<string, number>();
     try {
-      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT slug, adaptiveTargetEnabled AS e, adaptiveTargetMax AS m, adaptiveTargetSamples AS s,
                 focusRank AS f
            FROM protocol`,
@@ -981,7 +981,7 @@ export class ProtocolGatingController {
     let activeMap: Record<string, boolean> = {};
     let noteMap: Record<string, string | null> = {};
     try {
-      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT slug, active, note FROM protocol`,
       );
       for (const r of rows) {
@@ -992,7 +992,7 @@ export class ProtocolGatingController {
 
     const statusMap: Record<string, any> = {};
     try {
-      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT protocolId, state, reason, symbolsResolved, symbolsScored, lastTickAt, updatedAt FROM protocol_score_status`,
       );
       for (const r of rows) statusMap[r.protocolId] = r;
@@ -1015,7 +1015,7 @@ export class ProtocolGatingController {
     const STALL_AFTER_MS = 15 * 60_000; // 15 min: several 5m-scoring ticks, still actionable
     const lastReadingMap: Record<string, { at: Date; rawMax: number | null }> = {};
     try {
-      const reads: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const reads: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT strategyId AS protocolId, MAX(timestamp) AS at
            FROM score
           WHERE strategyId <> ''
@@ -1116,7 +1116,7 @@ export class ProtocolGatingController {
 
       let slug: string | null = null;
       try {
-        const assignment = await (this.prisma as any).symbolProtocolAssignment.findFirst({
+        const assignment = await this.prisma.symbolProtocolAssignment.findFirst({
           where: { symbol: p.symbol },
           orderBy: { priority: 'asc' },
           include: { protocol: { select: { slug: true } } },
@@ -1311,12 +1311,12 @@ export class ProtocolGatingController {
     let newActive = false;
     try {
       // Use raw SQL — Prisma client may not have 'active' field yet (added via SQL migration)
-      const existing: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const existing: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT active FROM protocol WHERE slug = ? LIMIT 1`, id,
       );
       if (existing?.length > 0) {
         newActive = !existing[0].active;
-        await (this.prisma as any).$executeRawUnsafe(
+        await this.prisma.$executeRawUnsafe(
           `UPDATE protocol SET active = ? WHERE slug = ?`, newActive ? 1 : 0, id,
         );
       } else {
@@ -1362,7 +1362,7 @@ export class ProtocolGatingController {
 
     let resolution = 'derived';
     try {
-      const proto = await (this.prisma as any).protocol.findFirst({
+      const proto = await this.prisma.protocol.findFirst({
         where: { OR: [{ slug: id }, { id }] },
         select: { id: true, slug: true },
       });
@@ -1372,7 +1372,7 @@ export class ProtocolGatingController {
       }
 
       const assignments = candidates.length
-        ? await (this.prisma as any).symbolProtocolAssignment.findMany({
+        ? await this.prisma.symbolProtocolAssignment.findMany({
             where: { protocolId: { in: candidates } },
           })
         : [];
@@ -1380,7 +1380,7 @@ export class ProtocolGatingController {
         resolution = 'db:assignment';
       } else {
         const wl = candidates.length
-          ? await (this.prisma as any).watchlist.findFirst({
+          ? await this.prisma.watchlist.findFirst({
               where: { protocolId: { in: candidates } },
             })
           : null;
@@ -1419,13 +1419,13 @@ export class ProtocolGatingController {
     const ticker = String(body?.symbol ?? '').trim().toUpperCase();
     if (!ticker) throw new BadRequestException('A `symbol` is required.');
 
-    const proto = await (this.prisma as any).protocol.findFirst({
+    const proto = await this.prisma.protocol.findFirst({
       where: { OR: [{ slug: id }, { id }] },
       select: { id: true, slug: true },
     });
     if (!proto) throw new BadRequestException(`No protocol matches "${id}".`);
 
-    const known = await (this.prisma as any).symbol.findFirst({
+    const known = await this.prisma.symbol.findFirst({
       where: { ticker },
       select: { ticker: true },
     });
@@ -1437,12 +1437,12 @@ export class ProtocolGatingController {
 
     // Idempotent by hand rather than `upsert`, so this does not depend on Prisma's generated
     // compound-unique key name. The table also carries @@unique([symbol, protocolId]).
-    const existing = await (this.prisma as any).symbolProtocolAssignment.findFirst({
+    const existing = await this.prisma.symbolProtocolAssignment.findFirst({
       where: { symbol: ticker, protocolId: proto.id },
       select: { id: true },
     });
     if (!existing) {
-      await (this.prisma as any).symbolProtocolAssignment.create({
+      await this.prisma.symbolProtocolAssignment.create({
         data: { symbol: ticker, protocolId: proto.id, priority: 0 },
       });
     }
@@ -1468,13 +1468,13 @@ export class ProtocolGatingController {
     @Param('symbol') symbol: string,
   ): Promise<{ removed: number; protocolId: string; symbols: string[] }> {
     const ticker = String(symbol ?? '').trim().toUpperCase();
-    const proto = await (this.prisma as any).protocol.findFirst({
+    const proto = await this.prisma.protocol.findFirst({
       where: { OR: [{ slug: id }, { id }] },
       select: { id: true, slug: true },
     });
     if (!proto) throw new BadRequestException(`No protocol matches "${id}".`);
 
-    const result = await (this.prisma as any).symbolProtocolAssignment.deleteMany({
+    const result = await this.prisma.symbolProtocolAssignment.deleteMany({
       where: { protocolId: proto.id, symbol: ticker },
     });
 

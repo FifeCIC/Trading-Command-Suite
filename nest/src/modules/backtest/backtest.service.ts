@@ -1383,7 +1383,7 @@ export class BacktestService {
      * subscriptions. Choosing "the long leg" silently is what it used to do; a wrong-but-plausible
      * result is worse than a refusal that names the legs, because a result gets believed.
      */
-    const subs: Array<{ protocolId: string; role: string }> = await (this.prisma as any).strategyProtocol
+    const subs: Array<{ protocolId: string; role: string }> = await this.prisma.strategyProtocol
       .findMany({ where: { strategyId: bot.id }, select: { protocolId: true, role: true }, orderBy: { sortOrder: 'asc' } })
       .catch(() => []);
 
@@ -3311,7 +3311,7 @@ export class BacktestService {
    */
   private async measuredSpreadPct(symbol: string): Promise<number | null> {
     try {
-      const routes = await (this.prisma as any).symbolRoute.findMany({
+      const routes = await this.prisma.symbolRoute.findMany({
         where: { symbol, enabled: true, provider: 'mt5' },
         select: { brokerId: true, brokerSymbol: true },
         orderBy: { brokerId: 'asc' },
@@ -3323,7 +3323,7 @@ export class BacktestService {
       for (const r of routes as Array<Record<string, unknown>>) {
         const venue = Number(r.brokerId);
         const nativeName = typeof r.brokerSymbol === 'string' && r.brokerSymbol ? r.brokerSymbol : symbol;
-        const row = await (this.prisma as any).brokerSymbol.findFirst({
+        const row = await this.prisma.brokerSymbol.findFirst({
           where: { brokerId: venue, name: nativeName, spreadPct: { not: null } },
           select: { spreadPct: true },
         });
@@ -3366,7 +3366,7 @@ export class BacktestService {
   }> {
     const unknown = { unitStep: null, minUnits: null, contractSize: null, source: 'no broker spec' };
     try {
-      const routes = await (this.prisma as any).symbolRoute.findMany({
+      const routes = await this.prisma.symbolRoute.findMany({
         where: { symbol, enabled: true, provider: 'mt5' },
         select: { brokerId: true, brokerSymbol: true },
         orderBy: { brokerId: 'asc' },
@@ -3374,7 +3374,7 @@ export class BacktestService {
       for (const r of routes as Array<Record<string, unknown>>) {
         const venue = Number(r.brokerId);
         const nativeName = typeof r.brokerSymbol === 'string' && r.brokerSymbol ? r.brokerSymbol : symbol;
-        const row = await (this.prisma as any).brokerSymbol.findFirst({
+        const row = await this.prisma.brokerSymbol.findFirst({
           where: { brokerId: venue, name: nativeName },
           select: { volumeStep: true, volumeMin: true, contractSize: true },
         });

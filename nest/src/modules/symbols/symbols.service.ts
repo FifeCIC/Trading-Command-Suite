@@ -348,7 +348,7 @@ export class SymbolsService implements OnApplicationBootstrap {
 
     this.refreshInFlight = (async () => {
       // ONE grouped query for the whole page — not one per symbol. `marketBar` is a generated
-      // model, so no cast is needed; `(this.prisma as any)` would silence the very types that
+      // model, so no cast is needed; `this.prisma` would silence the very types that
       // would catch a renamed column.
       const started = Date.now();
       const grouped = await this.prisma.marketBar.groupBy({
@@ -464,7 +464,7 @@ export class SymbolsService implements OnApplicationBootstrap {
     // Latest quote (if available)
     let price = null;
     try {
-      const marketBar = await (this.prisma as any).marketBar.findFirst({
+      const marketBar = await this.prisma.marketBar.findFirst({
         where: { symbolId: symbol.id },
         orderBy: { timestamp: 'desc' },
       });
@@ -482,7 +482,7 @@ export class SymbolsService implements OnApplicationBootstrap {
     // Positions
     let positions: any[] = [];
     try {
-      const allPositions = await (this.prisma as any).position.findMany();
+      const allPositions = await this.prisma.position.findMany();
       // 2026-09-10 — Position has no `symbolTicker` column (that filter could
       // never match), so match on symbolId or the symbol text.
       positions = allPositions.filter((p: any) =>
@@ -756,7 +756,7 @@ export class SymbolsService implements OnApplicationBootstrap {
     let historicalHigh: number | null = null;
     let historicalLow: number | null = null;
     try {
-      const bars = await (this.prisma as any).marketBar.findMany({
+      const bars = await this.prisma.marketBar.findMany({
         where: { symbolId: symbol.id, timeframe: '1d' },
         orderBy: { timestamp: 'asc' },
       }) as { high: number; low: number; close: number }[];
@@ -857,7 +857,7 @@ export class SymbolsService implements OnApplicationBootstrap {
     let history: any[] = [];
     if (slugs.length) {
       try {
-        history = await (this.prisma as any).scoreSnapshot.findMany({
+        history = await this.prisma.scoreSnapshot.findMany({
           where: { symbol: upperTicker, protocolId: { in: slugs } },
           orderBy: { snappedAt: 'desc' },
           // ⚠️ `tradingSignal` is the PRISMA field; `trading_signal` is the MySQL COLUMN. Using the
@@ -931,11 +931,14 @@ export class SymbolsService implements OnApplicationBootstrap {
     // Which protocols have an ACTIVE bot — one query for all of them, not one each.
     let botRows: any[] = [];
     try {
-      botRows = await (this.prisma as any).tradingStrategy.groupBy({
+      // ⚠️ `groupBy`'s generic overload rejects a literal argument object (#1320); casting the ARGS
+      // trips a circular-reference error in its mapped type, so the RESULT is narrowed instead. The
+      // shape is asserted by the `_count._all` read below.
+      botRows = (await this.prisma.tradingStrategy.groupBy({
         by: ['protocolId'],
         where: { symbol: upperTicker, active: true },
         _count: { _all: true },
-      });
+      })) as unknown as any[];
     } catch (e) {
       statsError ??= (e as Error).message;
     }
@@ -1183,7 +1186,7 @@ export class SymbolsService implements OnApplicationBootstrap {
     };
 
     // ── 1. Scoring Strategies that include this symbol ──
-    const allScoring = await (this.prisma as any).scoringStrategy.findMany({
+    const allScoring = await this.prisma.scoringStrategy.findMany({
       where: { enabled: true },
     }) as any[];
 
@@ -1193,19 +1196,19 @@ export class SymbolsService implements OnApplicationBootstrap {
     });
 
     // ── 2. Trading Strategies that target this symbol ──
-    const tradingStrategies = await (this.prisma as any).tradingStrategy.findMany({
+    const tradingStrategies = await this.prisma.tradingStrategy.findMany({
       where: { symbol: upperTicker, active: true },
     }) as any[];
 
     // ── 3. Recent decisions from decision_log ──
-    const recentDecisions = await (this.prisma as any).decisionLog.findMany({
+    const recentDecisions = await this.prisma.decisionLog.findMany({
       where: { symbol: upperTicker },
       orderBy: { timestamp: 'desc' },
       take: 20,
     }) as any[];
 
     // ── 4. Recent strategy evaluations ──
-    const recentEvaluations = await (this.prisma as any).strategyEvaluation.findMany({
+    const recentEvaluations = await this.prisma.strategyEvaluation.findMany({
       where: { symbol: upperTicker },
       orderBy: { evaluatedAt: 'desc' },
       take: 20,
@@ -1228,7 +1231,7 @@ export class SymbolsService implements OnApplicationBootstrap {
     const protocolIds = new Set<string>(resolution.protocols.map((p) => p.protocolId));
 
     // Protocol info — query from DB (Epic #510 Phase 4, replaces PROTOCOL_REGISTRY import)
-    const dbProtocols = await (this.prisma as any).protocol.findMany({
+    const dbProtocols = await this.prisma.protocol.findMany({
       where: { slug: { in: [...protocolIds] } },
       select: { slug: true, name: true, description: true, directionMode: true, tradingStyle: true, idealFor: true, directiveGroups: { select: { id: true } } },
     }).catch(() => []);

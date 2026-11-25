@@ -66,7 +66,7 @@ export class TradeHistoryController {
    */
   @Get('strategy-legs')
   async getStrategyLegs(@Query('strategyId') strategyId?: string) {
-    const bots = await (this.prisma as any).tradingStrategy.findMany({
+    const bots = await this.prisma.tradingStrategy.findMany({
       where: strategyId ? { id: strategyId } : {},
       select: {
         id: true, name: true, symbol: true, active: true,
@@ -135,7 +135,7 @@ export class TradeHistoryController {
   @Get('position-lifecycle')
   async getPositionLifecycle() {
     const [positions, trades, adjustments] = await Promise.all([
-      (this.prisma as any).position.findMany({
+      this.prisma.position.findMany({
         orderBy: { lastQuotedAt: 'desc' },
         take: 200,
       }).catch(() => []),
@@ -144,7 +144,7 @@ export class TradeHistoryController {
         orderBy: { openedAt: 'desc' },
         take: 200,
       }).catch(() => []),
-      (this.prisma as any).stopAdjustment.findMany({
+      this.prisma.stopAdjustment.findMany({
         orderBy: { adjustedAt: 'desc' },
         take: 50,
       }).catch(() => []),
@@ -478,14 +478,14 @@ export class TradeHistoryController {
     // so `identity.unlinked` below is a real, reportable state — not a bug in this join.
     const names = showdown.map((s) => s.strategy);
 
-    const bots = await (this.prisma as any).tradingStrategy
+    const bots = await this.prisma.tradingStrategy
       .findMany({ where: { name: { in: names } } })
       .catch(() => [] as any[]);
-    const botByName = new Map<string, any>(bots.map((b: any) => [b.name, b]));
+    const botByName = new Map<string, any>(bots.map((b: any) => [b.name, b] as [string, any]));
     const botIds = bots.map((b: any) => b.id);
 
     const subs = botIds.length
-      ? await (this.prisma as any).strategyProtocol
+      ? await this.prisma.strategyProtocol
           .findMany({ where: { strategyId: { in: botIds } } })
           .catch(() => [] as any[])
       : [];
@@ -503,13 +503,13 @@ export class TradeHistoryController {
     // carries the weight — so an entry is only meaningful together with its group).
     const protocolIds = protocols.map((p: any) => p.id);
     const groups = protocolIds.length
-      ? await (this.prisma as any).protocolDirectiveGroup
+      ? await this.prisma.protocolDirectiveGroup
           .findMany({ where: { protocolId: { in: protocolIds } }, orderBy: { sortOrder: 'asc' } })
           .catch(() => [] as any[])
       : [];
     const groupIds = groups.map((g: any) => g.id);
     const entries = groupIds.length
-      ? await (this.prisma as any).protocolDirectiveEntry
+      ? await this.prisma.protocolDirectiveEntry
           .findMany({ where: { groupId: { in: groupIds } } })
           .catch(() => [] as any[])
       : [];
@@ -816,13 +816,13 @@ export class TradeHistoryController {
     };
 
     const bots = await readAll('trading_strategy', () =>
-      (this.prisma as any).tradingStrategy.findMany({
+      this.prisma.tradingStrategy.findMany({
         select: { id: true, name: true, protocolId: true, scoringStrategyId: true },
       }));
     const botById = new Map<string, any>(bots.map((b: any) => [b.id, b] as [string, any]));
 
     const protocols = await readAll('protocol', () =>
-      (this.prisma as any).protocol.findMany({ select: { id: true, slug: true, name: true } }));
+      this.prisma.protocol.findMany({ select: { id: true, slug: true, name: true } }));
     const protocolById = new Map<string, any>(protocols.map((p: any) => [p.id, p] as [string, any]));
     const protocolBySlug = new Map<string, any>(protocols.map((p: any) => [p.slug, p] as [string, any]));
 
@@ -1167,7 +1167,7 @@ export class TradeHistoryController {
       if (symbol) where.symbol = symbol.toUpperCase();
       if (tradeTicket) where.tradeTicket = tradeTicket;
 
-      const adjustments = await (this.prisma as any).stopAdjustment.findMany({
+      const adjustments = await this.prisma.stopAdjustment.findMany({
         where, orderBy: { adjustedAt: 'desc' }, take,
       });
 
@@ -1225,8 +1225,8 @@ export class TradeHistoryController {
       }
 
       const [adjustments, simTslEvents] = await Promise.all([
-        (this.prisma as any).stopAdjustment.findMany({ where, orderBy: { adjustedAt: 'desc' } }),
-        (this.prisma as any).simTslEvent
+        this.prisma.stopAdjustment.findMany({ where, orderBy: { adjustedAt: 'desc' } }),
+        this.prisma.simTslEvent
           .findMany({ orderBy: { occurredAt: 'desc' }, take: 500 })
           .catch(() => []),
       ]);
@@ -1477,7 +1477,7 @@ export class TradeHistoryController {
         simTsl: {
           events: simTslEvents.length,
           byEvent: Object.entries(
-            simTslEvents.reduce((acc: Record<string, number>, e: any) => {
+            (simTslEvents as any[]).reduce((acc: Record<string, number>, e: any) => {
               acc[e.event] = (acc[e.event] ?? 0) + 1;
               return acc;
             }, {}),
@@ -1507,7 +1507,7 @@ export class TradeHistoryController {
       const where: any = {};
       if (type) where.snapshotType = type;
 
-      const snapshots = await (this.prisma as any).portfolioSnapshot.findMany({
+      const snapshots = await this.prisma.portfolioSnapshot.findMany({
         where, orderBy: { takenAt: 'desc' }, take,
         include: { positions: true },
       });

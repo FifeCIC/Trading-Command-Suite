@@ -258,7 +258,7 @@ export class BarRefreshService {
       // utf8mb4_unicode_ci), so a bare `=` raises ER_CANT_AGGREGATE_2COLLATIONS.
       // That error used to be swallowed by the catch below and surfaced as an empty
       // report — the failure mode this whole method exists to prevent. Do not remove.
-      const assigned: Array<{ ticker: string }> = await (this.prisma as any).$queryRawUnsafe(
+      const assigned: Array<{ ticker: string }> = await this.prisma.$queryRawUnsafe(
         `SELECT s.ticker, s.id AS symbolId
            FROM symbol s
           WHERE s.active = 1
@@ -272,7 +272,7 @@ export class BarRefreshService {
       );
       for (const row of assigned) {
         const agg: Array<{ timeframe: string; n: number; newest: Date | null }> =
-          await (this.prisma as any).$queryRawUnsafe(
+          await this.prisma.$queryRawUnsafe(
             `SELECT timeframe, COUNT(*) AS n, MAX(timestamp) AS newest
                FROM marketbar WHERE symbolId = ? GROUP BY timeframe`,
             (row as any).symbolId,
@@ -387,7 +387,7 @@ export class BarRefreshService {
         // outer FAIL-OPEN branch, which would let every resolved symbol through — the opposite of
         // conservative. No routes read means no ADDITIONS, i.e. exactly the previous behaviour.
         try {
-          return await (this.prisma as any).symbolRoute.findMany({
+          return await this.prisma.symbolRoute.findMany({
             where: { enabled: true },
             select: { symbol: true },
           });
@@ -593,7 +593,7 @@ export class BarRefreshService {
     };
     try {
       const routes: Array<{ symbol: string; provider: string | null }> =
-        await (this.prisma as any).$queryRawUnsafe(
+        await this.prisma.$queryRawUnsafe(
           `SELECT symbol, provider FROM symbol_route WHERE enabled = 1`,
         );
       for (const r of routes) {

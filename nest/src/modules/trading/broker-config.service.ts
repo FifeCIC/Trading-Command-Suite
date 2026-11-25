@@ -63,11 +63,11 @@ export class BrokerConfigService implements OnModuleInit {
   private async seedDefaults(): Promise<void> {
     try {
       if (!this.prisma.isAvailable) return;
-      const count = await (this.prisma as any).brokerConfig.count();
+      const count = await this.prisma.brokerConfig.count();
       if (count > 0) return;
 
       for (const cfg of BrokerConfigService.DEFAULTS) {
-        await (this.prisma as any).brokerConfig.create({ data: { ...cfg, isActive: true } });
+        await this.prisma.brokerConfig.create({ data: { ...cfg, isActive: true } });
       }
       this.logger.log(`Seeded ${BrokerConfigService.DEFAULTS.length} broker configs`);
     } catch (err) {
@@ -79,7 +79,7 @@ export class BrokerConfigService implements OnModuleInit {
   async findAll(): Promise<any[]> {
     try {
       if (!this.prisma.isAvailable) return BrokerConfigService.DEFAULTS.map(c => ({ ...c, isActive: true }));
-      return (this.prisma as any).brokerConfig.findMany({ orderBy: { sortOrder: 'asc' } });
+      return this.prisma.brokerConfig.findMany({ orderBy: { sortOrder: 'asc' } });
     } catch {
       return BrokerConfigService.DEFAULTS.map(c => ({ ...c, isActive: true }));
     }
@@ -89,7 +89,7 @@ export class BrokerConfigService implements OnModuleInit {
   async findOne(brokerId: string): Promise<any | null> {
     try {
       if (!this.prisma.isAvailable) return BrokerConfigService.DEFAULTS.find(c => c.id === brokerId) ?? null;
-      return (this.prisma as any).brokerConfig.findUnique({ where: { id: brokerId } });
+      return this.prisma.brokerConfig.findUnique({ where: { id: brokerId } });
     } catch {
       return BrokerConfigService.DEFAULTS.find(c => c.id === brokerId) ?? null;
     }

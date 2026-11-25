@@ -196,7 +196,7 @@ export class Mt5SymbolRouter implements OnModuleInit {
   async refresh(): Promise<void> {
     if (!this.prisma.isAvailable) return;
     try {
-      const rows = await (this.prisma as any).symbolRoute.findMany({
+      const rows = await this.prisma.symbolRoute.findMany({
         where: { enabled: true },
         orderBy: { priority: 'asc' },
       });
@@ -221,7 +221,7 @@ export class Mt5SymbolRouter implements OnModuleInit {
       // "unknown", which is the pre-#1002 behaviour — hence a scoped catch rather than letting it
       // fall into the outer one, where it would look like a `symbol_route` failure.
       try {
-        const rows: Array<{ brokerId: number; name: string }> = await (this.prisma as any).brokerSymbol.findMany({
+        const rows: Array<{ brokerId: number; name: string }> = await this.prisma.brokerSymbol.findMany({
           where: { tradeMode: { not: 0 } },
           select: { brokerId: true, name: true },
         });

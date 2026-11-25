@@ -286,7 +286,7 @@ export class DecisionChainService {
     const map = new Map<string, any>();
     if (ids.length === 0) return map;
     // Use raw queries since we can't use Prisma model methods generically
-    const rows = await (this.prisma as any).$queryRawUnsafe(
+    const rows = await this.prisma.$queryRawUnsafe(
       `SELECT * FROM \`${table}\` WHERE id IN (${ids.map(() => '?').join(',')})`,
       ...ids,
     );
@@ -311,7 +311,7 @@ export class DecisionChainService {
     let matched = 0;
     for (const trail of trails) {
       // Look up scoring strategy to get protocolId
-      const scoring = await (this.prisma as any).scoringStrategy.findUnique({
+      const scoring = await this.prisma.scoringStrategy.findUnique({
         where: { id: trail.strategyId },
         select: { protocolId: true },
       });

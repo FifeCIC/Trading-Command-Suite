@@ -74,7 +74,7 @@ export class PortfolioAccountsService {
   private async readSetting(key: string): Promise<{ enabled?: boolean; removed?: boolean; raw?: string }> {
     try {
       if (!this.prisma.isAvailable) return {};
-      const row = await (this.prisma as any).globalSetting.findUnique({ where: { key } });
+      const row = await this.prisma.globalSetting.findUnique({ where: { key } });
       if (!row?.value) return {};
       try {
         return JSON.parse(row.value);
@@ -92,7 +92,7 @@ export class PortfolioAccountsService {
     const next: Record<string, unknown> = { ...current, ...patch };
     delete next.raw;
     const value = JSON.stringify(next);
-    await (this.prisma as any).globalSetting.upsert({
+    await this.prisma.globalSetting.upsert({
       where: { key },
       create: { key, value },
       update: { value },

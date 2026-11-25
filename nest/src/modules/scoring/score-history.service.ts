@@ -462,7 +462,7 @@ export class ScoreHistoryService {
       latestWhere.push(`(${alternatives.join(' OR ')})`);
     }
 
-    const latestRows: Array<{ g: string | null; newest: string }> = await (this.prisma as any).$queryRawUnsafe(
+    const latestRows: Array<{ g: string | null; newest: string }> = await this.prisma.$queryRawUnsafe(
       `SELECT ${groupField} AS g,
               DATE_FORMAT(MAX(timestamp), '%Y-%m-%dT%H:%i:%s.000Z') AS newest
          FROM Score

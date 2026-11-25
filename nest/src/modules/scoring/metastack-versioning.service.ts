@@ -19,7 +19,7 @@ export class MetaStackVersioningService {
     if (!strategy) throw new NotFoundException(`Strategy ${scoringStrategyId} not found`);
 
     // Query protocol links separately (#470 — FK deferred)
-    const links = await (this.prisma as any).scoringStrategyProtocol.findMany({
+    const links = await this.prisma.scoringStrategyProtocol.findMany({
       where: { scoringStrategyId },
     });
 
@@ -229,7 +229,7 @@ export class MetaStackVersioningService {
       where: { id: scoringStrategyId },
     });
     if (!strategy) throw new NotFoundException(`Strategy ${scoringStrategyId} not found`);
-    const links = await (this.prisma as any).scoringStrategyProtocol.findMany({
+    const links = await this.prisma.scoringStrategyProtocol.findMany({
       where: { scoringStrategyId },
     });
     const data = { ...strategy, protocolLinks: links.map(p => ({ protocolSlug: p.protocolSlug, role: p.role, sortOrder: p.sortOrder })) || [] };

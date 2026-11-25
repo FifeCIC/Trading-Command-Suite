@@ -155,7 +155,7 @@ export class DirectivesService {
     let skipped = 0;
     for (const [id, directive] of this.registry) {
       try {
-        await (this.prisma as any).directive.upsert({
+        await this.prisma.directive.upsert({
           where: { id },
           create: {
             id,

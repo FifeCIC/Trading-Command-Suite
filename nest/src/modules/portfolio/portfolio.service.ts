@@ -345,7 +345,7 @@ export class PortfolioService {
     for (const pos of positions) {
       try {
         const ticker = pos.symbol.toUpperCase();
-        await (this.prisma as any).symbol.upsert({
+        await this.prisma.symbol.upsert({
           where: { ticker },
           update: {}, // no-op — don't overwrite existing
           create: {

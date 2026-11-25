@@ -94,7 +94,7 @@ export class Mt5Controller {
     }));
     let botsOnSymbol: number | null = null;
     try {
-      botsOnSymbol = await (this.prisma as any).tradingStrategy.count({
+      botsOnSymbol = await this.prisma.tradingStrategy.count({
         where: { symbol: sym, active: true },
       });
     } catch {
@@ -627,11 +627,14 @@ export class Mt5Controller {
       if (result.success && this.prisma.isAvailable) {
         const side = body.type?.toUpperCase() === 'SELL' ? 'sell' : 'buy';
         try {
-          await (this.prisma as any).trade.create({
+          await this.prisma.trade.create({
             data: {
               symbol: body.symbol, side, quantity: body.volume,
               entryPrice: result.price || 0, provider: 'mt5', status: 'open',
-              origin: 'user', ticket: result.ticket ?? null,
+              // ⚠️ `trade.ticket` is a BIGINT, and the adapter hands back `string | number` (#1320).
+              // Coerced rather than cast: a numeric string in a numeric column is a type mismatch the
+              // database would reject, and this row is the only attribution a manual trade gets.
+              origin: 'user', ticket: result.ticket == null ? null : Number(result.ticket),
               sl: body.sl ?? null, tp: body.tp ?? null,
               brokerComment: body.comment ?? null,
             },
@@ -665,7 +668,7 @@ export class Mt5Controller {
         try {
           const ticketNum = parseInt(ticket, 10);
           if (!isNaN(ticketNum)) {
-            await (this.prisma as any).trade.updateMany({
+            await this.prisma.trade.updateMany({
               where: { ticket: ticketNum, status: 'open' },
               data: { status: 'closed', exitPrice: data.price ?? null, closedAt: new Date() },
             });
@@ -707,7 +710,7 @@ export class Mt5Controller {
             // Update trade record (#446)
             if (this.prisma.isAvailable) {
               try {
-                await (this.prisma as any).trade.updateMany({
+                await this.prisma.trade.updateMany({
                   where: { ticket: pos.ticket, status: 'open' },
                   data: { status: 'closed', exitPrice: data.price ?? null, closedAt: new Date() },
                 });

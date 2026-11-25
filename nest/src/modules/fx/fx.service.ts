@@ -297,7 +297,7 @@ export class FxService {
     if (!this.prisma.isAvailable) return null;
 
     try {
-      const row = await (this.prisma as any).fxRate.findFirst({
+      const row = await this.prisma.fxRate.findFirst({
         where: { pair },
         orderBy: { timestamp: 'desc' },
       });
@@ -313,7 +313,7 @@ export class FxService {
 
     const since = new Date(Date.now() - days * 86_400_000);
     try {
-      const rows = await (this.prisma as any).fxRate.findMany({
+      const rows = await this.prisma.fxRate.findMany({
         where: { pair, timestamp: { gte: since } },
         orderBy: { timestamp: 'asc' },
         take: days * 24,
@@ -329,7 +329,7 @@ export class FxService {
     if (!this.prisma.isAvailable) return;
 
     try {
-      await (this.prisma as any).fxRate.create({
+      await this.prisma.fxRate.create({
         data: {
           pair: rate.pair,
           rate: rate.rate,

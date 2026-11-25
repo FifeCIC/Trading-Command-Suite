@@ -951,7 +951,7 @@ export class BacktestController {
     const protocolImpact = new Map<string, string[]>(); // directiveId → protocol slugs
     try {
       if (this.prisma.isAvailable) {
-        const entries = await (this.prisma as any).protocolDirectiveEntry.findMany({
+        const entries = await this.prisma.protocolDirectiveEntry.findMany({
           include: { group: { include: { protocol: { select: { slug: true } } } } },
         });
         for (const e of entries) {
@@ -1002,7 +1002,7 @@ export class BacktestController {
     try {
       if (this.prisma.isAvailable && perSymbol.length > 0 && !perSymbol[0].error) {
         const s = perSymbol[0].summary;
-        await (this.prisma as any).directiveAuditRun.create({
+        await this.prisma.directiveAuditRun.create({
           data: {
             symbol: tickers.join(','),
             days: lookback,
@@ -1034,7 +1034,7 @@ export class BacktestController {
     try {
       const where: any = {};
       if (symbol) where.symbol = { contains: symbol.toUpperCase() };
-      const runs = await (this.prisma as any).directiveAuditRun.findMany({
+      const runs = await this.prisma.directiveAuditRun.findMany({
         where, orderBy: { runAt: 'desc' }, take,
       });
       return {
@@ -1064,7 +1064,7 @@ export class BacktestController {
 
     try {
       // Fetch 1d bars for the lookback period
-      const bars = await (this.prisma as any).marketBar.findMany({
+      const bars = await this.prisma.marketBar.findMany({
         where: {
           symbol: { ticker: symbol.toUpperCase() },
           timeframe: '1d',
@@ -1102,7 +1102,7 @@ export class BacktestController {
       let strategyWinRate = 0;
       let strategyTrades = 0;
       try {
-        const trades = await (this.prisma as any).trade.findMany({
+        const trades = await this.prisma.trade.findMany({
           where: { symbol: symbol.toUpperCase(), status: 'closed' },
           orderBy: { openedAt: 'asc' },
           take: 200,

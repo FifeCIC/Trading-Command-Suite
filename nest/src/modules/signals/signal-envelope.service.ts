@@ -1777,7 +1777,7 @@ export class SignalEnvelopeService {
         // If a gating row exists in this same minute we adopt its id and leave
         // it in place. `scoreId` — the only thing this method's callers need —
         // is still returned, and the rich breakdown is preserved.
-        const existingRows = await (this.prisma as any).$queryRawUnsafe(
+        const existingRows = await this.prisma.$queryRawUnsafe(
           `SELECT id FROM Score
             WHERE symbolId = ? AND strategyId = ?
               AND timestamp >= ?
@@ -2095,7 +2095,7 @@ export class SignalEnvelopeService {
     // ── Dismissal filter (#684) — default horizon 1h, Screen Option can extend ──
     let dismissed = new Set<string>();
     try {
-      const rows: any[] = await (this.prisma as any).signalDismissal.findMany({
+      const rows: any[] = await this.prisma.signalDismissal.findMany({
         where: { dismissedUntil: { gt: new Date() } },
         select: { symbol: true, protocolId: true },
       });
@@ -2186,12 +2186,12 @@ export class SignalEnvelopeService {
     // ── Rank snapshot (#693) — hourly throttle. Persists the visible ranking so
     // forward outcomes can validate combinedStrength without paper assumptions. ──
     try {
-      const last: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const last: any[] = await this.prisma.$queryRawUnsafe(
         'SELECT MAX(runAt) AS lastRun FROM signal_rank_snapshot',
       );
       const lastRun = last?.[0]?.lastRun;
       if (!lastRun || Date.now() - new Date(lastRun).getTime() >= 60 * 60_000) {
-        await (this.prisma as any).signalRankSnapshot.createMany({
+        await this.prisma.signalRankSnapshot.createMany({
           data: visible.map((e, i) => ({
             symbol: e.symbol,
             protocolId: e.protocolId ?? 'any',
@@ -2242,7 +2242,7 @@ export class SignalEnvelopeService {
     const dismissedUntil = new Date(Date.now() + hours * 3_600_000);
 
     try {
-      await (this.prisma as any).signalDismissal.upsert({
+      await this.prisma.signalDismissal.upsert({
         where: { symbol_protocolId: { symbol: cleanSymbol, protocolId: pid } },
         create: {
           symbol: cleanSymbol,
@@ -2272,7 +2272,7 @@ export class SignalEnvelopeService {
   /** Active dismissals — used by the page's "show dismissed" toggle (#684). */
   async getDismissals(): Promise<Array<{ symbol: string; protocolId: string; dismissedUntil: string }>> {
     try {
-      const rows: any[] = await (this.prisma as any).signalDismissal.findMany({
+      const rows: any[] = await this.prisma.signalDismissal.findMany({
         where: { dismissedUntil: { gt: new Date() } },
         orderBy: { dismissedUntil: 'desc' },
       });
@@ -2299,7 +2299,7 @@ export class SignalEnvelopeService {
   async getAnalytics() {
     const q = async (sql: string): Promise<any[]> => {
       try {
-        return (await (this.prisma as any).$queryRawUnsafe(sql)) as any[];
+        return (await this.prisma.$queryRawUnsafe(sql)) as any[];
       } catch (err) {
         this.logger.warn(`analytics query failed: ${(err as Error).message}`);
         return [];

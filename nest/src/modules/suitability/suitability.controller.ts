@@ -25,7 +25,7 @@ export class SuitabilityController {
   /** Load active protocols' metadata — only static fields, no directives. */
   private async loadProtocols(): Promise<any[]> {
     try {
-      return await (this.prisma as any).protocol.findMany({
+      return await this.prisma.protocol.findMany({
         where: { active: true },
         select: { slug: true, name: true, directionMode: true, tradingStyle: true, recommendedTimeframe: true },
       });
@@ -44,7 +44,7 @@ export class SuitabilityController {
     let dbType: string | undefined;
     let tags: unknown;
     try {
-      const s = await (this.prisma as any).symbol.findFirst({
+      const s = await this.prisma.symbol.findFirst({
         where: { ticker: upper },
         select: { type: true, tags: true },
       });
@@ -106,13 +106,13 @@ export class SuitabilityController {
   @Get('directive-instrument-audit')
   async directiveInstrumentAudit() {
     try {
-      const placements = await (this.prisma as any).$queryRawUnsafe(`
+      const placements = await this.prisma.$queryRawUnsafe<Array<{ protocolSlug: string; protocolId: string; directiveId: string }>>(`
         SELECT p.slug AS protocolSlug, p.id AS protocolId, e.directiveId AS directiveId
         FROM protocol p
         JOIN protocol_directive_group g ON g.protocolId = p.id
         JOIN protocol_directive_entry e ON e.groupId = g.id
         WHERE p.active = 1`);
-      const symbols = await (this.prisma as any).$queryRawUnsafe(`
+      const symbols = await this.prisma.$queryRawUnsafe<Array<{ protocolId: string; ticker: string; sType: string }>>(`
         SELECT p.id AS protocolId, s.ticker AS ticker, s.type AS sType
         FROM protocol p
         JOIN symbol_protocol_assignment a ON a.protocolId = p.id

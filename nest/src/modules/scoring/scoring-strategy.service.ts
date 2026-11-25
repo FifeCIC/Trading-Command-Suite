@@ -42,7 +42,7 @@ export class ScoringStrategyService implements OnModuleInit {
 
   async findAll() {
     if (!this.prisma.isAvailable) return [];
-    const rows = await (this.prisma as any).scoringStrategy.findMany({
+    const rows = await this.prisma.scoringStrategy.findMany({
       orderBy: { createdAt: 'desc' },
     });
     return rows;
@@ -50,7 +50,7 @@ export class ScoringStrategyService implements OnModuleInit {
 
   async findById(id: string) {
     if (!this.prisma.isAvailable) throw new NotFoundException('Database unavailable');
-    const row = await (this.prisma as any).scoringStrategy.findUnique({ where: { id } });
+    const row = await this.prisma.scoringStrategy.findUnique({ where: { id } });
     if (!row) throw new NotFoundException(`Scoring strategy ${id} not found`);
     return row;
   }
@@ -59,13 +59,13 @@ export class ScoringStrategyService implements OnModuleInit {
     if (!this.prisma.isAvailable) throw new Error('Database unavailable');
     if (!dto.name || !dto.protocolId) throw new Error('name and protocolId are required');
 
-    const existing = await (this.prisma as any).scoringStrategy.findFirst({
+    const existing = await this.prisma.scoringStrategy.findFirst({
       where: { name: dto.name, protocolId: dto.protocolId },
     });
     if (existing) {
       // Update gate config if provided
       if (dto.gateConfig) {
-        await (this.prisma as any).scoringStrategy.update({
+        await this.prisma.scoringStrategy.update({
           where: { id: existing.id },
           data: { gateConfig: dto.gateConfig },
         });
@@ -74,7 +74,7 @@ export class ScoringStrategyService implements OnModuleInit {
       return existing;
     }
 
-    const created = await (this.prisma as any).scoringStrategy.create({
+    const created = await this.prisma.scoringStrategy.create({
       data: {
         name: dto.name,
         protocolId: dto.protocolId,
@@ -99,7 +99,7 @@ export class ScoringStrategyService implements OnModuleInit {
   async update(id: string, dto: Partial<CreateScoringStrategyDto>) {
     if (!this.prisma.isAvailable) throw new Error('Database unavailable');
     const existing = await this.findById(id);
-    return (this.prisma as any).scoringStrategy.update({
+    return this.prisma.scoringStrategy.update({
       where: { id: existing.id },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
@@ -115,7 +115,7 @@ export class ScoringStrategyService implements OnModuleInit {
     if (!this.prisma.isAvailable) return { created: 0, skipped: DEFAULT_SCORING_STRATEGIES.length };
     let created = 0, skipped = 0;
     for (const s of DEFAULT_SCORING_STRATEGIES) {
-      const existing = await (this.prisma as any).scoringStrategy.findFirst({
+      const existing = await this.prisma.scoringStrategy.findFirst({
         where: { name: s.name, protocolId: s.protocolId },
       });
       if (existing) { skipped++; continue; }

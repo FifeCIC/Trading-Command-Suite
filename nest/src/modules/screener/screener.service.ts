@@ -206,7 +206,7 @@ export class ScreenerService implements OnModuleInit {
 
     // RSS items (fresh) — news_item table.
     try {
-      const rss: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const rss: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT url, symbols, severity, publishedAt FROM news_item
          WHERE symbols IS NOT NULL AND symbols <> ''
            AND publishedAt >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 2 DAY)

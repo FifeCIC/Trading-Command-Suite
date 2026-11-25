@@ -304,7 +304,7 @@ export class WatchlistsController {
   @Get(':id/lock-status')
   async getLockStatus(@Param('id') id: string) {
     try {
-      const strategies = await (this.prisma as any).scoringStrategy.findMany({
+      const strategies = await this.prisma.scoringStrategy.findMany({
         where: { watchlistId: id, enabled: true },
         select: { id: true, name: true, protocolId: true },
       }) as Array<{ id: string; name: string; protocolId?: string }>;
@@ -313,7 +313,10 @@ export class WatchlistsController {
       // Check for active positions linked to strategies' protocols
       const protocolIds = [...new Set(strategies.map((s) => s.protocolId).filter(Boolean))] as string[];
       const activePositions = protocolIds.length > 0
-        ? await (this.prisma as any).position.count({ where: { protocolId: { in: protocolIds }, quantity: { gt: 0 } } })
+          // ⚠️ `position` HAS NO `protocolId` COLUMN (#1349). Kept compiling by a cast because fixing it
+          // needs a real join (position.magic -> trading_strategy.magic -> protocolId); renaming the
+          // field would be a guess that changes what "locked" means.
+          ? await (this.prisma as any).position.count({ where: { protocolId: { in: protocolIds }, quantity: { gt: 0 } } })
         : 0;
 
       const locked = activePositions > 0;
@@ -332,14 +335,17 @@ export class WatchlistsController {
     if (!wl) throw new NotFoundException(`Watchlist "${id}" not found`);
 
     // Lock check
-    const strategies = await (this.prisma as any).scoringStrategy.findMany({
+    const strategies = await this.prisma.scoringStrategy.findMany({
       where: { watchlistId: id, enabled: true },
       select: { name: true, protocolId: true },
     }) as Array<{ name: string; protocolId?: string }>;
     if (strategies.length > 0) {
       const protocolIds = [...new Set(strategies.map((s) => s.protocolId).filter(Boolean))] as string[];
       const activePositions = protocolIds.length > 0
-        ? await (this.prisma as any).position.count({ where: { protocolId: { in: protocolIds }, quantity: { gt: 0 } } })
+          // ⚠️ `position` HAS NO `protocolId` COLUMN (#1349). Kept compiling by a cast because fixing it
+          // needs a real join (position.magic -> trading_strategy.magic -> protocolId); renaming the
+          // field would be a guess that changes what "locked" means.
+          ? await (this.prisma as any).position.count({ where: { protocolId: { in: protocolIds }, quantity: { gt: 0 } } })
         : 0;
       if (activePositions > 0) {
         throw new ConflictException(`Watchlist is locked — used by ${strategies.map((s) => s.name).join(', ')} with ${activePositions} active positions`);

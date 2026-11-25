@@ -175,10 +175,10 @@ export class SystemHealthService {
 
   private async checkWatchlists(): Promise<HealthCheckItem> {
     try {
-      const count = await (this.prisma as any).watchlist?.count?.() ?? 0;
-      const systemCount = await (this.prisma as any).watchlist?.count?.({ where: { kind: 'system' } }) ?? 0;
+      const count = await this.prisma.watchlist?.count?.() ?? 0;
+      const systemCount = await this.prisma.watchlist?.count?.({ where: { kind: 'system' } }) ?? 0;
       if (systemCount >= 8) {
-        const names = await (this.prisma as any).watchlist?.findMany({
+        const names = await this.prisma.watchlist?.findMany({
           where: { kind: 'system' },
           select: { name: true },
         });

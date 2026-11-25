@@ -83,7 +83,7 @@ export class AuditLogService {
       // Write in chunks of 100 to avoid oversized queries
       for (let i = 0; i < batch.length; i += 100) {
         const chunk = batch.slice(i, i + 100);
-        await (this.prisma as any).automationEvent.createMany({
+        await this.prisma.automationEvent.createMany({
           data: chunk.map(e => ({
             timestamp: new Date(),
             // `log()` always fills this; `?? 0` keeps the column's NOT NULL contract explicit
@@ -222,7 +222,7 @@ export class AuditLogService {
     }
 
     try {
-      const events = await (this.prisma as any).automationEvent.findMany({
+      const events = await this.prisma.automationEvent.findMany({
         orderBy: { timestamp: 'desc' },
         take: limit,
       });
@@ -230,7 +230,7 @@ export class AuditLogService {
       // Count today's events
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const todayCount = await (this.prisma as any).automationEvent.count({
+      const todayCount = await this.prisma.automationEvent.count({
         where: { timestamp: { gte: today } },
       });
 

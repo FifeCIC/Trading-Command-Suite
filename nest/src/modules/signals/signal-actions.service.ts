@@ -60,7 +60,7 @@ export class SignalActionsService {
 
   /** Load a signal (Score row) or throw. */
   private async loadSignal(signalId: string) {
-    const score = await (this.prisma as any).score
+    const score = await this.prisma.score
       .findUnique({
         where: { id: signalId },
         include: { symbol: { select: { ticker: true } } },
@@ -92,7 +92,7 @@ export class SignalActionsService {
     const { symbol, protocolId, strategyId, scoredAt } = await this.loadSignal(signalId);
 
     // 1. Bot decisions since the score (decision_log EXECUTED/QUEUED)
-    const decisions: any[] = await (this.prisma as any).decisionLog
+    const decisions: any[] = await this.prisma.decisionLog
       .findMany({
         where: scoredAt
           ? { strategyId, symbol, timestamp: { gte: scoredAt } }
@@ -127,7 +127,7 @@ export class SignalActionsService {
     }
 
     // 2. Trades correlated via scoringStrategyId (bot writes protocolId there)
-    const trade: any = await (this.prisma as any).trade
+    const trade: any = await this.prisma.trade
       .findFirst({
         where: { scoringStrategyId: strategyId, symbol, status: 'open' },
         orderBy: { openedAt: 'desc' },
@@ -435,7 +435,7 @@ export class SignalActionsService {
 
     // Dedupe — one plan per symbol+protocol+direction. The signalId is a
     // Score-run id (a new row per scoring run), so it cannot be the key.
-    const existing: any[] = await (this.prisma as any).$queryRawUnsafe(
+    const existing = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(
       `SELECT id FROM tradingplan
        WHERE JSON_UNQUOTE(JSON_EXTRACT(content, '$.source')) = 'signals'
          AND JSON_UNQUOTE(JSON_EXTRACT(content, '$.symbol')) = ?
@@ -460,7 +460,7 @@ export class SignalActionsService {
       drivers ? `Top drivers: ${drivers}` : null,
     ].filter(Boolean).join(' · ');
 
-    const plan = await (this.prisma as any).tradingPlan.create({
+    const plan = await this.prisma.tradingPlan.create({
       data: {
         title: `${symbol} ${direction} — ${protocolLabel}`,
         type: 'signal',
@@ -486,7 +486,7 @@ export class SignalActionsService {
     });
 
     // First plan step: the pending entry this signal suggests.
-    await (this.prisma as any).planStep
+    await this.prisma.planStep
       .create({
         data: {
           planId: plan.id,

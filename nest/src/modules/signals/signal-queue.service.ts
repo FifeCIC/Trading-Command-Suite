@@ -96,7 +96,7 @@ export class SignalQueueService {
       // only purpose was to sell had no direction constraint in the live path. Measured
       // 2026-09-17: 24 subscriptions `role='long'`, 1 `role='short'`, and the routing filter matched
       // on protocol + symbol only.
-      const subs: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const subs: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT sp.strategyId, sp.protocolId, sp.role, ts.requireDirection, ts.symbol AS strategySymbol,
                 ts.scopeMode AS strategyScopeMode, ts.feedList AS strategyFeedList
          FROM strategy_protocol sp
@@ -237,7 +237,7 @@ export class SignalQueueService {
         if (silent.length === 0) continue;
 
         const placeholders = silent.map(() => '?').join(',');
-        await (this.prisma as any).$executeRawUnsafe(
+        await this.prisma.$executeRawUnsafe(
           `DELETE FROM strategy_signal_queue
            WHERE protocolId = ? AND status = 'pending' AND symbol IN (${placeholders})`,
           pid, ...silent,
@@ -266,14 +266,14 @@ export class SignalQueueService {
       // Rule 1 — STALENESS: last confirmation older than the bound. `updatedAt`, never
       // `createdAt`: a live, re-signalling entry keeps a fresh `updatedAt` while its `createdAt`
       // ages, and must NOT expire (see signal-freshness.ts for why the default is 360m).
-      const staleRows: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const staleRows: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT id, symbol, protocolId, TIMESTAMPDIFF(MINUTE, updatedAt, UTC_TIMESTAMP()) AS ageMin
            FROM strategy_signal_queue
           WHERE status = 'pending' AND updatedAt < UTC_TIMESTAMP() - INTERVAL ? MINUTE`,
         maxAgeMin,
       );
       if (Array.isArray(staleRows) && staleRows.length > 0) {
-        await (this.prisma as any).$executeRawUnsafe(
+        await this.prisma.$executeRawUnsafe(
           `UPDATE strategy_signal_queue
               SET status = 'expired', updatedAt = UTC_TIMESTAMP()
             WHERE status = 'pending' AND updatedAt < UTC_TIMESTAMP() - INTERVAL ? MINUTE`,
@@ -288,7 +288,7 @@ export class SignalQueueService {
       // Rule 2 — UNCONSUMABLE: no active bot+subscription can EVER drain this entry (bot
       // deactivated or its subscription removed). The consumer selects with `ts.active = 1`, so
       // these rows are invisible to it forever — they expire regardless of age, same pass.
-      const unconsumable = await (this.prisma as any).$executeRawUnsafe(
+      const unconsumable = await this.prisma.$executeRawUnsafe(
         `UPDATE strategy_signal_queue q
             SET status = 'expired', updatedAt = UTC_TIMESTAMP()
           WHERE q.status = 'pending'
@@ -312,12 +312,12 @@ export class SignalQueueService {
   async removePendingForSignal(symbol: string, protocolId?: string) {
     try {
       if (protocolId) {
-        await (this.prisma as any).$executeRawUnsafe(
+        await this.prisma.$executeRawUnsafe(
           `DELETE FROM strategy_signal_queue WHERE symbol = ? AND protocolId = ? AND status = 'pending'`,
           symbol, protocolId,
         );
       } else {
-        await (this.prisma as any).$executeRawUnsafe(
+        await this.prisma.$executeRawUnsafe(
           `DELETE FROM strategy_signal_queue WHERE symbol = ? AND status = 'pending'`,
           symbol,
         );
@@ -330,7 +330,7 @@ export class SignalQueueService {
   /** Pending queue for one trading bot, strongest first. */
   async getQueue(strategyId: string) {
     try {
-      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT id, strategyId, symbol, protocolId, direction, \`signal\`,
                 CAST(compositePct AS DECIMAL(10,4)) AS compositePct,
                 CAST(signalPct AS DECIMAL(10,4)) AS signalPct,
@@ -358,7 +358,7 @@ export class SignalQueueService {
 
   private async upsertEntry(strategyId: string, rec: RoutableSignal) {
     try {
-      await (this.prisma as any).$executeRawUnsafe(
+      await this.prisma.$executeRawUnsafe(
         `INSERT INTO strategy_signal_queue
            (id, strategyId, symbol, protocolId, direction, \`signal\`, compositePct, signalPct, opportunityPct, combinedStrength, scoreId, status, createdAt, updatedAt)
          VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', UTC_TIMESTAMP(), UTC_TIMESTAMP())

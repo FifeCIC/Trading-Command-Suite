@@ -131,7 +131,7 @@ export class BrokerSymbolsController {
   @Get('spreads')
   async spreads(@Query('brokerId') brokerId?: string) {
     const one = this.intOrUndefined(brokerId);
-    const rows = await (this.prisma as any).brokerSymbol.findMany({
+    const rows = await this.prisma.brokerSymbol.findMany({
       where: {
         ...(one !== undefined ? { brokerId: one } : {}),
         spreadPct: { not: null },
@@ -169,7 +169,7 @@ export class BrokerSymbolsController {
   async spread(@Query('symbol') symbol?: string) {
     if (!symbol) throw new BadRequestException('symbol is required');
     const ticker = String(symbol).toUpperCase();
-    const routes = await (this.prisma as any).symbolRoute.findMany({
+    const routes = await this.prisma.symbolRoute.findMany({
       where: { symbol: ticker, enabled: true, provider: 'mt5' },
       select: { brokerId: true, brokerSymbol: true },
       orderBy: { brokerId: 'asc' },
@@ -177,7 +177,7 @@ export class BrokerSymbolsController {
     for (const r of routes as Array<Record<string, unknown>>) {
       const venue = Number(r.brokerId);
       const nativeName = typeof r.brokerSymbol === 'string' && r.brokerSymbol ? r.brokerSymbol : ticker;
-      const row = await (this.prisma as any).brokerSymbol.findFirst({
+      const row = await this.prisma.brokerSymbol.findFirst({
         where: { brokerId: venue, name: nativeName, spreadPct: { not: null } },
         select: { name: true, digits: true, spreadPct: true, spreadAbs: true, spreadQuotedAt: true },
       });

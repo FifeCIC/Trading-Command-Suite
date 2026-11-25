@@ -308,7 +308,7 @@ export class TradingStrategyService {
 
   // #712 — strategy-owned protocol subscriptions.
   async getProtocolSubscriptions(strategyId: string) {
-    return (this.prisma as any).strategyProtocol
+    return this.prisma.strategyProtocol
       .findMany({ where: { strategyId }, orderBy: { sortOrder: 'asc' } })
       .catch(() => []);
   }
@@ -316,7 +316,7 @@ export class TradingStrategyService {
   /** #714 — pending signal queue for one trading bot (strongest first). */
   async getSignalQueue(strategyId: string) {
     try {
-      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT id, strategyId, symbol, protocolId, direction, \`signal\`,
                 CAST(compositePct AS SIGNED) AS compositePct,
                 CAST(signalPct AS SIGNED) AS signalPct,
@@ -348,7 +348,7 @@ export class TradingStrategyService {
    */
   async getAllQueues() {
     try {
-      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT q.id, q.strategyId, ts.name AS strategyName, ts.symbol AS strategySymbol,
                 ts.active AS strategyActive, ts.mode AS strategyMode, ts.brokerId,
                 q.symbol, q.protocolId, q.direction, q.\`signal\`,
@@ -379,15 +379,15 @@ export class TradingStrategyService {
   }
 
   async addProtocolSubscription(strategyId: string, protocolId: string, role = 'long') {
-    const existing: any = await (this.prisma as any).strategyProtocol
+    const existing: any = await this.prisma.strategyProtocol
       .findFirst({ where: { strategyId, protocolId, role } })
       .catch(() => null);
     if (existing) return existing;
-    return (this.prisma as any).strategyProtocol.create({ data: { strategyId, protocolId, role } });
+    return this.prisma.strategyProtocol.create({ data: { strategyId, protocolId, role } });
   }
 
   async removeProtocolSubscription(strategyId: string, subId: string) {
-    return (this.prisma as any).strategyProtocol.deleteMany({ where: { id: subId, strategyId } });
+    return this.prisma.strategyProtocol.deleteMany({ where: { id: subId, strategyId } });
   }
 
   /**
@@ -763,7 +763,7 @@ export class TradingStrategyService {
     const base = botSlug(name);
     for (let n = 2; n < 50; n += 1) {
       const candidate = n === 2 ? base : `${base}-${n}`;
-      const taken = await (this.prisma as any).tradingStrategy.findUnique({
+      const taken = await this.prisma.tradingStrategy.findUnique({
         where: { slug: candidate },
         select: { id: true },
       });
@@ -847,13 +847,13 @@ export class TradingStrategyService {
     if (!scoringStrategyId && (data.watchlistId || data.watchlistName)) {
       try {
         const watchlistName = data.watchlistName || data.watchlistId || 'default';
-        const existingScoring = await (this.prisma as any).scoringStrategy.findFirst({
+        const existingScoring = await this.prisma.scoringStrategy.findFirst({
           where: { protocolId: data.protocolId, watchlistName },
         });
         if (existingScoring) {
           scoringStrategyId = existingScoring.id;
         } else {
-          const created = await (this.prisma as any).scoringStrategy.create({
+          const created = await this.prisma.scoringStrategy.create({
             data: {
               name: `${data.name} Scoring`,
               protocolId: data.protocolId,
@@ -1014,11 +1014,11 @@ export class TradingStrategyService {
 
     // 1. Child rows the bot owns. Any failure here is loud: a half-deleted bot is worse than
     //    a refused one, because it looks gone while its subscriptions still route signals.
-    const subs = await (this.prisma as any).strategyProtocol.deleteMany({ where: { strategyId: id } });
-    const evals = await (this.prisma as any).strategyEvaluation.deleteMany({ where: { strategyId: id } });
+    const subs = await this.prisma.strategyProtocol.deleteMany({ where: { strategyId: id } });
+    const evals = await this.prisma.strategyEvaluation.deleteMany({ where: { strategyId: id } });
     let queueRows = 0;
     try {
-      queueRows = await (this.prisma as any).$executeRawUnsafe(
+      queueRows = await this.prisma.$executeRawUnsafe(
         `DELETE FROM strategy_signal_queue WHERE strategyId = ? AND status = 'pending'`,
         id,
       );
@@ -1045,7 +1045,7 @@ export class TradingStrategyService {
     const removedProtocols: string[] = [];
     const keptProtocols: Array<{ ref: string; reason: string }> = [];
     for (const ref of refs) {
-      const row: any = await (this.prisma as any).protocol.findFirst({
+      const row: any = await this.prisma.protocol.findFirst({
         where: { OR: [{ slug: ref }, { id: ref }] },
         select: { id: true, slug: true },
       });
@@ -1064,7 +1064,7 @@ export class TradingStrategyService {
           ],
         },
       });
-      const otherSubs = await (this.prisma as any).strategyProtocol.count({
+      const otherSubs = await this.prisma.strategyProtocol.count({
         where: { protocolId: { in: [row.slug, row.id] } },
       });
       if (otherBots > 0 || otherSubs > 0) {
@@ -1081,7 +1081,7 @@ export class TradingStrategyService {
     //    protocolId, never by name: a name match could delete a shared configuration.
     let removedScoringStrategies = 0;
     if (removedProtocols.length) {
-      const ss = await (this.prisma as any).scoringStrategy.deleteMany({
+      const ss = await this.prisma.scoringStrategy.deleteMany({
         where: { protocolId: { in: removedProtocols } },
       });
       removedScoringStrategies = ss.count;
@@ -1213,7 +1213,7 @@ export class TradingStrategyService {
         watchlists: Array<{ id: string; name: string }>;
       }> = [];
       for (const link of links) {
-        const srcProtocol: any = await (this.prisma as any).protocol.findFirst({
+        const srcProtocol: any = await this.prisma.protocol.findFirst({
           where: { OR: [{ slug: link.ref }, { id: link.ref }] },
           select: { id: true, slug: true, name: true },
         });
@@ -1246,7 +1246,7 @@ export class TradingStrategyService {
       // scope, not a treatment — sharing one is acceptable; sharing the config would not be).
       let sourceWatchlistName: string | null = null;
       if (source.scoringStrategyId) {
-        const ss: any = await (this.prisma as any).scoringStrategy
+        const ss: any = await this.prisma.scoringStrategy
           .findUnique({ where: { id: source.scoringStrategyId }, select: { watchlistName: true } })
           .catch(() => null);
         sourceWatchlistName = ss?.watchlistName ?? null;
@@ -1344,7 +1344,7 @@ export class TradingStrategyService {
       this.logger.error(`Duplicate of ${source.id} failed — cleaning up: ${(err as Error).message}`);
       try {
         if (copyBotId) {
-          await (this.prisma as any).strategyProtocol.deleteMany({ where: { strategyId: copyBotId } });
+          await this.prisma.strategyProtocol.deleteMany({ where: { strategyId: copyBotId } });
           await this.prisma.tradingStrategy.delete({ where: { id: copyBotId } });
         }
       } catch (cleanupErr) {
@@ -3110,13 +3110,13 @@ export class TradingStrategyService {
     sortOrder: number,
     dryRun: boolean,
   ): Promise<{ created: boolean; corrected: boolean }> {
-    const existing = await (this.prisma as any).strategyProtocol
+    const existing = await this.prisma.strategyProtocol
       .findFirst({ where: { strategyId, protocolId } })
       .catch(() => null);
     if (!existing) {
       if (!dryRun) {
         try {
-          await (this.prisma as any).strategyProtocol.create({
+          await this.prisma.strategyProtocol.create({
             data: { strategyId, protocolId, role, sortOrder },
           });
         } catch (err) {
@@ -3129,7 +3129,7 @@ export class TradingStrategyService {
     if (existing.role !== role) {
       if (!dryRun) {
         try {
-          await (this.prisma as any).strategyProtocol.update({
+          await this.prisma.strategyProtocol.update({
             where: { id: existing.id },
             data: { role },
           });
@@ -3249,7 +3249,7 @@ export class TradingStrategyService {
     const changes: Array<{ bot: string; fields: string[] }> = [];
 
     for (const s of strategies) {
-      const existing = await (this.prisma as any).tradingStrategy.findFirst({
+      const existing = await this.prisma.tradingStrategy.findFirst({
         where: { name: s.name, symbol: s.symbol },
       });
 
@@ -3424,7 +3424,7 @@ export class TradingStrategyService {
 
         if (differing.length) {
           if (!dryRun) {
-            await (this.prisma as any).tradingStrategy.update({
+            await this.prisma.tradingStrategy.update({
               where: { id: existing.id },
               data: desired,
             });
@@ -3459,7 +3459,7 @@ export class TradingStrategyService {
         const wantRole =
           resolveEffectiveRole(null, (s as any).requireDirection) ??
           (/-short|short-/i.test(s.protocolId) ? 'short' : 'long');
-        const sub = await (this.prisma as any).strategyProtocol.findFirst({
+        const sub = await this.prisma.strategyProtocol.findFirst({
           where: { strategyId: existing.id, protocolId: s.protocolId },
         });
         if (!sub) {
@@ -3467,7 +3467,7 @@ export class TradingStrategyService {
             subscriptionsRepaired++;
           } else {
             try {
-              await (this.prisma as any).strategyProtocol.create({
+              await this.prisma.strategyProtocol.create({
                 data: {
                   strategyId: existing.id,
                   protocolId: s.protocolId,
@@ -3487,7 +3487,7 @@ export class TradingStrategyService {
             rolesCorrected++;
           } else {
             try {
-              await (this.prisma as any).strategyProtocol.update({
+              await this.prisma.strategyProtocol.update({
                 where: { id: sub.id },
                 data: { role: wantRole },
               });
@@ -3527,13 +3527,13 @@ export class TradingStrategyService {
       // Create or find scoring strategy
       let scoringId: string | null = null;
       try {
-        const existingScoring = await (this.prisma as any).scoringStrategy.findFirst({
+        const existingScoring = await this.prisma.scoringStrategy.findFirst({
           where: { protocolId: s.protocolId, watchlistName: 'default' },
         });
         if (existingScoring) {
           scoringId = existingScoring.id;
         } else {
-          const createdScoring = await (this.prisma as any).scoringStrategy.create({
+          const createdScoring = await this.prisma.scoringStrategy.create({
             data: {
               name: `${s.name} Scoring`,
               protocolId: s.protocolId,
@@ -3552,7 +3552,7 @@ export class TradingStrategyService {
 
       // Create trading strategy
       try {
-        const createdBot = await (this.prisma as any).tradingStrategy.create({
+        const createdBot = await this.prisma.tradingStrategy.create({
           data: {
             // ⚠️ SEEDED BOTS GET THE SAME SHAPE AS API-CREATED ONES (requirement, 2026-11-05):
             // name ends "Bot", slug ends "-bot", derived by ONE helper so the two write paths cannot
@@ -3666,7 +3666,7 @@ export class TradingStrategyService {
         try {
           const declared = resolveEffectiveRole(null, (s as any).requireDirection);
           const shortFromName = /-short|short-/i.test(s.protocolId);
-          await (this.prisma as any).strategyProtocol.create({
+          await this.prisma.strategyProtocol.create({
             data: {
               strategyId: createdBot.id,
               protocolId: s.protocolId,

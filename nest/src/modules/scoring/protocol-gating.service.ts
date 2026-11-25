@@ -351,9 +351,13 @@ export interface GatedScore {
 }
 
 // ─── Rarity Bands ────────────────────────────────────────
-// ⚠️ The table that used to live here was a SECOND copy of the one in rarity.service.ts, with a
+// ⚠️ The table that used to live here was a SECOND copy of the one in `rarity.service.ts`, with a
 // different minimum sample size (10 here, 30 there) — so one score could receive two different
 // bands, and a future fix would land in only one of them. Both now import ./rarity-bands.
+// `rarity.service.ts` was DELETED 2026-11-25: it had no importer, so its copy could never run —
+// which also means it was never the second writer of `score_snapshot` that #1117's note assumes.
+// Its 224,373 historical rows are still in the table and still count towards rarity; only the
+// class that could write more of them is gone.
 
 // ─── Directive IDs that need EURUSD/DXY ────────────────────
 
@@ -1967,7 +1971,7 @@ export class ProtocolGatingService {
     const cached = this.protocolActiveCache.get(protocolId);
     if (cached && Date.now() - cached.at < 60_000) return cached.active;
     try {
-      const row = await (this.prisma as any).protocol.findFirst({
+      const row = await this.prisma.protocol.findFirst({
         where: { slug: protocolId },
         select: { active: true },
       });
@@ -2006,7 +2010,7 @@ export class ProtocolGatingService {
         // The peak only moves via the guarded CASE — `GREATEST` alone would still allow a
         // lower value to win if the row were read and written non-atomically, whereas the
         // CASE evaluates against the stored value inside the same statement.
-        await (this.prisma as any).$executeRawUnsafe(
+        await this.prisma.$executeRawUnsafe(
           `UPDATE protocol
               SET adaptiveTargetMax = CASE
                     WHEN adaptiveTargetMax IS NULL OR adaptiveTargetMax < ? THEN ?
@@ -2182,8 +2186,10 @@ export class ProtocolGatingService {
         //   • protocol inactive (#803) — the REFUSED warning is logged; **0 matches**.
         //   • the tick path did not run — refuted above, by `signalPct` presence.
         //   • retention with a shorter window — would have to leave 2026-09-15 intact, which it does.
-        //   • a second writer of `score_snapshot` with `signalPct` — there are only two writers of
-        //     that table (`protocol-gating`, `rarity.captureSnapshot`) and rarity sets no `signalPct`.
+        //   • a second writer of `score_snapshot` with `signalPct` — `rarity.captureSnapshot()` was
+        //     the only other writer of that table and it set no `signalPct`, and it has been
+        //     UNREACHABLE since at least this note (its class had no importer; the file was deleted
+        //     2026-11-25). So for the gap period there was effectively ONE writer, not two.
         //
         // LEADING REMAINING CANDIDATE, unprovable retroactively: the running `dist` differed from
         // this source for that period. `dist` is untracked and the console logs rotate, so there is
@@ -2196,7 +2202,11 @@ export class ProtocolGatingService {
         // ⚠️ IF YOU ARE ADDING A STATISTIC OVER `score`: state the window you measured over and
         // make it visible in the payload — the defect this pattern keeps producing (#1115) is a
         // number whose basis was invisible. See `ceilingWindowDays` for the shape to copy.
-        await (this.prisma as any).score.create({
+          // ⚠️ Narrow cast on THIS call only (#1320): `breakdown` carries `breakouts` as an open
+          // `Record<string, DirectiveBreakout[]>`, which Prisma's `InputJsonValue` cannot express. The
+          // value is JSON-serialisable; the type system cannot say so. Every other call in this file
+          // uses the typed client.
+          await (this.prisma as any).score.create({
           data: {
             symbolId: sym.id,
             strategyId: protocolId, // protocol-scored: strategyId IS the protocolId

@@ -108,7 +108,7 @@ export class ExperimentReviewService {
   private async objectiveReviews(now: Date): Promise<ObjectiveReview[]> {
     let rows: any[] = [];
     try {
-      rows = await (this.prisma as any).$queryRawUnsafe(
+      rows = await this.prisma.$queryRawUnsafe(
         `SELECT id, title, description, status, targetDate, progressPct, linkedStrategy
            FROM trading_objective WHERE status = 'active'`,
       );
@@ -142,7 +142,7 @@ export class ExperimentReviewService {
 
   /** Every `ab_test` row, with the sample the verdict machinery already computed for it. */
   private async abTestFacts(now: Date): Promise<ExperimentFacts[]> {
-    const tests = await (this.prisma as any).abTest.findMany({ orderBy: { createdAt: 'desc' } });
+    const tests = await this.prisma.abTest.findMany({ orderBy: { createdAt: 'desc' } });
     const out: ExperimentFacts[] = [];
 
     for (const t of tests) {
@@ -205,7 +205,7 @@ export class ExperimentReviewService {
    * `scoringStrategyId` here would repeat #459's wrong-foreign-key trap.
    */
   private async botPairFacts(now: Date): Promise<ExperimentFacts[]> {
-    const pairs: any[] = await (this.prisma as any).$queryRawUnsafe(`
+    const pairs: any[] = await this.prisma.$queryRawUnsafe(`
       SELECT t.id AS twinId, t.name AS twinName, t.magic AS twinMagic, t.active AS twinActive,
              t.createdAt AS twinCreated, t.symbol AS twinSymbol,
              c.id AS controlId, c.name AS controlName, c.magic AS controlMagic, c.active AS controlActive
@@ -219,7 +219,7 @@ export class ExperimentReviewService {
       const [controlStats, twinStats, rows] = await Promise.all([
         this.closedStatsForMagic(Number(p.controlMagic)),
         this.closedStatsForMagic(Number(p.twinMagic)),
-        (this.prisma as any).$queryRawUnsafe(
+        this.prisma.$queryRawUnsafe(
           'SELECT * FROM trading_strategy WHERE id IN (?, ?)', p.controlId, p.twinId,
         ),
       ]);
@@ -274,7 +274,7 @@ export class ExperimentReviewService {
 
   private async lastClosedForAbTest(abTestId: string): Promise<{ lastAt: Date | null }> {
     try {
-      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
         'SELECT MAX(closedAt) AS lastAt FROM trade WHERE abTestId = ? AND status = ?',
         abTestId, 'closed',
       );
@@ -289,7 +289,7 @@ export class ExperimentReviewService {
     const t = String(ticker ?? '').trim().toUpperCase();
     if (!t) return null;
     try {
-      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
         'SELECT type FROM symbol WHERE ticker = ?', t,
       );
       return rows?.[0]?.type ?? null;
@@ -316,7 +316,7 @@ export class ExperimentReviewService {
 
   /** Closed trades and realised P&L for one bot, by magic. `pnlInvalid` rows are excluded (#805). */  private async closedStatsForMagic(magic: number): Promise<{ n: number; pnl: number; lastAt: Date | null }> {
     try {
-      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT COUNT(*) AS n, COALESCE(SUM(pnl),0) AS pnl, MAX(closedAt) AS lastAt
            FROM trade WHERE magic = ? AND status = ? AND pnlInvalid = 0`,
         magic, 'closed',

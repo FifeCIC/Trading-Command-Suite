@@ -68,7 +68,7 @@ export class SignalOutcomeService {
       if (this.lastSig.get(k) === sig) return;
 
       const logId = `ol-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      await (this.prisma as any).$executeRawUnsafe(
+      await this.prisma.$executeRawUnsafe(
         `INSERT INTO signal_outcome_log
            (id, scoreId, symbol, protocolId, preTradeReady, blockerCount, conflictCount, warningCount, createdAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`,
@@ -104,7 +104,7 @@ export class SignalOutcomeService {
           sql += `${i > 0 ? ',' : ''} (UUID(), ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`;
           values.push(logId, r[0], r[1], r[2], r[3], r[4], r[5]);
         });
-        await (this.prisma as any).$executeRawUnsafe(sql, ...values);
+        await this.prisma.$executeRawUnsafe(sql, ...values);
       }
 
       this.lastSig.set(k, sig);
@@ -125,7 +125,7 @@ export class SignalOutcomeService {
   }): Promise<Array<{ symbol: string; protocolId: string | null; entryType: string; entryKey: string; count: number; lastSeenAt: string | null }>> {
     try {
       const days = params.days ?? 7;
-      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+      const rows: any[] = await this.prisma.$queryRawUnsafe(
         `SELECT l.symbol, l.protocolId, m.entryType, m.entryKey,
                 CAST(COUNT(*) AS SIGNED) AS cnt, MAX(l.createdAt) AS lastSeenAt
          FROM signal_outcome_meta m

@@ -36,7 +36,7 @@ export class PlanService {
     },
   ) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = (this.prisma as any).planStep;
+    const db = this.prisma.planStep;
     const maxStep = await db.findFirst({
       where: { planId },
       orderBy: { sortOrder: 'desc' },
@@ -68,7 +68,7 @@ export class PlanService {
     },
   ) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = (this.prisma as any).planStep;
+    const db = this.prisma.planStep;
     return db.update({
       where: { id: stepId },
       data: {
@@ -80,7 +80,7 @@ export class PlanService {
 
   async removeStep(stepId: string) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (this.prisma as any).planStep.delete({ where: { id: stepId } });
+    return this.prisma.planStep.delete({ where: { id: stepId } });
   }
 
   async create(data: {

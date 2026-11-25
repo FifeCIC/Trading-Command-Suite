@@ -244,7 +244,7 @@ export class ScoringService implements OnModuleInit {
     let protocolTimeframe: string | undefined;
     if (protocolSlug && this.prisma.isAvailable) {
       try {
-        const protocol = await (this.prisma as any).protocol.findUnique({
+        const protocol = await this.prisma.protocol.findUnique({
           where: { slug: protocolSlug },
           include: {
             directiveGroups: {
@@ -656,7 +656,7 @@ export class ScoringService implements OnModuleInit {
 
     try {
       // Get latest snapshot per symbol from ScoreSnapshot table
-      const snapshots = await (this.prisma as any).scoreSnapshot.findMany({
+      const snapshots = await this.prisma.scoreSnapshot.findMany({
         orderBy: { snappedAt: 'desc' },
         take: limit * 3, // overfetch to dedupe per-symbol
       });
