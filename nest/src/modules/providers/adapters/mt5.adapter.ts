@@ -1049,7 +1049,7 @@ export class Mt5Adapter implements IProviderAdapter {
     to?: Date,
     opts: { attempts?: number; delaySec?: number } = {},
   ): Promise<{
-    deals: any[];
+    deals: BrokerDeal[];
     recovered: string[];
     stillMissing: string[];
     byBroker: Record<number, { recovered: number; stillMissing: number }>;

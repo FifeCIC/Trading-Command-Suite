@@ -183,7 +183,7 @@ export class PositionSyncService {
       // represents the same symbol — otherwise it is a superseded duplicate:
       // matching by symbol alone made any re-opened symbol immortal.
       const ticketedSymbols = new Set(
-        dbPositions.filter((p: any) => p.brokerTicket).map((p: any) => p.symbol),
+        dbPositions.filter((p) => p.brokerTicket).map((p) => p.symbol),
       );
       const unticketedIncoming = new Set(
         positions.filter(p => !p.brokerTicket).map(p => p.symbol),
@@ -241,7 +241,7 @@ export class PositionSyncService {
     if (pos.currentPrice == null || !Number.isFinite(price) || price <= 0) return;
 
     try {
-      const row: any = await this.prisma.position.findFirst({
+      const row = await this.prisma.position.findFirst({
         where: pos.brokerTicket
           ? { provider, brokerTicket: pos.brokerTicket }
           : { provider, symbol: pos.symbol, brokerTicket: null },
@@ -328,7 +328,7 @@ export class PositionSyncService {
       // Measured 2026-09-18: **5** such rows against 5 live positions (10 open trades total) — and
       // growing. The issue recorded 3; two further VIX orphans were added the same day it was
       // written, which is the argument for fixing the class rather than the rows.
-      const stranded: any[] = await this.prisma.trade.findMany({
+      const stranded = await this.prisma.trade.findMany({
         where: { provider, status: 'open' },
         select: {
           id: true, symbol: true, openedAt: true,
@@ -444,7 +444,7 @@ export class PositionSyncService {
     bySymbol: Array<{ symbol: string; n: number }>;
     sample: Array<{ id: string; symbol: string; closedAt: Date | null; closeReason: string | null }>;
   }> {
-    const rows: any[] = await this.prisma.trade
+    const rows = await this.prisma.trade
       .findMany({
         where: { provider, status: 'closed', OR: [{ closeReason: null }, { closeReason: CLOSE_REASONS.BROKER_UNKNOWN }] },
         select: { id: true, symbol: true, closeReason: true, closedAt: true },
@@ -512,7 +512,7 @@ export class PositionSyncService {
       status: 'closed',
       OR: [{ closeReason: null }, { closeReason: CLOSE_REASONS.BROKER_UNKNOWN }],
     };
-    const rows: any[] = await this.prisma.trade
+    const rows = await this.prisma.trade
       .findMany({
         where: {
           ...gapWhere,
@@ -529,18 +529,18 @@ export class PositionSyncService {
       return { requested: 0, recovered: 0, stillMissing: 0, unasked: [], note: 'No closed trades are missing their exit record.' };
     }
 
-    const adapter: any = this.adapterFactory?.create(provider);
+    const adapter = this.adapterFactory?.create(provider);
     if (!adapter?.recoverDeals) {
       return { requested: rows.length, recovered: 0, stillMissing: rows.length, unasked: [], note: 'This provider has no deal-history recovery path.' };
     }
     const from = new Date(Math.min(...rows.map((r) => new Date(r.openedAt).getTime())));
-    let result: any = null;
+    let result: Awaited<ReturnType<NonNullable<typeof adapter.recoverDeals>>> | null = null;
     try {
-      result = await adapter.recoverDeals(rows.map((r: any) => String(r.brokerTicket)), from);
+      result = await adapter.recoverDeals(rows.map((r) => String(r.brokerTicket)), from);
     } catch (err) {
       return { requested: rows.length, recovered: 0, stillMissing: rows.length, unasked: [], note: `Recovery request failed: ${(err as Error).message}` };
     }
-    const served = new Set<string>((result?.recovered ?? []).map((p: any) => String(p)));
+    const served = new Set<string>((result?.recovered ?? []).map((p) => String(p)));
 
     const reFinalised: string[] = [];
     for (const r of rows) {
@@ -573,13 +573,13 @@ export class PositionSyncService {
     // unattributed. A button that reports 13 on every press while nothing changes is this repo's
     // own "plausible output, no error" signature. So the count is re-READ from the rows, and the
     // read-back is also what supplies the honest remainder below.
-    const after: any[] = reFinalised.length
+    const after = reFinalised.length
       ? await this.prisma.trade
           .findMany({ where: { id: { in: reFinalised } }, select: { id: true, closeReason: true } })
           .catch(() => [])
       : [];
     const gapClosed = after.filter(
-      (a: any) => a.closeReason && a.closeReason !== CLOSE_REASONS.BROKER_UNKNOWN && a.closeReason !== null,
+      (a) => a.closeReason && a.closeReason !== CLOSE_REASONS.BROKER_UNKNOWN && a.closeReason !== null,
     ).length;
     const reReadUnattributed = reFinalised.length - gapClosed;
     const recovered = gapClosed;
@@ -665,7 +665,7 @@ export class PositionSyncService {
     accountId: string | null = null,
     limit = 200,
   ): Promise<{ examined: number; repaired: number; notRepairable: number }> {
-    const candidates: any[] = await this.prisma.trade
+    const candidates = await this.prisma.trade
       .findMany({
         where: { provider, status: 'closed', pnlInvalid: 1 },
         select: {
@@ -758,11 +758,11 @@ export class PositionSyncService {
    */
   private async reconcileTrade(provider: string, pos: BrokerPosition): Promise<number> {
     const side = pos.side || 'buy';
-    const openWhere: any = { provider, status: 'open' };
+    const openWhere = { provider, status: 'open' };
 
     // 2a. Exact match by broker ticket (the primary 64-bit-safe link).
     if (pos.brokerTicket) {
-      const byTicket: any = await this.prisma.trade
+      const byTicket = await this.prisma.trade
         .findFirst({ where: { ...openWhere, brokerTicket: pos.brokerTicket } })
         .catch(() => null);
       if (byTicket) {
@@ -816,7 +816,7 @@ export class PositionSyncService {
       //            then reported but not repaired.
       // REGISTER:  docs/SETTLED-DECISIONS.md
       // GUARD:     nest/src/modules/providers/position-sync-reopen.spec.ts
-      const closedRow: any = await this.prisma.trade
+      const closedRow = await this.prisma.trade
         .findFirst({ where: { provider, brokerTicket: pos.brokerTicket } })
         .catch(() => null);
       if (closedRow) {
@@ -847,7 +847,7 @@ export class PositionSyncService {
     }
 
     // 2b. Fallback — match by symbol+provider+side (legacy rows with no ticket).
-    const bySymbol: any = await this.prisma.trade
+    const bySymbol = await this.prisma.trade
       .findFirst({ where: { ...openWhere, symbol: pos.symbol, side, brokerTicket: null }, orderBy: { openedAt: 'desc' } })
       .catch(() => null);
     if (bySymbol) {
@@ -981,8 +981,8 @@ export class PositionSyncService {
     // Find the open trade — by broker ticket first, then symbol fallback.
     // `status: undefined` is OMITTED by Prisma rather than rejected, which is what makes
     // `allowClosed` a widening of the filter and not a broken one.
-    const where: any = opts.allowClosed ? { provider } : { provider, status: 'open' };
-    let trade: any = null;
+    const where = opts.allowClosed ? { provider } : { provider, status: 'open' };
+    let trade = null;
     if (dbPos.brokerTicket) {
       trade = await this.prisma.trade.findFirst({ where: { ...where, brokerTicket: dbPos.brokerTicket } }).catch(() => null);
     }
@@ -1033,7 +1033,7 @@ export class PositionSyncService {
     // from "charged nothing", because on 0.01-lot FX a few pence decides whether a scalp works.
     let costComponents: { commission: number; swap: number; fee: number } | null = null;
     try {
-      const adapter: any = this.adapterFactory?.create(provider);
+      const adapter = this.adapterFactory?.create(provider);
       if (adapter?.getDeals && dbPos.openedAt) {
         // ⚠️ #1093 — the GRACE applies only when a TICKET exists. A ticketed row resolves by exact
         // id match, which extra deals cannot corrupt; an unticketed row keeps the narrow window
@@ -1056,15 +1056,15 @@ export class PositionSyncService {
         // still falls through to the symbol fallback exactly as before.
         const stored = dbPos.brokerTicket ? String(dbPos.brokerTicket) : null;
         let byPosition = stored
-          ? deals.filter((d: any) => d.positionId === stored)
+          ? deals.filter((d) => d.positionId === stored)
           : [];
         // ⚠️ True when this row's ticket names an ORDER, not the position — see the block below,
         // where it decides what the P&L split is allowed to assume.
         let resolvedFromOrder = false;
         if (byPosition.length === 0 && stored) {
-          const asOrder = deals.find((d: any) => d.orderId === stored);
+          const asOrder = deals.find((d) => d.orderId === stored);
           if (asOrder?.positionId != null) {
-            byPosition = deals.filter((d: any) => d.positionId === asOrder.positionId);
+            byPosition = deals.filter((d) => d.positionId === asOrder.positionId);
             if (byPosition.length > 0) {
               resolvedFromOrder = true;
               this.logger.log(
@@ -1078,9 +1078,9 @@ export class PositionSyncService {
         // only safe when the returned window identifies ONE lifecycle — with
         // several lifecycles for the same symbol it would average unrelated
         // deals into the exit price (2026-09-10).
-        const symbolDeals = deals.filter((d: any) => d.symbol === dbPos.symbol);
+        const symbolDeals = deals.filter((d) => d.symbol === dbPos.symbol);
         const symbolLifecycles = new Set(
-          symbolDeals.map((d: any) => d.positionId ?? d.orderId ?? ''),
+          symbolDeals.map((d) => d.positionId ?? d.orderId ?? ''),
         );
         const symbolFallbackSafe = symbolLifecycles.size <= 1;
         const candidates = byPosition.length > 0
@@ -1098,11 +1098,11 @@ export class PositionSyncService {
         // back as the exit price.
         const positionSide = String(trade?.side ?? dbPos.side ?? '').toLowerCase();
         const closingSide = positionSide === 'sell' ? 'buy' : 'sell';
-        const exitDeals = candidates.filter((d: any) => d.side === closingSide);
+        const exitDeals = candidates.filter((d) => d.side === closingSide);
         if (opts.allowClosed) {
           dealStats = `deals=${(deals as any[]).length} byPosition=${byPosition.length} candidates=${candidates.length} exitDeals=${exitDeals.length}`;
         }
-        if (exitDeals.length > 0) {            const lastDeal: any = exitDeals[exitDeals.length - 1];
+        if (exitDeals.length > 0) {            const lastDeal = exitDeals[exitDeals.length - 1];
             // The broker's own reason for the close, when it reports one.
             if (typeof lastDeal?.reason === 'number') dealReason = lastDeal.reason;
             // ⚠️ The comment can be STRICTLY BETTER evidence than the enum: our bridge stamps
@@ -1110,9 +1110,9 @@ export class PositionSyncService {
             // on the book: 33 of 41 closes carried EMPTY comments with reason 0 — a pattern the
             // enum alone cannot attribute to an actor or rule in as ours.
             if (typeof lastDeal?.comment === 'string') dealComment = lastDeal.comment;
-          const filledVolume = exitDeals.reduce((sum: number, d: any) => sum + Number(d.volume || 0), 0);
+          const filledVolume = exitDeals.reduce((sum: number, d) => sum + Number(d.volume || 0), 0);
           exitPrice = filledVolume > 0
-            ? exitDeals.reduce((sum: number, d: any) => sum + Number(d.price || 0) * Number(d.volume || 0), 0) / filledVolume
+            ? exitDeals.reduce((sum: number, d) => sum + Number(d.price || 0) * Number(d.volume || 0), 0) / filledVolume
             : Number(exitDeals[exitDeals.length - 1].price || 0);
           // ── DECISION (2026-09-28, primary) · REVERSED IN PART 2026-10-01 (#1014) ──
           // WHAT:      `realizedPnl` is now the row's SHARE of the position's net, not the whole
@@ -1136,7 +1136,7 @@ export class PositionSyncService {
           // ⚠️ THE ROWS-SHARING COUNT IS QUERIED, NEVER ASSUMED. The entire safety argument rests
           // on knowing whether more than one row owns this position, and a hardcoded 1 reintroduces
           // the overstatement. It is a single indexed count on `brokerTicket`.
-          const openings = candidates.filter((d: any) => d.side !== closingSide);
+          const openings = candidates.filter((d) => d.side !== closingSide);
           // ⚠️ HOW MANY `trade` ROWS CARRY THIS POSITION. Queried, never assumed — the whole safety
           // argument rests on it, and a hardcoded 1 reintroduces the overstatement.
           //
@@ -1179,7 +1179,7 @@ export class PositionSyncService {
           // itself — the one source that cannot be confused by which ticket a row happens to carry.
           const openingOrders = new Set(
             openings
-              .map((d: any) => String(d.orderId ?? d.positionId ?? ''))
+              .map((d) => String(d.orderId ?? d.positionId ?? ''))
               .filter(Boolean),
           );
           const multiOrderPosition = openingOrders.size > 1;
@@ -1220,9 +1220,9 @@ export class PositionSyncService {
           // `pnl` ALREADY includes these (it is profit + commission + swap + fee). Storing them
           // separately is what makes `grossPnl` computable without inventing a spread model.
           costComponents = {
-            commission: exitDeals.reduce((s: number, d: any) => s + Number(d.commission || 0), 0),
-            swap: exitDeals.reduce((s: number, d: any) => s + Number(d.swap || 0), 0),
-            fee: exitDeals.reduce((s: number, d: any) => s + Number(d.fee || 0), 0),
+            commission: exitDeals.reduce((s: number, d) => s + Number(d.commission || 0), 0),
+            swap: exitDeals.reduce((s: number, d) => s + Number(d.swap || 0), 0),
+            fee: exitDeals.reduce((s: number, d) => s + Number(d.fee || 0), 0),
           };
           // Prefer the broker's real close time over "now" (a reconciliation
           // pass can finalise a trade days after the broker closed it).

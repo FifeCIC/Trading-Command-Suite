@@ -282,6 +282,35 @@ export interface IProviderAdapter {
    * positions with their real exit price and realised PnL (#470).
    */
   getDeals?(since: Date): Promise<BrokerDeal[]>;
+
+  /**
+   * ── ASK THE TERMINAL(S) AGAIN, PER TICKET (#1093) — AND TYPED (#1320) ─────────────────────────
+   * The bulk `getDeals()` above asks for a date range; this asks for specific tickets, retries, and
+   * fans out across every broker that could hold them. `position-sync.recoverExitDataGaps()` is the
+   * one caller.
+   *
+   * ⚠️ WHY IT IS DECLARED HERE AT ALL. It used to exist only on `Mt5Adapter`, so the consumer wrote
+   * `const adapter: any = this.adapterFactory?.create(provider)` to reach it — and that single cast
+   * turned **297** downstream member accesses into unchecked `any` (#1320). Declaring it (optional,
+   * because not every adapter can recover history) lets the consumer be typed, and lets
+   * `deals` be `BrokerDeal[]` instead of `any[]`.
+   *
+   * `deals` is every fill the terminal actually served; `recovered` / `stillMissing` are the ticket
+   * verdicts, and `failed` names a broker that could not be asked AT ALL — which must not be
+   * silently indistinguishable from "asked, nothing there" (the 2026-10-08 correction).
+   */
+  recoverDeals?(
+    positions: string[],
+    from: Date,
+    to?: Date,
+    opts?: { attempts?: number; delaySec?: number },
+  ): Promise<{
+    deals: BrokerDeal[];
+    recovered: string[];
+    stillMissing: string[];
+    byBroker: Record<number, { recovered: number; stillMissing: number }>;
+    failed: Record<string, string>;
+  }>;
 }
 
 // ─── Broker Portfolio & Execution Types ─────────────────────
@@ -322,6 +351,21 @@ export interface BrokerDeal {
   brokerTicket: string;
   /** Broker position identifier. Unlike brokerTicket, this groups all fills for one position. */
   positionId?: string;
+  /**
+   * ── THE ORDER THAT PRODUCED THIS DEAL, AS A STRING (#1014, typed 2026-11-25) ───────────────────
+   * Rows written before the #1014 write-site fix stored an **ORDER** ticket in
+   * `trade.brokerTicket`, so a positional match (`positionId === brokerTicket`) can never find them.
+   * With `orderId` present the reconciler resolves order → position → deals and repairs the history
+   * instead of leaving it permanently unexplained.
+   *
+   * ⚠️ IT WAS ALWAYS ON THE WIRE AND NEVER IN THIS TYPE. The bridge has sent `orderId: d.order` in
+   * every deal payload (`mt5_bridge_v2.py`) and `mt5.adapter.ts` has mapped it to a STRING since
+   * #1014 — but the interface omitted it, so `position-sync` reached it through `(d: any)`. Removing
+   * that cast made the omission a compile error, which is how it was found (#1320). `undefined`
+   * means the broker did not report one; it is never an empty string, because an empty string would
+   * compare equal to another empty string.
+   */
+  orderId?: string;
   symbol: string;
   side: 'buy' | 'sell';
   volume: number;
