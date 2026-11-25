@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**620** source files · **3434** declarations · **402** ratio sites · **1799** nodes · **190** unreferenced
+**620** source files · **3436** declarations · **402** ratio sites · **1799** nodes · **190** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|

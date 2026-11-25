@@ -23,8 +23,30 @@ describe('timeStopReachable', () => {
     expect(timeStopReachable({ trades: 1, endOfDataTrades: 1, maxHoldHours: 4, exitBeforeUtc: null, sessionSpanMinutes: US_SESSION_MIN })).toBe(true);
   });
 
-  it('is TRUE when a boundary is declared, because the clock flattens the position anyway', () => {
+  it('is FALSE when a boundary pre-empts the hold — the case that was reported as reachable', () => {
+    // Measured on two movers sessions: cutoff 15:30, boundary 20:45 leaves 5h15m, so a 6h hold produced
+    // ZERO time exits while a 2h hold produced TIME×21.
+    expect(timeStopReachable({ trades: 1, endOfDataTrades: 1, maxHoldHours: 6, exitBeforeUtc: '20:45', cutoffUtc: '15:30', sessionSpanMinutes: US_SESSION_MIN })).toBe(false);
+    expect(timeStopReachable({ trades: 1, endOfDataTrades: 1, maxHoldHours: 10, exitBeforeUtc: '20:45', cutoffUtc: '15:30', sessionSpanMinutes: US_SESSION_MIN })).toBe(false);
+  });
+
+  it('is TRUE when the hold fits BEFORE the boundary', () => {
+    expect(timeStopReachable({ trades: 1, endOfDataTrades: 1, maxHoldHours: 2, exitBeforeUtc: '20:45', cutoffUtc: '15:30', sessionSpanMinutes: US_SESSION_MIN })).toBe(true);
+    // Exactly at the limit counts as reachable: 5h15m hold against a 5h15m window.
+    expect(timeStopReachable({ trades: 1, endOfDataTrades: 1, maxHoldHours: 5.25, exitBeforeUtc: '20:45', cutoffUtc: '15:30', sessionSpanMinutes: US_SESSION_MIN })).toBe(true);
+  });
+
+  it('is TRUE when a boundary is declared but the CUTOFF is unknown — cannot judge', () => {
     expect(timeStopReachable({ trades: 1, endOfDataTrades: 1, maxHoldHours: 10, exitBeforeUtc: '20:45', sessionSpanMinutes: US_SESSION_MIN })).toBe(true);
+    expect(timeStopReachable({ trades: 1, endOfDataTrades: 1, maxHoldHours: 10, exitBeforeUtc: '20:45', cutoffUtc: null, sessionSpanMinutes: US_SESSION_MIN })).toBe(true);
+  });
+
+  it('is TRUE when the boundary is at or before the cutoff — a different pathology, not arithmetic', () => {
+    expect(timeStopReachable({ trades: 1, endOfDataTrades: 1, maxHoldHours: 10, exitBeforeUtc: '15:00', cutoffUtc: '15:30', sessionSpanMinutes: US_SESSION_MIN })).toBe(true);
+  });
+
+  it('is TRUE for an unreadable boundary time — cannot judge', () => {
+    expect(timeStopReachable({ trades: 1, endOfDataTrades: 1, maxHoldHours: 10, exitBeforeUtc: 'not-a-time', cutoffUtc: '15:30', sessionSpanMinutes: US_SESSION_MIN })).toBe(true);
   });
 
   it('is TRUE when the span is UNKNOWN — "cannot judge" is not "unreachable"', () => {
@@ -58,6 +80,15 @@ describe('viabilityOf', () => {
     // The arithmetic is still reported — the time stop is genuinely unreachable — but the verdict is not
     // promoted to "this is not a result" on the strength of it.
     expect(v.timeStopReachable).toBe(false);
+    expect(v.why).toContain('cannot fire at all');
+  });
+
+  it('names the BOUNDARY as the binding constraint when it pre-empts the hold', () => {
+    // Both figures, because a reader fixing this needs to know which one to change.
+    const v = viabilityOf({ trades: 22, endOfDataTrades: 21, maxHoldHours: 6, exitBeforeUtc: '20:45', cutoffUtc: '15:30', sessionSpanMinutes: US_SESSION_MIN });
+    expect(v.timeStopReachable).toBe(false);
+    expect(v.why).toContain('20:45 UTC boundary');
+    expect(v.why).toContain('5.25h');
   });
 
   it('says nothing about exits when no trade closed', () => {

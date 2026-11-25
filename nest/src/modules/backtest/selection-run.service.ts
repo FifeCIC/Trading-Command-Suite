@@ -984,6 +984,9 @@ export class SelectionRunService {
         maxHoldHours: Number(appliedConfig.find((f) => f.id === 'maxHoldHours')?.value ?? NaN),
         exitBeforeUtc: (appliedConfig.find((f) => f.id === 'exitBeforeUtc')?.value as string | null) ?? null,
         sessionSpanMinutes: spanMinutes,
+        // The earliest instant an entry can occur — the boundary only pre-empts the hold by the distance
+        // from here, so without it the arithmetic cannot be done and no "unreachable" claim may be made.
+        cutoffUtc: cutoffUtc ?? null,
       }),
       best,
       caveats,

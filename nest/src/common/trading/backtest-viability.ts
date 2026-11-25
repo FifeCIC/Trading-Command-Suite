@@ -48,14 +48,30 @@ export interface ViabilityInput {
   exitBeforeUtc?: string | null;
   /** The dataset's own span, in minutes. Measured from the bars, not assumed from a session name. */
   sessionSpanMinutes?: number | null;
+  /**
+   * `HH:MM` UTC — the run's entry cutoff (`SelectionRunRequest.cutoffUtc`).
+   *
+   * ⚠️ NEEDED, AND ITS ABSENCE WAS THE BUG. A boundary only pre-empts the hold by `boundary − cutoff`,
+   * and without the cutoff that distance is unknowable. It is the EARLIEST instant an entry can occur, so
+   * using it measures the MAXIMUM possible holding time — which is the conservative direction: we only
+   * report "unreachable" when even the earliest possible entry cannot get there.
+   */
+  cutoffUtc?: string | null;
 }
 
 export interface Viability {
   verdict: ViabilityVerdict;
   /**
    * FALSE when the time stop cannot possibly fire inside this dataset — `maxHoldHours` reaches past the
-   * last bar AND no earlier boundary is declared. TRUE otherwise, including when the arithmetic cannot
-   * be done (an unknown span must not be reported as "unreachable").
+     * LAST BAR, or past the declared exit boundary, whichever comes first.
+     *
+     * ⚠️ CORRECTED 2026-11-24: a declared boundary used to return TRUE ("the clock flattens the position
+     * anyway"). That is backwards — a boundary does not make the hold reachable, it PRE-EMPTS it. Measured
+     * on two movers sessions: at `exitBeforeUtc: '20:45'` a 6-hour hold produced **zero** `TIME` exits
+     * (identical 1,628.73 / 222.69 and an identical `SESSION×21 · EOD×1` mix), while a 2-hour hold
+     * produced **TIME×21**. So `true` told a reader a stop could fire when it provably could not.
+     * TRUE is still returned when the arithmetic cannot be DONE — an unknown span or an unknown cutoff
+     * must never be dressed as "unreachable".
    */
   timeStopReachable: boolean;
   /** One sentence a page prints verbatim, beside the total. Never null, never empty. */
@@ -64,21 +80,49 @@ export interface Viability {
 
 const MIN_PER_HOUR = 60;
 
+/** `'HH:MM'` → minutes past UTC midnight, or null when it cannot be read. Total, never throws. */
+function hhmmToMinutes(raw: string | null | undefined): number | null {
+  if (typeof raw !== 'string') return null;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(raw.trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (!Number.isFinite(h) || !Number.isFinite(min) || h > 23 || min > 59) return null;
+  return h * 60 + min;
+}
+
+/**
+ * The longest a position can be held before something OTHER than the time stop closes it, in minutes.
+ * `null` means it cannot be computed and no claim may be made.
+ */
+export function maxHoldingMinutes(input: ViabilityInput): number | null {
+  const span = Number(input.sessionSpanMinutes);
+  const spanOk = Number.isFinite(span) && span > 0;
+  if (!input.exitBeforeUtc) return spanOk ? span : null;
+
+  const boundary = hhmmToMinutes(input.exitBeforeUtc);
+  const cutoff = hhmmToMinutes(input.cutoffUtc);
+  // A boundary with no cutoff, or an unreadable time, cannot be reasoned about.
+  if (boundary == null || cutoff == null) return null;
+  // A boundary at or before the cutoff would fire on entry — a different pathology, not arithmetic.
+  if (boundary <= cutoff) return null;
+  const toBoundary = boundary - cutoff;
+  return spanOk ? Math.min(span, toBoundary) : toBoundary;
+}
+
 /**
  * Is the time stop reachable inside the data?
  *
- * ⚠️ THREE ANSWERS, NOT TWO. An unknown span (`null`) or an undeclared hold returns `true` — "cannot
- * judge" must not be dressed as "unreachable", because the banner it would produce claims the run is
- * meaningless.
+ * ⚠️ THREE ANSWERS, NOT TWO. An unknown span, an unknown cutoff or an undeclared hold returns `true` —
+ * "cannot judge" must not be dressed as "unreachable", because the banner it would produce claims the
+ * run is meaningless.
  */
 export function timeStopReachable(input: ViabilityInput): boolean {
   const hold = Number(input.maxHoldHours);
-  const span = Number(input.sessionSpanMinutes);
   if (!Number.isFinite(hold) || hold <= 0) return true; // no declared hold → nothing to reach
-  if (!Number.isFinite(span) || span <= 0) return true; // unknown span → cannot judge
-  // A declared boundary makes the time stop moot: the position is flattened by the clock regardless.
-  if (input.exitBeforeUtc) return true;
-  return hold * MIN_PER_HOUR <= span;
+  const limit = maxHoldingMinutes(input);
+  if (limit == null) return true; // cannot judge
+  return hold * MIN_PER_HOUR <= limit;
 }
 
 /** The whole verdict for one run. */
@@ -101,11 +145,29 @@ export function viabilityOf(input: ViabilityInput): Viability {
   const eod = Number(input.endOfDataTrades) || 0;
   const reachable = timeStopReachable(input);
 
+  /**
+   * Which constraint binds, and by how much — a boundary and a short series are different causes and a
+   * reader acting on this sentence needs to know which one to change.
+   *
+   * ⚠️ REPORTED ON EVERY UNREACHABLE VERDICT, not only `mark-only`. Measured 2026-11-24: a run with 21
+   * of 22 trades closed on decisions carried `timeStopReachable: false` and a sentence that said nothing
+   * about why, so the only place the arithmetic appeared was a boolean with no explanation.
+   */
+  const hold = Number(input.maxHoldHours);
+  const span = Number(input.sessionSpanMinutes);
+  const limit = maxHoldingMinutes(input);
+  const byBoundary = limit != null && Number.isFinite(span) && span > 0 && limit < span;
+  const arithmetic = !reachable
+    ? ` The bot holds for ${hold}h and this dataset spans ${(span / MIN_PER_HOUR).toFixed(1)}h`
+      + (byBoundary ? `, with a ${input.exitBeforeUtc} UTC boundary leaving at most ${(limit! / MIN_PER_HOUR).toFixed(2)}h` : '')
+      + ', so its time stop cannot fire at all.'
+    : '';
+
   if (trades <= 0) {
     return {
       verdict: 'no-trades',
       timeStopReachable: reachable,
-      why: 'No trade closed, so this run says nothing about how the strategy exits.',
+      why: 'No trade closed, so this run says nothing about how the strategy exits.' + arithmetic,
     };
   }
 
@@ -113,18 +175,11 @@ export function viabilityOf(input: ViabilityInput): Viability {
     return {
       verdict: 'decision-exits',
       timeStopReachable: reachable,
-      why: `${trades - eod} of ${trades} trade(s) closed on a decision the account also makes.`,
+      why: `${trades - eod} of ${trades} trade(s) closed on a decision the account also makes.` + arithmetic,
     };
   }
 
   // Every trade ended with the data.
-  const hold = Number(input.maxHoldHours);
-  const span = Number(input.sessionSpanMinutes);
-  const arithmetic = !reachable
-    ? ` The bot holds for ${hold}h and this dataset spans ${(span / MIN_PER_HOUR).toFixed(1)}h, so its time `
-      + 'stop cannot fire at all.'
-    : '';
-
   return {
     verdict: 'mark-only',
     timeStopReachable: reachable,
