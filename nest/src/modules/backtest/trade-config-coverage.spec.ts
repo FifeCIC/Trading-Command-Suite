@@ -18,7 +18,7 @@
  * settings — they say WHICH market to measure, and the result already states them (`answerDate`,
  * `timeframe`, `protocolId`). A `mode`/`active` row is `reported-only` and likewise identity-ish.
  */
-import { buildTradeConfig } from './trade-config';
+import { applyHoldReachability, buildTradeConfig } from './trade-config';
 import { BOT_FIELDS } from './settings-inventory';
 
 /** Fields the table does not need a row for, each with the reason it is exempt. */
@@ -59,6 +59,61 @@ const BOT = {
   takeProfitAmount: null,
   brokerId: 'mt5',
 };
+
+describe('applyHoldReachability', () => {
+  const holdRows = () => buildTradeConfig({ ...BOT, maxHoldHours: 10, exitBeforeUtc: '20:45' });
+  const hold = (rows: ReturnType<typeof holdRows>) => rows.find((r) => r.id === 'maxHoldHours')!;
+
+  it('▶ CANARY — an armed but unreachable hold says it cannot fire, and stays applied', () => {
+    // Measured: cutoff 15:30 → boundary 20:45 leaves 5.25h; a 10h hold produced SESSION×21, EOD×1 and
+    // a 2h arm produced TIME×21 on the same data.
+    const rows = applyHoldReachability(holdRows(), { sessionSpanMinutes: 390, exitBeforeUtc: '20:45', cutoffUtc: '15:30' });
+    const row = hold(rows);
+    expect(row.applied).toBe(true); // the rule IS armed — different from the trail, which could not be built
+    expect(row.effect).toContain('cannot fire on this dataset');
+    expect(row.effect).toContain('5.25h');
+    expect(row.note).toContain('cannot fire on this dataset');
+  });
+
+  it('says nothing when the hold fits inside the available window', () => {
+    const rows = applyHoldReachability(buildTradeConfig({ ...BOT, maxHoldHours: 2, exitBeforeUtc: '20:45' }), { sessionSpanMinutes: 390, exitBeforeUtc: '20:45', cutoffUtc: '15:30' });
+    expect(hold(rows).effect).not.toContain('cannot fire');
+  });
+
+  it('still judges when the SPAN is unknown, because the boundary alone bounds the hold', () => {
+    // `maxHoldingMinutes()` returns `boundary − cutoff` when the span is missing — the boundary is a
+    // hard clock limit, so an unknown series length does not stop the arithmetic. Flagging here is right.
+    const noSpan = applyHoldReachability(holdRows(), { sessionSpanMinutes: null, exitBeforeUtc: '20:45', cutoffUtc: '15:30' });
+    expect(hold(noSpan).effect).toContain('cannot fire');
+  });
+
+  it('says nothing when the CUTOFF is unknown — cannot judge is not a finding', () => {
+    // Without the cutoff the boundary's distance is unknowable: `20:45` alone says nothing about how
+    // long a position may be held, so no claim may be made.
+    const noCutoff = applyHoldReachability(holdRows(), { sessionSpanMinutes: 390, exitBeforeUtc: '20:45', cutoffUtc: null });
+    expect(hold(noCutoff).effect).not.toContain('cannot fire');
+  });
+
+  it('says nothing when there is no boundary and the span fits the hold', () => {
+    const rows = applyHoldReachability(buildTradeConfig({ ...BOT, maxHoldHours: 4, exitBeforeUtc: null }), { sessionSpanMinutes: 390, exitBeforeUtc: null, cutoffUtc: '15:30' });
+    expect(hold(rows).effect).not.toContain('cannot fire');
+  });
+
+  it('▶ CANARY — never prints a raw null into the sentence', () => {
+    // Measured 2026-11-25: the first version read "a null UTC boundary from a 15:30 cutoff" for a bot
+    // with no boundary. The binding constraint there is the DATASET, and it must be named as such.
+    const rows = applyHoldReachability(buildTradeConfig({ ...BOT, maxHoldHours: 10, exitBeforeUtc: null }), { sessionSpanMinutes: 390, exitBeforeUtc: null, cutoffUtc: '15:30' });
+    const text = hold(rows).effect;
+    expect(text).toContain('cannot fire on this dataset');
+    expect(text).toContain('this dataset spans at most 6.50h');
+    expect(text).not.toContain('null');
+  });
+
+  it('leaves a zero hold alone — there is no rule to reach', () => {
+    const rows = applyHoldReachability(buildTradeConfig({ ...BOT, maxHoldHours: 0 }), { sessionSpanMinutes: 390, exitBeforeUtc: '20:45', cutoffUtc: '15:30' });
+    expect(hold(rows).effect).not.toContain('cannot fire');
+  });
+});
 
 describe('trade-config covers the whole bot', () => {
   const rows = buildTradeConfig(BOT);

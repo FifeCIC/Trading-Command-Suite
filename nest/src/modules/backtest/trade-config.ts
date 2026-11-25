@@ -27,6 +27,7 @@
  * Pure: the caller supplies the bot row and the request, so every branch is testable without Prisma.
  */
 import { BOT_RULES } from '../trading/bot-rules';
+import { maxHoldingMinutes } from '../../common/trading/backtest-viability';
 
 export type TradeConfigSource = 'bot' | 'request' | 'engine-default';
 
@@ -147,6 +148,55 @@ export interface TradeConfigField {
 }
 
 /** The subset of `trading_strategy` this module reads. */
+/**
+ * ── APPLIED IS NOT THE SAME AS REACHABLE (measured 2026-11-24) ────────────────────────────────────
+ * The `maxHoldHours` row read *"An open position is closed after 10 hours"* on a run whose exits were
+ * `SESSION×21 · EOD×1` — not one `TIME`. With a `20:45` UTC boundary from a `15:30` cutoff only
+ * **5.25 h** is available, so a 10 h hold is armed and can never trigger; a measured 2 h arm produced
+ * `TIME×21` on the same data (register rows 275, 276).
+ *
+ * This runs AFTER the run, because the dataset's span is not known when the table is first built. It is
+ * a separate function rather than a flag on `buildTradeConfig` so there is exactly ONE place that writes
+ * the sentence, and it reuses `maxHoldingMinutes()` rather than repeating `boundary − cutoff` — a second
+ * copy of that arithmetic is how two numbers drift and only one gets the next fix.
+ *
+ * `null` from `maxHoldingMinutes` means CANNOT JUDGE (unknown span, no cutoff, unreadable time) and
+ * nothing is said: an unknown must not produce a warning that reads like a finding.
+ */
+export function applyHoldReachability(
+  rows: TradeConfigField[],
+  ctx: { sessionSpanMinutes?: number | null; exitBeforeUtc?: string | null; cutoffUtc?: string | null },
+): TradeConfigField[] {
+  const idx = rows.findIndex((r) => r.id === 'maxHoldHours');
+  if (idx < 0) return rows;
+  const row = rows[idx];
+  const hold = Number(row.value);
+  if (!Number.isFinite(hold) || hold <= 0) return rows;
+
+  const limit = maxHoldingMinutes({
+    sessionSpanMinutes: ctx.sessionSpanMinutes,
+    exitBeforeUtc: ctx.exitBeforeUtc ?? null,
+    cutoffUtc: ctx.cutoffUtc ?? null,
+  });
+  if (limit == null || hold * 60 <= limit) return rows;
+
+  /**
+   * ⚠️ NEVER PRINT A RAW `null` INTO A SENTENCE (measured 2026-11-25). The first version read
+   * *"a null UTC boundary from a 15:30 cutoff leaves at most 6.42h"* for a bot with no boundary at all —
+   * the binding constraint there is the DATASET, not a clock. Two different causes, two different
+   * sentences, and neither may leak an internal value.
+   */
+  const limitHours = (limit / 60).toFixed(2);
+  const constraint = ctx.exitBeforeUtc
+    ? `a ${ctx.exitBeforeUtc} UTC boundary from a ${ctx.cutoffUtc} cutoff leaves at most ${limitHours}h`
+    : `this dataset spans at most ${limitHours}h`;
+  const sentence = ` ⚠️ It cannot fire on this dataset: ${constraint}, so no trade reaches ${hold}h — `
+    + (ctx.exitBeforeUtc ? 'the exit will be the boundary or the data ending.' : 'the exit will be the data ending.');
+  const next = rows.slice();
+  next[idx] = { ...row, effect: `${row.effect}${sentence}`, note: `${row.note}${sentence}` };
+  return next;
+}
+
 export interface TradeConfigBot {
   id: string;
   name: string;
@@ -195,6 +245,15 @@ export interface TradeConfigRequest {
    * and the row has to say so: the same bot read in both modes must not claim the same thing.
    */
   admission?: 'independent' | 'portfolio';
+  /**
+   * The dataset's own span, in minutes — measured from the bars.
+   *
+   * ⚠️ NOT read by `buildTradeConfig`. It is what `applyHoldReachability()` needs, and it is not known
+   * until the run has happened, which is why the hold row's reachability sentence is added afterwards.
+   */
+  sessionSpanMinutes?: number | null;
+  /** `HH:MM` UTC entry cutoff — the earliest instant a position can be held from. */
+  cutoffUtc?: string | null;
 }
 
 /**
@@ -451,6 +510,17 @@ export function buildTradeConfig(bot: TradeConfigBot | null, request: TradeConfi
       value: hold,
       unit: 'h',
       source: botHold !== null ? 'bot' : 'engine-default',
+      /**
+       * ── ARMED IS NOT THE SAME AS REACHABLE (measured 2026-11-24) ─────────────────────────────────
+       * `applied: true` is right: the engine DOES arm the hold. But this row read *"An open position is
+       * closed after 10 hours"* on a run whose exits were `SESSION×21 · EOD×1` — not one `TIME`. With a
+       * `20:45` UTC boundary from a `15:30` cutoff only 5.25 h is available, so a 10 h hold cannot fire
+       * (register rows 275, 276). A measured 2 h arm produced `TIME×21` on the same data.
+       *
+       * ⚠️ DIFFERENT FROM THE TRAIL ABOVE, deliberately: there the plan could not be BUILT, so nothing is
+       * armed and `applied` is false. Here the rule is armed and simply pre-empted. Marking it false
+       * would understate it as surely as leaving the sentence alone overstates it.
+       */
       applied: true,
       effect: hold > 0 ? HOLD_POSITIVE.replace('{value}', hours(hold)) : HOLD_ZERO,
       effectTemplate: { positive: HOLD_POSITIVE, zero: HOLD_ZERO },

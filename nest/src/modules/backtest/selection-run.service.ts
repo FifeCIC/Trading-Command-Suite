@@ -53,6 +53,7 @@ import {
   type DepthTrade,
 } from './run-depth';
 import {
+  applyHoldReachability,
   buildTradeConfig,
   tradeConfigSummary,
   type TradeConfigBot,
@@ -925,6 +926,18 @@ export class SelectionRunService {
      * reports rather than a literal.
      */
     const spanMinutes = await this.sessionSpanFor(picked.day.selected, decl.value.answerDate);
+
+    /**
+     * ⚠️ THE HOLD ROW'S REACHABILITY CAN ONLY BE JUDGED NOW (2026-11-24). The table is built before the
+     * bars are loaded, so it could not know the dataset's span or how far the exit boundary is from the
+     * cutoff — and without that it reported *"closed after 10 hours"* on a run whose exits were 100%
+     * boundary. `applied` stays true (the rule IS armed); the sentence is what changes.
+     */
+    tradeConfig.fields = applyHoldReachability(tradeConfig.fields, {
+      sessionSpanMinutes: spanMinutes,
+      exitBeforeUtc: bot?.exitBeforeUtc ?? null,
+      cutoffUtc,
+    });
 
     return {
       datasetName,

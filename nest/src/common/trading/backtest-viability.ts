@@ -95,7 +95,9 @@ function hhmmToMinutes(raw: string | null | undefined): number | null {
  * The longest a position can be held before something OTHER than the time stop closes it, in minutes.
  * `null` means it cannot be computed and no claim may be made.
  */
-export function maxHoldingMinutes(input: ViabilityInput): number | null {
+export function maxHoldingMinutes(
+  input: Pick<ViabilityInput, 'sessionSpanMinutes' | 'exitBeforeUtc' | 'cutoffUtc'>,
+): number | null {
   const span = Number(input.sessionSpanMinutes);
   const spanOk = Number.isFinite(span) && span > 0;
   if (!input.exitBeforeUtc) return spanOk ? span : null;

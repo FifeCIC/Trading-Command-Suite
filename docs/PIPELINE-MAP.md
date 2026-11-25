@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**620** source files · **3436** declarations · **402** ratio sites · **1799** nodes · **190** unreferenced
+**620** source files · **3437** declarations · **402** ratio sites · **1799** nodes · **190** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -128,10 +128,10 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:2195` — `observeExhaustion()`
   - `(prior/entry)*100`
-- `nest/src/modules/backtest/selection-run.service.ts:673` — `runSelection()`
+- `nest/src/modules/backtest/selection-run.service.ts:674` — `runSelection()`
   - `kept.length?(wins/kept.length)*100:0`
   - guarded by: `kept.length`
-- `nest/src/modules/backtest/selection-run.service.ts:757` — `runSelection()` → `winRate`
+- `nest/src/modules/backtest/selection-run.service.ts:758` — `runSelection()` → `winRate`
   - `totalTrades?(totalWins/totalTrades)*100:0`
   - guarded by: `totalTrades`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
@@ -454,10 +454,10 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:2195` — `observeExhaustion()`
   - `(prior/entry)*100`
-- `nest/src/modules/backtest/selection-run.service.ts:673` — `runSelection()`
+- `nest/src/modules/backtest/selection-run.service.ts:674` — `runSelection()`
   - `kept.length?(wins/kept.length)*100:0`
   - guarded by: `kept.length`
-- `nest/src/modules/backtest/selection-run.service.ts:757` — `runSelection()` → `winRate`
+- `nest/src/modules/backtest/selection-run.service.ts:758` — `runSelection()` → `winRate`
   - `totalTrades?(totalWins/totalTrades)*100:0`
   - guarded by: `totalTrades`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
@@ -698,10 +698,10 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:2195` — `observeExhaustion()`
   - `(prior/entry)*100`
-- `nest/src/modules/backtest/selection-run.service.ts:673` — `runSelection()`
+- `nest/src/modules/backtest/selection-run.service.ts:674` — `runSelection()`
   - `kept.length?(wins/kept.length)*100:0`
   - guarded by: `kept.length`
-- `nest/src/modules/backtest/selection-run.service.ts:757` — `runSelection()` → `winRate`
+- `nest/src/modules/backtest/selection-run.service.ts:758` — `runSelection()` → `winRate`
   - `totalTrades?(totalWins/totalTrades)*100:0`
   - guarded by: `totalTrades`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
@@ -961,8 +961,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/backtest/score-maths.ts:76 r4`
 - `nest/src/modules/backtest/score-maths.ts:874 bucketKey`
 - `nest/src/modules/backtest/score-maths.ts:89 collect`
-- `nest/src/modules/backtest/selection-run.service.ts:477 num`
-- `nest/src/modules/backtest/selection-run.service.ts:89 num`
+- `nest/src/modules/backtest/selection-run.service.ts:478 num`
+- `nest/src/modules/backtest/selection-run.service.ts:90 num`
 - `nest/src/modules/directives/directives.service.ts:1039 refreshActiveStatuses`
 - `nest/src/modules/directives/directives.service.ts:264 prepare`
 - `nest/src/modules/directives/directives.service.ts:517 mean`
