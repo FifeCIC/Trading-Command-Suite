@@ -49,8 +49,7 @@ import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { PrismaService } from '../../database/prisma.service';
 // #929 — the runner consumes EVERY active test now (capacity >1); the type names the param.
-import type { AbTest } from '@prisma/client';
-// ⚠️ #908 — required by the data-readiness gate: `recommendedTimeframe` is FREE TEXT and
+import { Prisma, type AbTest } from '@prisma/client';
 // must reach bar queries through selectBaseTimeframe() (INV-SINGLE-CADENCE).
 import { selectBaseTimeframe } from '../../common/utils/timeframe';
 import { AdapterFactory } from '../providers/adapter-factory';
@@ -59,7 +58,7 @@ import { ScoringService } from '../scoring/scoring.service';
 import { MetaStackVersioningService } from '../scoring/metastack-versioning.service';
 import { StrategyRegistryService } from '../scoring/strategy-registry.service';
 import { ScoringLogService } from '../system/scoring-log.service';
-import { TradingStrategyService } from '../trading/trading-strategy.service';
+import { TradingStrategyService, type StrategySummary } from '../trading/trading-strategy.service';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { PyramidPolicyService } from '../trading/pyramid-policy.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
@@ -72,6 +71,7 @@ import { JobQueueService } from './job-queue.service';
 import { AbTestService } from './ab-test.service';
 import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { PositionSyncService } from '../providers/position-sync.service';
+import type { BrokerPosition } from '../providers/interfaces/provider-adapter.interface';
 import { WeekendDefenseService } from '../trading/weekend-defense.service';
 import { SymbolResolverService } from '../symbols/symbol-resolver.service';
 import { SignalEnvelopeService } from '../signals/signal-envelope.service';
@@ -173,7 +173,7 @@ export interface LoopState {
   lastTickMs: number;
   brokerStates: Record<string, BrokerLoopState>;
   activeStrategyIds: string[];
-  activeStrategies: any[];
+  activeStrategies: LoopStrategy[];
   pendingActions: PendingAction[];
   activeTimelineEvents: any[];
   globalRiskMultiplier: number;
@@ -253,6 +253,20 @@ export interface ScoringStrategy {
 }
 
 /**
+ * LoopStrategy — a bot AS THE AUTOMATION LOOP HOLDS IT.
+ *
+ * The `findAll()` summary, plus the per-tick DATA READINESS annotation this loop writes onto it
+ * (`dataStatus` / `dataStatusReason`, step 2b). ⚠️ `state.activeStrategies` was `any[]` (#1351,
+ * population 2), which made every `s.active`, `s.magic` and `s.scoringStrategyId` read downstream an
+ * unchecked member access — the `any` sat upstream of ~200 lint errors that could not be fixed at
+ * their sites, exactly the shape register row 281 records.
+ */
+type LoopStrategy = StrategySummary & {
+  dataStatus?: 'ready' | 'pending_bars' | 'blocked';
+  dataStatusReason?: string;
+};
+
+/**
  * #909 / #937 — the score slots, as a DISCRIMINATED CHOICE rather than two loose optionals.
  *
  *   compositeRaw — the additive protocol score (envelope ladder + A/B writers). Compared
@@ -319,15 +333,44 @@ export type TickDecision = {
 
 const WATCHLISTS_DIR = resolve(__dirname, '../../../../src/data/watchlists');
 
+/**
+ * toSymbolList() — one entry of a watchlist JSON file, as a ticker, or `null` when it names none.
+ * An entry is either a bare ticker or an object carrying `ticker` / `symbol`.
+ */
+function watchlistEntryTicker(v: unknown): string | null {
+  if (typeof v === 'string') return v;
+  if (v !== null && typeof v === 'object') {
+    const rec = v as Record<string, unknown>;
+    const t = rec.ticker ?? rec.symbol;
+    return typeof t === 'string' ? t : null;
+  }
+  return null;
+}
+
+/** An ARRAY of watchlist entries as tickers, or `null` when the value is not an array. */
+export function toSymbolList(v: unknown): string[] | null {
+  if (!Array.isArray(v)) return null;
+  return v.map(watchlistEntryTicker).filter((s): s is string => Boolean(s));
+}
+
 /** Fallback: read watchlist symbols from a JSON file. Returns null if file not found or unparseable. */
 function readWatchlistFromFile(name: string): string[] | null {
   try {
     const path = resolve(WATCHLISTS_DIR, `${name}.json`);
     if (!existsSync(path)) return null;
     const raw = readFileSync(path, 'utf-8');
-    const data = JSON.parse(raw);
-    if (Array.isArray(data)) return data.map((s: any) => typeof s === 'string' ? s : s.ticker || s.symbol).filter(Boolean);
-    if (data.symbols && Array.isArray(data.symbols)) return data.symbols.map((s: any) => typeof s === 'string' ? s : s.ticker || s.symbol).filter(Boolean);
+    // ⚠️ `JSON.parse` returns `any`, so every read below was an unchecked member access (#1351,
+    // population 2). The shape is OURS — these files live in `src/data/watchlists` — so it is
+    // narrowed here rather than asserted. Behaviour is unchanged: an array returns its tickers
+    // (possibly EMPTY, which the original `.filter(Boolean)` also returned), a non-array that
+    // carries a `symbols` array returns that array's tickers, and anything else is `null` —
+    // "unparseable" and "empty" stay distinguishable, which is the whole point of the null.
+    const data: unknown = JSON.parse(raw);
+    const direct = toSymbolList(data);
+    if (direct) return direct;
+    return data !== null && typeof data === 'object'
+      ? toSymbolList((data as Record<string, unknown>).symbols)
+      : null;
     return null;
   } catch {
     return null;
@@ -433,6 +476,38 @@ export function resolveSyncAccountScope(args: {
  * if the refusal is not wired — the same division of labour as `authoritativeFromSnapshot`
  * (#1058), whose own docblock says its signature cannot stop a future edit at the call site.
  */
+/**
+ * PendingDispatchRow — the row `processSignalQueues()` reads, DECLARED WITH ITS MEASURED RUNTIME TYPES.
+ *
+ * ── WHY THIS EXISTS (#1351, population 2) ────────────────────────────────────────────────────────
+ * The query was `$queryRawUnsafe<any[]>(...)`, so every one of the ~200 member accesses downstream
+ * was unchecked (`no-unsafe-member-access`) and the file carried 379 lint errors that could not be
+ * fixed at the site — the `any` was upstream of all of them.
+ *
+ * ⚠️ `compositePct` and `combinedStrength` ARE `Prisma.Decimal`, NOT `number`. Both are
+ * `CAST(... AS DECIMAL(10,4))` in the SQL, and MEASURED against the live table 2026-11-26 a cast
+ * DECIMAL arrives as a `Prisma.Decimal` instance (`Decimal:26`, `Decimal:36`), while `createdAt`
+ * arrives as a `Date`. Declaring them `number` would have been a LIE THAT HAPPENS TO WORK:
+ * `Number(decimal)` succeeds via `valueOf()`, so nothing would ever have failed — the type would
+ * simply have been untrue, which is the defect register row 283 exists for.
+ *
+ * ⚠️ The uncast `q.combinedStrength` really is a `number`, so the CAST is what changes the type.
+ * That was measured too, and it is why this declares Decimal rather than number.
+ */
+interface PendingDispatchRow {
+  id: string;
+  strategyId: string;
+  symbol: string;
+  protocolId: string;
+  direction: string;
+  signal: string;
+  compositePct: Prisma.Decimal | null;
+  combinedStrength: Prisma.Decimal | null;
+  scoreId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface AbArmAccounts {
   /** True only when both arms name an account AND the two differ. */
   ok: boolean;
@@ -770,7 +845,7 @@ export class AutomationLoopService implements OnModuleInit {
 
     // Duplicate / scale-in policy (#721 — shared library, bot path)
     const broker = this.adapterFactory.create(brokerId);
-    let openPositions: any[] = [];
+    let openPositions: BrokerPosition[] = [];
     try {
       openPositions = (await broker?.getPositions?.()) ?? [];
     } catch { /* unknown — policy will treat as no open position */ }
@@ -1400,9 +1475,9 @@ export class AutomationLoopService implements OnModuleInit {
    *
    * `day` is a parameter rather than a `new Date()` read inside, for exactly that reason.
    */
-  private async runWeekendDefenseCheck(day: number, allPositions: any[]): Promise<void> {
+  private async runWeekendDefenseCheck(day: number, allPositions: BrokerPosition[]): Promise<void> {
     if (day !== 3 && day !== 5) return;
-    const mt5Positions = allPositions.filter((p: any) => p.symbol);
+    const mt5Positions = allPositions.filter((p) => p.symbol);
     if (mt5Positions.length === 0) return;
     try {
       const checklist = await this.weekendDefense.buildChecklist(
@@ -1479,7 +1554,7 @@ export class AutomationLoopService implements OnModuleInit {
       this.logger.warn(`Job queue poll failed: ${(err as Error).message}`));
 
     // Collect positions across all brokers for scoring + snapshot
-    let allPositions: any[] = [];
+    let allPositions: BrokerPosition[] = [];
 
     try {
       // 1. Check Timeline
@@ -1606,7 +1681,7 @@ export class AutomationLoopService implements OnModuleInit {
       await this.runWeekendDefenseCheck(new Date().getUTCDay(), allPositions);
 
       // 2b. Discover active TradingStrategy records from DB
-      let activeStrategies: any[] = [];
+    let activeStrategies: LoopStrategy[] = [];
       try {
         const all = await this.strategyService.findAll();
         activeStrategies = all.filter((s: any) => s.active);
@@ -2402,7 +2477,7 @@ export class AutomationLoopService implements OnModuleInit {
         );
       } catch { /* recovery is best-effort */ }
 
-      const pendingRows = await this.prisma.$queryRawUnsafe<any[]>(
+      const pendingRows = await this.prisma.$queryRawUnsafe<PendingDispatchRow[]>(
         `SELECT q.id, q.strategyId, q.symbol, q.protocolId, q.direction, q.\`signal\`,
                 CAST(q.compositePct AS DECIMAL(10,4)) AS compositePct,
                 CAST(q.combinedStrength AS DECIMAL(10,4)) AS combinedStrength,
@@ -2419,8 +2494,8 @@ export class AutomationLoopService implements OnModuleInit {
       // on every strength tie; if the freshness gate is ever removed, THIS ORDERING MUST GO.
       if (!Array.isArray(pendingRows) || pendingRows.length === 0) return;
 
-      const stratById = new Map(strategies.map((s: any) => [s.id, s]));
-      const heads = new Map<string, any>();
+      const stratById = new Map(strategies.map((s) => [s.id, s]));
+      const heads = new Map<string, PendingDispatchRow & { strategy: LoopStrategy }>();
       for (const r of pendingRows) {
         if (heads.has(r.strategyId) || !stratById.has(r.strategyId)) continue;
         heads.set(r.strategyId, { ...r, strategy: stratById.get(r.strategyId) });
