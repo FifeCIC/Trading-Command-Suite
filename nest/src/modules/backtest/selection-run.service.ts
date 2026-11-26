@@ -35,6 +35,10 @@ import {
   buildDayRanks,
   selectAnswerDay,
   applySelection,
+  // The SAME cutoff comparison the ranking uses, so the preview's per-symbol count and the ranking's
+  // "at or before the cutoff" rule cannot drift apart.
+  minuteOfDayUtc,
+  parseCutoffUtc,
   type DayRank,
   type RankBar,
 } from './selection-ranking';
@@ -78,6 +82,8 @@ import { admitTrades } from './portfolio-admission';
 // #1282 — the ranker compares closes ACROSS symbols, so a blend of two publishers' price scales would
 // reorder the candidate list. One publisher, chosen and reported.
 import { chooseBarProvider } from './bar-provider';
+// The pre-run coverage summary. It compares the SAME two bases the run uses, and says so.
+import { buildSelectionPreview, type SelectionPreview } from './selection-preview';
 import { summariseExitDivergence, type ExitDivergence } from '../../common/trading/exit-guardian/exit-equivalence';
 import { summariseFillGap, type FillGapSummary } from '../../common/trading/exit-guardian/stop-fill-gap';
 // #1335 — how much of THIS run rode on a mechanism live would not reproduce.
@@ -97,6 +103,17 @@ export interface SelectionRunRequest {
   topN?: number;
   /** `HH:MM` UTC. Entries before this are not counted, and the ranking may not see past it. */
   cutoffUtc?: string;
+  /**
+   * ── PREVIEW ONLY: STOP BEFORE THE ENGINE (owner, 2026-11-25) ──────────────────────────────────
+   *
+   * Returns the day's coverage — candidate count, per-symbol bar coverage on BOTH bases, the ranking's
+   * publisher and the thinnest basis it rests on — and runs nothing.
+   *
+   * ⚠️ IT GOES THROUGH EVERY ADMISSION CHECK FIRST (dataset name, side conflict, publisher choice,
+   * `selectAnswerDay`) and therefore REFUSES exactly as a real run would. A preview with its own copy
+   * of those rules is the copy that goes stale, and it would report a thin day as clean.
+   */
+  dryRun?: boolean;
   /** Optional override. It must AGREE with the dataset's own side; a disagreement is refused. */
   side?: MoversSide;
   /**
@@ -489,7 +506,61 @@ export class SelectionRunService {
     };
   }
 
-  async runSelection(request: SelectionRunRequest): Promise<SelectionRunResult> {
+  /**
+   * windowBarsPerCandidate() — the bar count the ENGINE will judge each candidate on.
+   *
+   * ── WHY THIS IS NOT THE RANKING'S COUNT ──────────────────────────────────────────────────────────
+   * `backtest.run()` chooses a publisher PER SYMBOL inside that symbol's own period window, and throws
+   * `< 100 bars` against what it loaded. The ranking chooses ONE publisher for the whole group and
+   * reads the group window. Two different queries answering two different questions — so the floor
+   * test must use this one, or the preview clears days the engine then refuses.
+   *
+   * One `groupBy` over `[symbolId, provider]` with each symbol's own window in the `OR`, then
+   * `chooseBarProvider()` — the SAME decision function the engine calls. ⚠️ No `barProvider` pin is
+   * passed: the selection run does not forward the caller's pin to the engine, so honouring it here
+   * would predict a choice the engine will not make.
+   */
+  private async windowBarsPerCandidate(
+    periods: Array<{ symbolId: string; fromDate: Date; toDate: Date }>,
+    timeframe: string,
+    tickerById: Map<string, string>,
+  ): Promise<Record<string, { bars: number; provider: string | null }>> {
+    const out: Record<string, { bars: number; provider: string | null }> = {};
+    if (!periods.length) return out;
+
+    const groups = await this.prisma.marketBar.groupBy({
+      by: ['symbolId', 'provider'],
+      where: {
+        timeframe,
+        OR: periods.map((p) => ({
+          symbolId: p.symbolId,
+          timestamp: { gte: p.fromDate, lte: p.toDate },
+        })),
+      } as never,
+      _count: { _all: true },
+    });
+
+    const countsBySymbol = new Map<string, Record<string, number>>();
+    for (const g of groups) {
+      const bucket = countsBySymbol.get(g.symbolId) ?? {};
+      bucket[g.provider] = Number((g._count as { _all: number })._all);
+      countsBySymbol.set(g.symbolId, bucket);
+    }
+
+    for (const p of periods) {
+      const ticker = tickerById.get(p.symbolId);
+      if (!ticker) continue;
+      const counts = countsBySymbol.get(p.symbolId) ?? {};
+      const choice = chooseBarProvider(counts);
+      out[ticker] = {
+        bars: choice.provider ? Number(counts[choice.provider] ?? 0) : 0,
+        provider: choice.provider,
+      };
+    }
+    return out;
+  }
+
+  async runSelection(request: SelectionRunRequest): Promise<SelectionRunResult | SelectionPreview> {
     const datasetName = (request.datasetName ?? '').trim();
     if (!datasetName) throw new BadRequestException('datasetName is required.');
     if (!request.protocolId) throw new BadRequestException('protocolId is required.');
@@ -616,6 +687,51 @@ export class SelectionRunService {
     const days: DayRank[] = [picked.day];
 
     const priorSessions = [...allDates].filter((d) => d < decl.value.answerDate).length;
+
+    /**
+     * ── PREVIEW: THE SAME DAY, STOPPED BEFORE THE ENGINE (owner, 2026-11-25) ─────────────────────
+     *
+     * Everything above this line is ADMISSION — dataset name, side conflict, publisher choice and
+     * `selectAnswerDay`. A dry run returns here, so the preview cannot disagree with a real run about a
+     * refusal: it IS the same code. Below this line is the engine loop, which is the cost being
+     * previewed.
+     *
+     * ⚠️ TWO COUNTS, TWO BASES — see `selection-preview.ts`. `cutoffBars` is the RANKING's basis
+     * (ranking publisher, group window, at or before the cutoff). `windowBars` is the ENGINE's basis
+     * (that symbol's own period window, the publisher `backtest.run()` will choose), which is what the
+     * 100-bar refusal is thrown against. Judging the floor on the ranking count would clear days the
+     * engine then refuses.
+     */
+    if (request.dryRun) {
+      const cutoffMinute = parseCutoffUtc(cutoffUtc);
+      const cutoffBarsBySymbol: Record<string, number> = {};
+      for (const [ticker, bars] of barsBySymbol) {
+        cutoffBarsBySymbol[ticker] = bars.filter((b) => (
+          b.timestamp.slice(0, 10) === decl.value.answerDate && minuteOfDayUtc(b.timestamp) <= cutoffMinute
+        )).length;
+      }
+
+      return buildSelectionPreview({
+        datasetName,
+        protocolId: request.protocolId,
+        answerDate: decl.value.answerDate,
+        side: resolution.side,
+        sideSource: resolution.source,
+        timeframe,
+        topN,
+        cutoffUtc,
+        candidates: tickers,
+        selected: picked.day.selected,
+        rankingProvider: {
+          provider: rankingProvider.provider,
+          available: rankingProvider.available,
+          ambiguous: rankingProvider.ambiguous,
+          note: rankingProvider.note,
+        },
+        cutoffBarsBySymbol,
+        windowBarsBySymbol: await this.windowBarsPerCandidate(periods, timeframe, tickerById),
+      });
+    }
 
     // ── run the ENGINE, unchanged, once per symbol the day selected ─────────────────────────────
     const periodByTicker = new Map<string, string>();

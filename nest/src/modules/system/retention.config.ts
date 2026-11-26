@@ -84,6 +84,23 @@ export const RETENTION_TABLES: Record<string, RetentionTableConfig> = {
   order:               { dateCol: 'createdAt',    defaultDays: 365, envKey: 'DATA_RETENTION_ORDER_DAYS',     label: 'Orders' },
   bridge_event:        { dateCol: 'createdAt',    defaultDays: 90,  envKey: 'DATA_RETENTION_BRIDGE_DAYS',    label: 'Bridge Events' },
 
+  // ── DECISION (2026-11-25, primary) — `macrosnapshot` gets a 30-day window ─────────────────────
+  // WHAT:  `macrosnapshot` enters CLASS 1. It was the ONLY table written from the scoring path with
+  //        no bound at all.
+  // WHY:   MEASURED 2026-11-25: **543,206 rows / 138 MB**, the second-largest table in the database,
+  //        and **3,721 rows/day** (one insert per scoring run, ~1.35M rows/year). Nothing reads its
+  //        history as an input — `getCurrentRegime()` is `ORDER BY createdAt DESC LIMIT 1` and
+  //        `getHistory()` defaults to 24 HOURS (`macro.controller.ts`). The regime classification is
+  //        computed from LIVE quotes by the directives; the stored row is a diagnostic record.
+  // INSTEAD OF: no bound (the state it was in). Not a boundary-reduction: the table's only consumer
+  //        asks for a day, so 30 days is 30× the deepest read.
+  // REVERSE BY: change `defaultDays`, or set `DATA_RETENTION_MACRO_DAYS`. One line either way.
+  // REGISTER:  docs/SETTLED-DECISIONS.md row 279
+  // GUARD:     nest/scripts/validate-retention-columns.cjs (prebuild) asserts `createdAt` is
+  //            intrinsic and leads an index — `MacroSnapshot.createdAt_idx` exists in schema.prisma
+  //            and in the live table.
+  macrosnapshot:       { dateCol: 'createdAt',    defaultDays: 30,  envKey: 'DATA_RETENTION_MACRO_DAYS',     label: 'Macro Snapshots' },
+
   // ── DECISION (2026-10-03, owner) — 30 days, and it was the ONLY large table with no bound ──────
   // WHAT:  `apiactivitylog` gets a 30-day window.
   // WHY:   MEASURED 2026-10-03: **1,332,329 rows / 249 MB** — the largest table in the database and

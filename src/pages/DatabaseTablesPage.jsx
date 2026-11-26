@@ -1,254 +1,282 @@
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
-import { feedUnavailable } from '../core/api/feed-state.js'
+import { feedUnavailable, feedState } from '../core/api/feed-state.js'
+import LoadingSkeleton from '../components/LoadingSkeleton.jsx'
+import LoadingOrbit from '../components/LoadingOrbit.jsx'
 import './database-tables.css'
 
-// These mirror the Prisma schema models and planned tables.
-//
-// ⚠️ THE TABLE NAME IS THE LOOKUP KEY, AND IT IS THE SQL NAME (lowercase). Everything else on the
-// row — row count, last write, whether it exists at all — comes from `/api/database/table-stats`.
-// A row listed here that the database does not have renders as **not in db** rather than as an
-// active table, so the next table to be dropped shows up as a visible gap instead of a confident
-// lie.
-//
-// ⚠️ SEVEN `…Meta` ROWS WERE REMOVED 2026-11-18 (#1288, #1292): `DataSourcesMeta`, `CacheMeta`,
-// `StrategyMeta`, `WatchlistMeta`, `CronMeta`, `ProcessMeta`, `NewsMeta`. None of those tables ever
-// existed in the database — measured against the live schema — and they were listed here as
-// `status: 'active'` with a phpMyAdmin link that 404s. Six of the seven were the unused `…Meta`
-// tables dropped in #1288; the page had simply never been told.
-const ALL_TABLES = [
-  // Core Trading Tables
-  { name: 'Symbol', description: 'Trading symbols and company data', status: 'active' },
-  { name: 'Strategy', description: 'Trading strategies and rules', status: 'active' },
-  { name: 'Directive', description: 'Scoring directive definitions', status: 'active' },
-  { name: 'Score', description: 'Symbol scoring history', status: 'active' },
-  { name: 'Signal', description: 'Trading signal records (no writer — see #1288)', status: 'active' },
-  { name: 'MarketBar', description: 'OHLCV price data from imports', status: 'active' },
-  { name: 'ImportRun', description: 'Data import job tracking', status: 'active' },
-  { name: 'ProviderHealth', description: 'Provider connectivity status', status: 'active' },
+/**
+ * DatabaseTablesPage — the TABLE REGISTRY (Development → Database Tables).
+ *
+ * ⚠️ EVERYTHING ON THIS PAGE COMES FROM `/api/database/table-stats`. The page holds NO table list.
+ * It used to: a hand-written array of 20 tables (out of ~135) with hand-written descriptions, which
+ * is why seven `…Meta` tables could sit here as `status: 'active'` with phpMyAdmin links that 404'd
+ * (#1288, #1292). A registry that restates the schema is a second copy of the schema, and only one
+ * of the copies gets corrected. `?tables=declared` asks the server for the declared set instead.
+ *
+ * ── The three questions this page answers, and where each answer is OWNED ──────────────────────
+ *   1. What is this table for?              → `table-usage.data.ts`  (declared, joined server-side)
+ *   2. How big is it, how fast does it grow? → `SHOW TABLE STATUS` + a measured growth span
+ *   3. How long is it kept?                 → `retention.config.ts`  (the ONE owner of windows)
+ * This page is the join. It must never become a fourth declaration of any of the three.
+ *
+ * ── THE STYLING IS QUOTED, NOT DRAWN (2026-11-25, owner correction) ────────────────────────────
+ * *"you've not used an authorised table styling … it's almost like every table gets its own
+ * approach. The Theme page has some of the accepted designs."* Correct. This page now uses the
+ * gallery's named specimens verbatim:
+ *
+ *   Summary Strip → `.thm-tint` / `.thm-stat-grid` / `.thm-stat`   (`core/specimens.css`)
+ *   Chip Bar      → `.thm-chipbar` / `.thm-chipset` / `.thm-chip`  (`core/specimens.css`)
+ *   Spacious Table→ `.thm-scroll` / `.thm-table .thm-table--spacious` (`core/specimens.css` + `core/tables.css`)
+ *   Tones         → `.thm-sym` / `.thm-num` / `.thm-soft` / `.thm-muted` / `.thm-accent` / `.thm-warn`
+ *
+ * `database-tables.css` is now width, one column minimum and the WCAG tap target — and says so at
+ * each rule. ⚠️ The next page that wants a summary strip must import the specimen, not redraw it.
+ *
+ * ── Loading is STATED, never absent ───────────────────────────────────────────────────────────
+ * The first paint used to show a dash in every cell and a bare line reading "Reading table
+ * statistics…", which the owner read as a broken page for the 3–5 s the two COUNT passes take. A
+ * wait whose shape is known gets a SKELETON, and the label survives a screen reader, a screenshot
+ * and `prefers-reduced-motion` — none of which an animation survives.
+ */
 
-  // Symbol Meta Tables (Planned — genuinely not built)
-  { name: 'SymbolMeta', description: 'Extended symbol metadata storage', status: 'planned' },
-  { name: 'SymbolFundamentals', description: 'Fundamental data (PE, EPS, etc.)', status: 'planned' },
-  { name: 'SymbolTechnical', description: 'Technical indicators by timeframe', status: 'active' },
+const CLASS_LABELS = {
+  present: 'present',
+  input: 'input',
+  history: 'history',
+  trace: 'trace',
+  reference: 'reference',
+  undeclared: 'undeclared',
+}
 
-  // API Management Tables
-  { name: 'ApiCalls', description: 'API call tracking for rate limiting', status: 'active' },
-  { name: 'ApiCredentials', description: 'Encrypted API credentials storage', status: 'active' },
-
-  // Strategy Tables
-  { name: 'StrategyPerformance', description: 'Strategy performance tracking', status: 'active' },
-
-  // User Activity Tables
-  { name: 'UserPreferences', description: 'User trading preferences', status: 'active' },
-  { name: 'Watchlist', description: 'User watchlists', status: 'active' },
-
-  // Market Context Tables
-  { name: 'MarketSessions', description: 'Market session information (London/NY/Asia)', status: 'active' },
-
-  // Order Management
-  { name: 'Order', description: 'Trading orders', status: 'active' },
-  { name: 'OrderExecution', description: 'Order execution history', status: 'active' },
-  { name: 'Position', description: 'Open trading positions', status: 'active' },
-  { name: 'Trade', description: 'Completed trade records', status: 'active' },
+const FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'hot', label: 'Hot path' },
+  { id: 'unbounded', label: 'No bound' },
+  { id: 'trace', label: 'Trace' },
+  { id: 'undeclared', label: 'Undeclared' },
 ]
 
+function mb(kb) {
+  if (typeof kb !== 'number' || Number.isNaN(kb)) return '—'
+  if (kb < 1024) return `${kb} KB`
+  return `${(kb / 1024).toFixed(kb < 1024 * 100 ? 1 : 0)} MB`
+}
+
+function rowCount(stat) {
+  if (!stat || typeof stat.rowCount !== 'number') return '—'
+  // An estimate is marked as one. A number that looks exact and is 35% out is the defect this page
+  // was fixed for (#1292); the source travels with the value.
+  return stat.rowCountSource === 'exact'
+    ? stat.rowCount.toLocaleString()
+    : `≈${stat.rowCount.toLocaleString()}`
+}
+
 export default function DatabaseTablesPage() {
-  const version = useQuery({
-    queryKey: ['db-version'],
-    queryFn: () => apiGet('/api/version'),
-  })
+  const [filter, setFilter] = useState('all')
 
-  const symbols = useQuery({
-    queryKey: ['db-symbols'],
-    queryFn: () => apiGet('/api/symbols'),
-  })
-
-  const providers = useQuery({
-    queryKey: ['db-providers'],
-    queryFn: () => apiGet('/api/providers/health'),
-  })
-
-  const imports = useQuery({
-    queryKey: ['db-imports'],
-    queryFn: () => apiGet('/api/imports/runs?limit=100'),
-  })
-
-  // Table stats — row counts, sizes, last write.
-  // ⚠️ NO `.catch(() => ({}))` (#782 / INV-NO-EMPTY-SWALLOW). `tStats` drives the Rows and
-  // Last Insert columns; an empty object renders every table as having NO DATA, which is the claim
-  // this page exists to make truthfully.
-  //
-  // ⚠️ `?tables=` IS NOT OPTIONAL HERE. Without it the endpoint returns InnoDB's row ESTIMATE, which
-  // is not close on a table with churn — measured 2026-11-18: `newsarticle` 34,821 against a real
-  // 52,048 (−33%), `score` 12,482 against 19,103 (−35%), `position` 25 against 11 (+127%). Naming
-  // the tables switches those rows to `COUNT(*)` and costs ~0.5 s for all 19 of them.
   const tableStats = useQuery({
-    queryKey: ['db-table-stats'],
-    queryFn: () =>
-      apiGet(
-        `/api/database/table-stats?tables=${ALL_TABLES.filter((t) => t.status === 'active')
-          .map((t) => t.name)
-          .join(',')}`,
-      ),
+    queryKey: ['db-table-stats-registry'],
+    queryFn: () => apiGet('/api/database/table-stats?tables=declared'),
     retry: 1,
     staleTime: 30_000,
   })
 
-  const v = version.data ?? {}
-  const svc = v.services ?? {}
-  const dbConnected = svc.databaseConnected === true
-  const prismaVersion = v.prismaVersion ?? '5.22.0'
-  const s = symbols.data ?? {}
-  const syms = Array.isArray(s.symbols) ? s.symbols : []
-  const p = providers.data ?? {}
-  const provs = Array.isArray(p.providers) ? p.providers : []
-  const i = imports.data ?? {}
-  const runs = Array.isArray(i.runs) ? i.runs : []
+  const rows = Array.isArray(tableStats.data?.tables) ? tableStats.data.tables : []
+  const summary = tableStats.data?.summary ?? {}
+  const database = tableStats.data?.database ?? null
+  const unreadable = feedUnavailable(tableStats)
+  const loading = feedState(tableStats) === 'loading'
 
-  // ⚠️ THE API RETURNS AN ARRAY OF ROWS KEYED BY SQL TABLE NAME, NOT A RECORD KEYED BY PRISMA MODEL.
-  // This was read as `data.tables['Symbol']`, which on an array is `undefined` — so every cell in the
-  // Last Insert column rendered `—` for every table, on a page whose whole purpose is to report it.
-  // Measured 2026-11-18 before the fix: `GET /api/database/table-stats` returned 130 rows carrying
-  // `lastInsert`, e.g. `alert` = 2026-11-17T19:40:07Z, and the page discarded all of them.
-  const statRows = Array.isArray(tableStats.data?.tables) ? tableStats.data.tables : []
-  const statByTable = new Map(statRows.map((row) => [String(row.tableName).toLowerCase(), row]))
-  const databaseName = tableStats.data?.database ?? null
-  const statsReadable = statRows.length > 0
+  const sorted = useMemo(
+    () => [...rows].sort((a, b) => (b.totalSizeKb ?? 0) - (a.totalSizeKb ?? 0)),
+    [rows],
+  )
 
-  /** The live row for this table, or `undefined` when the database does not have it. */
-  function statOf(tableName) {
-    return statByTable.get(tableName.toLowerCase())
-  }
-
-  function rowCount(tableName) {
-    const stat = statOf(tableName)
-    if (!stat) return '—'
-    if (typeof stat.rowCount !== 'number') return '—'
-    // An estimate is marked as one. A number that looks exact and is 35% out is the defect this
-    // page was just fixed for; the source travels with the value.
-    return stat.rowCountSource === 'exact'
-      ? stat.rowCount.toLocaleString()
-      : `≈${stat.rowCount.toLocaleString()}`
-  }
-
-  function tableStatus(table) {
-    if (table.status === 'planned') return 'planned'
-    if (!dbConnected) return 'offline'
-    // A table the stats feed knows nothing about is either absent or unreadable; both are stated,
-    // neither is presented as a working table.
-    if (!statsReadable) return 'unknown'
-    return statOf(table.name) ? 'installed' : 'missing'
-  }
-
-  function statusChip(status) {
-    const labels = {
-      installed: 'ok',
-      present: 'neutral',
-      offline: 'warn',
-      planned: 'info',
-      missing: 'error',
-      unknown: 'warn',
+  const visible = useMemo(() => {
+    switch (filter) {
+      case 'hot': return sorted.filter((r) => r.readBy === 'hot-path')
+      case 'unbounded': return sorted.filter((r) => r.retentionDays === null)
+      case 'trace': return sorted.filter((r) => r.class === 'trace')
+      case 'undeclared': return sorted.filter((r) => r.class === 'undeclared')
+      default: return sorted
     }
-    const chipLabels = {
-      installed: 'installed',
-      present: 'present',
-      offline: 'offline',
-      planned: 'planned',
-      missing: 'not in db',
-      unknown: 'unreadable',
-    }
-    return <span className={`db-chip db-chip--${labels[status] || 'neutral'}`}>{chipLabels[status] || status}</span>
-  }
+  }, [sorted, filter])
 
-  function lastInsert(tableName) {
-    const stat = statOf(tableName)
-    if (!stat?.lastInsert) return '—'
-    return new Date(stat.lastInsert).toLocaleString()
-  }
-
-  function phpMyAdminLink(tableName) {
-    // `db` comes from the API (`SELECT DATABASE()`), so a second deployment does not link to this
-    // machine's schema name. Omitted when unknown, so phpMyAdmin falls back to its default.
-    const db = databaseName ? `&db=${encodeURIComponent(databaseName)}` : ''
-    return `http://localhost/phpmyadmin/index.php?route=/table/sql${db}&table=${tableName}`
-  }
+  const totalKb = typeof summary.totalDataKb === 'number'
+    ? summary.totalDataKb + (summary.totalIndexKb ?? 0)
+    : null
 
   return (
     <div className="database-tables-page">
-      <header className="db-page-header">
-        <p>
-          Status: {dbConnected ? 'MySQL connected' : 'Database offline'} ·
-          {syms.length} symbols ·
-          {provs.length} providers ·
-          {runs.length} import runs
-        </p>
-      </header>
-
-      {feedUnavailable(tableStats) && (
+      {/* ⚠️ NO PAGE HEADER. A page supplies CONTENT; the shell supplies CHROME (2026-11-18 rule, and
+          the owner restated it here on 2026-11-26: "Text introduction on pages is against design
+          rules for this app"). The explanation lives in `VIEW_EXPLANATIONS['database-tables']` and is
+          rendered as the one ℹ in `.main-top-row`. A paragraph here would be a second copy of it. */}
+      {unreadable && (
         <p className="db-unread" role="alert">
-          ⚠️ Table statistics could not be read — the <strong>Rows</strong> and{' '}
-          <strong>Last Write</strong> columns below are unknown for every table, not "no data".{' '}
-          <button type="button" className="db-unread-retry" onClick={() => tableStats.refetch()}>retry</button>
+          ⚠️ The table registry could not be read — every column below is <strong>unknown</strong>,
+          not empty.{' '}
+          <button type="button" className="db-unread-retry" onClick={() => tableStats.refetch()}>
+            retry
+          </button>
         </p>
       )}
 
-      <table className="tables-table">
-        <thead>
-          <tr>
-            <th>Table</th>
-            <th>Description</th>
-            <th>Status</th>
-            <th title="COUNT(*) for the tables named in the request. A leading ≈ means the server could only supply InnoDB's row estimate.">Rows</th>
-            <th>Version</th>
-            <th title="SHOW TABLE STATUS.Update_time — the last WRITE to the table, not the last row inserted. InnoDB often reports NULL, which is unknown rather than zero.">Last Write</th>
-            <th className="dt-col-view">View</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ALL_TABLES.map((t) => {
-            const status = tableStatus(t)
-            const present = status === 'installed'
-            return (
-              <tr key={t.name} className={t.status === 'planned' ? 'row-planned' : ''}>
-                <td><code>{t.name}</code></td>
-                <td>{t.description}</td>
-                <td>{statusChip(status)}</td>
-                <td className="num">{t.status === 'planned' ? '—' : rowCount(t.name)}</td>
-                <td className="num dt-num-sm">{present ? `Prisma ${prismaVersion}` : '—'}</td>
-                <td className="num dt-num-sm">{present ? lastInsert(t.name) : '—'}</td>
-                <td>
-                  {present && (
-                    <a href={phpMyAdminLink(t.name)} target="_blank" rel="noreferrer" className="tp-chip tp-chip--info dt-phpmyadmin-link" title="Open in phpMyAdmin">
-                      🔗
-                    </a>
-                  )}
-                </td>
+      {/* SUMMARY STRIP (specimen). Not rendered while loading: five dashes read as a report of zero,
+          and "nothing stored" is the one thing this page must never imply while it is still asking. */}
+      {!loading && !unreadable && (
+        <div className="thm-tint">
+          <div className="thm-stat-grid">
+            <div className="thm-stat">
+              <span className="thm-stat-label">Tables</span>
+              <span className="thm-stat-value">{summary.totalTables ?? '—'}</span>
+            </div>
+            <div className="thm-stat">
+              <span className="thm-stat-label">Total on disk</span>
+              <span className="thm-stat-value">{totalKb == null ? '—' : mb(totalKb)}</span>
+            </div>
+            <div className="thm-stat">
+              <span className="thm-stat-label">Read by the loop &gt;5 MB</span>
+              <span className="thm-stat-value">{summary.hotPathLarge ?? '—'}</span>
+            </div>
+            <div className={`thm-stat${summary.unboundedLarge ? ' thm-stat--accent' : ''}`}>
+              <span className="thm-stat-label">No bound &gt;5 MB</span>
+              <span className={`thm-stat-value${summary.unboundedLarge ? ' thm-warn' : ''}`}>
+                {summary.unboundedLarge ?? '—'}
+              </span>
+            </div>
+            <div className="thm-stat">
+              <span className="thm-stat-label">Undeclared</span>
+              <span className="thm-stat-value">{summary.undeclared ?? '—'}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CHIP BAR (specimen). `.db-filter` adds only the WCAG tap target — see the page stylesheet.
+          Withheld while the feed is unreadable: a filter row over nothing suggests there is a
+          result set to narrow, which is the same misreading as an empty table. */}
+      {!loading && !unreadable && (
+        <div className="thm-chipbar db-filterbar">
+          <div className="thm-chipset">
+            <span className="thm-chipset-label">Filter</span>
+            {FILTERS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                className={`thm-chip db-filter${filter === f.id ? ' is-on' : ''}`}
+                aria-pressed={filter === f.id}
+                onClick={() => setFilter(f.id)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {summary.declaredMissing?.length > 0 && (
+        <p className="db-note">
+          <span className="thm-warn">Declared but not in the database:</span>{' '}
+          {summary.declaredMissing.map((t) => <code key={t}>{t}</code>)}{' '}
+          — either the table was renamed or dropped, or the declaration is stale.
+        </p>
+      )}
+
+      {summary.growthMeasured === false && !unreadable && (
+        <p className="db-note">
+          <span className="thm-warn">Growth could not be measured</span> — the <strong>/day</strong>{' '}
+          column is unknown, not zero.
+        </p>
+      )}
+
+      {loading ? (
+        <div className="thm-scroll db-loading">
+          <LoadingOrbit size="sm" label="Reading table statistics…" />
+          <LoadingSkeleton variant="table" rows={8} cols={6} />
+        </div>
+      ) : unreadable ? null : (
+        <div className="thm-scroll">
+          <table className="thm-table thm-table--spacious">
+            <caption className="db-caption">
+              {visible.length} of {rows.length} tables, largest first. Retention windows live in{' '}
+              <code>retention.config.ts</code>; table roles live in <code>table-usage.data.ts</code>.
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Table</th>
+                <th scope="col">Class</th>
+                <th scope="col">Purpose</th>
+                <th scope="col">Written</th>
+                <th scope="col" title="hot path = read repeatedly by the scoring/trading loop while it runs">Read by</th>
+                <th scope="col" className="db-num">Rows</th>
+                <th scope="col" className="db-num">Size</th>
+                <th
+                  scope="col"
+                  className="db-num"
+                  title="Rows per day across the span actually retained — a lifetime average of what survives, not today's rate."
+                >
+                  /day
+                </th>
+                <th scope="col">Retention</th>
+                <th scope="col">Open</th>
               </tr>
-            )
-          })}
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              {visible.map((t) => {
+                const hot = t.readBy === 'hot-path'
+                const unbounded = t.retentionDays === null
+                return (
+                  <tr key={t.tableName}>
+                    <td className="thm-sym">{t.tableName}</td>
+                    <td className={t.class === 'undeclared' ? 'thm-warn' : 'thm-soft'}>
+                      {CLASS_LABELS[t.class] ?? t.class}
+                    </td>
+                    <td className="db-purpose">
+                      {t.purpose ?? <em className="thm-muted">no declared purpose</em>}
+                    </td>
+                    <td className="thm-muted">{t.writtenPer ?? '—'}</td>
+                    <td className={hot ? 'thm-accent' : 'thm-muted'}>
+                      {t.readBy == null ? '—' : hot ? 'hot path' : t.readBy}
+                    </td>
+                    <td className="db-num thm-num">{rowCount(t)}</td>
+                    <td className="db-num thm-num">{mb(t.totalSizeKb)}</td>
+                    <td className="db-num thm-num thm-muted">
+                      {t.growthPerDay == null ? '—' : t.growthPerDay.toLocaleString()}
+                    </td>
+                    <td className={unbounded ? 'thm-warn' : 'thm-soft'}>
+                      {unbounded ? 'no bound' : `${t.retentionDays}d`}
+                    </td>
+                    <td>
+                      <a
+                        href={`http://localhost/phpmyadmin/index.php?route=/table/sql${database ? `&db=${encodeURIComponent(database)}` : ''}&table=${encodeURIComponent(t.tableName)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="db-open-link"
+                        aria-label={`Open ${t.tableName} in phpMyAdmin`}
+                        title="Open in phpMyAdmin"
+                      >
+                        🔗
+                      </a>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {!loading && !unreadable && visible.length === 0 && (
+        <p className="db-note">No table matches this filter.</p>
+      )}
 
       <footer className="page-footer">
-        <p>Engine: MySQL 9.1 (WAMP) · Database: {databaseName ?? 'unknown'} · ORM: Prisma {prismaVersion}</p>
-        {/*
-          ⚠️ THIS FOOTER USED TO READ "Migrations are applied with `npx prisma db push`" — an
-          instruction to run the one command this repo BANS. `db push` treats `schema.prisma` as the
-          complete truth and drops every table that has no model, which is 13 tables here including
-          the trade execution queue (`strategy_signal_queue`). It does not error; it warns and waits
-          for a `y`. Replaced 2026-11-18 (#1292).
-        */}
         <p>
-          Tables are declared in <code>nest/prisma/schema.prisma</code>, which is documentation — not the
-          schema. Several tables are managed outside Prisma, so changes are applied with explicit{' '}
-          <code>ALTER TABLE</code> / <code>CREATE TABLE</code> and then{' '}
-          <code>npx prisma generate</code>. <strong>Never</strong> <code>npx prisma db push</code> — it
-          drops every table that has no model. Run <code>npm --prefix nest run db:check</code> first.
+          Database: {database ?? 'unknown'} · ORM: Prisma · Engine: MySQL.
         </p>
-        {!dbConnected && (
-          <p className="db-hint">Database not connected. Check DATABASE_URL in nest/.env and that MySQL is running.</p>
-        )}
       </footer>
     </div>
   )

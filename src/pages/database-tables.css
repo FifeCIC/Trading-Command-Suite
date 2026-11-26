@@ -1,110 +1,91 @@
+/*
+ * database-tables.css — what the SPECIMENS do not cover. Four rules, each with its reason.
+ *
+ * ⚠️ THERE IS NO TABLE ARRANGEMENT HERE, NO STAT CARD AND NO CHIP. Those are the gallery's named
+ * specimens — Summary Strip, Chip Bar, Spacious Table — and they live in `src/core/specimens.css`
+ * (+ `.thm-table` in `src/core/tables.css`), loaded once for the whole app. The owner's correction
+ * on 2026-11-25 was that this page had drawn its own of each; a page-local copy is how two answers
+ * to the same question end up in the same app.
+ *
+ * If a rule below starts to look like a component, it belongs in the gallery and this file gets
+ * shorter — not longer.
+ */
+
 .database-tables-page {
-  max-width: 900px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
   color: var(--ink);
 }
 
-.database-tables-page .db-page-header h1 {
-  margin: 0 0 0.25rem;
-  font-size: 1.4rem;
+/* ⚠️ WCAG 2.2 SC 2.5.5 — a tap target is 44×44 px. The `.thm-chip` specimen is ~26px tall because
+ * the gallery shows it as part of a control ROW. A page that makes it interactive owes the target,
+ * so the enlargement is here rather than in the specimen (which would change the gallery for
+ * everyone). `min-height`, not padding, so the label stays vertically centred at any font size. */
+.database-tables-page .db-filter {
+  min-height: 44px;
 }
 
-.database-tables-page .db-page-header p {
-  color: var(--ink-soft);
-  margin: 0 0 1.5rem;
-  font-size: 0.85rem;
+/* Spacing only — the chip bar specimen has a 680px cap that suits a demo, not a page filter row. */
+.database-tables-page .db-filterbar {
+  max-width: none;
+  margin: 1rem 0;
 }
 
-.page-footer {
-  margin-top: 2rem;
-  font-size: 0.75rem;
-  color: var(--ink-soft);
+/* The registry is 10 columns across a prose column: the browser will starve Purpose to one word per
+ * line unless it is given a floor. `min-width` on the cell is the only lever that survives an
+ * auto-layout table; the Spacious specimen supplies everything else. */
+.database-tables-page .db-purpose {
+  min-width: 26ch;
 }
 
-.db-hint {
-  color: #9a6400;
-  margin-top: 0.3rem;
-}
-
-/* --- Table --- */
-
-.tables-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.tables-table th {
-  text-align: left;
-  padding: 0.6rem 0.75rem;
-  border-bottom: 2px solid var(--line);
-  color: var(--ink-soft);
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.tables-table td {
-  padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid var(--line);
-  font-size: 0.85rem;
-}
-
-.tables-table code {
-  background: color-mix(in srgb, var(--line) 75%, var(--panel));
-  padding: 0.15rem 0.4rem;
-  border-radius: 3px;
-  color: var(--accent);
-  font-size: 0.8rem;
-}
-
-.tables-table .num {
-  font-variant-numeric: tabular-nums;
+/* Numbers carry the column, and the specimen's table does not assume which cells are numeric.
+ * `nowrap` because a right-aligned figure that breaks between "1551" and "MB" stops being scannable
+ * as a number — the column is the unit of comparison, not the cell. */
+.database-tables-page .db-num {
   text-align: right;
-  color: var(--ink-soft);
+  white-space: nowrap;
 }
 
-.tables-table .row-planned {
-  opacity: 0.6;
-}
-
-.tables-table .row-planned code {
-  color: var(--ink-soft);
-}
-
-.db-chip {
-  display: inline-block;
-  padding: 0.1rem 0.5rem;
-  border-radius: 3px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.db-chip--ok { background: color-mix(in srgb, var(--color-profit) 12.5%, transparent); color: var(--color-profit); }
-.db-chip--warn { background: color-mix(in srgb, var(--color-warning) 12.5%, transparent); color: var(--color-warning); }
-.db-chip--neutral { background: color-mix(in srgb, var(--line) 75%, var(--panel)); color: var(--ink-soft); }
-.db-chip--error { background: #ff004020; color: var(--danger); }
-.db-chip--info { background: var(--accent)20; color: var(--accent); }
-
-/* ─── Column widths & small text ─────────────────────────── */
-
-.dt-col-view {
-  width: 50px;
-}
-
-.dt-num-sm {
-  font-size: 11px;
-}
-
-.dt-phpmyadmin-link {
-  font-size: 10px;
+/* The phpMyAdmin affordance: an icon link, so it gets the 44px target and a focus ring of its own. */
+.database-tables-page .db-open-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
   text-decoration: none;
+  border-radius: var(--radius-md);
+}
+.database-tables-page .db-open-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
-/* Unread table-stats notice + retry (#782) — INV-NO-EMPTY-SWALLOW. */
+.database-tables-page .db-caption {
+  caption-side: top;
+  text-align: left;
+  padding: 0.75rem 0.8rem 0.5rem;
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+}
+
+/* The skeleton block holds the table's shape so nothing jumps when the data lands. */
+.database-tables-page .db-loading {
+  padding: 0.85rem;
+}
+
+.database-tables-page .db-note {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.database-tables-page .db-note code {
+  margin-left: 0.35rem;
+}
+
+/* Unread feed notice + retry (#782) — INV-NO-EMPTY-SWALLOW. `role="alert"` is on the element. */
 .db-unread {
   margin: 0 0 0.75rem;
   padding: 0.55rem 0.75rem;
@@ -113,7 +94,13 @@
   color: var(--ink);
   font-size: 0.82rem;
 }
+
 .db-unread-retry {
-  background: none; border: none; padding: 0; font: inherit;
-  color: var(--accent); text-decoration: underline; cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
 }

@@ -13,6 +13,7 @@ import './index.css';
 // It loads last so its declarations win any tie — though the per-page arrangement rules were removed
 // outright, so there should be nothing left to tie with. See the file's own header for the measurement.
 import './core/tables.css';
+import './core/specimens.css';
 
 // Apply the stored notice locale before the first render, so a reload never flashes English
 // messages at a user who chose otherwise (#826 Phase 6). Every later change applies through

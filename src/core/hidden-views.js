@@ -111,6 +111,17 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   '/lab/movers-strategy-backtest',
   // ⚠️ '/lab/movers-cockpit' removed 2026-11-23 — the page was deleted, so there is nothing to hide.
 
+  // The table registry (2026-11-25). The view existed in `view-routes.jsx` with no navigation entry,
+  // so it was unreachable — wiring it made it NEW to this gate.
+  //
+  // ⚠️ IT IS HIDDEN BY POLICY, NOT "PENDING REVIEW". Owner, 2026-11-26: *"No it should be a hidden
+  // page. I'm planning on hiding most pages to create a streamlined and well polished first
+  // experience for new users so any page that isn't vital or isn't strong or is badly designed
+  // visually will be hidden pending testing and polishing."* So this entry is a DECISION, not a
+  // queue item: do not file a review row asking whether to release it, and do not remove the line
+  // without the owner asking. `OWNER_SEES_WITHHELD` still keeps it in his rail. Register row 285.
+  '/development/database-tables',
+
   // ── Pack 8 (continued): the 2026-11-23 Appearance removal ─────────────────────────────────────
   // `/development/theme` is the replacement design gallery. The other three are MOVED pages: their
   // route paths are new even though the components are old, so the gate treats them as new. Withheld

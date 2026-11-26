@@ -1,4 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
+// #1348 option A - a quote refusal becomes a counted fault. No cycle: FaultsModule depends only on
+// the (global) database, the same reason alerts and providers import it.
+import { FaultsModule } from '../faults/faults.module';
 import { Mt5TradingService } from './mt5-trading.service';
 import { Mt5TradingController } from './mt5-trading.controller';
 import { SessionTrackerService } from './session-tracker.service';

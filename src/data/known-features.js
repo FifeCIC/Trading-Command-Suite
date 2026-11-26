@@ -1109,4 +1109,52 @@ export const KNOWN_FEATURES = {
   //    was already recorded by batch #56, so nothing is added and its "no capability" is correct
   //    rather than missing. Both sources moved to `processed/`.
     'Ranked-selection backtest (a strategy that picks its instrument daily)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
+  // ── batch #59 (nine handoffs dated 2026-11-23, recorded 2026-11-26) ──
+  //    ⚠️ `2026-11-23-1333-linked-depth-tables.md` declares NO capability and says so on its face
+  //    ("REVERSED the same day — nothing landed … Do not record a capability for it"), so none is
+  //    invented; its QA test is recorded instead.
+  //    ⚠️ `2026-11-23-1282-one-bar-publisher.md` was REJECTED by batch #59 (no Capability Map
+  //    entry, no Architecture Framework entry, no diagram for a bar-read flow it changed) and was
+  //    RE-WRITTEN and PROCESSED on 2026-11-25 once all three were declared. ⚠️ A rejection is a claim
+  //    about the SOURCE, so the source was fixed rather than the gate being satisfied by deletion —
+  //    the gate is blocking, and its cheapest exit would otherwise have been to delete the file.
+  //    Its capability row is below: `uiSurfaces: 0` is a FINDING (the API returns the choice and
+  //    nothing renders it — `backtest-unused-fields.js` lists `rankingProvider` as unused).
+  //    ⚠️ Recorded in this file (the seed) AND pushed to the `capability` table through
+  //    `POST /api/capabilities` — the page reads the DB first and falls back to this literal, so
+  //    editing only one of the two leaves the map disagreeing with itself.
+    'Loading states — three effects, chosen by what is known': { dataPersistence: 'ephemeral', uiSurfaces: 2, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Trade-management table explains behaviour': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Live-reproducibility reporting for a backtest run': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Movers day-list builder with refusals': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Continuous bar capture for every active, routed symbol': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+    'Best result per test (long-term record)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'Backtest step accordions': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+    'Scoring funnel and directive record': { dataPersistence: 'ephemeral', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+    'Named Design Gallery (Theme)': { dataPersistence: 'none', uiSurfaces: 3, pipelineIntegration: 'none', devCompletion: 'complete' },
+  //    `2026-11-23-1282-one-bar-publisher.md` — processed 2026-11-25 after a re-write. ⚠️ `uiSurfaces: 0` is a FINDING, not a blank.
+    'One-publisher backtest bar reads': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+  // ── batch #60 (fifteen handoffs dated 2026-11-24 to 2026-11-26, recorded 2026-11-26) ──
+  //    Thirteen Full handoffs contribute one capability row each. ⚠️ Two are NOTES by contract and
+  //    carry a QA Test Entry ONLY — `2026-11-25-1350-hurst-confidence-regression-quality.md` (a
+  //    bugfix) and `2026-11-26-1351-population-2-first-boundaries.md` (a refactor) — so no capability
+  //    is invented for them; their tests are recorded in `qa-checklist.js`.
+  //    ⚠️ Recorded in this file (the seed) AND pushed to the `capability` table through
+  //    `node nest/scripts/seed-capabilities.cjs` (upsert by name) — the page reads the DB first and
+  //    falls back to this literal, so editing only one of the two leaves the map disagreeing with
+  //    itself. ⚠️ `Database Table Registry` declares `config`: the DECLARATIONS are a source file,
+  //    the live figures come from the database at request time.
+    'Backtest/live parity register': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+    'Parity register — labels are claims and are checked': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+    'Movers long — session-exit A/B copy': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'partial' },
+    'Run-level parity exposure': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+    'Run viability (can this run close a trade?)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+    'Backtest viability — the time stop\'s reachability is computed, not assumed': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+    'Backtest config table — `applied` means the mechanism runs': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Parity register — mechanism absence judged on the row\'s id': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+    'Type safety on database access — a wrong column is a compile error': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'partial' },
+    'Backend lint — a gate that reports what a human will fix': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'partial' },
+    'Provider adapter boundary — deal history is typed': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Bot list scope honesty (feed-scoped bots report their declared scope, never a cast-derived guess)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'complete' },
+    'Database Table Registry': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
 };

@@ -21,32 +21,8 @@
   "ApiEndpointsPage.jsx": {
     "page-h1": 1
   },
-  "AppearanceAreaPage.jsx": {
-    "page-info-popover": 1
-  },
-  "AppearanceColourPage.jsx": {
-    "page-info-popover": 1
-  },
-  "AppearanceDataDisplayPage.jsx": {
-    "page-info-popover": 1
-  },
-  "AppearanceFormsPage.jsx": {
-    "page-info-popover": 2
-  },
-  "AppearanceInteractivePage.jsx": {
-    "page-info-popover": 1
-  },
-  "AppearanceMotionPage.jsx": {
-    "page-info-popover": 1
-  },
-  "AppearancePatternsPage.jsx": {
-    "page-info-popover": 1
-  },
   "AppearanceSettingsPage.jsx": {
     "page-h1": 1
-  },
-  "AppearanceSurfacesPage.jsx": {
-    "page-info-popover": 1
   },
   "AutomationSettingsPage.jsx": {
     "page-h1": 1
@@ -367,14 +343,6 @@
   },
   "TechnicalIndicatorsPage.jsx": {
     "page-h1": 1
-  },
-  "ThemeLabMotion.jsx": {
-    "page-info-popover": 1,
-    "section-title-info": 1
-  },
-  "ThemeLabPopover.jsx": {
-    "page-info-popover": 1,
-    "section-title-info": 1
   },
   "TheoryRegistryPage.jsx": {
     "page-h1": 1

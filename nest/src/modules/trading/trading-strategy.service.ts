@@ -85,10 +85,52 @@ import { parseSessionWindow, serialiseSessionWindow } from './session-window';
 import { normaliseBotName, botSlug } from './bot-slug';
 import { isFeedList } from './feed-scope';
 // #1085 — the quote-freshness refusal: a stale quote must not size an order (see the file header).
-import { checkQuoteFreshness } from '../../common/trading/quote-freshness';
+import { checkQuoteFreshness, type QuoteFreshness } from '../../common/trading/quote-freshness';
+// #1348 option A — a refusal that could not price an order becomes a COUNTED fault. The registry
+// depends only on the global database, so there is no cycle (the precedent is alerts/providers).
+import { FaultsService } from '../faults/faults.service';
+import { EpisodeTracker } from '../faults/episode-tracker';
 // ⚠️ #849 (2026-09-17): the three risk caps below were `process.env.MT5_MAX_*`. They are now declared
 // settings read through this resolver — see settings-registry.ts for why, and for the carried-over defaults.
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
+
+/**
+ * The four ways a quote fails to price an order, each its OWN fault code (#1348, option A).
+ *
+ * ⚠️ ONE CODE PER CAUSE, NOT ONE CODE WITH A `kind` IN THE EVIDENCE. The entire finding of #1348 is
+ * that these four were indistinguishable in the run totals: 5,293 stale, 843 ahead-of-clock, 961
+ * no-tick-time and ~610 no-quote, and only the first had been explained. `count` per code is what
+ * makes a GROWING cause visible; hiding them behind one code would reproduce the defect inside the
+ * registry built to end it. `fresh` and `disabled` are absent on purpose — neither is a fault.
+ *
+ * Codes match `TCS-<PATHWAY>-<CONDITION>` because the faults service rejects anything that is not a
+ * code, and a code is the identity a count is attached to.
+ */
+export const QUOTE_FAULT_CODES = {
+  stale: 'TCS-QUOTE-STALE',
+  future: 'TCS-QUOTE-FUTURE',
+  'no-tick-time': 'TCS-QUOTE-NO-TICK-TIME',
+  'no-quote': 'TCS-QUOTE-NO-QUOTE',
+} as const;
+
+const QUOTE_FAULT_TITLES: Record<keyof typeof QUOTE_FAULT_CODES, string> = {
+  stale: 'A quote could not price an order: the broker tick was older than the allowance',
+  future: 'A quote could not price an order: its tick time was AHEAD of the clock',
+  'no-tick-time': 'A quote could not price an order: the terminal reported no tick time',
+  'no-quote': 'A quote could not price an order: no quote was returned for the symbol',
+};
+
+/**
+ * quoteFaultObservation() — the PURE half of #1348 option A: which fault, if any, a freshness
+ * verdict describes. `fresh` and `disabled` return `null`, so a healthy tick can never create a
+ * fault no matter how often it is evaluated.
+ */
+export function quoteFaultObservation(
+  kind: QuoteFreshness['kind'],
+): { code: string; title: string } | null {
+  if (kind === 'fresh' || kind === 'disabled') return null;
+  return { code: QUOTE_FAULT_CODES[kind], title: QUOTE_FAULT_TITLES[kind] };
+}
 
 export interface StrategySummary {
   id: string;
@@ -285,6 +327,10 @@ export class TradingStrategyService {
   // and its own fail-closed path applies (a missing dependency must not silently permit a
   // subscription). See `score-only-protocols.service.ts` for why this exists at all.
   @Optional() private readonly scoreOnlyProtocols?: ScoreOnlyProtocolService,
+  // #1348 option A — the persistent fault registry. `@Optional()` for the same reason as the two
+  // above: every existing positional construction (specs included) keeps working, and an absent
+  // registry means a refusal is still refused, just not counted.
+  @Optional() private readonly faults?: FaultsService,
   ) {
     this.scoreOnlyLazy = scoreOnlyProtocols;
   }
@@ -303,6 +349,64 @@ export class TradingStrategyService {
   private get scoreOnly(): ScoreOnlyProtocolService {
     if (!this.scoreOnlyLazy) this.scoreOnlyLazy = new ScoreOnlyProtocolService();
     return this.scoreOnlyLazy;
+  }
+
+  /**
+   * noteQuoteUnpriceable() — turn a REFUSAL into a recorded FAULT, once per EPISODE (#1348 option A).
+   *
+   * ⚠️ NOT ONCE PER REFUSAL, and that distinction is the whole reason `EpisodeTracker` exists.
+   * `FaultsService.record()` counts EPISODES by contract — *"call this on a state TRANSITION, never
+   * from a poll loop, or the count becomes a measure of how often the caller ran"*. Measured
+   * 2026-11-26: **8,387 refusals across 7,472 symbol-minutes**, so recording each one would have
+   * inflated the count by 12% and turned the registry into a log — the bloat
+   * `docs/FAULT-TAXONOMY-GUARDRAILS.md` exists to prevent.
+   *
+   * The episode key is the SYMBOL, and it is fed on EVERY evaluation — including the healthy ones,
+   * because `observe(key, false)` is the only branch that CLEARS the episode. Without that, a
+   * condition that ends and later returns is never counted a second time, and the recurrence this
+   * registry exists to record is lost silently.
+   *
+   * ⚠️ FIRE AND FORGET, with its own catch. Recording is DIAGNOSTICS: it must never delay a
+   * dispatch decision and must never be able to throw inside the sizing path. A fault registry that
+   * can block an order is worse than no registry.
+   */
+  private noteQuoteUnpriceable(
+    symbol: string,
+    freshness: QuoteFreshness,
+    allowanceSeconds: number,
+  ): void {
+    const event = this.quoteFaultEpisodes.observe(`quote:${symbol}`, !freshness.ok);
+    if (event !== 'started') return;
+    const observation = quoteFaultObservation(freshness.kind);
+    if (!observation) return;
+    void this.faults
+      ?.record({
+        code: observation.code,
+        title: observation.title,
+        area: 'bridge',
+        severity: 'warning',
+        evidence: {
+          symbol,
+          kind: freshness.kind,
+          reason: freshness.reason,
+          ageSeconds: freshness.ageSeconds,
+          maxQuoteAgeSeconds: allowanceSeconds,
+          observedAt: new Date().toISOString(),
+        },
+        issueUrl: 'https://github.com/FifeCIC/Trading-Command-Suite/issues/1348',
+      })
+      .catch(() => { /* a diagnostic must never break a trade decision */ });
+  }
+
+  /**
+   * See the constructor's `faults` note — and `scoreOnlyLazy`'s for WHY THIS IS A GETTER.
+   * A field initialiser is `undefined` on an `Object.create(prototype)` instance, which is how a
+   * large number of the specs build this service.
+   */
+  private quoteFaultEpisodesLazy?: EpisodeTracker;
+  private get quoteFaultEpisodes(): EpisodeTracker {
+    if (!this.quoteFaultEpisodesLazy) this.quoteFaultEpisodesLazy = new EpisodeTracker();
+    return this.quoteFaultEpisodesLazy;
   }
 
   // ── CRUD ──────────────────────────────────────────────
@@ -2603,10 +2707,12 @@ export class TradingStrategyService {
           // refuses with the condition NAMED ('stale 3600s' ≠ 'no tick time' ≠ 'no quote'), and
           // may not proceed on a freshness it could not establish. The throw lands in the inner
           // catch below, which refuses the order and quotes the reason.
-          const quoteFreshness = checkQuoteFreshness(
-            symbolQuote,
-            await this.settings.get<number>('trading.maxQuoteAgeSeconds'),
-          );
+          const maxQuoteAgeSeconds = await this.settings.get<number>('trading.maxQuoteAgeSeconds');
+          const quoteFreshness = checkQuoteFreshness(symbolQuote, maxQuoteAgeSeconds);
+          // ⚠️ CALLED ON EVERY EVALUATION, not only on failure. `observe(key, false)` is the only
+          // branch that CLEARS the episode, so a condition that ends and later returns is counted
+          // again instead of being silently absorbed into the first one (#1348 option A).
+          this.noteQuoteUnpriceable(symbol, quoteFreshness, maxQuoteAgeSeconds);
           if (!quoteFreshness.ok) {
             throw new Error(`quote cannot price this order — ${quoteFreshness.reason}`);
           }

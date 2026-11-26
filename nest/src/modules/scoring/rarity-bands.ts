@@ -8,6 +8,10 @@
  * of the two tables would be fixed by a future change. Two copies of a sizing table on an
  * order-placing path is the most expensive kind of debt: both drift, one gets the next fix.
  *
+ * ⚠️ `rarity.service.ts` was DELETED 2026-11-25 — it had no importer, so its copy of the band table
+ * and its `score_snapshot` writer could never run. That is why the consolidation above could not be
+ * undone by it; `protocol-gating` is the only live path.
+ *
  * ── Why `sizeMultiplier` matters ──
  * It is NOT decorative. `trading-strategy.service.ts` (`size *= evalResult.rarity.sizeMultiplier`)
  * scales the ORDER VOLUME, gated by `trading_strategy.useRaritySizing` — which is NOT NULL

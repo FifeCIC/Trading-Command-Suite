@@ -147,6 +147,17 @@ export default function MoversStrategyBacktestPage() {
   const [settingsSignal, setSettingsSignal] = useState(0);
 
   const [results, setResults] = useState([]);
+  /**
+   * ── PRE-RUN COVERAGE (audit note 'a', owner 2026-11-25) ─────────────────────────────────────────
+   * `dryRun` asks the RUN's own admission checks — publisher, the 100-bar floor, the cutoff basis —
+   * without spending the engine on a day. Keyed by the settings that decide the answer, so a check
+   * made under different settings is visibly stale instead of quietly reused.
+   *
+   * ⚠️ NO SELECTED NAMES. The payload carries a COUNT; the page deliberately never shows which names
+   * the ranking picked before a run (nobody knows them live — the bot reads a feed at the cutoff).
+   */
+  const [coverage, setCoverage] = useState(null); // { key, byName, checkedAt }
+  const [checking, setChecking] = useState(false);
   const [progress, setProgress] = useState(null); // { queue, done, current, startedAt, stopped }
   const [now, setNow] = useState(() => Date.now());
   const stopRef = useRef(false);
@@ -236,6 +247,42 @@ export default function MoversStrategyBacktestPage() {
   );
 
   const canRun = !running && runQueue.length > 0 && currentLegState?.available !== false;
+
+  /** The settings a coverage check was made under. A mismatch is STALE, never "close enough". */
+  const coverageKey = `${leg.key}|${topN}|${cutoffUtc}`;
+  const coverageForSettings = coverage && coverage.key === coverageKey ? coverage : null;
+
+  async function checkCoverage() {
+    if (!runQueue.length || checking) return;
+    setChecking(true);
+    const key = coverageKey;
+    const byName = {};
+    for (const name of runQueue) {
+      const answerDate = datasetByName.get(name)?.answerDate ?? null;
+      try {
+        byName[name] = await apiPost('/api/backtest/selection-run', {
+          datasetName: name,
+          protocolId: leg.protocolId,
+          topN,
+          cutoffUtc,
+          dryRun: true,
+        });
+      } catch (err) {
+        // A REFUSAL IS THE PREVIEW'S MOST USEFUL ANSWER — recorded against that day, with the
+        // server's own wording, never folded into a "looks fine" row.
+        byName[name] = {
+          preview: true,
+          datasetName: name,
+          answerDate,
+          notice: noticeFromError(err, 'TCS-SYS-007', {
+            operation: `preview the ${dayLabel(answerDate)} selection`,
+          }),
+        };
+      }
+    }
+    setCoverage({ key, byName, checkedAt: Date.now() });
+    setChecking(false);
+  }
 
   async function runAll() {
     stopRef.current = false;
@@ -534,6 +581,12 @@ export default function MoversStrategyBacktestPage() {
             <StepMeta value={leg.label} label="leg" />
             <StepMeta value={`top ${topN}`} label="per day" />
             <StepMeta value={cutoffUtc} label="UTC screen" />
+            {coverageForSettings && (
+              <StepMeta
+                value={`${runQueue.filter((n) => coverageForSettings.byName[n]?.status === 'ready').length}/${runQueue.length}`}
+                label="ready"
+              />
+            )}
           </>
         )}
       >
@@ -754,8 +807,97 @@ export default function MoversStrategyBacktestPage() {
               )}
             </div>
 
+            {/* ── PRE-RUN COVERAGE — the run's own admission tests, asked before a run is spent ────
+                From `dryRun`, so `refused` here is the SAME refusal the Run button would hit. The two
+                counts are deliberately different bases: `Usable` is candidates the ranking can see
+                AND the engine can run; `Rank basis` is the thinnest bar count the ranking rests on. */}
+            {coverage && coverage.key !== coverageKey && (
+              <p className="mvp-note mvp-note--warn">
+                Settings changed since the coverage check — check again for this configuration.
+              </p>
+            )}
+            {coverageForSettings && (
+              <div className="ff-field" id="mvp-sec-coverage">
+                <div className="mvp-scroll">
+                  <table className="mvp-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Day</th>
+                        <th scope="col" className="mvp-num">Candidates</th>
+                        <th scope="col" className="mvp-num">Usable</th>
+                        <th scope="col" className="mvp-num">Picked</th>
+                        <th scope="col" className="mvp-num">Rank basis</th>
+                        <th scope="col">Coverage</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {runQueue.map((name) => {
+                        const p = coverageForSettings.byName[name];
+                        if (!p) return null;
+                        if (p.notice) {
+                          return (
+                            <tr key={name} className="mvp-row--bad">
+                              <td>{dayLabel(p.answerDate)}</td>
+                              <td className="mvp-num">—</td>
+                              <td className="mvp-num">—</td>
+                              <td className="mvp-num">—</td>
+                              <td className="mvp-num">—</td>
+                              <td className="mvp-warn">refused</td>
+                            </tr>
+                          );
+                        }
+                        return (
+                          <tr key={name} className={p.status === 'ready' ? undefined : 'mvp-row--bad'}>
+                            <td>{dayLabel(p.answerDate)}</td>
+                            <td className="mvp-num">{p.candidates}</td>
+                            <td className="mvp-num">{p.usable}</td>
+                            <td className="mvp-num">{p.selected} of {p.topN}</td>
+                            <td className="mvp-num">
+                              {p.rankBasisBars == null
+                                ? '—'
+                                : `${p.rankBasisBars} bar${p.rankBasisBars === 1 ? '' : 's'}`}
+                            </td>
+                            <td>
+                              {p.status === 'ready' ? 'ready' : p.status === 'blocked' ? 'blocked' : 'thin'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {runQueue.map((name) => {
+                  const p = coverageForSettings.byName[name];
+                  if (!p) return null;
+                  if (p.notice) {
+                    return <NoticeBlock key={`${name}-notice`} notice={p.notice} />;
+                  }
+                  if (!p.notes?.length) return null;
+                  return (
+                    <ul key={`${name}-notes`} className="mvp-coverage-notes">
+                      {p.notes.map((line) => (
+                        <li key={line} className="mvp-note">
+                          <strong>{dayLabel(p.answerDate)}</strong> — {line}
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                })}
+              </div>
+            )}
+
             <div className="mvp-form-foot">
               <div className="ff-actions">
+                <button
+                  type="button"
+                  className="ff-btn ff-btn-secondary"
+                  disabled={!runQueue.length || running || checking}
+                  onClick={checkCoverage}
+                >
+                  {checking
+                    ? 'Checking coverage…'
+                    : `Check ${runQueue.length} day${runQueue.length === 1 ? '' : 's'}`}
+                </button>
                 {running && (
                   <button
                     type="button"

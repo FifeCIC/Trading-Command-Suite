@@ -7,6 +7,8 @@
 
 import { BadRequestException, Controller, Get, Logger, Query, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
+import { RETENTION_TABLES, resolveRetentionDays } from '../modules/system/retention.config';
+import { TABLE_USAGE, type TableClass, type TableReadBy } from './table-usage.data';
 
 interface TableStat {
   tableName: string;
@@ -32,6 +34,38 @@ interface TableStat {
   totalSizeKb: number;
   lastInsert: string | null;
   engine: string | null;
+
+  // ── declared usage (table-usage.data.ts) ──────────────────────────────────────────────────────
+  /**
+   * `undeclared` is a FINDING, not a blank: the table exists and nobody has said what it is for.
+   * The page lists those first-class rather than hiding them, because a table with no declared role
+   * is exactly the one that grows unnoticed.
+   */
+  class: TableClass | 'undeclared';
+  purpose: string | null;
+  writtenPer: string | null;
+  readBy: TableReadBy | null;
+
+  // ── declared retention (retention.config.ts — the ONE owner of windows) ───────────────────────
+  /** Effective window in days after the `DATA_RETENTION_*` override. `null` = NO BOUND declared. */
+  retentionDays: number | null;
+  /** The write-time column the bound is applied to, or null when there is no bound. */
+  retentionDateCol: string | null;
+  /** The env key that overrides `retentionDays`, so the page can name how to change it. */
+  retentionEnvKey: string | null;
+
+  // ── growth, measured over the RETAINED window only ────────────────────────────────────────────
+  /**
+   * Rows per day across the span actually present: `COUNT(*) / (MAX(dateCol) − MIN(dateCol) + 1)`.
+   *
+   * ⚠️ THIS IS A LIFETIME AVERAGE OF WHAT SURVIVES, NOT TODAY'S RATE. On a table whose oldest row
+   * is exactly its retention boundary the two are the same; on one that has never been pruned it is
+   * the whole history. The page labels it "over retained window" for that reason.
+   * `null` means it was not measured — no declared date column, or the count could not be read.
+   */
+  growthPerDay: number | null;
+  /** Oldest row, from the same query as `growthPerDay`. `null` when unmeasured. */
+  oldest: string | null;
 }
 
 /**
@@ -57,7 +91,22 @@ interface TableStat {
 export function resolveRequestedTables(
   tablesParam: string | undefined,
   realNames: Map<string, string>,
+  declared: readonly string[] = [],
 ): string[] {
+  const raw = (tablesParam ?? '').trim().toLowerCase();
+
+  // `declared` is a KEYWORD, not a table name: it expands to every table the registry declares, so
+  // the page never keeps its own list of tables to count (a second copy of `table-usage.data.ts`
+  // would be the exact duplication this endpoint's sibling warns about). Names that are declared but
+  // absent from the database are DROPPED here, not refused — the caller reports them as
+  // `summary.declaredMissing`, which is a finding the page can show. Refusing would make a renamed
+  // table take the whole registry down.
+  if (raw === 'declared') {
+    return [...new Set(declared.map((n) => n.toLowerCase()))]
+      .filter((n) => realNames.has(n))
+      .map((n) => realNames.get(n) as string);
+  }
+
   const requested = (tablesParam ?? '')
     .split(',')
     .map((n) => n.trim().toLowerCase())
@@ -79,6 +128,13 @@ export class DatabaseController {  private readonly logger = new Logger(Database
 
   /**
    * GET /api/database/table-stats — row counts, sizes, and freshness for every table.
+   *
+   * Since 2026-11-25 this is also the **table registry**: each row carries what the table is FOR
+   * (`table-usage.data.ts`), whether it has a retention window (`retention.config.ts` — the one
+   * owner), and its measured growth. The three facts live in three places on purpose; this handler
+   * is the join, not a fourth copy. A table with no usage entry reports `class: 'undeclared'` rather
+   * than an empty purpose, because "nobody has said what this is" and "it has no purpose" are
+   * different findings and only one of them is true.
    *
    * ⚠️ THIS IS THE ONLY HANDLER FOR THIS ROUTE. A second controller
    * (`modules/system/database-stats.controller.ts`) declared `@Controller('database')` +
@@ -110,6 +166,11 @@ export class DatabaseController {  private readonly logger = new Logger(Database
       totalRows: number;
       totalDataKb: number;
       totalIndexKb: number;
+      unboundedLarge: number;
+      hotPathLarge: number;
+      undeclared: number;
+      declaredMissing: string[];
+      growthMeasured: boolean;
     };
   }> {
     if (!this.prisma.isAvailable) {
@@ -144,7 +205,7 @@ export class DatabaseController {  private readonly logger = new Logger(Database
       // ── exact counts, opt-in and narrowed ────────────────────────────────────────────────
       const realNames = new Map(rows.map((r) => [String(r.Name).toLowerCase(), String(r.Name)]));
       const exactCounts = new Map<string, number>();
-      const targetTables = resolveRequestedTables(tablesParam, realNames);
+      const targetTables = resolveRequestedTables(tablesParam, realNames, Object.keys(TABLE_USAGE));
 
       if (targetTables.length) {
         const sql =
@@ -156,10 +217,60 @@ export class DatabaseController {  private readonly logger = new Logger(Database
         }
       }
 
+      // ── growth, measured over the RETAINED window ────────────────────────────────────────────
+      // ⚠️ ONE query, built from `RETENTION_TABLES` — never from the request. A per-table query in a
+      // loop over ~12 tables was the obvious shape and it is 12 round trips for one page load; a
+      // UNION ALL is one. Identifiers are validated before interpolation even though they can only
+      // come from code, because this is the same file's SQL-injection surface (see resolveRequestedTables).
+      //
+      // ⚠️ A FAILURE HERE MUST NOT FAIL THE PAGE. A registry without growth is still a registry, and
+      // returning 503 because one COUNT timed out would hide the retention windows too. But it must
+      // be VISIBLE: `growthMeasured: false` makes the page say the column is unknown, never empty.
+      let growthMeasured = false;
+      const growth = new Map<string, { growthPerDay: number; oldest: string }>();
+      const retentionNames = Object.keys(RETENTION_TABLES);
+      if (retentionNames.length) {
+        try {
+          const parts = retentionNames.map((t) => {
+            const dateCol = RETENTION_TABLES[t].dateCol;
+            if (!/^[A-Za-z0-9_]+$/.test(t) || !/^[A-Za-z0-9_]+$/.test(dateCol)) {
+              throw new Error(`refusing unsafe identifier in retention config: ${t}.${dateCol}`);
+            }
+            return (
+              `SELECT '${t}' AS t, COUNT(*) AS n, MIN(\`${dateCol}\`) AS oldest, MAX(\`${dateCol}\`) AS newest ` +
+              `FROM \`${t}\``
+            );
+          });
+          const counted = await this.prisma.$queryRawUnsafe<
+            Array<{ t: string; n: bigint | number; oldest: Date | string | null; newest: Date | string | null }>
+          >(parts.join(' UNION ALL '));
+
+          for (const r of counted) {
+            if (r.oldest == null) continue;
+            const oldest = new Date(r.oldest);
+            const newest = r.newest == null ? oldest : new Date(r.newest);
+            const spanDays = Math.max(1, Math.floor((newest.getTime() - oldest.getTime()) / 86_400_000) + 1);
+            growth.set(String(r.t), {
+              growthPerDay: Math.round(Number(r.n) / spanDays),
+              oldest: oldest.toISOString(),
+            });
+          }
+          growthMeasured = true;
+        } catch (err) {
+          this.logger.warn(
+            `growth could not be measured — the table registry will show growth as unknown, not zero: ${(err as Error).message}`,
+          );
+        }
+      }
+
       const tables: TableStat[] = rows.map((r) => {
         const dataLen = Number(r.Data_length ?? 0);
         const indexLen = Number(r.Index_length ?? 0);
         const exact = exactCounts.get(String(r.Name).toLowerCase());
+        const key = String(r.Name).toLowerCase();
+        const usage = TABLE_USAGE[key];
+        const retention = RETENTION_TABLES[key];
+        const measured = growth.get(key);
         return {
           tableName: r.Name,
           rowCount: exact ?? Number(r.Rows ?? 0),
@@ -169,8 +280,20 @@ export class DatabaseController {  private readonly logger = new Logger(Database
           totalSizeKb: Math.round((dataLen + indexLen) / 1024),
           lastInsert: r.Update_time ?? null,
           engine: r.Engine ?? null,
+          class: usage?.class ?? 'undeclared',
+          purpose: usage?.purpose ?? null,
+          writtenPer: usage?.writtenPer ?? null,
+          readBy: usage?.readBy ?? null,
+          retentionDays: retention ? resolveRetentionDays(key) : null,
+          retentionDateCol: retention?.dateCol ?? null,
+          retentionEnvKey: retention?.envKey ?? null,
+          growthPerDay: measured?.growthPerDay ?? null,
+          oldest: measured?.oldest ?? null,
         };
       });
+
+      const presentNames = new Set(tables.map((t) => t.tableName.toLowerCase()));
+      const declaredMissing = Object.keys(TABLE_USAGE).filter((t) => !presentNames.has(t));
 
       return {
         database,
@@ -183,6 +306,23 @@ export class DatabaseController {  private readonly logger = new Logger(Database
           totalRows: tables.reduce((s, t) => s + t.rowCount, 0),
           totalDataKb: tables.reduce((s, t) => s + t.dataSizeKb, 0),
           totalIndexKb: tables.reduce((s, t) => s + t.indexSizeKb, 0),
+          /**
+           * Tables over 5 MB with NO declared window — the growth risk the registry exists to show.
+           * ⚠️ SIZE, not rows: `SHOW TABLE STATUS` sizes are exact while its row counts are InnoDB
+           * estimates, so a row threshold would make this number drift with sampling.
+           */
+          unboundedLarge: tables.filter((t) => t.retentionDays === null && t.totalSizeKb >= 5 * 1024).length,
+          /** Tables over 5 MB that the loop reads repeatedly — where an index matters. Size for the same reason. */
+          hotPathLarge: tables.filter((t) => t.readBy === 'hot-path' && t.totalSizeKb >= 5 * 1024).length,
+          /** Real tables nobody has described. A to-do list, not a blank. */
+          undeclared: tables.filter((t) => t.class === 'undeclared').length,
+          /** Declared but absent from the database — a rename or a drop that the declaration missed. */
+          declaredMissing,
+          /**
+           * Whether the growth figures were measured at all. `false` is why every `growthPerDay` is
+           * null, and the page must say so rather than render an empty column as "no growth".
+           */
+          growthMeasured,
         },
       };
     } catch (err) {

@@ -79,4 +79,40 @@ describe('resolveRequestedTables', () => {
   it('keeps an underscore-bearing name intact', () => {
     expect(resolveRequestedTables('order_item', realNames)).toEqual(['order_item']);
   });
+
+  /**
+   * `declared` — added 2026-11-25 with the table registry.
+   *
+   * ⚠️ WHY A KEYWORD AND NOT A LIST ON THE PAGE. The page used to hold its own array of tables to
+   * count. That is a second copy of `table-usage.data.ts`, and the copy that is NOT corrected is the
+   * one that produces the wrong number. The keyword also settles an ordering question the page could
+   * not: declaration order is irrelevant here, so the result is filtered, never merged.
+   */
+  it('⚠️ `declared` expands to the declared set, intersected with the real schema', () => {
+    expect(
+      resolveRequestedTables('declared', realNames, ['Score', 'gone', 'marketbar']),
+    ).toEqual(['score', 'marketbar']);
+  });
+
+  it('`declared` is case-insensitive as a keyword', () => {
+    expect(resolveRequestedTables('  DECLARED ', realNames, ['symbol'])).toEqual(['symbol']);
+  });
+
+  it('⚠️ a declared-but-absent table is DROPPED, not refused', () => {
+    // The opposite of the `?tables=` rule above, deliberately: one bad name in a HAND request is a
+    // typo the caller must fix, while one stale entry in the DECLARATION must not take the whole
+    // registry offline. It is reported as `summary.declaredMissing` instead of being silent.
+    expect(resolveRequestedTables('declared', realNames, ['not_there'])).toEqual([]);
+  });
+
+  it('`declared` collapses duplicates across spellings', () => {
+    const out = resolveRequestedTables('declared', realNames, ['score', 'Score', 'score']);
+    expect(out).toEqual(['score']);
+    expect(out).toHaveLength(1);
+  });
+
+  it('an empty declaration counts nothing rather than everything', () => {
+    // Widening to "all tables" here would make every registry load pay the 2.9 s all-tables count.
+    expect(resolveRequestedTables('declared', realNames, [])).toEqual([]);
+  });
 });

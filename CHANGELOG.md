@@ -48,6 +48,52 @@ time, as the rule above requires.
   value in a `mysql://user:password@` URL and an `IDENTIFIED BY '<password>'` clause — the two lines a
   new contributor copies. Both are now placeholders. No value is reproduced here (#1252).
 
+### Recorded 2026-11-26 — the 2026-11-23 landings (handoff batch #59)
+
+⚠️ Versions **0.172.1 → 0.173.7** shipped without an entry, so the lines below are reconstructed
+from the nine handoffs that describe them. Each is a change a user could notice; the refactors that
+shipped with them are not listed.
+
+**Added**
+
+- **Best result per test** — one `backtest_best` row per test, decided on net P/L **per measured
+  day** so a longer run cannot beat a record by having more days in it. Read at
+  `GET /api/backtest/best` and rendered beside the run it beat (#1341).
+- **A design gallery at `/development/theme`** — twenty named specimens (Dotted Stat, Dense Table,
+  Detail Rail, Trade Card …) that replace the Appearance area and its written design rules.
+  Theme packs are now at `/settings/appearance` and `/appearance/*` redirects to the gallery
+  (register row 265).
+- **Three loading states, chosen by what is already known** — a skeleton when the final shape is
+  known, a step rail with real counts when the length is known, an orbit with a label when neither
+  is. The movers day-list field now draws its 1–3 s wait instead of claiming no long day was ever
+  stored (#1330).
+- **Two steps that count the scoring half of a movers run** — the engine's own bar-state funnel
+  with the speed rating, and the directive record with its window and sample stated (#1344).
+
+**Changed**
+
+- **The movers backtest is a numbered accordion** — each step answers its own question while
+  closed, audit notes sit between steps, and the page is split into a shared library beside
+  `src/features/movers-strategy/` (#1342).
+- **The trade-management column says what a value does to a trade**, not where it lives — and the
+  sentence follows the value, so a 25% target and a no-target bot read oppositely (row 249).
+
+**Fixed**
+
+- **The live bar refresh covered one symbol while eleven sat 68 hours stale**, and NVDA had no
+  route at all. It now refreshes every active symbol with an enabled route (#1337).
+- **A backtest reports how much of itself live could not reproduce**, and how optimistic its stop
+  fills are. It counts; it does not re-decide (#251, #252).
+- **The movers day-list builder can refuse** — a sign disagreement, a multi-session move and a flat
+  list are refused instead of written. Three day lists became fourteen (#253).
+- **The depth tables no longer highlight two or three rows at once** — a hover affordance marks one
+  row or none. The linked-tables sync that did otherwise was withdrawn the same day it shipped
+  (#1333).
+- **A backtest reads ONE bar publisher and says which** — `marketbar` holds eight ticker/timeframe
+  pairs under two publishers that can sit ~25x apart, so a run used to blend them and report a
+  "−45.92% intraday move" that was a level mismatch. A pinned publisher that matches nothing is
+  refused rather than becoming "whatever is there" (#1282, row 250).
+
 ## [0.164.0] — 2026-11-16
 
 ### Added

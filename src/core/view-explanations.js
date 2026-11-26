@@ -146,4 +146,20 @@ export const VIEW_EXPLANATIONS = {
     'sees bars up to the cutoff and nothing after it, which is what stops the test scoring itself ' +
     'against the answer key. The residual bias is stated on every result: a stored list was built ' +
     'from the full day’s move, so its membership knows the outcome even though its ranking does not.',
+
+  // ── Development ──
+  // ⚠️ A PAGE SUPPLIES CONTENT, THE SHELL SUPPLIES CHROME (2026-11-18). The explanation used to be a
+  // paragraph under the breadcrumb; the owner called it out on 2026-11-26 — *"Text introduction on
+  // pages is against design rules for this app."* It belongs here, which is the ONE ℹ position.
+  'database-tables':
+    'The registry of every table in the database: what it is for, who reads it, how big it is, how ' +
+    'fast it grows and how long it is kept. Row counts marked ≈ are InnoDB estimates — the rest are ' +
+    'real counts, because the estimate can be 35% out on a table with churn. Three different facts ' +
+    'meet on this page and each has one owner: a table’s ROLE is declared in table-usage.data.ts, ' +
+    'its RETENTION WINDOW in retention.config.ts, and its size is read live. So a window is changed ' +
+    'by the DATA_RETENTION_* environment key or in that one file — never by adding a second list. ' +
+    '“Hot path” means the scoring or trading loop reads that table repeatedly while it runs, which ' +
+    'is where an index matters; “no bound” means nothing prunes it, which is the number to watch. ' +
+    'A table with no declared role shows as undeclared rather than blank: that is a to-do, not a ' +
+    'table with no purpose.',
 };

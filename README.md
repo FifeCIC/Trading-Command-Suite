@@ -5,66 +5,36 @@
 
 **Algorithmic trading & portfolio management platform.** Multi-broker, multi-session scoring engine with protocol-gated directive pipelines, automation loop, and decision-trail audit chain.
 
-Built by [FifeCIC](https://fifecic.scot) | [Ryan Bayne](https://github.com/RyanBayne)
+Built by [FifeCIC](https://fifecic.scot) and [Ryan Bayne](https://github.com/RyanBayne).
 
-**[Website](https://fifecic.github.io/Trading-Command-Suite/) · [Screenshots](https://fifecic.github.io/Trading-Command-Suite/showcase/) · [Wiki](https://github.com/FifeCIC/Trading-Command-Suite/wiki) · [Discussions](https://github.com/FifeCIC/Trading-Command-Suite/discussions) · [Issues](https://github.com/FifeCIC/Trading-Command-Suite/issues) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Support](https://fifecic.github.io/Trading-Command-Suite/support/)**
+What it does, screenshots of every area, and the install steps are on the project website —
+[fifecic.github.io/Trading-Command-Suite](https://fifecic.github.io/Trading-Command-Suite/).
 
-> ### 🌐 [Open the project website →](https://fifecic.github.io/Trading-Command-Suite/)
->
-> What it does, screenshots of every area, and the install steps — as a page rather than a file.
-> **Wiki:** [github.com/FifeCIC/Trading-Command-Suite/wiki](https://github.com/FifeCIC/Trading-Command-Suite/wiki)
+## Before You Connect an Account
 
-**Licensed under [AGPL-3.0](LICENSE).** Copyright (C) 2026 Ryan Bayne / FifeCIC.
+**This software is not configured to profit by default, and it is not financial advice.** The shipped
+configuration is an engineering baseline for research and development — no strategy in it has been
+shown to be profitable, and the trading performance of this project is not a feature of this release.
 
-This is an open-source project and you get the full benefit of it — use it, run it, read it, fork it,
-and contribute to it. ⚠️ The AGPL's network clause means that if you run a **modified** version as a
-service, you must publish your changes. That is deliberate: improvements come back to everyone
-instead of being resold as a closed product.
+**Use a demo account.** Test on demo until you can explain every order the system places. Only then
+consider a funded account, and never one you cannot afford to empty.
 
-Contributions and ideas are welcome. ⚠️ The project is engineered and maintained by one person, so
-reviews and replies may take time — that is the honest trade for a codebase this size.
-
-> ### 💚 [Support the project →](https://fifecic.github.io/Trading-Command-Suite/support/)
->
-> This is one person's full-time work and it has no income. The whole app is given away — the scoring
-> engine, the risk controls, the position management, all of it — and it stays that way. If it earns
-> you something, or saves you something, [a tip or a sponsorship](https://fifecic.github.io/Trading-Command-Suite/support/)
-> is what keeps it being maintained. GitHub's **Sponsor** button on this page goes to the same place.
->
-> ⚠️ **Nothing is withheld to make you pay.** There is no premium edition, no crippled build, and no
-> feature behind a licence check. The ask is voluntary and the app is complete without it.
-
----
-
-> ## 🛑 Read before you connect an account: [`DISCLAIMER.md`](DISCLAIMER.md)
->
-> **This software is not configured to profit by default, and it is not financial advice.**
-> The shipped configuration is an engineering baseline for research and development — no strategy in
-> it has been shown to be profitable, and the trading performance of this project is not a feature of
-> this release.
->
-> **Use a demo account.** Test on demo until you can explain every order the system places. Only then
-> consider a funded account, and never one you cannot afford to empty.
->
-> The AGPL covers the *licence*; it does not tell you the *risk*. [`DISCLAIMER.md`](DISCLAIMER.md) does,
-> and it binds by the same terms.
-
----
+The AGPL covers the *licence*; it does not tell you the *risk*.
+[DISCLAIMER.md](DISCLAIMER.md) does, and it binds by the same terms.
 
 ## What It Does
 
 - **META.Stack Scoring** (**M**odular **E**xpert **T**rading **A**rchitecture) — protocols built from inspirable directives across technical, sentiment, and risk groups. Protocol-gated scoring (~14 directives per protocol) is ~7× cheaper than flat scoring.
-- **Automation Loop** — 120s tick cycle. Scores strategy symbols, gates through risk chains, dispatches trades, covering Tokyo, London, and US sessions.
-
-> 🔢 **The counts are deliberately not written here.** Every number this README used to quote
-> (protocols, directives, adapters, active strategies) had gone stale, because a count in prose is a
-> second copy of something the system already knows — and the second copy is the one that rots.
-> Current totals live in **[`docs/GENERATED-FACTS.md`](docs/GENERATED-FACTS.md)**, which is generated
-> and **fails the build if it disagrees with the repo**. Nothing in this file should quote a number
-> that file owns.
 - **Decision Trail** — Full audit chain from trade → dispatch → gate → score → directive → market data. Queryable via `GET /api/automation/decision-trail`.
-- **Multi-Broker** — a provider-adapter layer spanning FX, equities, crypto and macro data (MT5, Alpaca, Trading212, Capital.com, Interactive Brokers, Binance, Polygon, Finnhub, FMP, Twelve Data, Alpha Vantage, ECB, FRED and others). The current adapter total is in [`docs/GENERATED-FACTS.md`](docs/GENERATED-FACTS.md) — it changes, so it is generated, not listed here.
+- **Automation Loop** — 120s tick cycle. Scores strategy symbols, gates through risk chains, dispatches trades, covering Tokyo, London, and US sessions.
+- **Multi-Broker** — a provider-adapter layer spanning FX, equities, crypto and macro data (MT5, Alpaca, Trading212, Capital.com, Interactive Brokers, Binance, Polygon, Finnhub, FMP, Twelve Data, Alpha Vantage, ECB, FRED and others).
 - **A/B Testing Foundation** — Protocol variants with `derivedFrom` lineage. LONG vs SHORT comparison stored per tick. Ready for side-by-side protocol evaluation.
+
+Counts are deliberately not written here. Every number this README used to quote (protocols, directives,
+adapters, active strategies) had gone stale, because a count in prose is a second copy of something the
+system already knows — and the second copy is the one that rots. Current totals live in
+[docs/GENERATED-FACTS.md](docs/GENERATED-FACTS.md), which is generated and **fails the build if it
+disagrees with the repo**.
 
 ## Architecture
 
@@ -133,6 +103,33 @@ npm --prefix nest run start  # NestJS API (3201)
   bars, scores) query the API — those are never published. A doc that quotes a count without one of
   these is a claim, not a fact.
 
-## Licence
+## Project Links
 
-GPL-3.0 — see [LICENSE](LICENSE) for details.
+| Resource | Location |
+|---|---|
+| Website | [fifecic.github.io/Trading-Command-Suite](https://fifecic.github.io/Trading-Command-Suite/) |
+| Screenshots | [showcase](https://fifecic.github.io/Trading-Command-Suite/showcase/) |
+| Wiki | [FifeCIC/Trading-Command-Suite/wiki](https://github.com/FifeCIC/Trading-Command-Suite/wiki) |
+| Discussions | [FifeCIC/Trading-Command-Suite/discussions](https://github.com/FifeCIC/Trading-Command-Suite/discussions) |
+| Issues | [FifeCIC/Trading-Command-Suite/issues](https://github.com/FifeCIC/Trading-Command-Suite/issues) |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Security | [SECURITY.md](SECURITY.md) |
+
+## Licence and Support
+
+Licensed under **AGPL-3.0** — see [LICENSE](LICENSE). Copyright (C) 2026 Ryan Bayne / FifeCIC.
+
+This is an open-source project and you get the full benefit of it — use it, run it, read it, fork it, and
+contribute to it. The AGPL's network clause means that if you run a **modified** version as a service, you
+must publish your changes. That is deliberate: improvements come back to everyone instead of being
+resold as a closed product.
+
+This is one person's full-time work and it has no income. The whole app is given away — the scoring
+engine, the risk controls, the position management, all of it — and it stays that way. If it earns you
+something, or saves you something, [a tip or a sponsorship](https://fifecic.github.io/Trading-Command-Suite/support/)
+is what keeps it being maintained; GitHub's **Sponsor** button on this page goes to the same place. Nothing
+is withheld to make you pay — there is no premium edition, no crippled build, and no feature behind a
+licence check. The ask is voluntary and the app is complete without it.
+
+Contributions and ideas are welcome. The project is engineered and maintained by one person, so reviews
+and replies may take time — that is the honest trade for a codebase this size.

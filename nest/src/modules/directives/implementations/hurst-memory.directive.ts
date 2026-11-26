@@ -6,7 +6,19 @@
  * H < 0.40 → mean-reverting / anti-persistent
  * H ≈ 0.50 → random walk / efficient
  *
- * Confidence weighted by R² of the log-log regression.
+ * Confidence weighted by the R² of the SAME log-log regression that produced H.
+ *
+ * ⚠️ R² is measured over the regression POINTS (`log(n)`, `log(R/S)`), never over the price series.
+ * Computing it from the prices measures how much the price moves relative to its own variance — a
+ * quantity correlated with H itself — so a trending series earned both a high score and a high
+ * confidence, and a quiet mean-reverting series was penalised twice. Measured 2026-11-25 on the
+ * committed fixtures: the price-based form returned confidence **0.87 on 8 of 9 fixtures** (it is
+ * `0.3 + 0.95 × 0.6` once `ΣΔ²/Σ(x−x̄)² → 6/n`), and its only low reading, **0.36**, was the
+ * maximally anti-persistent alternating series — the one case where H is most decisive.
+ *
+ * ⚠️ KNOWN LIMIT, not a defect: with three R/S windows a straight line usually fits by chance, so R²
+ * sits near 1 on almost every series. That is a property of R/S at three points, not of this
+ * weighting. Widening the window set would move H itself and is a maths change (A/B required).
  */
 
 import { Injectable } from '@nestjs/common';
@@ -21,6 +33,27 @@ const MIN_BARS = 50;
 const RS_WINDOWS = [8, 16, 32];
 const TREND_LEVEL = 0.65;
 const REVERSION_LEVEL = 0.35;
+
+/**
+ * A straight line through TWO points always fits perfectly, so an R² of 1 from two points is
+ * arithmetic, not evidence. Fit quality is only measurable from three regression points.
+ */
+const MIN_FIT_POINTS = 3;
+
+/** Confidence spans `FLOOR` (no fit) … `FLOOR + SPAN` (perfect fit). */
+const CONFIDENCE_FLOOR = 0.3;
+const CONFIDENCE_SPAN = 0.6;
+
+/**
+ * The fit quality to assume when R² cannot be measured — the MIDPOINT of 0 (no fit) and 1 (perfect
+ * fit), i.e. no discount and no bonus.
+ *
+ * ⚠️ NOT the floor. Two R/S windows are real evidence about memory; they are silent only about
+ * linearity. Measured 2026-11-25: flooring the unmeasurable case put a 50–63-bar series (two windows
+ * at the default `longestWindow`) at **0.30**, which crosses `scoring.service`'s 0.5 low-confidence
+ * suppression threshold and would have silently dropped the directive's vote under group consensus.
+ */
+const NEUTRAL_FIT_QUALITY = 0.5;
 
 /**
  * Tunable knobs (#1165). Defaults are the constants above — BASELINE proves the equality.
@@ -85,7 +118,7 @@ export class HurstMemoryDirective implements IDirective {
   readonly maxScore = 95;
   readonly minScore = 1;
   readonly minBars = { '1d': 50 };
-  readonly version = '1.1.0';
+  readonly version = '1.2.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
   readonly params = PARAMS;
@@ -106,8 +139,8 @@ export class HurstMemoryDirective implements IDirective {
     }
 
     const closes = bars.map((b) => b.close);
-    const h = this.hurstRS(closes, this.rsWindows(values.longestWindow as number));
-    const rSquared = this.regressionQuality(closes);
+    const estimate = this.hurstRS(closes, this.rsWindows(values.longestWindow as number));
+    const h = estimate.h;
 
     // Determine signal
     let score: number;
@@ -143,18 +176,24 @@ export class HurstMemoryDirective implements IDirective {
       reason = `H=${h.toFixed(3)} — near random walk. No memory bias.`;
     }
 
+    const confidence = Number(
+      (CONFIDENCE_FLOOR + (estimate.rSquared ?? NEUTRAL_FIT_QUALITY) * CONFIDENCE_SPAN).toFixed(2),
+    );
+
     return {
       score: Math.round(score),
-      confidence: Number((0.3 + rSquared * 0.6).toFixed(2)),
-      reason,
+      confidence,
+      // "Cannot judge" must not render as "judged well": when only two windows fit the series there
+      // is no third point to test linearity against, so the reason says so rather than leaving an
+      // unmoved confidence unexplained.
+      reason:
+        estimate.rSquared === null
+          ? `${reason} Fit quality unmeasurable on ${estimate.windowCount} R/S windows — confidence left neutral.`
+          : reason,
       signalClass,
     };
   }
 
-  /**
-   * Hurst exponent via R/S analysis.
-   * For each window size n, compute R/S and regress log(R/S) vs log(n).
-   */
   /**
    * Derive the R/S window set from the single `longestWindow` knob: w/4, w/2, w.
    * One knob rather than three, because a regression over an incoherent set (8 and 64 together)
@@ -165,7 +204,18 @@ export class HurstMemoryDirective implements IDirective {
     return [...new Set([Math.max(2, Math.round(w / 4)), Math.max(3, Math.round(w / 2)), w])];
   }
 
-  private hurstRS(values: number[], windows: number[]): number {
+  /**
+   * Hurst exponent via R/S analysis.
+   * For each window size n, compute R/S and regress log(R/S) vs log(n); H is that slope, and the
+   * returned `rSquared` is the fit quality of THAT regression over those SAME points.
+   *
+   * `rSquared` is null — not 1 — when fewer than `MIN_FIT_POINTS` points remain, because two points
+   * are collinear by construction and an R² of 1 there would be a fabricated perfect fit.
+   */
+  private hurstRS(
+    values: number[],
+    windows: number[],
+  ): { h: number; rSquared: number | null; windowCount: number } {
     const points: { x: number; y: number }[] = [];
 
     for (const windowSize of windows) {
@@ -200,7 +250,7 @@ export class HurstMemoryDirective implements IDirective {
       }
     }
 
-    if (points.length < 2) return 0.5;
+    if (points.length < 2) return { h: 0.5, rSquared: null, windowCount: points.length };
 
     // Linear regression: log(R/S) = H × log(n) + constant
     const n = points.length;
@@ -210,25 +260,32 @@ export class HurstMemoryDirective implements IDirective {
     const sumX2 = points.reduce((s, p) => s + p.x * p.x, 0);
 
     const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    return Math.max(0.1, Math.min(1, slope));
-  }
+    const intercept = (sumY - slope * sumX) / n;
 
-  private regressionQuality(values: number[]): number {
-    // Simple R² approximation based on price autocorrelation
-    const n = values.length;
-    if (n < 20) return 0.3;
-
-    const mean = values.reduce((a, b) => a + b, 0) / n;
+    const yMean = sumY / n;
     let ssTotal = 0;
     let ssResidual = 0;
-
-    for (let i = 1; i < n; i++) {
-      ssTotal += (values[i] - mean) ** 2;
-      ssResidual += (values[i] - values[i - 1]) ** 2;
+    // ⚠️ Same arithmetic as `linearRegression()` in `modules/trend/trend-read.math.ts`, and
+    // deliberately NOT shared yet. That one regresses PRICE against bar index, where a flat series
+    // means an undefined fit (it returns 0); here a flat LOG-LOG plot means every window agreed
+    // exactly, which is a perfect fit. Converting that live trend path is a maths change under the
+    // A/B rule, so it is named here instead — an edit to R² semantics must find both sites.
+    for (const p of points) {
+      ssTotal += (p.y - yMean) ** 2;
+      ssResidual += (p.y - (slope * p.x + intercept)) ** 2;
     }
 
-    if (ssTotal === 0) return 0.3;
-    return Math.min(0.95, Math.max(0.1, 1 - ssResidual / ssTotal));
+    // ssTotal === 0 means every window agreed exactly (a flat log-log plot, e.g. a pure sawtooth):
+    // the line is then BOTH the fit and the mean, so the residuals are zero and the fit is perfect.
+    // That is measured agreement across 3 points, not the vacuous 1 that two points would give.
+    const rSquared =
+      n < MIN_FIT_POINTS
+        ? null
+        : ssTotal > 0
+          ? Math.max(0, Math.min(1, 1 - ssResidual / ssTotal))
+          : 1;
+
+    return { h: Math.max(0.1, Math.min(1, slope)), rSquared, windowCount: n };
   }
 }
 

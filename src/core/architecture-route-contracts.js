@@ -3021,6 +3021,22 @@ export const ROUTE_CONTRACTS = [
     status: 'active',
   },
   {
+    route: 'GET /api/backtest/best',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'BacktestController',
+    contract: 'The best result ever recorded per test (#1341), read from `backtest_best` — one row per scope + profile key, written by `best-run.service.ts` for scope `movers-selection` (selection runs) and `protocol-backtest` (single-symbol runs). The record is decided on net P/L PER MEASURED DAY, so a longer run cannot win by existing: a worse run still increments `attempts` and leaves `achievedAt` untouched, and the reply names the record figure it failed to beat. Query `?scope=` filters; an UNKNOWN scope is a 400 naming both known scopes rather than an empty list that would read as "nothing recorded yet". The row carries the config JSON that produced it. Added 2026-11-23 (register row 262).',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/backtest/parity',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'BacktestController',
+    contract: 'A READ of the parity register, not a computation (#1335/#1345): `common/trading/parity-register.ts` declares once every mechanism that changes a trade outcome and whether the engine shares it with live, and validate-parity-register.cjs checks that declaration against the source on every build — an endpoint that re-derived the list would be the second copy. Replies { summary, rows }. The one honesty field is summary.outcomeGaps: mechanisms that move money and are NOT shared verbatim, computed server-side so the page cannot soften it. Added 2026-11-25.',
+    status: 'active',
+  },
+  {
     route: 'GET /api/faults',
     method: 'GET',
     permission: 'Authenticated read access',

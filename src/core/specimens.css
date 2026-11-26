@@ -1,0 +1,186 @@
+/*
+ * specimens.css — THE APPROVED VOCABULARY, available to every page.
+ *
+ * ⚠️ WHY THIS FILE EXISTS (2026-11-25, owner): *"you've not used an authorised table styling. This is
+ * another example of agentic AI random styling and it's almost like every table gets its own
+ * approach. … The Theme page has some of the accepted designs."*
+ *
+ * He was right, and the cause was structural rather than cosmetic. `/development/theme` is the named
+ * gallery the design rules were replaced with (`ui-standards` retired 2026-11-23), but its specimens
+ * lived in `src/pages/theme-page.css` — a PAGE stylesheet. So the approved designs were visible and
+ * unusable: a page that wanted the Summary Strip had to either import another page's stylesheet or
+ * invent its own. Both happened.
+ *
+ * These rules are MOVED here verbatim from `theme-page.css`; that file keeps the gallery's layout and
+ * anything genuinely peculiar to it. Nothing here is new styling — it is the same vocabulary, given
+ * one home so it can be quoted instead of re-drawn.
+ *
+ * ── What is here ───────────────────────────────────────────────────────────────────────────────
+ *   Summary Strip   .thm-tint · .thm-stat-grid · .thm-stat (+ --accent · --derived · --disabled)
+ *   Chip Bar        .thm-chipbar · .thm-chipset · .thm-chipset-label · .thm-chip (+ .is-on)
+ *   Tables          .thm-scroll · .thm-table--dense · .thm-table--spacious
+ *                   (the table ARRANGEMENT itself is `.thm-table` in `core/tables.css`)
+ *   Tone atoms      .thm-sym · .thm-num · .thm-soft · .thm-muted · .thm-accent · .thm-pos · .thm-neg · .thm-warn
+ *
+ * ⚠️ A TONE IS NOT A COMPONENT. `.thm-warn` is one declaration, in the same family as `.thm-neg`;
+ * anything larger than a colour belongs in the gallery, not in a page.
+ *
+ * ⚠️ TAP TARGETS ARE THE CALLER'S JOB, DELIBERATELY. `.thm-chip` is ~26px tall because the gallery
+ * shows it as part of a control row; WCAG 2.5.5 wants 44px for a real control. A page that makes it
+ * interactive sets `min-height` itself and says why — do not grow the specimen for everyone.
+ *
+ * ── THE RULE THIS FILE ENFORCES BY EXISTING ─────────────────────────────────────────────────────
+ * A page QUOTES one of these. It does not draw its own of the same thing. Owner, 2026-11-25:
+ * *"it's almost like every table gets it's own approach."* Register row **282**; the table half is
+ * gated by `validate-table-enrolment.cjs`, the rest is a reading discipline, not a gate.
+ */
+
+/* ── Tinted container — "a background colour so the cards stand out" ───────────────────────── */
+
+.thm-tint {
+  padding: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg-elev));
+}
+
+/* ── Tone atoms ────────────────────────────────────────────────────────────────────────────── */
+
+.thm-sym { font-family: var(--font-mono); font-weight: 700; color: var(--ink); }
+.thm-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.thm-soft { color: var(--text-dim); }
+.thm-muted { color: var(--text-faint); }
+.thm-pos { color: var(--color-profit); }
+.thm-neg { color: var(--color-loss); }
+.thm-warn { color: var(--color-warning); }
+.thm-accent { color: var(--accent); }
+
+/* ── Summary Strip — a row of stat cards ───────────────────────────────────────────────────── */
+
+.thm-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.6rem;
+}
+
+.thm-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 0.62rem 0.78rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+}
+
+.thm-stat-label {
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink-soft);
+}
+
+.thm-stat-value {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+/* Derived: dotted edge = "less important than the reported figures beside it". */
+.thm-stat--derived {
+  border-style: dashed;
+  border-color: var(--border-strong);
+  background: color-mix(in srgb, var(--bg) 55%, var(--panel));
+}
+.thm-stat--derived .thm-stat-label::after {
+  content: ' · derived';
+  color: var(--text-faint);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Disabled: same dotted language, and the content is visibly held back. */
+.thm-stat--disabled {
+  border-style: dashed;
+  border-color: var(--border);
+  opacity: 0.62;
+}
+.thm-stat--disabled .thm-stat-label::after {
+  content: ' · disabled';
+  color: var(--text-faint);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.thm-stat--accent {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+}
+
+/* ── Chip Bar — multi-row controls ─────────────────────────────────────────────────────────── */
+
+.thm-chipbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  max-width: 680px;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+
+.thm-chipset {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.thm-chipset-label {
+  min-width: 86px;
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--text-faint);
+}
+
+.thm-chip {
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.thm-chip:hover { color: var(--ink); border-color: var(--border-strong); }
+.thm-chip.is-on {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--accent) 65%, var(--border));
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+/* ── Table wrappers and modifiers (the arrangement is `.thm-table` in core/tables.css) ────── */
+
+.thm-scroll {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  overflow-x: auto;
+}
+
+/* Busy: tight, monospaced figures, horizontal scroll rather than wrapping. */
+.thm-table--dense { font-size: var(--text-xs); }
+.thm-table--dense th,
+.thm-table--dense td { padding: 0.3rem 0.5rem; white-space: nowrap; }
+.thm-table--dense td { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.thm-table--dense td.thm-sym { color: var(--accent); }
+
+/* Spacious: the default. Room to read, and the scanned column leads. */
+.thm-table--spacious { font-size: var(--text-base); }
+.thm-table--spacious th,
+.thm-table--spacious td { padding: 0.62rem 0.8rem; }
+.thm-table--spacious .thm-sym { font-size: var(--text-md); }

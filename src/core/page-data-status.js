@@ -119,6 +119,14 @@ export const PAGE_DATA_STATUS = {
   'diagrams': { status: 'live', source: 'Generated diagrams' },
   'workflow-wizards': { status: 'mock', note: 'Not yet built' },
   'theme-lab-popover': { status: 'live', source: 'Self-contained demo' },
+  // 2026-11-23 (batch #59, register row 265): the Appearance AREA is gone and `/development/theme` is
+  // the design vocabulary — twenty NAMED specimens (Dotted Stat, Dense Table, Detail Rail, Trade Card
+  // …) rather than written rules. Static by design: no store and no API, so `live` follows the same
+  // convention as `candle-patterns` and `theory-registry` — the file IS the source of truth.
+  'theme': { status: 'live', source: 'src/pages/ThemePage.jsx — static specimens; `/appearance/*` redirects here' },
+  // The paragraph explainers between demos were removed in the same landing; a reading strip and
+  // framed panels remain, on the page\'s own stylesheet.
+  'responsive-layout-lab': { status: 'live', source: 'src/pages/ResponsiveLayoutLabPage.jsx — static CSS demonstrations' },
   'backtest': { status: 'live', source: 'Backtest engine + DB (moved to Training nav #466)' },
   'meta-stack-explorer': { status: 'live', source: 'Interactive pipeline visualization via POST /api/scoring/gated/batch' },
   'performance-lab': { status: 'partial', source: 'Trade table + MT5 bridge' },

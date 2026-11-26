@@ -213,23 +213,12 @@
   white-space: nowrap;
 }
 
-/* A tinted container — "a background colour so the cards stand out". */
-.thm-tint {
-  padding: 0.85rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--accent) 7%, var(--bg-elev));
-}
+/* A tinted container — "a background colour so the cards stand out".
+ * ⚠️ MOVED to `src/core/specimens.css` 2026-11-25 (shared vocabulary). Do not re-add here. */
 
 /* ── Shared atoms ───────────────────────────────────────────────────────────────────────────── */
-
-.thm-sym { font-family: var(--font-mono); font-weight: 700; color: var(--ink); }
-.thm-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.thm-soft { color: var(--text-dim); }
-.thm-muted { color: var(--text-faint); }
-.thm-pos { color: var(--color-profit); }
-.thm-neg { color: var(--color-loss); }
-.thm-accent { color: var(--accent); }
+/* ⚠️ .thm-sym / .thm-num / .thm-soft / .thm-muted / .thm-pos / .thm-neg / .thm-accent MOVED to
+ * `src/core/specimens.css` 2026-11-25 (shared vocabulary). Do not re-add here. */
 
 .thm-pill {
   display: inline-flex;
@@ -304,67 +293,9 @@
 .thm-star { color: var(--text-faint); }
 
 /* ── Stat cards ─────────────────────────────────────────────────────────────────────────────── */
-
-.thm-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 0.6rem;
-}
-
-.thm-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  padding: 0.62rem 0.78rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--panel);
-}
-
-.thm-stat-label {
-  font-size: var(--text-2xs);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wide);
-  color: var(--ink-soft);
-}
-
-.thm-stat-value {
-  font-family: var(--font-mono);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
-}
-
-/* Derived: dotted edge = "less important than the reported figures beside it". */
-.thm-stat--derived {
-  border-style: dashed;
-  border-color: var(--border-strong);
-  background: color-mix(in srgb, var(--bg) 55%, var(--panel));
-}
-.thm-stat--derived .thm-stat-label::after {
-  content: ' · derived';
-  color: var(--text-faint);
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-/* Disabled: same dotted language, and the content is visibly held back. */
-.thm-stat--disabled {
-  border-style: dashed;
-  border-color: var(--border);
-  opacity: 0.62;
-}
-.thm-stat--disabled .thm-stat-label::after {
-  content: ' · disabled';
-  color: var(--text-faint);
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.thm-stat--accent {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
-  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
-}
+/* ⚠️ .thm-stat-grid / .thm-stat / .thm-stat-label / .thm-stat-value and the --derived / --disabled /
+ * --accent modifiers MOVED to `src/core/specimens.css` 2026-11-25 (shared vocabulary).
+ * Do not re-add here: a second copy is the drift this move removes. */
 
 /* ── Tables ─────────────────────────────────────────────────────────────────────────────────── */
 
@@ -375,12 +306,7 @@
   overflow: hidden;
 }
 
-.thm-scroll {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--panel);
-  overflow-x: auto;
-}
+/* ⚠️ .thm-scroll MOVED to `src/core/specimens.css` 2026-11-25 (shared vocabulary). */
 
 .thm-table {
   width: 100%;
@@ -408,18 +334,9 @@
 .thm-table tbody tr:last-child td { border-bottom: none; }
 .thm-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
 
-/* Busy: tight, monospaced figures, horizontal scroll rather than wrapping. */
-.thm-table--dense { font-size: var(--text-xs); }
-.thm-table--dense th,
-.thm-table--dense td { padding: 0.3rem 0.5rem; white-space: nowrap; }
-.thm-table--dense td { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.thm-table--dense td.thm-sym { color: var(--accent); }
-
-/* Spacious: the default. Room to read, and the scanned column leads. */
-.thm-table--spacious { font-size: var(--text-base); }
-.thm-table--spacious th,
-.thm-table--spacious td { padding: 0.62rem 0.8rem; }
-.thm-table--spacious .thm-sym { font-size: var(--text-md); }
+/* ⚠️ .thm-table--dense and .thm-table--spacious MOVED to `src/core/specimens.css` 2026-11-25
+ * (shared vocabulary). The `.thm-table` arrangement itself was never here — it is in
+ * `src/core/tables.css`, which is loaded once for the whole app. */
 
 /* Meter in a table cell: number and bar adjacent so the value is never a bare percentage. */
 .thm-meter-cell {
@@ -520,49 +437,8 @@
 }
 
 /* ── Chip bar ───────────────────────────────────────────────────────────────────────────────── */
-
-.thm-chipbar {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  max-width: 680px;
-  padding: 0.7rem 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--panel);
-}
-
-.thm-chipset {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-}
-
-.thm-chipset-label {
-  min-width: 86px;
-  font-size: var(--text-2xs);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wider);
-  color: var(--text-faint);
-}
-
-.thm-chip {
-  padding: 0.25rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--ink-soft);
-  font-size: var(--text-sm);
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-}
-.thm-chip:hover { color: var(--ink); border-color: var(--border-strong); }
-.thm-chip.is-on {
-  color: var(--ink);
-  border-color: color-mix(in srgb, var(--accent) 65%, var(--border));
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
-}
+/* ⚠️ .thm-chipbar / .thm-chipset / .thm-chipset-label / .thm-chip MOVED to
+ * `src/core/specimens.css` 2026-11-25 (shared vocabulary). Do not re-add here. */
 
 /* ── Colour lists ───────────────────────────────────────────────────────────────────────────── */
 

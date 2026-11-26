@@ -1357,6 +1357,15 @@
   color: var(--color-warning);
 }
 
+/* Pre-run coverage (2026-11-25): one line per day that will not run clean, directly under the table
+   that flagged it. A reason behind a hover is a reason nobody reads. */
+.mvp-coverage-notes {
+  margin: 8px 0 0;
+  padding-left: 16px;
+  display: grid;
+  gap: 4px;
+}
+
 .mvp-muted {
   color: var(--text-dim);
 }

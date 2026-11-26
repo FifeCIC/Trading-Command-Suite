@@ -505,6 +505,12 @@ export const NAV_TREE = {
       // tooling rather than with system health.
       { id: 'commands', label: 'Commands Reference', icon: '💻' },
       { id: 'file-inventory', label: 'File Inventory', icon: '📁' },
+      // 2026-11-25 — the TABLE registry, sibling of File Inventory: that page answers "what files
+      // exist", this one answers "what tables exist, what each is for, how fast it grows and how
+      // long it is kept". ⚠️ The view already existed in `view-routes.jsx` and had NO navigation
+      // entry anywhere, so it was unreachable — wiring it is not a new surface. It is here, in
+      // Development, because it is engineering reference rather than a trading or health page.
+      { id: 'database-tables', label: 'Database Tables', icon: '🗄' },
       // ── Decisions — the sandbox's OUTPUT (requirement 2026-09-24) ──
       // The Development area is where an agent may build a competing approach, measure it, and produce
       // a decision. An experiment that does not end in a decision is a prototype, not an experiment —
