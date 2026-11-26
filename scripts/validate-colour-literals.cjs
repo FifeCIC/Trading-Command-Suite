@@ -57,6 +57,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { sourceFiles, repoRelative, readBaseline, compareToBaseline, writeBaseline: writeRatchet } = require('./lib/validator-ratchet.cjs');
 
 const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'src');
@@ -105,20 +106,6 @@ function tokenValues(css) {
   return byValue;
 }
 
-function walk(dir) {
-  const out = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === 'node_modules' || entry.name === '__tests__') continue;
-      out.push(...walk(full));
-    } else if (/\.(jsx|js)$/.test(entry.name)) {
-      out.push(full);
-    }
-  }
-  return out;
-}
-
 /** Every inline-style hex in one source, in order, with the style body it came from. */
 function inlineHex(text) {
   const out = [];
@@ -151,27 +138,8 @@ function analyse(sources, byValue, baseline) {
       }
     }
   }
-  const grown = [];
-  const newFiles = [];
-  const shrunk = [];
-  const known = baseline && baseline.files ? baseline.files : {};
-  const claimedTotal = baseline && typeof baseline.total === 'number' ? baseline.total : null;
-  for (const [file, n] of counts) {
-    const was = known[file];
-    if (was === undefined) newFiles.push({ file, count: n });
-    else if (n > was) grown.push({ file, was, count: n });
-    else if (n < was) shrunk.push({ file, was, count: n });
-  }
-  for (const [file, was] of Object.entries(known)) {
-    if (!counts.has(file)) shrunk.push({ file, was, count: 0 });
-  }
-  const total = [...counts.values()].reduce((a, b) => a + b, 0);
+  const { total, grown, newFiles, shrunk, claimedTotal } = compareToBaseline(counts, baseline);
   return { mustMove, counts, total, grown, newFiles, shrunk, claimedTotal };
-}
-
-function readBaseline() {
-  if (!fs.existsSync(BASELINE)) return { total: 0, files: {} };
-  return JSON.parse(fs.readFileSync(BASELINE, 'utf8'));
 }
 
 function check() {
@@ -182,12 +150,12 @@ function check() {
     // here would be the false negative this repo keeps re-finding.
     throw new Error('no colour token values parsed from src/index.css — the file changed shape');
   }
-  const files = walk(SRC).map((f) => path.relative(ROOT, f).replace(/\\/g, '/')).filter((f) => !DEFINES_COLOURS.has(f));
+  const files = sourceFiles(SRC).map((f) => repoRelative(ROOT, f)).filter((f) => !DEFINES_COLOURS.has(f));
   const sources = files.map((file) => ({ file, text: fs.readFileSync(path.join(ROOT, file), 'utf8') }));
   if (!sources.some((s) => s.text.includes('style={{'))) {
     throw new Error('no inline style blocks found in src/ — the scanner matched nothing');
   }
-  return { ...analyse(sources, byValue, readBaseline()), scanned: files.length, tokens: byValue.size };
+  return { ...analyse(sources, byValue, readBaseline(BASELINE)), scanned: files.length, tokens: byValue.size };
 }
 
 function selfTest() {
@@ -274,18 +242,6 @@ function selfTest() {
   process.exit(failures === 0 ? 0 : 1);
 }
 
-function writeBaseline(result) {
-  const files = {};
-  for (const [file, n] of [...result.counts.entries()].sort()) files[file] = n;
-  const body = {
-    note: 'Inline-style hex literals that are BESPOKE (no token carries the value). Frozen so the count cannot grow; regenerate with `node scripts/validate-colour-literals.cjs --write-baseline` when a file shrinks.',
-    total: result.total,
-    files,
-  };
-  fs.writeFileSync(BASELINE, `${JSON.stringify(body, null, 2)}\n`);
-  console.log(`[colour-literals] wrote ${path.relative(ROOT, BASELINE)} — ${result.total} site(s) in ${Object.keys(files).length} file(s)`);
-}
-
 function main() {
   const argv = process.argv.slice(2);
   if (argv.includes('--self-test')) return selfTest();
@@ -300,7 +256,10 @@ function main() {
     console.error(`[colour-literals] ✖ could not judge: ${err.message}`);
     process.exit(2);
   }
-  if (argv.includes('--write-baseline')) return writeBaseline(result);
+  if (argv.includes('--write-baseline')) {
+    writeRatchet(BASELINE, 'Inline-style hex literals that are BESPOKE (no token carries the value). Frozen so the count cannot grow; regenerate with `node scripts/validate-colour-literals.cjs --write-baseline` when a file shrinks.', result.counts, ROOT);
+    return;
+  }
 
   if (argv.includes('--report')) {
     console.log(`\n${result.total} bespoke inline hex in ${result.counts.size} file(s) · ${result.tokens} token value(s) in index.css\n`);

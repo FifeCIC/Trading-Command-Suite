@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **623** backend source files (specs excluded). Two access paths, because one
+Scanned **624** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -81,12 +81,12 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**623** source files · **3450** declarations · **405** ratio sites · **1815** nodes · **196** unreferenced
+**624** source files · **3452** declarations · **407** ratio sites · **1815** nodes · **196** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
-| `exact` | the identical computation after normalisation | 51 |
-| `coarse` | the identical **shape**, different constants | 48 |
+| `exact` | the identical computation after normalisation | 52 |
+| `coarse` | the identical **shape**, different constants | 49 |
 | `idiom` | `(A−B)` **and** `(B−A)` in one expression | 1 |
 
 ## Divergent edges — the same maths, DIFFERENT rules
@@ -128,10 +128,10 @@ fabricated 1,172 bars (#1068) is only findable through the second.
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:2198` — `observeExhaustion()`
   - `(prior/entry)*100`
-- `nest/src/modules/backtest/selection-run.service.ts:790` — `runSelection()`
+- `nest/src/modules/backtest/selection-run.service.ts:892` — `runSelection()`
   - `kept.length?(wins/kept.length)*100:0`
   - guarded by: `kept.length`
-- `nest/src/modules/backtest/selection-run.service.ts:874` — `runSelection()` → `winRate`
+- `nest/src/modules/backtest/selection-run.service.ts:976` — `runSelection()` → `winRate`
   - `totalTrades?(totalWins/totalTrades)*100:0`
   - guarded by: `totalTrades`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
@@ -373,7 +373,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/common/trading/exit-guardian/position-bar.ts:177` — `managePositionBar()` → `inFavourPct`
   - `isLong?((bar.high-state.entryPrice)/state.entryPrice)*100:((state.entryPrice-bar.low)/state.entryPrice)*100`
   - conditions: `isLong`
-- `nest/src/common/trading/exit-guardian/stop-fill-gap.ts:76` — `summariseFillGap()` → `over`
+- `nest/src/common/trading/exit-guardian/stop-fill-gap.ts:97` — `summariseFillGap()` → `over`
   - `t?.direction==='SHORT'?((high-stop)/stop)*100:((stop-low)/stop)*100`
   - conditions: `t?.direction==='SHORT'`
 
@@ -454,10 +454,10 @@ Identical after normalisation: variable names differ, the computation does not.
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:2198` — `observeExhaustion()`
   - `(prior/entry)*100`
-- `nest/src/modules/backtest/selection-run.service.ts:790` — `runSelection()`
+- `nest/src/modules/backtest/selection-run.service.ts:892` — `runSelection()`
   - `kept.length?(wins/kept.length)*100:0`
   - guarded by: `kept.length`
-- `nest/src/modules/backtest/selection-run.service.ts:874` — `runSelection()` → `winRate`
+- `nest/src/modules/backtest/selection-run.service.ts:976` — `runSelection()` → `winRate`
   - `totalTrades?(totalWins/totalTrades)*100:0`
   - guarded by: `totalTrades`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
@@ -636,7 +636,7 @@ Identical after normalisation: variable names differ, the computation does not.
   - `peak>0?((peak-cum)/peak)*100:0`
   - guarded by: `peak>0`
 
-_… and 41 further group(s)._
+_… and 42 further group(s)._
 
 ## Q3b — the same shape, differing constants
 
@@ -698,10 +698,10 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `(recent/entry)*100`
 - `nest/src/modules/automation/stop-guardian.service.ts:2198` — `observeExhaustion()`
   - `(prior/entry)*100`
-- `nest/src/modules/backtest/selection-run.service.ts:790` — `runSelection()`
+- `nest/src/modules/backtest/selection-run.service.ts:892` — `runSelection()`
   - `kept.length?(wins/kept.length)*100:0`
   - guarded by: `kept.length`
-- `nest/src/modules/backtest/selection-run.service.ts:874` — `runSelection()` → `winRate`
+- `nest/src/modules/backtest/selection-run.service.ts:976` — `runSelection()` → `winRate`
   - `totalTrades?(totalWins/totalTrades)*100:0`
   - guarded by: `totalTrades`
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:228` — `calculate()` → `atrPct`
@@ -865,7 +865,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - guarded by: `total>0`
 - … and 2 more
 
-_… and 38 further group(s)._
+_… and 39 further group(s)._
 
 ## Q3c — the same idea, re-derived
 
@@ -913,8 +913,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/common/cache/cache.service.ts:69 del`
 - `nest/src/common/trading/exit-guardian/position-bar.ts:118 sign`
 - `nest/src/common/trading/exit-guardian/simulated-tsl.ts:60 usable`
-- `nest/src/common/trading/exit-guardian/stop-fill-gap.ts:53 round2`
-- `nest/src/common/trading/exit-guardian/stop-fill-gap.ts:81 at`
+- `nest/src/common/trading/exit-guardian/stop-fill-gap.ts:102 at`
+- `nest/src/common/trading/exit-guardian/stop-fill-gap.ts:70 round2`
 - `nest/src/common/trading/overfit-verdict.ts:65 pct`
 - `nest/src/modules/alerts/alert-trigger.service.ts:1046 toMap`
 - `nest/src/modules/alerts/alert-trigger.service.ts:236 stop`
@@ -967,8 +967,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/backtest/score-maths.ts:89 collect`
 - `nest/src/modules/backtest/selection-preview.ts:285 scoredOf`
 - `nest/src/modules/backtest/selection-preview.ts:288 runnable`
-- `nest/src/modules/backtest/selection-run.service.ts:495 num`
-- `nest/src/modules/backtest/selection-run.service.ts:96 num`
+- `nest/src/modules/backtest/selection-run.service.ts:114 num`
+- `nest/src/modules/backtest/selection-run.service.ts:594 num`
 - `nest/src/modules/directives/directives.service.ts:1039 refreshActiveStatuses`
 - `nest/src/modules/directives/directives.service.ts:264 prepare`
 - `nest/src/modules/directives/directives.service.ts:517 mean`
@@ -1056,11 +1056,11 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/scoring/strategy-derivation.service.ts:711 text`
 - `nest/src/modules/scoring/strategy-derivation.service.ts:712 flag`
 - `nest/src/modules/screener/screener.service.ts:183 bump`
-- `nest/src/modules/signals/signal-envelope.service.ts:2115 isRouteable`
-- `nest/src/modules/signals/signal-envelope.service.ts:2300 q`
-- `nest/src/modules/signals/signal-envelope.service.ts:2308 first`
-- `nest/src/modules/signals/signal-envelope.service.ts:327 has`
-- `nest/src/modules/signals/signal-envelope.service.ts:707 newestOfTf`
+- `nest/src/modules/signals/signal-envelope.service.ts:2168 isRouteable`
+- `nest/src/modules/signals/signal-envelope.service.ts:2353 q`
+- `nest/src/modules/signals/signal-envelope.service.ts:2361 first`
+- `nest/src/modules/signals/signal-envelope.service.ts:361 has`
+- `nest/src/modules/signals/signal-envelope.service.ts:741 newestOfTf`
 - `nest/src/modules/signals/signal-queue.service.ts:331 getQueue`
 - `nest/src/modules/strategies/strategies.service.ts:56 calculateScore`
 - `nest/src/modules/supporter/supporter.service.ts:131 unavailable`

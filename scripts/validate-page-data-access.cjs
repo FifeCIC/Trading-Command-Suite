@@ -58,6 +58,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { sourceFiles, repoRelative, readBaseline, compareToBaseline, writeBaseline: writeRatchet } = require('./lib/validator-ratchet.cjs');
 
 const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'src');
@@ -137,20 +138,6 @@ function scanSource(text) {
   return hits;
 }
 
-function walk(dir) {
-  const out = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === 'node_modules' || entry.name === '__tests__') continue;
-      out.push(...walk(full));
-    } else if (/\.(jsx|js)$/.test(entry.name) && !/\.test\.js$/.test(entry.name)) {
-      out.push(full);
-    }
-  }
-  return out;
-}
-
 /**
  * analyse(sources, baseline) — pure, so the self-test can drive every branch.
  * `sources` is [{ file, text }]; `baseline` is { files: { path: count } }.
@@ -168,31 +155,13 @@ function analyse(sources, baseline) {
     counts.set(file, hits.length);
     undeclared.push({ file, count: hits.length });
   }
-  const known = baseline && baseline.files ? baseline.files : {};
-  const grown = [];
-  const newFiles = [];
-  const shrunk = [];
-  for (const [file, n] of counts) {
-    const was = known[file];
-    if (was === undefined) newFiles.push({ file, count: n });
-    else if (n > was) grown.push({ file, was, count: n });
-    else if (n < was) shrunk.push({ file, was, count: n });
-  }
-  for (const [file, was] of Object.entries(known)) {
-    if (!counts.has(file)) shrunk.push({ file, was, count: 0 });
-  }
-  const total = [...counts.values()].reduce((a, b) => a + b, 0);
+  const { total, grown, newFiles, shrunk } = compareToBaseline(counts, baseline);
   return { sites, undeclared, counts, total, grown, newFiles, shrunk, allowed: Object.keys(ALLOWED) };
-}
-
-function readBaseline() {
-  if (!fs.existsSync(BASELINE)) return { total: 0, files: {} };
-  return JSON.parse(fs.readFileSync(BASELINE, 'utf8'));
 }
 
 function check() {
   if (!fs.existsSync(path.join(ROOT, CLIENT))) throw new Error(`${CLIENT} not found — cannot judge`);
-  const files = walk(SRC).map((f) => path.relative(ROOT, f).replace(/\\/g, '/'));
+  const files = sourceFiles(SRC).map((f) => repoRelative(ROOT, f));
   const sources = files.map((file) => ({ file, text: fs.readFileSync(path.join(ROOT, file), 'utf8') }));
   const declared = sources.find((s) => s.file === CLIENT);
   if (!scanSource(declared.text).length) {
@@ -200,7 +169,7 @@ function check() {
     // "clean" result below would be a false negative — the false pass this repo keeps re-finding.
     throw new Error(`the scanner found no fetch( in ${CLIENT} — the tokenizer is not reading code`);
   }
-  return { ...analyse(sources, readBaseline()), scanned: files.length };
+  return { ...analyse(sources, readBaseline(BASELINE)), scanned: files.length };
 }
 
 function selfTest() {
@@ -293,20 +262,6 @@ function selfTest() {
   process.exit(failures === 0 ? 0 : 1);
 }
 
-function writeBaseline(result) {
-  const files = {};
-  for (const [file, n] of [...result.counts.entries()].sort()) files[file] = n;
-  fs.writeFileSync(
-    BASELINE,
-    `${JSON.stringify({
-      note: 'Raw `fetch(` call sites still bypassing src/core/api/client.js. Frozen so the count cannot grow; regenerate with `node scripts/validate-page-data-access.cjs --write-baseline` when a file shrinks.',
-      total: result.total,
-      files,
-    }, null, 2)}\n`,
-  );
-  console.log(`[data-access] wrote ${path.relative(ROOT, BASELINE)} — ${result.total} call(s) in ${Object.keys(files).length} file(s)`);
-}
-
 function main() {
   const argv = process.argv.slice(2);
   if (argv.includes('--self-test')) return selfTest();
@@ -321,7 +276,10 @@ function main() {
     console.error(`[data-access] ✖ could not judge: ${err.message}`);
     process.exit(2);
   }
-  if (argv.includes('--write-baseline')) return writeBaseline(result);
+  if (argv.includes('--write-baseline')) {
+    writeRatchet(BASELINE, 'Raw `fetch(` call sites still bypassing src/core/api/client.js. Frozen so the count cannot grow; regenerate with `node scripts/validate-page-data-access.cjs --write-baseline` when a file shrinks.', result.counts, ROOT);
+    return;
+  }
 
   if (argv.includes('--report')) {
     console.log(`\n${result.total} raw call(s) in ${result.counts.size} file(s); ${result.allowed.length} file(s) allowed with a reason\n`);

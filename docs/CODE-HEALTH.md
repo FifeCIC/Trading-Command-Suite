@@ -27,22 +27,22 @@ line counts change on every edit and a guard that fires during normal work gets 
 ⚠️ This tool measures SHAPE, not correctness. It never reads the logic. A file here is not "wrong" —
 it is expensive to review and risky to change.
 
-## Files needing attention (14)
+## Files needing attention (15)
 
 ### `critical`
 
 | File | Lines | Comments | Longest fn | Fns over 60 |
 |---|---|---|---|---|
 | `nest/src/modules/backtest/backtest.service.ts` | 5,687 | 44.7% | 1588 | 5 |
-| `nest/src/modules/trading/trading-strategy.service.ts` | 3,748 | 35.9% | 218 | 7 |
-| `nest/src/modules/automation/automation-loop.service.ts` | 3,421 | 37.4% | 430 | 4 |
+| `nest/src/modules/trading/trading-strategy.service.ts` | 3,912 | 36.8% | 218 | 8 |
+| `nest/src/modules/automation/automation-loop.service.ts` | 3,534 | 37.8% | 417 | 4 |
 
 ### `high`
 
 | File | Lines | Comments | Longest fn | Fns over 60 |
 |---|---|---|---|---|
-| `nest/src/modules/automation/stop-guardian.service.ts` | 2,451 | 51.9% | 484 | 2 |
-| `nest/src/modules/signals/signal-envelope.service.ts` | 2,441 | 35.9% | 263 | 3 |
+| `nest/src/modules/signals/signal-envelope.service.ts` | 2,494 | 36.4% | 263 | 3 |
+| `nest/src/modules/automation/stop-guardian.service.ts` | 2,454 | 52.0% | 484 | 2 |
 | `nest/src/modules/scoring/protocol-gating.service.ts` | 2,300 | 49.5% | 65 | 1 |
 | `src/pages/DiagramsPage.jsx` | 2,105 | 2.4% | 211 | 1 |
 
@@ -53,6 +53,7 @@ it is expensive to review and risky to change.
 | `src/pages/ViewStrategyPage.jsx` | 1,823 | 19.7% | 841 | 1 |
 | `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts` | 1,770 | 26.2% | 87 | 3 |
 | `src/pages/MetaStackExplorerPage.jsx` | 1,695 | 15.0% | 1381 | 1 |
+| `src/pages/MoversStrategyBacktestPage.jsx` | 1,593 | 19.4% | 1457 | 1 |
 | `nest/src/modules/trading/trade-history.controller.ts` | 1,542 | 27.4% | 413 | 4 |
 | `nest/src/modules/providers/adapters/mt5.adapter.ts` | 1,536 | 32.4% | 195 | 1 |
 | `src/pages/ArchitectureFrameworkPage.jsx` | 1,528 | 0.8% | 1281 | 1 |
@@ -64,21 +65,20 @@ it is expensive to review and risky to change.
 | `src/pages/BacktestPage.jsx` | 3,966 | 26.1% | 16 | 0 |
 
 
-## Unreferenced modules (7)
+## Unreferenced modules (6)
 
 ⚠️ **A name-reference scan, not a module graph.** A file loaded through `import.meta.glob` or a
 registry string that does not contain its filename reads as unreferenced here and is not. Treat each
 line as a QUESTION — delete / wire up / keep and explain — never as a delete list. Owner: #1228.
 
 - `nest/src/modules/auth/guards/api-key.guard.ts`
-- `src/components/LoadingSteps.jsx`
 - `src/data/external-urls.js`
 - `src/hooks/useKeyboardShortcuts.js`
 - `src/hooks/useSpeedTradingKeys.js`
 - `src/pages/AdvancedResearchPage.jsx`
 - `src/pages/directives-manager.seed.js`
 
-## Named only in commentary (6)
+## Named only in commentary (8)
 
 ⚠️ **Discussed somewhere, named by no code.** These are NOT in the list above, because a name-reference
 scan sees them mentioned — usually by the very documentation that makes them look intentional. That is
@@ -88,7 +88,9 @@ per-bar drill-down in three documents while nothing imported it.
 A prose mention, in a comment **or a string**, is not a reference. Same QUESTION per file — delete /
 wire up / keep and explain. Owner: #1228.
 
+- `nest/src/modules/strategies/strategy-seeds.ts`
 - `src/components/DetachableWidget.jsx`
+- `src/components/LoadingSteps.jsx`
 - `src/components/SeesScoringPanel.jsx`
 - `src/components/StickyHeader.jsx`
 - `src/core/phase-gates.js`

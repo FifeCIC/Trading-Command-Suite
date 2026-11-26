@@ -39,6 +39,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { sourceFiles, repoRelative, readBaseline, compareToBaseline, writeBaseline } = require('./lib/validator-ratchet.cjs');
 
 const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'src');
@@ -120,20 +121,6 @@ function analyse(sources, exports) {
   return { decls, violations, allowlisted };
 }
 
-function walk(dir) {
-  const out = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === 'node_modules' || entry.name === '__tests__') continue;
-      out.push(...walk(full));
-    } else if (/\.(jsx|js)$/.test(entry.name)) {
-      out.push(full);
-    }
-  }
-  return out;
-}
-
 function check() {
   if (!fs.existsSync(CANON)) throw new Error(`${path.relative(ROOT, CANON)} not found — cannot judge`);
   const exports = exportsOf(fs.readFileSync(CANON, 'utf8'));
@@ -142,8 +129,8 @@ function check() {
     // matches nothing must ERROR: reporting "no shadowing" here would be a false negative.
     throw new Error('no exports parsed from format-utils.js — the file changed shape');
   }
-  const files = walk(SRC).filter((f) => path.resolve(f) !== path.resolve(CANON));
-  const sources = files.map((f) => ({ file: path.relative(ROOT, f).replace(/\\/g, '/'), text: fs.readFileSync(f, 'utf8') }));
+  const files = sourceFiles(SRC).filter((f) => path.resolve(f) !== path.resolve(CANON));
+  const sources = files.map((f) => ({ file: repoRelative(ROOT, f), text: fs.readFileSync(f, 'utf8') }));
   const result = analyse(sources, exports);
   if (result.decls.length === 0) throw new Error('no formatter declarations found in src/ — the scanner matched nothing');
   return { ...result, exports, fileCount: files.length };
