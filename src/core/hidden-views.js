@@ -113,13 +113,18 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
 
   // The table registry (2026-11-25). The view existed in `view-routes.jsx` with no navigation entry,
   // so it was unreachable — wiring it made it NEW to this gate.
+  // ⚠️ IT IS HIDDEN BY POLICY, NOT "PENDING REVIEW". Decided 2026-11-26: most pages will be hidden
+  // so that a new user meets a streamlined, polished product, and any page that is not vital, not
+  // strong, or badly designed visually stays hidden until it has been tested and polished. So this
+  // entry is a DECISION, not a queue item: do not file a review row asking whether to release it, and
+  // do not remove the line without the owner asking. `OWNER_SEES_WITHHELD` still keeps it in his rail.
+  // Register row 285.
   //
-  // ⚠️ IT IS HIDDEN BY POLICY, NOT "PENDING REVIEW". Owner, 2026-11-26: *"No it should be a hidden
-  // page. I'm planning on hiding most pages to create a streamlined and well polished first
-  // experience for new users so any page that isn't vital or isn't strong or is badly designed
-  // visually will be hidden pending testing and polishing."* So this entry is a DECISION, not a
-  // queue item: do not file a review row asking whether to release it, and do not remove the line
-  // without the owner asking. `OWNER_SEES_WITHHELD` still keeps it in his rail. Register row 285.
+  // ⚠️ THE QUOTATION WAS REMOVED 2026-11-26 BECAUSE IT BROKE THE BUILD. `validate-owner-quotes`
+  // allows ZERO quoted conversation (`scripts/owner-quotes-baseline.json` is `{}`), and a verbatim
+  // quotation is the part that reproduces a private message — the attribution is fine, the quote is
+  // not. Measured: this one line made `prebuild` fail on HEAD, which meant **no agent could run
+  // `build:api`** until it was reworded. The reasoning survives; only the quotation is gone.
   '/development/database-tables',
 
   // ── Pack 8 (continued): the 2026-11-23 Appearance removal ─────────────────────────────────────

@@ -49,6 +49,7 @@ import { NotificationService } from '../notifications/notifications.service';
 // simply falls back to `DEFAULT_TICK_INTERVAL_MS`.
 import { SettingsResolverService } from '../../common/settings/settings-resolver.service';
 import { PrismaService } from '../../database/prisma.service';
+import { BRIDGE_DEFAULT_MAGIC } from '../../common/trading/attribution-magic';
 import { CLOSE_REASONS } from '../../common/trading/close-reason';
 // The guardian's own rule, extracted 2026-11-23 so a backtest can call the same one (row 257).
 // ⚠️ Imported for USE as well as re-exported: a `export … from` does not put the names in scope.
@@ -457,16 +458,18 @@ export { declaredStopDistance, trailDistanceFor, trailDistanceProblem } from '..
 /**
  * The BRIDGE's default magic — `DEFAULT_MAGIC` in `scripts/mt5-bridge/mt5_bridge_v2.py`.
  *
- * ⚠️ A LITERAL HERE, DELIBERATELY, and the duplication is the lesser evil. The bridge is Python and
- * this is TypeScript; there is no shared constant to import, and the bridge cannot be assumed
- * running to be asked. The value is fixed forever by MT5's own data — every position opened before
- * 2026-09-28 carries it — so it cannot drift without invalidating the positions that exist.
+ * ⚠️ MOVED TO `common/trading/attribution-magic.ts` (2026-11-26, #1349) — and the reason is that the
+ * docblock that used to sit here argued for a local literal on the grounds that *"there is no shared
+ * constant to import"*. That was true when it was written and stopped being true the moment a second
+ * consumer needed the same fact: the watchlist lock check (#1349) must not count a `234000` position
+ * as belonging to a bot, and a third copy of the value is exactly the drift the shared-core rule
+ * names. The value is unchanged; only the number of places that state it changed.
  *
  * A position carrying it means "NO BOT ATTRIBUTED": not a bot whose magic happens to be 234000, but
  * an order placed before per-bot magics existed. Per-bot values are seeded from 234100 upward for
  * exactly that reason.
  */
-const BRIDGE_DEFAULT_MAGIC = 234000;
+
 
 /**
  * DEFAULT_TICK_INTERVAL_MS — how often the guardian re-derives every trailing stop.

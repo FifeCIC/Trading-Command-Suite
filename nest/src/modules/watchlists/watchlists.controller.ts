@@ -11,6 +11,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { Trading212Adapter } from '../providers/adapters/trading212.adapter';
 import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join } from 'path';
+import { resolveWatchlistLock } from './watchlist-lock';
 
 const WATCHLISTS_DIR = join(__dirname, '..', '..', '..', '..', '..', 'src', 'data', 'watchlists');
 
@@ -75,6 +76,94 @@ export class WatchlistsController {
     private readonly prisma: PrismaService,
     private readonly t212: Trading212Adapter,
   ) {}
+
+  /**
+   * evaluateLock() — the ONE place a watchlist's lock is decided (#1349).
+   *
+   * Before 2026-11-26 both call sites ran `position.count({ where: { protocolId } })`, a query on a
+   * column that does not exist. It survived because the client was cast to `any`; at runtime Prisma
+   * threw, the surrounding `catch` returned `{ locked: false }`, and **every watchlist reported
+   * itself as safe to delete**. The reasoning and the measured chain are in `watchlist-lock.ts`.
+   *
+   * ⚠️ A FAILED READ IS NOT "NOT LOCKED". If the rows cannot be read, this throws and the caller
+   * decides — the deletion path lets it surface, because deleting a watchlist that a live position
+   * depends on is not recoverable, while a refused deletion is.
+   *
+   * ⚠️ `enabled` IS SELECTED BUT NOT FILTERED, AND THAT IS A DELIBERATE WIDENING. The old query
+   * asked only for `enabled: true` strategies, so a bot switched OFF contributed no lock — which is
+   * precisely the case an operator reasons about as *"it is off, so it is safe to delete"* while its
+   * positions are still open at the broker. A live position is a live dependency whatever the
+   * switch says. The enabled flag is returned so the UI can show which of the named bots are dark.
+   */
+  private async evaluateLock(watchlistId: string) {
+    // ⚠️ A WATCHLIST LINKS TO A PROTOCOL TWO WAYS, AND READING ONE OF THEM IS THE SAME DEFECT AGAIN.
+    // Measured 2026-11-26:
+    //   · `scoring_strategy.watchlistId` → `.protocolId` (a slug)  — resolves for 2 watchlists
+    //   · `watchlist.protocolId` (a UUID on 20 rows, a slug on one) — declares the owner DIRECTLY
+    // The old code read only the first, so `silver (B)` — which states its protocol as
+    // `xau-speed-v1-long-copy` and has no `scoring_strategy` row — answered `{locked:false,
+    // strategies:[]}` on the live API at 09:15 UTC. A lock that names no strategy cannot refuse.
+    const [strategies, watchlist] = await Promise.all([
+      this.prisma.scoringStrategy.findMany({
+        where: { watchlistId },
+        select: { id: true, name: true, protocolId: true, enabled: true },
+      }) as Promise<Array<{ id: string; name: string; protocolId?: string | null; enabled?: boolean }>>,
+      this.prisma.watchlist.findUnique({ where: { id: watchlistId }, select: { protocolId: true } }),
+    ]);
+
+    const linked = strategies
+      .filter((s) => typeof s.protocolId === 'string' && s.protocolId.trim())
+      .map((s) => ({ name: s.name, enabled: s.enabled, protocolId: s.protocolId as string }));
+    const declared = typeof watchlist?.protocolId === 'string' && watchlist.protocolId.trim()
+      ? [{ name: `watchlist protocol ${watchlist.protocolId}`, enabled: true, protocolId: watchlist.protocolId }]
+      : [];
+
+    const keys = [...new Set([...linked, ...declared].map((x) => x.protocolId.trim()))];
+
+    // `trading_strategy.protocolId` is slug-or-UUID (#801), so BOTH forms are resolved rather than
+    // assuming whichever shape the majority happens to have today. A key may be a slug (from
+    // `scoring_strategy`) or a UUID (from `watchlist.protocolId`) — this lookup answers either.
+    const protocols = keys.length
+      ? await this.prisma.protocol.findMany({
+          where: { OR: [{ slug: { in: keys } }, { id: { in: keys } }] },
+          select: { id: true, slug: true },
+        })
+      : [];
+    const protocolIdBySlug: Record<string, string> = {};
+    const candidateIds = new Set<string>(keys);
+    for (const p of protocols) {
+      if (!p.slug || !p.id) continue;
+      protocolIdBySlug[p.slug] = p.id;
+      candidateIds.add(p.id);
+      candidateIds.add(p.slug);
+    }
+
+    const bots = candidateIds.size
+      ? await this.prisma.tradingStrategy.findMany({
+          where: { protocolId: { in: [...candidateIds] } },
+          select: { protocolId: true, magic: true },
+        })
+      : [];
+
+    // ⚠️ TWO LIVE SOURCES, because the first is measured to be unusable on its own: every one of the
+    // 13 `position` rows carried `magic: NULL` on 2026-11-26 while `trade` held 5 attributable open
+    // rows. Reading only `position` would have rebuilt the same cannot-fire lock.
+    const [positions, openTrades] = await Promise.all([
+      this.prisma.position.findMany({ where: { quantity: { gt: 0 } }, select: { id: true, magic: true } }),
+      this.prisma.trade.findMany({ where: { status: 'open' }, select: { id: true, magic: true } }),
+    ]);
+
+    return {
+      strategies: [...linked, ...declared],
+      verdict: resolveWatchlistLock({
+        protocolIds: keys,
+        protocolIdBySlug,
+        strategies: bots.map((b) => ({ protocolId: b.protocolId, magic: b.magic })),
+        positions: positions.map((p) => ({ magic: p.magic, ref: p.id })),
+        openTrades: openTrades.map((t) => ({ magic: t.magic, ref: t.id })),
+      }),
+    };
+  }
 
   /** Lazily migrate any JSON files into the database (one-time) */
   private async migrateFilesIfNeeded() {
@@ -304,26 +393,25 @@ export class WatchlistsController {
   @Get(':id/lock-status')
   async getLockStatus(@Param('id') id: string) {
     try {
-      const strategies = await this.prisma.scoringStrategy.findMany({
-        where: { watchlistId: id, enabled: true },
-        select: { id: true, name: true, protocolId: true },
-      }) as Array<{ id: string; name: string; protocolId?: string }>;
-      if (strategies.length === 0) return { locked: false, strategies: [] };
-
-      // Check for active positions linked to strategies' protocols
-      const protocolIds = [...new Set(strategies.map((s) => s.protocolId).filter(Boolean))] as string[];
-      const activePositions = protocolIds.length > 0
-          // ⚠️ `position` HAS NO `protocolId` COLUMN (#1349). Kept compiling by a cast because fixing it
-          // needs a real join (position.magic -> trading_strategy.magic -> protocolId); renaming the
-          // field would be a guess that changes what "locked" means.
-          ? await (this.prisma as any).position.count({ where: { protocolId: { in: protocolIds }, quantity: { gt: 0 } } })
-        : 0;
-
-      const locked = activePositions > 0;
-      return { locked, strategies: strategies.map((s) => s.name), activePositions };
+      const { strategies, verdict } = await this.evaluateLock(id);
+      return {
+        locked: verdict.locked,
+        strategies: strategies.map((s) => s.name),
+        activePositions: verdict.attributedCount,
+        // ⚠️ THREE FACTS, NOT ONE. "locked" is a definite match. `unattributable` counts live rows
+        // that belong to no bot we can name — a reader who sees 0 locked and 13 unattributable must
+        // not conclude the book is empty (measured: that is exactly today's state).
+        unattributable: verdict.unattributableCount,
+        magics: verdict.magics,
+        // TRUE when the watchlist names a protocol and no bot declares a magic for it: the "not
+        // locked" answer then rests on configuration, not on evidence.
+        protocolWithoutBotMagic: verdict.protocolWithoutBotMagic,
+      };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      return { locked: false, error: message };
+      // ⚠️ `locked: false` here is REPORTED AS UNKNOWN, not as permission: the caller gets the reason,
+      // and DELETE refuses rather than deleting on an unreadable lock (see deleteWatchlist).
+      return { locked: null, error: message };
     }
   }
 
@@ -334,26 +422,28 @@ export class WatchlistsController {
     const wl = await this.prisma.watchlist.findUnique({ where: { id } });
     if (!wl) throw new NotFoundException(`Watchlist "${id}" not found`);
 
-    // Lock check
-    const strategies = await this.prisma.scoringStrategy.findMany({
-      where: { watchlistId: id, enabled: true },
-      select: { name: true, protocolId: true },
-    }) as Array<{ name: string; protocolId?: string }>;
-    if (strategies.length > 0) {
-      const protocolIds = [...new Set(strategies.map((s) => s.protocolId).filter(Boolean))] as string[];
-      const activePositions = protocolIds.length > 0
-          // ⚠️ `position` HAS NO `protocolId` COLUMN (#1349). Kept compiling by a cast because fixing it
-          // needs a real join (position.magic -> trading_strategy.magic -> protocolId); renaming the
-          // field would be a guess that changes what "locked" means.
-          ? await (this.prisma as any).position.count({ where: { protocolId: { in: protocolIds }, quantity: { gt: 0 } } })
-        : 0;
-      if (activePositions > 0) {
-        throw new ConflictException(`Watchlist is locked — used by ${strategies.map((s) => s.name).join(', ')} with ${activePositions} active positions`);
-      }
+    // ⚠️ NOTHING IS CAUGHT HERE, DELIBERATELY (#1349). The previous version wrapped this query in a
+    // `catch` that returned "not locked", so a query that could not run READ AS PERMISSION — the
+    // deletion went ahead. A failed lock read surfaced as a 500 is the correct outcome: refusing a
+    // deletion is recoverable, deleting a watchlist a live position depends on is not.
+    const { strategies, verdict } = await this.evaluateLock(id);
+
+    if (verdict.locked) {
+      throw new ConflictException(
+        `Watchlist is locked — used by ${strategies.map((s) => (s.enabled === false ? `${s.name} (disabled)` : s.name)).join(', ')} `
+        + `with ${verdict.attributedCount} live position(s) on magic ${verdict.magics.join(', ')}`,
+      );
     }
 
     await this.prisma.watchlist.delete({ where: { id } });
-    return { deleted: true, id };
+    return {
+      deleted: true,
+      id,
+      // The answer is stated with its evidence: what was counted, and what could NOT be counted.
+      activePositions: verdict.attributedCount,
+      unattributable: verdict.unattributableCount,
+      protocolWithoutBotMagic: verdict.protocolWithoutBotMagic,
+    };
   }
 
   /**
