@@ -1366,6 +1366,15 @@
   gap: 4px;
 }
 
+/* The queue's total cost (2026-11-26): work as an exact count, time as a band that names its basis.
+   Sits inside the coverage field, under the table it totals. */
+.mvp-cost-total {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
 .mvp-muted {
   color: var(--text-dim);
 }

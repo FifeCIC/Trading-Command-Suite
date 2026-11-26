@@ -47,7 +47,17 @@ import { splitPnlByVolume } from './pnl-split';
  */
 export const DEAL_LOOKBACK_GRACE_MS = 2 * 86_400_000;
 
-/** Normalised position shape — any broker adapter should map to this. */
+/**
+ * Normalised position shape — what a broker adapter maps to before `syncPositions()` stores it.
+ *
+ * 🛑 THIS NAME IS DECLARED TWICE AND THE TWO SHAPES DIFFER — which is how `magic` was lost (#1354).
+ * `interfaces/provider-adapter.interface.ts` also exports a `BrokerPosition`, and THAT one declares
+ * `magic`. This copy did not, so an adapter could report a magic and the sync never wrote it: every
+ * `position` row was created NULL and no later sync could repair it. The other copy is not a
+ * superset (it has `ticker`/`avgCost`/`marketValue` and a string `openedAt`), so they cannot be
+ * merged — renaming this one to `NormalisedPosition` is the fix that closes the class, deferred
+ * because it touches every `syncPositions()` caller.
+ */
 export interface BrokerPosition {
   symbol: string;
   brokerTicket: string;    // broker-specific order/position ID (MT5 ticket, T212 orderId, etc.) — 64-bit safe string
@@ -61,6 +71,12 @@ export interface BrokerPosition {
   comment: string;
   openedAt: Date;
   accountId?: string | null;
+  /**
+   * The bot attribution key the broker reports. `null`/absent = the broker did not report one, which
+   * is NOT the same as "no bot" — `234000` is the bridge's own default meaning exactly that
+   * (`common/trading/attribution-magic.ts`).
+   */
+  magic?: number | null;
 }
 
 export interface PositionSyncOptions {
@@ -102,6 +118,10 @@ export class PositionSyncService {
       let created = 0;
       for (const pos of positions) {
         const positionAccountId = pos.accountId ?? accountId;
+        // ⚠️ `magic` WAS NEVER WRITTEN (#1354). Measured 2026-11-26: the bridge reported a real magic
+        // for all 6 MT5 positions while the database held NULL on all 14 rows. `symbolId` is still not
+        // written: it needs a ticker→id lookup this path does not do, and `symbols.service.ts` falls
+        // back to the ticker. Recorded rather than guessed.
         const data = {
             symbol: pos.symbol,
             quantity: pos.quantity,
@@ -112,6 +132,7 @@ export class PositionSyncService {
             accountId: positionAccountId,
             brokerTicket: pos.brokerTicket || null,
             side: pos.side || null,
+            magic: pos.magic ?? null,
             openedAt: pos.openedAt,
             lastQuotedAt: new Date(),
         };
@@ -123,6 +144,13 @@ export class PositionSyncService {
             brokerTicket: pos.brokerTicket || null,
             side: pos.side || null,
             accountId: positionAccountId,
+            // ⚠️ CONDITIONAL, and this is the REPAIR path as well as the write path. Magic is
+            // immutable at the broker, so a non-null value can only ever agree with the row — but a
+            // null from the adapter means "not reported", NOT "there is none", and an unconditional
+            // `magic: null` here would ERASE an attribution the guardian needs. Same rule as the
+            // `seedDefaults()` upsert: an update clause that omits a field cannot repair it, and one
+            // that writes unconditionally can destroy it.
+            ...(pos.magic != null ? { magic: pos.magic } : {}),
             lastQuotedAt: new Date(),
         };
         if (pos.brokerTicket) {

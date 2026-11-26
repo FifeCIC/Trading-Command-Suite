@@ -81,12 +81,12 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**623** source files · **3442** declarations · **403** ratio sites · **1805** nodes · **191** unreferenced
+**623** source files · **3450** declarations · **405** ratio sites · **1815** nodes · **196** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
-| `exact` | the identical computation after normalisation | 50 |
-| `coarse` | the identical **shape**, different constants | 47 |
+| `exact` | the identical computation after normalisation | 51 |
+| `coarse` | the identical **shape**, different constants | 48 |
 | `idiom` | `(A−B)` **and** `(B−A)` in one expression | 1 |
 
 ## Divergent edges — the same maths, DIFFERENT rules
@@ -118,7 +118,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:754` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
-- `nest/src/modules/automation/automation-loop.service.ts:3168` — `capturePortfolioSnapshot()`
+- `nest/src/modules/automation/automation-loop.service.ts:3206` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
   - guarded by: `totalCost>0`
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
@@ -260,14 +260,14 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/automation/ab-test.service.ts:449` — `dispatchSideTrade()` → `sl`
   - `sideDir==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `sideDir==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:912` — `dispatchTrade()` → `sl`
+- `nest/src/modules/automation/automation-loop.service.ts:963` — `dispatchTrade()` → `sl`
   - `side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `side==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:2878` — `confirmAction()` → `sl`
+- `nest/src/modules/automation/automation-loop.service.ts:2916` — `confirmAction()` → `sl`
   - `entryPrice>0?action.side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100):0`
   - conditions: `action.side==='BUY'`
   - guarded by: `entryPrice>0`
-- `nest/src/modules/automation/automation-loop.service.ts:2987` — `recordPaperTrade()` → `sl`
+- `nest/src/modules/automation/automation-loop.service.ts:3025` — `recordPaperTrade()` → `sl`
   - `side==='BUY'?entryPrice*(1-slPct/100):entryPrice*(1+slPct/100)`
   - conditions: `side==='BUY'`
 
@@ -310,14 +310,14 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/automation/ab-test.service.ts:450` — `dispatchSideTrade()` → `tp`
   - `sideDir==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `sideDir==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:913` — `dispatchTrade()` → `tp`
+- `nest/src/modules/automation/automation-loop.service.ts:964` — `dispatchTrade()` → `tp`
   - `side==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `side==='BUY'`
-- `nest/src/modules/automation/automation-loop.service.ts:2881` — `confirmAction()` → `tp`
+- `nest/src/modules/automation/automation-loop.service.ts:2919` — `confirmAction()` → `tp`
   - `entryPrice>0?action.side==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100):0`
   - conditions: `action.side==='BUY'`
   - guarded by: `entryPrice>0`
-- `nest/src/modules/automation/automation-loop.service.ts:2988` — `recordPaperTrade()` → `tp`
+- `nest/src/modules/automation/automation-loop.service.ts:3026` — `recordPaperTrade()` → `tp`
   - `side==='BUY'?entryPrice*(1+tpPct/100):entryPrice*(1-tpPct/100)`
   - conditions: `side==='BUY'`
 
@@ -444,7 +444,7 @@ Identical after normalisation: variable names differ, the computation does not.
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:754` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
-- `nest/src/modules/automation/automation-loop.service.ts:3168` — `capturePortfolioSnapshot()`
+- `nest/src/modules/automation/automation-loop.service.ts:3206` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
   - guarded by: `totalCost>0`
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
@@ -636,7 +636,7 @@ Identical after normalisation: variable names differ, the computation does not.
   - `peak>0?((peak-cum)/peak)*100:0`
   - guarded by: `peak>0`
 
-_… and 40 further group(s)._
+_… and 41 further group(s)._
 
 ## Q3b — the same shape, differing constants
 
@@ -688,7 +688,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 - `nest/src/modules/alerts/alert-trigger.service.ts:754` — `checkMarginUtilization()` → `utilPct`
   - `(acc.margin/acc.equity)*100`
-- `nest/src/modules/automation/automation-loop.service.ts:3168` — `capturePortfolioSnapshot()`
+- `nest/src/modules/automation/automation-loop.service.ts:3206` — `capturePortfolioSnapshot()`
   - `totalCost>0?(totalPnl/totalCost)*100:0`
   - guarded by: `totalCost>0`
 - `nest/src/modules/automation/multi-protocol-ranking.service.ts:86` — `rankAcrossProtocols()` → `normalizedScore`
@@ -865,7 +865,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - guarded by: `total>0`
 - … and 2 more
 
-_… and 37 further group(s)._
+_… and 38 further group(s)._
 
 ## Q3c — the same idea, re-derived
 
@@ -924,11 +924,14 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/automation/ab-test.service.ts:316 getActiveTest`
 - `nest/src/modules/automation/ab-test.service.ts:375 isActive`
 - `nest/src/modules/automation/ab-test.service.ts:606 summarize`
-- `nest/src/modules/automation/automation-loop.service.ts:2086 evalSide`
-- `nest/src/modules/automation/automation-loop.service.ts:2507 getClose`
+- `nest/src/modules/automation/automation-loop.service.ts:2124 evalSide`
+- `nest/src/modules/automation/automation-loop.service.ts:2545 getClose`
 - `nest/src/modules/automation/automation-loop.service.ts:340 watchlistEntryTicker`
-- `nest/src/modules/automation/automation-loop.service.ts:601 read`
-- `nest/src/modules/automation/automation-loop.service.ts:666 getWatchlistSymbols`
+- `nest/src/modules/automation/automation-loop.service.ts:377 num`
+- `nest/src/modules/automation/automation-loop.service.ts:378 str`
+- `nest/src/modules/automation/automation-loop.service.ts:379 t`
+- `nest/src/modules/automation/automation-loop.service.ts:652 read`
+- `nest/src/modules/automation/automation-loop.service.ts:717 getWatchlistSymbols`
 - `nest/src/modules/automation/automation.controller.ts:731 safe`
 - `nest/src/modules/automation/experiment-review.service.ts:32 norm`
 - `nest/src/modules/automation/stop-guardian.service.ts:2158 progress`
@@ -962,6 +965,8 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/backtest/score-maths.ts:76 r4`
 - `nest/src/modules/backtest/score-maths.ts:874 bucketKey`
 - `nest/src/modules/backtest/score-maths.ts:89 collect`
+- `nest/src/modules/backtest/selection-preview.ts:285 scoredOf`
+- `nest/src/modules/backtest/selection-preview.ts:288 runnable`
 - `nest/src/modules/backtest/selection-run.service.ts:495 num`
 - `nest/src/modules/backtest/selection-run.service.ts:96 num`
 - `nest/src/modules/directives/directives.service.ts:1039 refreshActiveStatuses`
@@ -1002,7 +1007,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/providers/adapters/finnhub.adapter.ts:508 getCapabilities`
 - `nest/src/modules/providers/adapters/trading212.adapter.ts:759 getCapabilities`
 - `nest/src/modules/providers/mt5/mt5-symbol-router.service.ts:383 getBrokerSymbol`
-- `nest/src/modules/providers/position-sync.service.ts:692 note`
+- `nest/src/modules/providers/position-sync.service.ts:720 note`
 - `nest/src/modules/providers/provider-cache.service.ts:62 getStatus`
 - `nest/src/modules/replay/replay.service.ts:628 computeReturn`
 - `nest/src/modules/replay/replay.service.ts:653 avg`

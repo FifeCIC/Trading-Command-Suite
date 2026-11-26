@@ -348,6 +348,57 @@ function watchlistEntryTicker(v: unknown): string | null {
 }
 
 /** An ARRAY of watchlist entries as tickers, or `null` when the value is not an array. */
+
+/**
+ * normaliseBrokerPosition() — the ADAPTER's position shape as the SYNC's shape (#1354).
+ *
+ * ⚠️ THIS EXISTS AS A NAMED, EXPORTED FUNCTION BECAUSE IT WAS AN INLINE LITERAL AND IT SILENTLY
+ * DROPPED A FIELD. `mt5.adapter.ts` mapped the broker's `magic` correctly, `BrokerPosition` declared
+ * it, and this field-by-field copy never named it — so every `position` row was created with
+ * `magic: NULL` and the guardian had no primary owner key (measured: the bridge reported a real
+ * magic for all 6 MT5 positions while all 14 rows held NULL). An inline literal cannot be tested
+ * without duplicating it, and a test that duplicates a literal tests the duplicate.
+ *
+ * ⚠️ A FIELD ADDED TO `BrokerPosition` MUST BE ADDED HERE TOO. That is the contract this function
+ * makes visible: `position-sync-magic.spec.ts` imports it and asserts the fields the trade path
+ * reads survive.
+ */
+export function normaliseBrokerPosition(
+  p: BrokerPosition,
+  fallbackAccountId?: string | null,
+): {
+  symbol: string; brokerTicket: string; side: 'buy' | 'sell' | null; quantity: number;
+  avgPrice: number; currentPrice: number; pnl: number; sl: number | null; tp: number | null;
+  comment: string; magic: number | null; openedAt: Date; accountId: string | null;
+} {
+  // ⚠️ ONE cast, at the boundary, for the LEGACY ALIASES only: adapters differ (`avgCost` vs
+  // `avgPrice`, `unrealizedPnl` vs `pnl`) and the shared interface declares one of each pair.
+  const r = p as unknown as Record<string, unknown>;
+  const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
+  const str = (v: unknown): string | null => (typeof v === 'string' ? v : null);
+  const t = (v: unknown) => (typeof v === 'number' ? v : null);
+  return {
+    symbol: String(r.symbol ?? ''),
+    brokerTicket: String(r.brokerTicket ?? r.ticket ?? r.id ?? ''),
+    side: r.side === 'buy' || r.side === 'sell' ? r.side : null,
+    quantity: num(r.quantity),
+    avgPrice: num(r.avgCost ?? r.avgPrice ?? r.entryPrice),
+    currentPrice: num(r.currentPrice ?? r.avgCost ?? r.avgPrice),
+    pnl: num(r.unrealizedPnl ?? r.pnl),
+    sl: typeof r.sl === 'number' ? r.sl : null,
+    tp: typeof r.tp === 'number' ? r.tp : null,
+    comment: str(r.comment) ?? '',
+    // ⚠️ THE FIELD THAT WAS LOST. `null` means "the broker did not report one", which is NOT "no
+    // bot" — 234000 is the bridge default meaning exactly that (common/trading/attribution-magic.ts).
+    magic: t(r.magic),
+    openedAt: r.openedAt ? new Date(r.openedAt as string | number | Date) : new Date(),
+    accountId: str(r.accountId) ?? accountIdOrNull(fallbackAccountId),
+  };
+}
+
+function accountIdOrNull(v: unknown): string | null {
+  return typeof v === 'string' ? v : null;
+}
 export function toSymbolList(v: unknown): string[] | null {
   if (!Array.isArray(v)) return null;
   return v.map(watchlistEntryTicker).filter((s): s is string => Boolean(s));
@@ -1645,20 +1696,7 @@ export class AutomationLoopService implements OnModuleInit {
           // `authoritativeFromSnapshot()` takes ONLY the snapshot, so the position list is not
           // available to be mistaken for evidence. See its docblock.
           const authoritative = authoritativeFromSnapshot(snapshot);
-          const normalised = positions.map((p: any) => ({
-            symbol: p.symbol,
-            brokerTicket: String(p.brokerTicket ?? p.ticket ?? p.id ?? ''),
-            side: p.side ?? null,
-            quantity: p.quantity,
-            avgPrice: p.avgCost ?? p.entryPrice ?? 0,
-            currentPrice: p.currentPrice ?? p.avgCost ?? 0,
-            pnl: p.unrealizedPnl ?? p.pnl ?? 0,
-            sl: p.sl ?? null,
-            tp: p.tp ?? null,
-            comment: p.comment ?? '',
-            openedAt: p.openedAt ? new Date(p.openedAt) : new Date(),
-            accountId: p.accountId ?? accountId ?? null,
-          }));
+          const normalised = positions.map((p) => normaliseBrokerPosition(p, accountId));
           await this.positionSync.syncPositions(brokerId, normalised, { authoritative, accountId });
         } catch (err) {
           // Measurement FAILED. Reset to unknown rather than leaving the previous tick's number —
