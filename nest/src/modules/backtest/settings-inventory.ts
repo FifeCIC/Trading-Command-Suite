@@ -100,7 +100,17 @@ export const BOT_FIELDS: ReadonlyArray<{ key: string; label: string; applied: Ap
   { key: 'maxPositions', label: 'Max positions', applied: 'ignored', why: 'Zero references in backtest.service; the engine opens one position at a time per trade record.' },
   { key: 'cooldownMinutes', label: 'Cooldown (minutes)', applied: 'ignored', why: 'Zero references. The live loop enforces it between trades; the backtester does not.' },
   { key: 'maxHoldHours', label: 'Max hold (hours)', applied: 'honoured', why: 'The bot’s own TIME STOP, in hours, applied per trade: a position held to `entry + maxHoldHours` closes at that bar’s close with exit reason TIME. Live equivalent is position-time-stop.service.ts (SYSTEM_TIME_STOP). ⚠️ Set on 42 of 64 active bots and ignored by the engine until 2026-11-16, so older runs of these bots held trades far past this limit.' },
-  { key: 'maxPyramidTiers', label: 'Max pyramid tiers', applied: 'ignored', why: 'Zero references. Pyramiding is applied live only.' },
+  {
+    key: 'maxPyramidTiers',
+    label: 'Max pyramid tiers',
+    applied: 'reported-only',
+    why:
+      'READ, NOT APPLIED (changed 2026-11-26). Pyramiding is applied live only — the engine holds ONE '
+      + 'position per symbol — so the field cannot influence a run. It is now read for exactly one reason: '
+      + 'when the bot declares more than one tier the run STATES that scale-in is not modelled, and that its '
+      + 'trade count and exposure are understated. Before that, a run against a scale-in bot was silently '
+      + 'optimistic. Register row 300.',
+  },
   { key: 'exhaustionObserveEnabled', label: 'Exhaustion observe mode', applied: 'ignored', why: 'Zero references.' },
   { key: 'exhaustionDecelPct', label: 'Exhaustion deceleration %', applied: 'ignored', why: 'Zero references.' },
   { key: 'simTslEnabled', label: 'Simulated trailing stop', applied: 'honoured', why: 'Switches the trail on. Translated by sim-tsl.ts into StopPlan (lockAtPct from simTslActivationPct, trailPct from simTslDistancePct) and applied per trade. ⚠️ Set on 3 of 64 active bots and ignored by the engine until 2026-11-17, so older runs of these bots measured NO trail.' },

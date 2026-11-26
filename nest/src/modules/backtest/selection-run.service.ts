@@ -586,6 +586,13 @@ export class SelectionRunService {
       closeReason: typeof t.closeReason === 'string' ? t.closeReason : null,
       signal: String(t.signal ?? ''),
       kept: keptSet.has(t),
+      /**
+       * The bracket the trade carried, passed through for the bar chart (note m). ⚠️ A non-number
+       * becomes `null`, never 0 — the engine sends null for runs recorded before levels were stored,
+       * and `Number(null)` is 0, which would draw a stop at a price that never existed.
+       */
+      stopLoss: typeof t.stopLoss === 'number' ? t.stopLoss : null,
+      takeProfit: typeof t.takeProfit === 'number' ? t.takeProfit : null,
       // ⚠️ THE REASON, so a table can say WHICH refusal rather than "refused" (2026-11-23).
       selectionReason: keptSet.has(t)
         ? null
