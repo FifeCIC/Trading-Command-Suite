@@ -453,6 +453,18 @@ const VIEW_META = {
     // Several GETs under /api/scoring RECOMPUTE on call and are deliberately not used here.
     api: ['GET /api/trading/trade-history', 'GET /api/trading/portfolio-snapshots'],
   },
+  '/development/standards': {
+    tier: 'premium',
+    // 'pending' until the owner has looked at it (#988). `tier` is metadata only since the free
+    // edition was cancelled (2026-10-28); nothing branches on it.
+    review: 'pending',
+    label: 'Engineering Standards',
+    file: 'src/pages/StandardsPage.jsx',
+    css: 'src/pages/standards.css',
+    // No API call: the list is `src/data/standards.js`, and the GATE that proves it runs in
+    // `prebuild` — a page that fetched its own compliance would be reporting on itself.
+    api: [],
+  },
   '/development/ui-review': {
     tier: 'premium',
     // 'pending' until the requirement has actually looked at it — the rule this repo applies to every new

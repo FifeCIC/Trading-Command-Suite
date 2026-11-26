@@ -183,6 +183,11 @@ export const DEFAULT_HIDDEN_ROUTES = new Set([
   // the same reason the movers pages are: it is an unfinished working list, and a page whose numbers
   // describe unbuilt directives should not be the first thing a new user opens.
   '/development/queued-changes',
+  // The standards badge list (2026-11-26). Withheld like every new page, per the owner's rule that a
+  // new page defaults to owner-only. ⚠️ It is withheld for a SECOND reason as well: it is an internal
+  // engineering surface, and the list it shows is published to the public repository as a generated
+  // block, so a visitor reading it here gains nothing they cannot read there.
+  '/development/standards',
 
   // ── Pack 9: the Strategies area (2026-11-18) ───────────────────────────────────────────────────
   // Requirement: I would like a Strategies area (again)! … The area will list all strategies in a separate

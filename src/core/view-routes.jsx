@@ -199,6 +199,7 @@ const DesignObservationsPage = lazy(() => import('../pages/DesignObservationsPag
 const SymbolPage = lazy(() => import('../pages/SymbolPage.jsx'));
 const ArchitectureFrameworkPage = lazy(() => import('../pages/ArchitectureFrameworkPage.jsx'));
 const UiReviewPage = lazy(() => import('../pages/UiReviewPage.jsx'));
+const StandardsPage = lazy(() => import('../pages/StandardsPage.jsx'));
 const DiagramsPage = lazy(() => import('../pages/DiagramsPage.jsx'));
 const BlockedSignalsPage = lazy(() => import('../pages/BlockedSignalsPage.jsx'));
 // #1190 — the trend READING experiment. Development because it is an experiment first.
@@ -411,6 +412,7 @@ export const VIEW_COMPONENTS = {
   'design-observations': DesignObservationsPage,
   'architecture-framework': ArchitectureFrameworkPage,
   'ui-review': UiReviewPage,
+  standards: StandardsPage,
   'diagrams': DiagramsPage,
   'blocked-signals': BlockedSignalsPage,
   'trend-reading': TrendReadingPage,

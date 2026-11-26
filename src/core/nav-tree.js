@@ -531,6 +531,9 @@ export const NAV_TREE = {
       { id: 'queued-changes', label: 'Queued Changes', icon: '📝' },
       { id: 'feature-lab', label: 'Feature Lab', icon: '🔬' },
       { id: 'ui-review', label: 'Page Walkthrough', icon: '📋' },
+      // The badge list the owner asked for: every standard this project claims, and the gate that
+      // proves it. Withheld by default like every other new page (page-visibility rule).
+      { id: 'standards', label: 'Engineering Standards', icon: '🏅' },
       // ⚠️ `responsive-layout-lab` MOVED to the Appearance area 2026-10-13 (owner request). It is a
       // viewport/visual tool rather than an engineering debug surface, and the new area is where the
       // owner is collecting visual options. Its old route redirects.
