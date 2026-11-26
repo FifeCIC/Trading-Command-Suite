@@ -37,18 +37,20 @@ export default function UnusedDataPanel({ runs, bare = false }) {
   );
 
   const table = (
-    <div className="mvp-scroll">
+    <>
+      {/*
+        ⚠️ THE CAPTION SAYS WHAT THE LIST IS. An inventory of fields the page does not use is only
+        honest if the reader knows it was assembled by reading the source, not by the payload — the
+        payload cannot know what the page reads.
+        ⚠️ A `<p>` above the frame, not a `<caption>` inside it (theme, 2026-11-26).
+      */}
+      <p className="mvp-caption">
+        Fields this run returns that the tables above do not use. Chosen by reading the page's own
+        source; every value below comes from the run in front of you, and a field the run did not
+        return says so rather than showing a blank.
+      </p>
+      <div className="mvp-scroll">
       <table className="mvp-table">
-        {/*
-          ⚠️ THE CAPTION SAYS WHAT THE LIST IS. An inventory of fields the page does not use is only
-          honest if the reader knows it was assembled by reading the source, not by the payload — the
-          payload cannot know what the page reads.
-        */}
-        <caption className="mvp-caption">
-          Fields this run returns that the tables above do not use. Chosen by reading the page's own
-          source; every value below comes from the run in front of you, and a field the run did not
-          return says so rather than showing a blank.
-        </caption>
         <thead>
           <tr>
             <th scope="col">Field</th>
@@ -74,7 +76,8 @@ export default function UnusedDataPanel({ runs, bare = false }) {
           })}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 
   /**

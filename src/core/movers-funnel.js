@@ -102,3 +102,36 @@ export function protocolDirectiveIds(entries) {
   }
   return ids;
 }
+
+/**
+ * funnelShape() — one row's buckets as a stack, for a bar that shows WHERE the population went.
+ *
+ * ── WHY THIS IS NOT `count / scored` PER BUCKET ─────────────────────────────────────────────────
+ * ⚠️ **Scaled to `scored`, not to the buckets' own total.** An engine state this module does not know
+ * about is counted into NO bucket (see the header), so the two totals can differ. Scaling to the
+ * buckets' sum would always fill the bar and make that difference invisible. Scaled to `scored`, the
+ * bar simply stops short and `unaccounted` says by how much — a gap a reader can ask about, instead of
+ * a full bar that quietly omits it.
+ *
+ * @param {object} row one `funnelFor()` row
+ * @returns {{ segments: Array<{key:string,count:number,pct:number}>, unaccounted: number }}
+ *   `segments` run most-survived first, so the bar reads right-to-left in the pipeline's order.
+ */
+export function funnelShape(row) {
+  const scored = Number(row?.scored ?? 0);
+  if (!Number.isFinite(scored) || scored <= 0) return { segments: [], unaccounted: 0 };
+
+  const parts = [
+    { key: 'entered', count: Number(row.entered ?? 0) },
+    { key: 'signalNotTraded', count: Number(row.signalNotTraded ?? 0) },
+    { key: 'barGate', count: Number(row.barGate ?? 0) },
+    { key: 'quiet', count: Number(row.quiet ?? 0) },
+    { key: 'noData', count: Number(row.noData ?? 0) },
+  ];
+  const explained = parts.reduce((a, p) => a + p.count, 0);
+
+  return {
+    segments: parts.map((p) => ({ ...p, pct: (p.count / scored) * 100 })),
+    unaccounted: Math.max(0, scored - explained),
+  };
+}

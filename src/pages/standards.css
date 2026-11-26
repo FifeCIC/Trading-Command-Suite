@@ -74,35 +74,11 @@
   color: var(--ink);
 }
 
-/* ── the enforced table ───────────────────────────────────────────────────── */
-.std-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.78rem;
-}
-
-.std-table thead th {
-  text-align: left;
-  padding: 0.45rem 0.6rem;
-  color: var(--ink-soft);
-  font-weight: 600;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-
-.std-table tbody th,
-.std-table td {
-  text-align: left;
-  vertical-align: top;
-  padding: 0.55rem 0.6rem;
-  border-bottom: 1px solid var(--line);
-}
-
-.std-table tbody th {
-  font-weight: 500;
-  max-width: 34ch;
-}
-
+/* ── the enforced table ───────────────────────────────────────────────────────────────────────
+   ⚠️ NO TABLE CHROME HERE. Width, borders, padding, header and hover rules for `.std-table` live in
+   `src/core/tables.css` with every other table, because `validate-table-enrolment.cjs` fails the build
+   on a `<table>` whose class is outside that arrangement — and a plain table still LOOKS like a table,
+   so nothing would report it. This file styles only what is particular to these cells. */
 .std-name {
   display: block;
   color: var(--ink);

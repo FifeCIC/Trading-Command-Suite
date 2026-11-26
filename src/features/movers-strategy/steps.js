@@ -98,9 +98,9 @@ export const MOVERS_STEPS = [
     title: 'Result by symbol',
     purpose: 'Which instruments carried the total, and which were picked more than once.',
     defaultOpen: false,
-    audit: [
-      'P/L by symbol as a bar, with win rate beside it, to show concentration rather than ask for it.',
-    ],
+    /** SHIPPED 2026-11-26 — the P/L bar and the win rate now sit in one row per symbol, scaled to the
+     *  largest symbol so concentration is visible without arithmetic. Lives in `pnl-bars.js`. */
+    audit: [],
   },
   {
     id: 'mvp-step-funnel',
@@ -108,10 +108,10 @@ export const MOVERS_STEPS = [
     title: 'Scores → signals → trades',
     purpose: 'How many scorings became a signal, how many cleared the bar, and how many were traded.',
     defaultOpen: false,
-    audit: [
-      'Speed is RATED and invisible: `speed-momentum` holds 120 of the protocol’s capacity and has no column anywhere.',
-      'A funnel bar per symbol would show where the population is lost, not just how much.',
-    ],
+    /** SHIPPED 2026-11-26 — `funnelShape()` in `movers-funnel.js` draws one stacked bar per symbol,
+     *  scaled to `bars scored`, with a striped `unaccounted` segment for bars carrying no declared
+     *  state. That segment is why the bar exists: it made 6 of ~260 bars visibly unclassified. */
+    audit: [],
   },
   {
     id: 'mvp-step-directives',
@@ -119,9 +119,13 @@ export const MOVERS_STEPS = [
     title: 'Directive record',
     purpose: 'What each directive has actually scored and predicted, over the stored sample.',
     defaultOpen: false,
-    audit: [
-      'Per-directive hit rate beside this run’s own scores — “which voice was right?” needs both.',
-    ],
+    /**
+     * SHIPPED 2026-11-26 — a `This run` column carrying each directive's bars scored and mean score
+     * from the run's own per-bar directives (`directive-run-stats.js`). Kept in its own columns rather
+     * than folded into the historical figures because they are different populations: bars here,
+     * matured predictions there. A run with no breakdown reports `attributed: 0`, never silence.
+     */
+    audit: [],
   },
   {
     id: 'mvp-step-parity',
@@ -129,10 +133,15 @@ export const MOVERS_STEPS = [
     title: 'Backtest vs live',
     purpose: 'Which mechanisms this run shares with the account, and what it cannot reproduce.',
     defaultOpen: false,
-    audit: [
-      'Wiring a divergent mechanism is a maths change: copy the configuration and compare, never edit in place.',
-      'A run could state its own exposure — how many of its trades touched a mechanism that differs.',
-    ],
+    /**
+     * Audit notes retired 2026-11-26 rather than built — BOTH WERE ALREADY DONE:
+     *  · "a divergent mechanism is a maths change: copy and compare" is a RULE, not a surface. It is
+     *    already enforced by `.github/instructions/maths-change-requires-ab.instructions.md`; a note
+     *    here advertised policy the codebase already carries.
+     *  · "a run could state its own exposure" SHIPPED in `ParityStep`, which renders `parityExposure` —
+     *    trades touched, `eodShare`, a mechanism table and the unmapped exits. The note outlived it.
+     */
+    audit: [],
   },
   {
     id: 'mvp-step-bars',
@@ -160,9 +169,10 @@ export const MOVERS_STEPS = [
     title: 'Trade configuration',
     purpose: 'The stop, target, entry bar and hold time these numbers were produced under.',
     defaultOpen: false,
-    audit: [
-      'Price distances beside every percentage: `slPct 5` at a 1.50 entry is 0.075, and the reader does that sum today.',
-    ],
+    /** SHIPPED 2026-11-26 — every `%` setting now prints the price distance it is, worked at the
+     *  most-traded symbol's median entry (`price-reference.js`), because the reader was doing that
+     *  multiplication against the In/Out prices in the tables above. */
+    audit: [],
   },
 ];
 

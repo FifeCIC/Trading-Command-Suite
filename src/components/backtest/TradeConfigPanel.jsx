@@ -47,6 +47,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiPatch } from '../../core/api/client';
 import { noticeFromError } from '../../core/notices/from-error.js';
 import { collectChanges, parseFieldValue, sameFieldValue, storedRaw } from '../../core/trade-config-edit.js';
+import { priceDistance, formatDistance } from '../../features/movers-strategy/price-reference.js';
 import {
   snapshotOf,
   revertBody,
@@ -86,6 +87,13 @@ export default function TradeConfigPanel({
    * NEW figure by the time the comparison happens, and every change would look neutral.
    */
   getBaselineNetPnl,
+  /**
+   * `{ symbol, price, count, symbols } | null` from `buildPriceReference()` — one symbol's median
+   * entry, so a percentage can be printed as the price distance it actually is. `null` means no trade
+   * in this run carried a readable entry price, and the panel then says nothing rather than inventing a
+   * price to multiply by.
+   */
+  priceRef = null,
 }) {
   const [showIgnored, setShowIgnored] = useState(true);
   const [draft, setDraft] = useState({});
@@ -461,6 +469,28 @@ export default function TradeConfigPanel({
                           </span>
                         )}
                       </>
+                    )}
+                    {/**
+                      * ── PRICE DISTANCE (note o, 2026-11-26) ──
+                      * `slPct 5` at a 1.50 entry is 0.075, and the reader was doing that sum in their
+                      * head to compare a bracket against the In/Out prices in the tables above.
+                      *
+                      * ⚠️ It is a percentage OF A PRICE, so it needs a price, and one run can hold
+                      * EURUSD at 1.05 and BTC at 60,000. `priceRef` is the MOST-TRADED symbol's median
+                      * entry, never a blend — a blended price describes no instrument — and the title
+                      * says which symbol and how many others it does not cover.
+                      */}
+                    {f.unit === '%' && priceRef && priceDistance(f.value, priceRef.price) !== null && (
+                      <span
+                        className="mvp-config-dist"
+                        title={
+                          priceRef.symbols > 1
+                            ? `Worked at ${priceRef.symbol} — its median of ${priceRef.count} entry price(s). This run also traded ${priceRef.symbols - 1} other symbol(s), at prices of their own; each needs its own sum.`
+                            : `Worked at ${priceRef.symbol}'s median entry price, across ${priceRef.count} trade(s).`
+                        }
+                      >
+                        ≈ {formatDistance(priceDistance(f.value, priceRef.price))} at {formatDistance(priceRef.price)}
+                      </span>
                     )}
                   </td>
                   <td className="mvp-nowrap">

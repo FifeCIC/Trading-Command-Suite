@@ -13,6 +13,7 @@ import {
   sharePct,
   speedOf,
   protocolDirectiveIds,
+  funnelShape,
   BAR_STATES,
 } from './movers-funnel.js';
 
@@ -101,4 +102,46 @@ test('protocolDirectiveIds reads membership from the bars, and is empty when the
   assert.deepEqual([...withBars].sort(), ['speed-momentum', 'vwap']);
   assert.equal(protocolDirectiveIds([{ detail: { bars: [bar('quiet')] } }]).size, 0);
   assert.equal(protocolDirectiveIds(undefined).size, 0);
+});
+
+/**
+ * ── funnelShape (audit note 'i', 2026-11-26) ────────────────────────────────────────────────────
+ * The owner asked for a bar that shows WHERE the population is lost, not just how much. The scale is
+ * the whole claim: scaled to `scored`, an engine state this module does not know leaves a VISIBLE gap;
+ * scaled to the buckets' own sum, the bar always fills and that difference disappears.
+ */
+test('▶ CANARY — the bar is scaled to `scored`, so an unknown state leaves a VISIBLE gap', () => {
+  const row = funnelFor('AAA', detail([
+    bar('entry'), bar('entry+exit'), bar('quiet'), bar('mystery-state'),
+  ]));
+  const { segments, unaccounted } = funnelShape(row);
+  const entered = segments.find((s) => s.key === 'entered');
+  assert.equal(row.scored, 4);
+  assert.equal(entered.count, 2);
+  // 2 of 4 bars traded → half the bar, NOT 2 of 3 (which would be a full-looking 66.7%).
+  assert.equal(entered.pct, 50);
+  assert.equal(unaccounted, 1);
+  // The segments never add past the whole.
+  assert.ok(segments.reduce((a, s) => a + s.pct, 0) <= 100);
+});
+
+test('a fully-explained row accounts for every bar and leaves no gap', () => {
+  const row = funnelFor('BBB', detail([bar('entry'), bar('quiet'), bar('no-data'), bar('bar-gate')]));
+  const { segments, unaccounted } = funnelShape(row);
+  assert.equal(unaccounted, 0);
+  assert.equal(Math.round(segments.reduce((a, s) => a + s.pct, 0)), 100);
+});
+
+test('segments run most-survived first, so the bar reads in pipeline order', () => {
+  const row = funnelFor('CCC', detail([bar('entry'), bar('bar-gate'), bar('quiet')]));
+  assert.deepEqual(funnelShape(row).segments.map((s) => s.key), [
+    'entered', 'signalNotTraded', 'barGate', 'quiet', 'noData',
+  ]);
+});
+
+test('no bars means no bar — an empty shape, never a division by zero', () => {
+  const { segments, unaccounted } = funnelShape(funnelFor('DDD', detail([])));
+  assert.deepEqual(segments, []);
+  assert.equal(unaccounted, 0);
+  assert.deepEqual(funnelShape(null).segments, []);
 });

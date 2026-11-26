@@ -197,6 +197,15 @@ export interface SelectionSymbolResult {
   /** Trades the engine produced that the selection did NOT permit, by reason. */
   excludedNotSelected: number;
   excludedBeforeCutoff: number;
+  /**
+   * The ENGINE's caveats for THIS symbol, verbatim.
+   *
+   * ⚠️ THEY WERE BEING DROPPED (measured 2026-11-26). `this.backtest.run()` returns `caveats`, and this
+   * service read `.trades`, `.id` and `.persisted` from it and nothing else — so the engine's own
+   * statements, including *"POSITION SIZING DOES NOT MATCH THE LIVE PATH (#843)"*, never reached a
+   * selection result. The wrapper was silently reporting a subset of what the run knew. Register row 300.
+   */
+  caveats?: string[];
   error?: string;
   /**
    * #1325 — trades this symbol produced that the ADMISSION filter refused (cooldown / cap).
@@ -380,10 +389,10 @@ export interface SelectionCaveat {
     | 'symbol-failed'
     | 'none-ranked'
     /**
-     * The parity register's only remaining `gap`: the bot declares scale-in and the engine models one
-     * position per symbol, so trade count and exposure are understated. Register row 300.
+     * The ENGINE's own statements, passed through verbatim — including the parity register's only `gap`
+     * (scale-in not modelled). Register row 300.
      */
-    | 'pyramid-not-modelled';
+    | 'engine-caveats';
   /** Two or three words, for scanning a column rather than reading sentences. */
   label: string;
   /** WHICH FIGURE this qualifies — the table's second column. */
@@ -894,6 +903,11 @@ export class SelectionRunService {
           profitFactor: result.stats?.profitFactor ?? null,
           excludedNotSelected: notSelected,
           excludedBeforeCutoff: beforeCutoff,
+          // ⚠️ THE ENGINE'S OWN WORDS, carried rather than summarised. It qualified this run itself and
+          // this wrapper used to drop the array on the floor. Register row 300.
+          caveats: Array.isArray((result as { caveats?: string[] }).caveats)
+            ? (result as { caveats: string[] }).caveats
+            : [],
           ...(request.includeBreakdown ? { detail: this.buildDetail(result, tagged, keptSet, new Map(dropped.map((d) => [d.trade, d.code])), decl.value.answerDate, cutoffUtc, directionMode, picked.day.selected.length, tickers.length) } : {}),
         });
       } catch (err) {
@@ -1179,30 +1193,26 @@ export class SelectionRunService {
       });
     }
     /**
-     * ⚠️ PYRAMIDING IS THE PARITY REGISTER'S ONLY REMAINING `gap`, AND THIS IS WHAT MAKES IT VISIBLE
-     * (2026-11-26). The engine models ONE position per symbol: `backtest.service.ts` opens a trade and
-     * walks forward to its exit. `PyramidPolicyService` in the live path may open a SECOND position on
-     * the same symbol when the bot declares `maxPyramidTiers > 1` and the existing one is green with its
-     * stop at breakeven-or-better. So a run against a bot that declares scale-in understates both its
-     * exposure and its trade count — silently, because nothing in the result said the mechanism was
-     * missing. Register row 300.
+     * ── THE ENGINE'S OWN CAVEATS, SURFACED RATHER THAN RESTATED ─────────────────────────
+     * A selection run is a wrapper over the single-symbol engine, and that engine qualifies its own
+     * numbers: sizing does not match the live path (#843), an entry bar or time stop makes old runs
+     * non-comparable, a session window could not be applied, and — the parity register's only `gap` —
+     * scale-in is not modelled. None of those reached this result until 2026-11-26: the wrapper read
+     * `.trades`, `.id` and `.persisted` and dropped `.caveats`, so the page showed a SUBSET of what the
+     * run knew and nothing said so.
      *
-     * The modelling itself is NOT landed here: it changes the trade population (concurrent positions
-     * instead of one at a time), which is a maths change and needs a copied configuration and a
-     * side-by-side run. Until then the run states which mechanism it could not model.
+     * ⚠️ THIS IS DELIBERATELY A PASS-THROUGH, NOT A COPY. The pyramid statement used to be written
+     * HERE, which meant a single-symbol run stayed silent and a second place had to know about
+     * pyramiding. The engine owns the sentence; this row carries it. Register row 300.
      */
-    const botTiers = Number((bot as unknown as { maxPyramidTiers?: number | null } | null)?.maxPyramidTiers ?? 1);
-    if (Number.isFinite(botTiers) && botTiers > 1) {
+    const engineCaveats = [...new Set(perSymbol.flatMap((s) => s.caveats ?? []))];
+    if (engineCaveats.length) {
       caveatRows.push({
-        code: 'pyramid-not-modelled',
-        label: 'Scale-in not modelled',
-        qualifies: 'Trades, exposure, P/L',
+        code: 'engine-caveats',
+        label: 'Engine qualifications',
+        qualifies: 'P/L, sizing, hold, trade count',
         text:
-          `${tradeConfig.bot?.name ?? 'This bot'} declares scale-in up to ${botTiers} tiers ` +
-          '(`maxPyramidTiers`), and the ENGINE MODELS ONE POSITION PER SYMBOL. When the live path would ' +
-          'have added a second position to a profitable, stop-locked one, this run recorded no such ' +
-          'trade — so its trade count and exposure are UNDERSTATED, and the gap widens the more often ' +
-          'the first position went green before the signal faded. Parity register row `pyramid`.',
+          `The engine qualified this run itself, on every symbol: ${engineCaveats.join(' ')}`,
       });
     }
     const caveats = caveatRows.map((r) => r.text);

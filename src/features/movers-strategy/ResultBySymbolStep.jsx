@@ -33,13 +33,14 @@ export default function ResultBySymbolStep({ sort }) {
   });
 
   return (
-    <div className="mvp-scroll">
+    <>
+      <p className="mvp-caption">
+        The bar length is this symbol&rsquo;s P/L against the biggest one in the table
+        ({formatAmount(bars.maxAbs)}), so a handful of instruments carrying the total is visible rather
+        than inferred. The figure beside it is the value.
+      </p>
+      <div className="mvp-scroll">
       <table className="mvp-table">
-        <caption className="mvp-caption">
-          The bar length is this symbol&rsquo;s P/L against the biggest one in the table
-          ({formatAmount(bars.maxAbs)}), so a handful of instruments carrying the total is visible rather
-          than inferred. The figure beside it is the value.
-        </caption>
         <thead>
           <tr>
             <SortableTh col="symbol" label="Symbol" api={sort} buttonClassName="th-sort" firstDir="asc" />
@@ -74,6 +75,7 @@ export default function ResultBySymbolStep({ sort }) {
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }

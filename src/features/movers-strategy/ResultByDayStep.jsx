@@ -35,16 +35,19 @@ export default function ResultByDayStep({ sort }) {
   const bars = buildPnlBars(rows);
 
   return (
-    <div className="mvp-scroll">
+    <>
+      {/*
+        The bar's scale is a claim, so it is stated with the numbers it draws. ⚠️ Colour is never the
+        only carrier: the sign is in the P/L text beside every bar.
+        ⚠️ A `<p>` ABOVE the frame, not a `<caption>` inside it (theme, 2026-11-26) — as a caption it
+        sat inside the bordered scroll, jammed against the header row.
+      */}
+      <p className="mvp-caption">
+        The bar length is this day&rsquo;s P/L against the largest day in the table ({formatAmount(bars.maxAbs)}),
+        so a single day carrying the total is visible at a glance. The figure beside it is the value.
+      </p>
+      <div className="mvp-scroll">
       <table className="mvp-table">
-        {/*
-          The bar's scale is a claim, so it is stated with the numbers it draws. ⚠️ Colour is never the
-          only carrier: the sign is in the P/L text beside every bar.
-        */}
-        <caption className="mvp-caption">
-          The bar length is this day&rsquo;s P/L against the largest day in the table ({formatAmount(bars.maxAbs)}),
-          so a single day carrying the total is visible at a glance. The figure beside it is the value.
-        </caption>
         <thead>
           <tr>
             <SortableTh col="answerDate" label="Day" api={sort} buttonClassName="th-sort" firstDir="asc" />
@@ -119,6 +122,7 @@ export default function ResultByDayStep({ sort }) {
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }

@@ -62,6 +62,7 @@ import StepAccordion, { StepMeta } from '../components/StepAccordion.jsx';
 import { MOVERS_PAGE_ID, MOVERS_STEP } from '../features/movers-strategy/steps.js';
 import { groupCaveats, caveatDetail } from '../features/movers-strategy/caveats.js';
 import { summariseFillGaps, fillGapChips } from '../features/movers-strategy/fill-gap.js';
+import { buildPriceReference } from '../features/movers-strategy/price-reference.js';
 import QualifierStrip from '../components/QualifierStrip.jsx';
 import ResultByDayStep from '../features/movers-strategy/ResultByDayStep.jsx';
 import ResultBySymbolStep from '../features/movers-strategy/ResultBySymbolStep.jsx';
@@ -555,6 +556,22 @@ export default function MoversStrategyBacktestPage() {
     [okRuns, datasetByName],
   );
   const focusedDepth = depthEntries.find((d) => d.key === focusKey) ?? depthEntries[0] ?? null;
+
+  /**
+   * Note o — the price a `slPct` / `tpPct` percentage is a percentage OF. Read from this run's own
+   * trades (`depthEntries` covers every day, not just the focused one) and reduced by
+   * `buildPriceReference()` to the most-traded symbol's median entry. Never a blend across symbols:
+   * 5% of EURUSD and 5% of BTC do not average into anything.
+   *
+   * ⚠️ Declared AFTER `depthEntries` — it reads it, and a `const` read before its own declaration is a
+   * TDZ ReferenceError that takes the whole page to a blank fallback with no error in the UI.
+   */
+  const priceRef = useMemo(
+    () => buildPriceReference(
+      depthEntries.flatMap((e) => (e.detail?.trades ?? []).map((t) => ({ ...t, symbol: t.symbol || e.symbol }))),
+    ),
+    [depthEntries],
+  );
   /**
    * The scoring funnel's headline, computed ONCE from the same per-bar states the funnel table counts.
    * ⚠️ Step 6's header must not re-derive these: two implementations of one count is how a tile and a
@@ -1321,17 +1338,23 @@ export default function MoversStrategyBacktestPage() {
                           <td className="mvp-nowrap">{c.label}</td>
                           <td className="mvp-nowrap">{c.qualifies}</td>
                           <td className="mvp-num">{c.days} of {okRuns.length}</td>
-                          <td className="mvp-caveat-text">
-                            {caveatDetail(c)}
-                            {c.texts.length > 1 && (
-                              <span className="mvp-muted"> (other days say much the same with their own figures)</span>
-                            )}
-                          </td>
+                          <td className="mvp-caveat-text">{caveatDetail(c)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+                {/* ⚠️ The explanation of `e.g.` belongs HERE, once, not repeated inside every row.
+                    It used to be a parenthetical appended to each detail — the same twelve words four
+                    times, which cost a wrapped line per row to say nothing row-specific. The owner's
+                    complaint about this page was text volume, and this is text that scales with the
+                    table rather than with the information. */}
+                {caveatTable.some((c) => c.texts.length > 1) && (
+                  <p className="mvp-note">
+                    <code>e.g.</code> marks a row whose days each state their own figures — the example
+                    stands for <em>Days</em> runs, it is not a five-day total.
+                  </p>
+                )}
               </div>
             )}
 
@@ -1581,6 +1604,7 @@ export default function MoversStrategyBacktestPage() {
              * automatic revert would compare the change against itself.
              */
             getBaselineNetPnl={() => totalsRef.current?.netPnl ?? null}
+            priceRef={priceRef}
           />
           </StepAccordion>
           </>

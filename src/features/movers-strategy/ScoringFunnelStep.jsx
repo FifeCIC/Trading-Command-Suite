@@ -25,7 +25,7 @@
  *   entry / entry+exit → traded
  */
 import { useMemo } from 'react';
-import { funnelFor, funnelTotals, sharePct, SPEED_DIRECTIVE } from '../../core/movers-funnel.js';
+import { funnelFor, funnelTotals, sharePct, funnelShape, SPEED_DIRECTIVE } from '../../core/movers-funnel.js';
 
 const BUCKETS = [
   { key: 'scored', label: 'Bars scored' },
@@ -75,12 +75,12 @@ export default function ScoringFunnelStep({ entries }) {
         read than the numbers, and the numbers are what a reader compares. The chart worth building is the
         price-with-markers one (#1342 step 8), not a redrawing of six integers.
       */}
+      <p className="mvp-caption">
+        Every bar the engine scored, and what became of it. <strong>Under the bar</strong> is the
+        population a lower entry bar would admit — the one number that answers “why so few trades”.
+      </p>
       <div className="mvp-scroll">
         <table className="mvp-table">
-          <caption className="mvp-caption">
-            Every bar the engine scored, and what became of it. <strong>Under the bar</strong> is the
-            population a lower entry bar would admit — the one number that answers “why so few trades”.
-          </caption>
           <thead>
             <tr>
               <th scope="col">Symbol</th>
@@ -96,6 +96,36 @@ export default function ScoringFunnelStep({ entries }) {
                 <th scope="row" className="mvp-nowrap">
                   {r.symbol}
                   {r.day && <span className="mvp-inv-label">{r.day}</span>}
+                  {/*
+                    Audit note 'i' (2026-11-26) — WHERE the population is lost, not just how much.
+                    The stack is scaled to `bars scored`, so an engine state this page does not bucket
+                    leaves a visible gap rather than a full-looking bar. `aria-hidden`: every count is
+                    in the columns beside it, so the bar adds shape, not information a reader can only
+                    get by seeing it.
+                  */}
+                  {(() => {
+                    const shape = funnelShape(r);
+                    if (!shape.segments.length) return null;
+                    return (
+                      <span className="mvp-funnelbar" aria-hidden="true">
+                        {shape.segments.map((s) => (
+                          s.count > 0 && (
+                            <span
+                              key={s.key}
+                              className={`mvp-funnelbar-seg mvp-funnelbar-seg--${s.key}`}
+                              style={{ width: `${s.pct}%` }}
+                            />
+                          )
+                        ))}
+                        {shape.unaccounted > 0 && (
+                          <span
+                            className="mvp-funnelbar-seg mvp-funnelbar-seg--unaccounted"
+                            style={{ width: `${(shape.unaccounted / r.scored) * 100}%` }}
+                          />
+                        )}
+                      </span>
+                    );
+                  })()}
                 </th>
                 <td className="mvp-num">{r.scored}</td>
                 <td className="mvp-num mvp-muted">{r.noData}</td>
@@ -129,12 +159,13 @@ export default function ScoringFunnelStep({ entries }) {
         </span>
       </h3>
       {anySpeed ? (
-        <div className="mvp-scroll">
+        <>
+          <p className="mvp-caption">
+            The protocol’s own speed directive, read per bar. A symbol whose peak is near the ceiling
+            moved fast for at least one bar; a low mean says the move was not sustained.
+          </p>
+          <div className="mvp-scroll">
           <table className="mvp-table">
-            <caption className="mvp-caption">
-              The protocol’s own speed directive, read per bar. A symbol whose peak is near the ceiling
-              moved fast for at least one bar; a low mean says the move was not sustained.
-            </caption>
             <thead>
               <tr>
                 <th scope="col">Symbol</th>
@@ -156,7 +187,8 @@ export default function ScoringFunnelStep({ entries }) {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       ) : (
         <p className="mvp-note">
           This run carried no per-directive breakdown, so the speed directive’s own score was not

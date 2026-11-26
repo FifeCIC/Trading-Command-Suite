@@ -120,6 +120,7 @@
 .dal-recent-table,
 .dp-table,
 .vd-table,
+.std-table,
 .va-table {
   width: 100%;
   border-collapse: collapse;
@@ -233,6 +234,7 @@
 .dal-recent-table th,
 .dp-table th,
 .vd-table th,
+.std-table th,
 .va-table th {
   text-align: left;
   padding: 0.5rem 0.65rem;
@@ -352,6 +354,7 @@
 .dal-recent-table td,
 .dp-table td,
 .vd-table td,
+.std-table td,
 .va-table td {
   padding: 0.45rem 0.65rem;
   border-bottom: 1px solid var(--line);
@@ -464,6 +467,7 @@
 .dal-recent-table tbody tr:last-child td,
 .dp-table tbody tr:last-child td,
 .vd-table tbody tr:last-child td,
+.std-table tbody tr:last-child td,
 .va-table tbody tr:last-child td {
   border-bottom: none;
 }
@@ -549,6 +553,7 @@
 .tp-comparison-table tbody tr:hover,
 .tp-config-table tbody tr:hover,
 .tp-table tbody tr:hover,
+.std-table tbody tr:hover,
 .uir-table tbody tr:hover {
   /* ⚠️ THE HOVER BODY WAS MISSING ENTIRELY (found 2026-11-06). This selector list ended in a dangling
      comma followed by a comment and then the `.num` selectors, so the comment was stripped and ALL of
@@ -613,6 +618,7 @@
 .dal-recent-table td.num,
 .dp-table td.num,
 .vd-table th.num,
+.std-table td.num,
 .vd-table td.num {
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -643,6 +649,7 @@
 .dal-recent-table tbody tr:hover,
 .dp-table tbody tr:hover,
 .vd-table tbody tr:hover,
+.std-table tbody tr:hover,
 .va-table tbody tr:hover {
   background: color-mix(in srgb, var(--accent) 5%, transparent);
 }

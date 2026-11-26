@@ -30,6 +30,7 @@ import { apiGet } from '../../core/api/client';
 import NoticeBlock from '../../components/NoticeBlock.jsx';
 import { noticeFromError } from '../../core/notices/from-error.js';
 import { protocolDirectiveIds } from '../../core/movers-funnel.js';
+import { buildRunDirectiveStats } from './directive-run-stats.js';
 
 const pct = (v) => (typeof v === 'number' ? `${(v * 100).toFixed(1)}%` : '—');
 const ci = (e) => (e?.ci95 ? `${(e.ci95.low * 100).toFixed(0)}–${(e.ci95.high * 100).toFixed(0)}%` : '—');
@@ -48,6 +49,15 @@ export default function DirectiveRecordStep({ entries, days: windowDays = 30 }) 
   });
 
   const mine = protocolDirectiveIds(entries);
+
+  /**
+   * Note j — the OTHER half of "which voice was right?". This run's own per-directive participation,
+   * from the bars it produced. ⚠️ A different population from the hit rates below, which are measured
+   * across every strategy and symbol over the stored window; the table keeps them in separate columns
+   * precisely so the two are never read as one number.
+   */
+  const runStats = buildRunDirectiveStats(entries);
+  const runById = new Map(runStats.directives.map((d) => [d.id, d]));
 
   if (report.isPending) {
     return <p className="mvp-note">Reading the stored directive outcomes…</p>;
@@ -100,6 +110,31 @@ export default function DirectiveRecordStep({ entries, days: windowDays = 30 }) 
         A hit rate is directional accuracy, not profit.
       </p>
 
+      {/**
+        * ⚠️ THE COVERAGE LINE IS THE POINT OF THE `This run` COLUMN. Without it, a table of hit rates
+        * beside a run that recorded no per-bar breakdown reads as "these directives explain these
+        * numbers". `attributed: 0` is a REPORTED state — the run has no breakdown — and must never be
+        * drawn as "no directive fired".
+        */}
+      <p className="mvp-note">
+        {runStats.bars === 0 ? (
+          <>This run recorded no bars, so no directive can be attributed to it.</>
+        ) : runStats.attributed === 0 ? (
+          <>
+            <strong>This run recorded no per-bar directive breakdown</strong> ({runStats.bars} bar
+            {runStats.bars === 1 ? '' : 's'}), so the <em>This run</em> column is empty — that is missing
+            data, not evidence that no directive scored.
+          </>
+        ) : (
+          <>
+            <em>This run</em> is counted from the run’s own {runStats.bars} bar
+            {runStats.bars === 1 ? '' : 's'}, {runStats.attributed} of which carry at least one scored
+            directive. It is a different population from the hit rates beside it — bars here, matured
+            predictions there.
+          </>
+        )}
+      </p>
+
       {thinSample && (
         <p className="mvp-note mvp-note--warn">
           <strong>The sample is {days} calendar day{days === 1 ? '' : 's'}.</strong> That is one market
@@ -115,6 +150,7 @@ export default function DirectiveRecordStep({ entries, days: windowDays = 30 }) 
               <th scope="col">Directive</th>
               <th scope="col">In this protocol</th>
               <th scope="col" className="mvp-num">Mean score</th>
+              <th scope="col" className="mvp-num">This run</th>
               <th scope="col" className="mvp-num">Bullish hit</th>
               <th scope="col" className="mvp-num">Bearish hit</th>
               <th scope="col" className="mvp-num">n</th>
@@ -134,6 +170,24 @@ export default function DirectiveRecordStep({ entries, days: windowDays = 30 }) 
                       : isMine ? 'yes' : <span className="mvp-muted">—</span>}
                   </td>
                   <td className="mvp-num">{typeof d.avgScore === 'number' ? d.avgScore.toFixed(1) : '—'}</td>
+                  {/**
+                    * The run's own figures, or a dash that means "it did not score on this run" — which
+                    * is different from the historical columns' "never measured". `bars` is included
+                    * because a directive that scored twice and one that scored on every bar are not the
+                    * same evidence, even at the same mean.
+                    */}
+                  <td className="mvp-num">
+                    {(() => {
+                      const r = runById.get(d.directiveId);
+                      if (!r) return <span className="mvp-muted">—</span>;
+                      return (
+                        <>
+                          {r.mean === null ? '—' : r.mean.toFixed(1)}
+                          <span className="mvp-muted"> {r.bars} bar{r.bars === 1 ? '' : 's'}</span>
+                        </>
+                      );
+                    })()}
+                  </td>
                   <td className="mvp-num">
                     {pct(d.bullish?.hitRate)}
                     <span className="mvp-muted"> {d.bullish ? `n=${d.bullish.n}` : ''}</span>

@@ -208,12 +208,13 @@ export function SelectionSummaryTable({ trades }) {
   const anyIgnored = rows.some((r) => r.opened !== r.counted);
 
   return (
-    <div className="mvp-scroll">
+    <>
+      <p className="mvp-caption">
+        What the day list counted. A row the engine opened but the selection did not admit has real
+        P/L and is in no total on this page.
+      </p>
+      <div className="mvp-scroll">
       <table className="mvp-table">
-        <caption className="mvp-caption">
-          What the day list counted. A row the engine opened but the selection did not admit has real
-          P/L and is in no total on this page.
-        </caption>
         <thead>
           <tr>
             <th scope="col">Symbol</th>
@@ -245,7 +246,8 @@ export function SelectionSummaryTable({ trades }) {
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }
 

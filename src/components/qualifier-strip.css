@@ -10,10 +10,19 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  margin: 10px 0 0;
+  /* ⚠️ CENTRED AND SEPARATED (owner, 2026-11-26): the row was flush left and its bottom edge touched
+     the block below it, so it read as the first line of that table rather than as a summary of the
+     figures above. A status row is a band, not a column. */
+  margin: 16px 0 14px;
   padding: 0;
   list-style: none;
+}
+
+/* A caller that wants the row flush left (e.g. inside a narrow rail) opts out explicitly. */
+.qstrip--start {
+  justify-content: flex-start;
 }
 
 .qstrip-item {
@@ -30,8 +39,8 @@
   background: var(--panel);
   color: var(--ink);
   font-family: inherit;
-  font-size: 11px;
-  line-height: 1.35;
+  font-size: 12.5px;
+  line-height: 1.4;
   cursor: pointer;
   white-space: nowrap;
   transition: border-color 0.15s ease, background 0.15s ease;

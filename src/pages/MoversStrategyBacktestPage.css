@@ -667,15 +667,18 @@
   gap: 10px;
 }
 
+/* ── TABLE BLOCK (theme, 2026-11-26) ─────────────────────────────────────────────────────────────
+   ONE FRAME PER TABLE. This was a bordered box (`background` + `border` + radius 4px) wrapping
+   `.mvp-scroll`, which is ITSELF a bordered box (radius 6px) — a box around a box, with
+   `padding: 8px 10px 8px 26px`, so the caveat table started 27px inside everything above it. That
+   asymmetry is why it read as unanchored. The wrapper is now layout only: no fill, no border, no
+   padding, and the same top offset as any other block. */
 .mvp-caveats {
-  margin: 0;
-  padding: 8px 10px 8px 26px;
+  margin: 12px 0 0;
+  padding: 0;
   font-size: 11px;
   line-height: 1.55;
   color: var(--text-dim);
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: 4px;
 }
 
 /*
@@ -1391,12 +1394,16 @@
 
 /* #1340 — a table's own caption, so an explanation sits WITH the numbers it describes instead of
    floating under them. Tokens only: the theme is user-configurable. */
+/* ── TEXT THAT DESCRIBES A TABLE (theme, 2026-11-26) ───────────────────────────────────────────
+   ALWAYS A PARAGRAPH ABOVE THE FRAME, NEVER A `<caption>` INSIDE IT. As a caption it rendered inside
+   the bordered `.mvp-scroll`, jammed against the header row — the owner's *"it's like it's at the top
+   of the table in a silly way"*. Nine call sites now share this one class, all as `<p>` above the
+   frame, so the treatment cannot drift between tables. */
 .mvp-caption {
-  caption-side: top;
-  text-align: left;
-  padding: 0 0 8px;
-  font-size: 11px;
-  line-height: 1.45;
+  margin: 0 0 8px;
+  padding: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
   color: var(--text-dim);
   white-space: normal;
 }
@@ -1552,5 +1559,136 @@
 .mvp-sym-error {
   font-size: 10px;
   color: var(--color-warning);
+  white-space: nowrap;
+}
+
+/* ── FUNNEL SHAPE (audit note 'i', 2026-11-26) ─────────────────────────────────────────────────
+   WHERE the population is lost, per symbol, under its name. Scaled to `bars scored`, so an
+   unaccounted engine state leaves a visible gap instead of a full-looking bar. */
+.mvp-funnelbar {
+  display: flex;
+  width: 120px;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--ink-soft) 12%, transparent);
+}
+
+.mvp-funnelbar-seg { display: block; height: 100%; }
+
+.mvp-funnelbar-seg--entered { background: var(--risk-normal); }
+.mvp-funnelbar-seg--signalNotTraded { background: var(--accent); }
+.mvp-funnelbar-seg--barGate { background: var(--color-warning); }
+.mvp-funnelbar-seg--quiet { background: color-mix(in srgb, var(--ink-soft) 35%, transparent); }
+.mvp-funnelbar-seg--noData { background: color-mix(in srgb, var(--ink-soft) 18%, transparent); }
+/* Striped, because it is the one segment that means "this page cannot account for these bars". */
+.mvp-funnelbar-seg--unaccounted {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--text-dim) 0 2px,
+    transparent 2px 4px
+  );
+}
+
+/* ══ TYPE & RHYTHM (owner, 2026-11-26) ═══════════════════════════════════════════════════════════
+   Verdict on the page: *"a lot of the text is too small or bunched together and too close to other
+   elements."* Measured before this block — 210 elements at 10px, 76 at 11.2px, 70 at 11.5px, tables at
+   11.2px, `.mvp-depth-pre` at 9px — against line-heights around 1.2.
+
+   SCALE — the floor is 12px. Nothing informational sits below it:
+     11px    mono index labels only (`mvp-inv-label`), where the row's own number carries the meaning
+     12px    chrome: state chips, recap items, symbols, source tags
+     12.5px  body: table cells, notes, captions
+     13px    emphasis inside a table (a strong cell)
+   RHYTHM — one step, used everywhere:
+     16px    between blocks
+     6px     between a describing note and the frame it describes
+     14px    below a strip
+
+   ⚠️ This block is deliberately last in the file: it is a THEME override, and it must win over the
+   ad-hoc sizes above rather than being interleaved with them. It replaces values, not rules — a
+   property not named here keeps whatever the page already said. */
+.mvp-page { font-size: 13px; }
+
+/* ── Body text ─────────────────────────────────────────────────────────────────────────────────── */
+.mvp-tables,
+.mvp-table { font-size: 12.5px; }
+
+.mvp-table th,
+.mvp-table td {
+  line-height: 1.45;
+}
+
+.mvp-note,
+.mvp-caption {
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.mvp-config-note { font-size: 12px; line-height: 1.55; }
+.mvp-state { font-size: 12px; }
+.mvp-source { font-size: 11.5px; }
+.mvp-sym { font-size: 12px; }
+.mvp-sym em { font-size: 10.5px; }
+.mvp-depth-pre { font-size: 11.5px; line-height: 1.55; }
+.mvp-inv-label { font-size: 11px; }
+
+/* The recap line and the run controls are read continuously — they were 11px. */
+.mvp-recap-leg,
+.mvp-recap-item,
+.mvp-recap-status,
+.mvp-link-btn { font-size: 12px; }
+
+/* ── Spacing between blocks ───────────────────────────────────────────────────────────────────── */
+.mvp-caveats { margin-top: 16px; }
+.mvp-cost-total { margin-top: 12px; }
+.mvp-coverage-notes { margin-top: 10px; gap: 6px; }
+
+/* A step's body gets breathing room from its own header. */
+.mvp-run-summary > * + * { margin-top: 14px; }
+
+/* ── Table cells, stated explicitly ────────────────────────────────────────────────────────────────
+   `font-size` on `.mvp-table` is inherited, and several inner tables set 11px on a WRAPPER rather than
+   on the cell — so the cell won. Naming the cell is what actually holds the floor. (Measured after the
+   first pass: 25 `mvp-num` cells and 17 `mvp-ds-ticker` still at 11px.) */
+.mvp-page table th,
+.mvp-page table td { font-size: 12.5px; }
+.mvp-page table th { text-transform: none; }
+
+/* The answer-day ticker cell carries two lines in one column; both are read, so neither is caption-sized. */
+.mvp-ds-sym { font-size: 12px; }
+.mvp-ds-pct { font-size: 11.5px; }
+
+/* The ET equivalent inside a UTC cutoff button — a secondary reading of the same clock, not a footnote. */
+.mvp-et { font-size: 0.75rem; }
+
+/* ── Shared components, page-scoped ────────────────────────────────────────────────────────────────
+   ⚠️ Raised HERE rather than in `step-accordion.css` on purpose: the accordion is shared, this is one
+   page's density decision, and editing the shared sheet would change every other page's steps. */
+.mvp-page .step-acc__num { font-size: 0.78rem; }
+.mvp-page .step-acc__stat span { font-size: 0.72rem; letter-spacing: 0.03em; }
+.mvp-page .step-acc__stat strong { font-size: 0.95rem; }
+
+/* ── Strip rhythm, page-level ──────────────────────────────────────────────────────────────────────
+   ⚠️ CORRECTED mid-measurement: `.qstrip` was reported computing to 14px top while its own rule said
+   16px, and that was written down as "a second, invisible source of the value". It was not — the
+   stylesheet was a stale hot-reload, and once the file actually reloaded the rule applied as written.
+
+   The larger value is still wanted, so it stays: a band sits between two blocks that are both read, so
+   it needs clear air above AND below. Set here rather than in `qualifier-strip.css` because it is this
+   page's rhythm, not the component's. */
+.mvp-page .qstrip { margin: 18px 0 16px; }
+
+/* The price distance under a percentage in the trade-config table (note o). Small and dim on purpose:
+   it is the SAME fact as the percentage above it, expressed in the unit the trade tables use, so it
+   must not compete with the configured value for attention. */
+.mvp-config-dist {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--text-dim);
   white-space: nowrap;
 }

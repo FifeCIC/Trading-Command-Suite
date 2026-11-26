@@ -701,6 +701,21 @@ export interface BotForBacktest {
    */
   maxHoldHours?: number | null;
   /**
+   * The bot's scale-in limit (`maxPyramidTiers`), carried ONLY so the run can report that it does not
+   * model it.
+   *
+   * ⚠️ Pyramiding is the parity register's only remaining `gap`: `PyramidPolicyService` may open a
+   * SECOND position on a symbol when this is > 1 and the existing one is green with its stop at
+   * breakeven-or-better, and this engine models ONE position per symbol. A run against such a bot
+   * therefore understates its trade count and its exposure.
+   *
+   * ⚠️ THE CAVEAT LIVES HERE, NOT IN THE SELECTION WRAPPER (measured 2026-11-26). It was first added
+   * to `selection-run.service.ts`, which meant (a) a single-symbol run stayed silent, and (b) a second
+   * place had to know about pyramiding. The limitation belongs to the engine because the engine is
+   * where it exists.
+   */
+  maxPyramidTiers?: number | null;
+  /**
    * The bot's declared TRADING CLOCK — `trading_strategy.sessionWindow`, e.g. `'["us"]'`.
    *
    * ⚠️ Set on essentially every bot and read by NOTHING in the engine until 2026-11-20 (#1242), so a
@@ -944,6 +959,21 @@ export function mergeBotConfig(
             'will be rejected rather than measured against a default.',
         ]),
   ];
+
+  // ── THE MECHANISM THIS RUN CANNOT MODEL ──────────────────────────────────────────────────
+  // `pyramid` is the parity register's only `gap`. Pushed AFTER the array literal rather than spread
+  // inside it, only when the bot would have used it — so a bot at 1 tier (the default, and every
+  // incumbent configuration) gains no noise. Register row 300.
+  const pyramidTiers = Number(bot.maxPyramidTiers ?? 1);
+  if (pyramidTiers > 1) {
+    caveats.push(
+      `⚠️ SCALE-IN IS NOT MODELLED. This bot allows ${pyramidTiers} pyramid tiers, and the engine holds `
+      + 'ONE position per symbol: where the live path would have added a second position to a profitable, '
+      + 'stop-locked one, this run recorded no such trade. Its trade count and exposure are UNDERSTATED, and '
+      + 'the gap widens the more often the first position went green before the signal faded. '
+      + 'Parity register row: pyramid.',
+    );
+  }
 
   return {
     request: merged,
