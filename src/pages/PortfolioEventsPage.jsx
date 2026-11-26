@@ -73,7 +73,7 @@ export default function PortfolioEventsPage() {
               <div className="pe-card-header">
                 <span className="pe-symbol">{item.symbol}</span>
                 {item.riskLevel && (
-                  <span className="pe-risk-badge" style={{ background: (RISK_COLORS[item.riskLevel] || '#6b7280') + '20', color: RISK_COLORS[item.riskLevel] }}>
+                  <span className="pe-risk-badge" style={{ background: (RISK_COLORS[item.riskLevel] || 'var(--color-text-dim)') + '20', color: RISK_COLORS[item.riskLevel] }}>
                     {item.riskLevel} RISK ({item.riskScore})
                   </span>
                 )}

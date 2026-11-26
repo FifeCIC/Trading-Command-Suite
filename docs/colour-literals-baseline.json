@@ -1,0 +1,19 @@
+{
+  "note": "Inline-style hex literals that are BESPOKE (no token carries the value). Frozen so the count cannot grow; regenerate with `node scripts/validate-colour-literals.cjs --write-baseline` when a file shrinks.",
+  "total": 37,
+  "files": {
+    "src/components/FeatureLab/AutoRiskSizingDemo.jsx": 3,
+    "src/components/FeatureLab/DirectiveConfigDemo.jsx": 7,
+    "src/components/FeatureLab/NewsDissipationDemo.jsx": 1,
+    "src/components/FeatureLab/PartialTakeProfitDemo.jsx": 3,
+    "src/components/FeatureLab/TimezoneDecisionDemo.jsx": 2,
+    "src/components/SeasonalityHeatmap.jsx": 1,
+    "src/components/SpeedChart.jsx": 1,
+    "src/components/backtest/RsiDivergenceChart.jsx": 1,
+    "src/pages/CandlePatternsGuidePage.jsx": 10,
+    "src/pages/DirectivesManagerPage.jsx": 1,
+    "src/pages/MarketContextPage.jsx": 4,
+    "src/pages/SnapshotReplayPage.jsx": 1,
+    "src/pages/StrategyLibraryPage.jsx": 2
+  }
+}

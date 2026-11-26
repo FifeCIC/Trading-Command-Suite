@@ -744,7 +744,7 @@ export default function ScreenOptions({ activeView, area, onSettingsChange, isOp
             onClick={() => window.location.href = '/status/setup'}
             title={`Bridge: ${isMt5Online ? 'Connected' : 'Offline'} | API: ${isApiOnline ? 'Online' : 'Offline'} | DB: ${isDbOnline ? 'Connected' : 'Offline'}`}
             aria-label="System status"
-            style={{ color: statusLevel === 'online' ? '#22c55e' : statusLevel === 'warn' ? '#f59e0b' : '#ef4444' }}
+            style={{ color: statusLevel === 'online' ? 'var(--color-profit)' : statusLevel === 'warn' ? 'var(--color-warning)' : 'var(--color-loss)' }}
           >
             !
           </button>

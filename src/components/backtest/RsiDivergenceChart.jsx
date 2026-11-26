@@ -195,10 +195,10 @@ export default function RsiDivergenceChart({ preview, height = 520 }) {
     <div className="bt-div-chart">
       <div ref={containerRef} className="bt-div-chart-canvas" />
       <p className="ff-hint bt-div-legend">
-        <span className="bt-div-key" style={{ color: '#22c55e' }}>━ Bull</span> regular, solid = reversal{' '}
+        <span className="bt-div-key" style={{ color: 'var(--color-profit)' }}>━ Bull</span> regular, solid = reversal{' '}
         <span className="bt-div-key" style={{ color: '#14b8a6' }}>┅ H Bull</span> hidden, dashed = continuation{' '}
-        <span className="bt-div-key" style={{ color: '#ef4444' }}>━ Bear</span>{' '}
-        <span className="bt-div-key" style={{ color: '#f59e0b' }}>┅ H Bear</span>
+        <span className="bt-div-key" style={{ color: 'var(--color-loss)' }}>━ Bear</span>{' '}
+        <span className="bt-div-key" style={{ color: 'var(--color-warning)' }}>┅ H Bear</span>
         {' '}— each pair is drawn in BOTH panes, and the claim is only visible where the price leg and the
         RSI leg slope in opposite directions.
         {divergences.length > MAX_DRAWN_PAIRS && (

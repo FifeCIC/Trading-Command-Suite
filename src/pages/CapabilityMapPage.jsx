@@ -498,7 +498,7 @@ export default function CapabilityMapPage() {
       <div className="capmap-summary">
         <div className="capmap-summary-item"><span className="capmap-summary-value">{allRows.length}</span><span className="capmap-summary-label">total capabilities</span></div>
         <div className="capmap-summary-item" title="Features where data is stored (not ephemeral), has at least 1 UI surface, is integrated into scoring/trading, and is marked complete">
-          <span className="capmap-summary-value" style={{color: completeLoop > completeDev * 0.3 ? '#22c55e' : '#f59e0b'}}>{completeLoop}/{completeDev}</span>
+          <span className="capmap-summary-value" style={{color: completeLoop > completeDev * 0.3 ? 'var(--color-profit)' : 'var(--color-warning)'}}>{completeLoop}/{completeDev}</span>
           <span className="capmap-summary-label">complete loops</span>
         </div>
         {categories.map((cat) => (
@@ -552,7 +552,7 @@ export default function CapabilityMapPage() {
                 <td style={{ fontSize: 11, color: 'var(--ink-soft)' }}>{row.type}</td>
                 <td><StatusBadge status={row.status} /></td>
                 <td><DataBadge value={row.dataPersistence} /></td>
-                <td style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: row.uiSurfaces > 0 ? '#22c55e' : 'var(--ink-soft)' }}>{row.uiSurfaces}</td>
+                <td style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: row.uiSurfaces > 0 ? 'var(--color-profit)' : 'var(--ink-soft)' }}>{row.uiSurfaces}</td>
                 <td><PipelineBadge value={row.pipelineIntegration} /></td>
                 <td><DoneBadge value={row.devCompletion} /></td>
                 <td style={{ fontSize: 11, color: 'var(--ink-soft)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.notes || '—'}</td>

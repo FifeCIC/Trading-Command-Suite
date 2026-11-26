@@ -203,7 +203,7 @@ export default function DecoderPage() {
             <label className="decoder-ai-toggle">
               <input type="checkbox" checked={aiEnabled} onChange={(e) => setAiEnabled(e.target.checked)} />
               <span>AI Analysis</span>
-              <span className="decoder-ai-badge" style={{ background: aiEnabled ? 'rgba(34,197,94,0.12)' : 'rgba(148,163,184,0.12)', color: aiEnabled ? '#22c55e' : '#94a3b8' }}>
+              <span className="decoder-ai-badge" style={{ background: aiEnabled ? 'rgba(34,197,94,0.12)' : 'rgba(148,163,184,0.12)', color: aiEnabled ? 'var(--color-profit)' : 'var(--ink-soft)' }}>
                 {aiEnabled ? 'Active' : 'Off'}
               </span>
             </label>
@@ -217,7 +217,7 @@ export default function DecoderPage() {
                 <div className="decoder-ai-result">
                   <div className="decoder-ai-head">
                     <span className="decoder-ai-sentiment" style={{
-                      color: backendResult.sentiment === 'bullish' ? '#22c55e' : backendResult.sentiment === 'bearish' ? '#ef4444' : '#94a3b8'
+                      color: backendResult.sentiment === 'bullish' ? 'var(--color-profit)' : backendResult.sentiment === 'bearish' ? 'var(--color-loss)' : 'var(--ink-soft)'
                     }}>
                       {backendResult.sentiment === 'bullish' ? '🟢 Bullish' : backendResult.sentiment === 'bearish' ? '🔴 Bearish' : '⚪ Neutral'}
                     </span>

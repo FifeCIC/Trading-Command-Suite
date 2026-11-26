@@ -186,7 +186,7 @@ export default function PriceForecastPage() {
                 </div>
                 <div className="ps-confidence-bar" style={{ marginTop: 4 }}>
                   <motion.div className="ps-confidence-fill" initial={{ width: 0 }} animate={{ width: `${f.consensus === 'Strong Buy' ? 95 : f.consensus === 'Buy' ? 78 : f.consensus === 'Hold' ? 50 : 25}%` }}
-                    transition={{ duration: 0.5 }} style={{ background: f.consensus === 'Strong Buy' || f.consensus === 'Buy' ? '#22c55e' : f.consensus === 'Hold' ? '#f59e0b' : '#ef4444' }} />
+                    transition={{ duration: 0.5 }} style={{ background: f.consensus === 'Strong Buy' || f.consensus === 'Buy' ? 'var(--color-profit)' : f.consensus === 'Hold' ? 'var(--color-warning)' : 'var(--color-loss)' }} />
                 </div>
               </motion.div>
             </div>

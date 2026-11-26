@@ -484,7 +484,7 @@ export default function SnapshotReplayPage() {
                         className="sr-dir-bar"
                         animate={{ width: `${Math.min(100, (d.score / Math.max(1, d.maxScore)) * 100)}%` }}
                         transition={{ duration: 0.3 }}
-                        style={{ background: d.signalClass === 'bullish' ? '#22c55e' : d.signalClass === 'bearish' ? '#ef4444' : '#6366f1' }}
+                        style={{ background: d.signalClass === 'bullish' ? 'var(--color-profit)' : d.signalClass === 'bearish' ? 'var(--color-loss)' : '#6366f1' }}
                       />
                     </div>
                     <span className="sr-dir-score">{d.score}/{d.maxScore}</span>

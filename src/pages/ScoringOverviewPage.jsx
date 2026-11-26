@@ -330,7 +330,7 @@ export default function ScoringOverviewPage() {
                     <td className="so-num">{(item.score ?? 0).toFixed(1)}</td>
                     <td className="so-num">{((item.normalizedScore ?? 0)).toFixed(0)}%</td>
                     <td><span className={`so-signal-chip so-signal--${item.signal ?? 'unknown'}`}>{item.signal ?? 'unknown'}</span></td>
-                    <td className="so-num" style={{ color: item.coverage < 0.7 ? '#ef4444' : item.coverage < 1 ? '#f59e0b' : '#22c55e' }}>
+                    <td className="so-num" style={{ color: item.coverage < 0.7 ? 'var(--color-loss)' : item.coverage < 1 ? 'var(--color-warning)' : 'var(--color-profit)' }}>
                       {item.activeDirectives}/{item.totalDirectives} ({(item.coverage * 100).toFixed(0)}%)
                     </td>
                     <td><span className={`so-freshness-chip ${FRESHNESS_COLORS[item.freshness] ?? ''}`}>{item.freshness ?? 'unknown'}</span></td>

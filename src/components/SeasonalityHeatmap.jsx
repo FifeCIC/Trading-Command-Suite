@@ -101,9 +101,9 @@ export default function SeasonalityHeatmap({ symbol }) {
                 ))}
               </div>
               <div className="sh-legend">
-                <span className="sh-legend-item"><span className="sh-legend-swatch" style={{ background: '#ef4444' }} />Bearish</span>
+                <span className="sh-legend-item"><span className="sh-legend-swatch" style={{ background: 'var(--color-loss)' }} />Bearish</span>
                 <span className="sh-legend-item"><span className="sh-legend-swatch" style={{ background: '#334155' }} />Neutral</span>
-                <span className="sh-legend-item"><span className="sh-legend-swatch" style={{ background: '#22c55e' }} />Bullish</span>
+                <span className="sh-legend-item"><span className="sh-legend-swatch" style={{ background: 'var(--color-profit)' }} />Bullish</span>
                 <span className="sh-legend-item"><span className="sh-legend-swatch sh-dots" />Low data</span>
                 {selectedCell && (
                   <span className="sh-legend-info">

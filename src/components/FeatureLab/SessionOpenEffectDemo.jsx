@@ -30,7 +30,7 @@ function SessionBar({ session, active }) {
         <span style={{
           fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 999,
           background: direction === 'Bullish' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-          color: direction === 'Bullish' ? '#22c55e' : '#ef4444',
+          color: direction === 'Bullish' ? 'var(--color-profit)' : 'var(--color-loss)',
         }}>
           {direction} {(session.bias * 100).toFixed(0)}%
         </span>

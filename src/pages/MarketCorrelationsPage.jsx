@@ -71,7 +71,7 @@ export default function MarketCorrelationsPage() {
                     const bg = v !== null ? corrColor(v) : 'transparent';
                     return (
                       <td key={col} className={`mc-cell ${isDiag ? 'mc-diag' : ''}`}
-                        style={{ backgroundColor: isDiag ? 'transparent' : bg, color: isDiag ? 'var(--ink-soft)' : (v !== null && Math.abs(v) > 0.4) ? '#fff' : 'var(--ink)' }}
+                        style={{ backgroundColor: isDiag ? 'transparent' : bg, color: isDiag ? 'var(--ink-soft)' : (v !== null && Math.abs(v) > 0.4) ? 'var(--on-accent)' : 'var(--ink)' }}
                         title={`${row} ↔ ${col}: ${displayV}`}>{displayV}</td>
                     );
                   })}

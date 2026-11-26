@@ -28,7 +28,7 @@ export default function DirectiveConfigDemo() {
           style={{ background: 'rgba(0,0,0,0.15)', borderRadius: 8, padding: 12, border: '1px solid var(--line)' }}
         >
           <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--ink-soft)', marginBottom: 6 }}>Default Weights</div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'monospace', color: '#94a3b8' }}>{totalDefault}</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--ink-soft)' }}>{totalDefault}</div>
           <div style={{ fontSize: '0.62rem', color: 'var(--ink-soft)' }}>Composite Score</div>
         </motion.div>
         <motion.div
@@ -39,7 +39,7 @@ export default function DirectiveConfigDemo() {
         >
           <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#a5b4fc', marginBottom: 6 }}>Custom Weights</div>
           <div style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'monospace', color: '#818cf8' }}>{totalCustom}</div>
-          <div style={{ fontSize: '0.62rem', color: deltaPercent.startsWith('-') ? '#ef4444' : '#22c55e' }}>
+          <div style={{ fontSize: '0.62rem', color: deltaPercent.startsWith('-') ? 'var(--color-loss)' : 'var(--color-profit)' }}>
             {deltaPercent.startsWith('-') ? '↓' : '↑'} {deltaPercent}% vs default
           </div>
         </motion.div>
@@ -75,9 +75,9 @@ export default function DirectiveConfigDemo() {
                   )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'monospace', fontSize: '0.78rem' }}>
-                  <span style={{ color: '#94a3b8' }}>{d.defaultScore}</span>
+                  <span style={{ color: 'var(--ink-soft)' }}>{d.defaultScore}</span>
                   <span style={{ color: 'var(--ink-soft)' }}>→</span>
-                  <span style={{ color: diff > 0 ? '#22c55e' : diff < 0 ? '#ef4444' : '#94a3b8', fontWeight: 700 }}>
+                  <span style={{ color: diff > 0 ? 'var(--color-profit)' : diff < 0 ? 'var(--color-loss)' : 'var(--ink-soft)', fontWeight: 700 }}>
                     {d.customScore}
                   </span>
                 </div>

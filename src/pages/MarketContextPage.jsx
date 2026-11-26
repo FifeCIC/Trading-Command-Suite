@@ -265,15 +265,15 @@ export default function MarketContextPage() {
           <p className="mc-day-note">{day.sessionNote}</p>
           <div className="mc-day-tags">
             {day.gapExposure !== 'none' && (
-              <span className="mc-tag" style={{ background: day.gapExposure === 'high' ? '#ef444418' : '#f59e0b18', color: day.gapExposure === 'high' ? '#ef4444' : '#f59e0b' }}>
+              <span className="mc-tag" style={{ background: day.gapExposure === 'high' ? '#ef444418' : '#f59e0b18', color: day.gapExposure === 'high' ? 'var(--color-loss)' : 'var(--color-warning)' }}>
                 Gap: {day.gapExposure}
               </span>
             )}
-            <span className="mc-tag" style={{ background: day.swapRisk === 'triple' ? '#ef444418' : '#22c55e18', color: day.swapRisk === 'triple' ? '#ef4444' : '#22c55e' }}>
+            <span className="mc-tag" style={{ background: day.swapRisk === 'triple' ? '#ef444418' : '#22c55e18', color: day.swapRisk === 'triple' ? 'var(--color-loss)' : 'var(--color-profit)' }}>
               Swap: {day.swapRisk}
             </span>
             {strongestSession && (
-              <span className="mc-tag" style={{ background: 'var(--accent)', color: '#fff' }}>
+              <span className="mc-tag" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>
                 Strongest: {strongestSession.name}
               </span>
             )}

@@ -1,6 +1,6 @@
 {
   "name": "tradingcs",
-  "version": "0.174.0",
+  "version": "0.175.0",
   "releaseStage": "alpha",
   "private": true,
   "license": "AGPL-3.0",
@@ -37,7 +37,7 @@
     "audit:unregistered-directives": "node scripts/why-unregistered.cjs",
     "audit:unregistered-directives:self-test": "node scripts/why-unregistered.cjs --self-test",
     "build": "vite build",
-    "prebuild": "node scripts/validate-phrasing.cjs && node scripts/validate-repo-hygiene.cjs && node scripts/validate-page-visibility.cjs && node scripts/validate-no-notice-bar.cjs && node scripts/validate-arch-card-shapes.cjs && node scripts/validate-route-params.cjs && node scripts/validate-fault-taxonomy.cjs && node scripts/validate-standards.cjs && node scripts/validate-formatters.cjs",
+    "prebuild": "node scripts/validate-phrasing.cjs && node scripts/validate-repo-hygiene.cjs && node scripts/validate-page-visibility.cjs && node scripts/validate-no-notice-bar.cjs && node scripts/validate-arch-card-shapes.cjs && node scripts/validate-route-params.cjs && node scripts/validate-fault-taxonomy.cjs && node scripts/validate-standards.cjs && node scripts/validate-formatters.cjs && node scripts/validate-colour-literals.cjs && node --test src/theme/semantic-contrast.test.js",
     "postbuild": "node ./scripts/check-bundle-budget.mjs",
     "build:guard": "npm run build",
     "canary:arch-docs": "node ./scripts/canary-architecture-docs.cjs",
@@ -175,6 +175,9 @@
     "formatters": "node scripts/validate-formatters.cjs",
     "formatters:check": "node scripts/validate-formatters.cjs",
     "formatters:self-test": "node scripts/validate-formatters.cjs --self-test",
+    "colours": "node scripts/validate-colour-literals.cjs --report",
+    "colours:check": "node scripts/validate-colour-literals.cjs",
+    "colours:self-test": "node scripts/validate-colour-literals.cjs --self-test",
     "standards:self-test": "node scripts/validate-standards.cjs --self-test",
     "audit:handoffs:self-test": "node scripts/check-handoff-staleness.cjs --self-test"
   },

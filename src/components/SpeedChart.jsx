@@ -363,9 +363,9 @@ export default function SpeedChart({
   // ── Legend ──
   const legend = chartMode === 'candles' && bars.length > 0 ? (
     <div className="st-chart-legend">
-      <span className="st-chart-legend-item" style={{ color: '#f59e0b' }}>EMA 9</span>
+      <span className="st-chart-legend-item" style={{ color: 'var(--color-warning)' }}>EMA 9</span>
       <span className="st-chart-legend-item" style={{ color: '#8b5cf6' }}>EMA 21</span>
-      <span className="st-chart-legend-item" style={{ color: '#3b82f6' }}>EMA 50</span>
+      <span className="st-chart-legend-item" style={{ color: 'var(--color-accent-blue)' }}>EMA 50</span>
       <span className="st-chart-legend-sep">|</span>
       <span className="st-chart-legend-symbol">{symbol}</span>
       <span className="st-chart-legend-tf">{timeframe}</span>

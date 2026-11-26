@@ -98,7 +98,7 @@ export default function PerformanceLabPage() {
       {data?.overall && (
         <div className="perflab-overall">
           <div className="perflab-stat-card">
-            <span className="perflab-stat-val" style={{ color: data.overall.totalPnl >= 0 ? '#22c55e' : '#ef4444' }}>
+            <span className="perflab-stat-val" style={{ color: data.overall.totalPnl >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
               {data.overall.totalPnl >= 0 ? '+' : ''}{data.overall.totalPnl.toFixed(2)}
             </span>
             <span className="perflab-stat-label">Total P&L ({days}d)</span>
@@ -259,7 +259,7 @@ export default function PerformanceLabPage() {
                     <td>{m.trades}</td>
                     <td className="perflab-up">{m.wins}</td>
                     <td className="perflab-down">{m.losses}</td>
-                    <td style={{ color: m.winRate >= 50 ? '#22c55e' : '#ef4444' }}>{m.winRate}%</td>
+                    <td style={{ color: m.winRate >= 50 ? 'var(--color-profit)' : 'var(--color-loss)' }}>{m.winRate}%</td>
                     <td><PnlBadge value={m.pnl} /></td>
                   </tr>
                 ))}

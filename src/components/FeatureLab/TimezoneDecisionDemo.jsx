@@ -64,24 +64,24 @@ export default function TimezoneDecisionDemo() {
           onClick={() => setPlaying((p) => !p)}
           style={{
             padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
-            background: 'var(--accent, #0ea5a6)', color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+            background: 'var(--accent)', color: 'var(--on-accent)', fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
           }}
         >
           {playing ? '⏸ Pause' : '▶ Auto-Play'}
         </button>
-        <button type="button" onClick={advance} style={{ padding: '4px 10px', borderRadius: 4, border: '1px solid var(--line, #1e2a45)', background: 'transparent', color: 'var(--ink-soft, #94a3b8)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }}>⏭ Next Month</button>
-        <label style={{ fontSize: 12, color: 'var(--ink-soft, #94a3b8)', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <button type="button" onClick={advance} style={{ padding: '4px 10px', borderRadius: 4, border: '1px solid var(--line)', background: 'transparent', color: 'var(--ink-soft)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }}>⏭ Next Month</button>
+        <label style={{ fontSize: 12, color: 'var(--ink-soft)', display: 'flex', alignItems: 'center', gap: 4 }}>
           <input type="checkbox" checked={dstEnabled} onChange={(e) => setDstEnabled(e.target.checked)} disabled={!hasDST} />
           DST {!hasDST ? '(N/A)' : ''}
         </label>
         <select
           value={tz.id}
           onChange={(e) => { setTz(TIMEZONES.find((t) => t.id === e.target.value) || TIMEZONES[0]); setMonth(0); }}
-          style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid var(--line, #1e2a45)', background: 'var(--panel, #141a2e)', color: 'var(--ink, #e2e8f0)', fontFamily: 'inherit', fontSize: 12 }}
+          style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid var(--line)', background: 'var(--panel)', color: 'var(--ink)', fontFamily: 'inherit', fontSize: 12 }}
         >
           {TIMEZONES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
         </select>
-        <span style={{ fontSize: 12, color: 'var(--ink-soft, #94a3b8)', marginLeft: 'auto', fontWeight: 600 }}>
+        <span style={{ fontSize: 12, color: 'var(--ink-soft)', marginLeft: 'auto', fontWeight: 600 }}>
           {MONTHS[month]} {inDST ? '(DST)' : hasDST ? '(Standard)' : ''}
         </span>
       </div>
@@ -90,7 +90,7 @@ export default function TimezoneDecisionDemo() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
         {/* Column A — UTC Offset */}
         <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}>
-          <h4 style={{ margin: '0 0 8px', fontSize: 13, color: '#ef4444' }}>A: UTC Offset ({tz.offset >= 0 ? '+' : ''}{tz.offset}:00)</h4>
+          <h4 style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--color-loss)' }}>A: UTC Offset ({tz.offset >= 0 ? '+' : ''}{tz.offset}:00)</h4>
 
           {/* Clock */}
           <Clock hour={fixedOpenLocal} color="#ef4444" label="Market open on this clock" />
@@ -102,8 +102,8 @@ export default function TimezoneDecisionDemo() {
                 key={m}
                 style={{
                   flex: 1, textAlign: 'center', fontSize: 9, padding: '3px 0', borderRadius: 3,
-                  background: i === month ? 'var(--accent, #0ea5a6)' : 'rgba(255,255,255,0.04)',
-                  color: i === month ? '#fff' : 'var(--ink-soft, #94a3b8)',
+                  background: i === month ? 'var(--accent)' : 'rgba(255,255,255,0.04)',
+                  color: i === month ? 'var(--on-accent)' : 'var(--ink-soft)',
                   fontWeight: i === month ? 700 : 400,
                 }}
               >
@@ -117,31 +117,31 @@ export default function TimezoneDecisionDemo() {
             <motion.div
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
-              style={{ marginTop: 8, fontSize: 11, color: '#ef4444', fontWeight: 600, textAlign: 'center' }}
+              style={{ marginTop: 8, fontSize: 11, color: 'var(--color-loss)', fontWeight: 600, textAlign: 'center' }}
             >
               ⚡ Clock jumped — market open now {formatHour(fixedOpenLocal)} instead of {formatHour(MARKET_OPEN)}
             </motion.div>
           )}
           {!inDST && hasDST && (
-            <div style={{ marginTop: 8, fontSize: 11, color: '#22c55e', textAlign: 'center' }}>✓ On time (standard time)</div>
+            <div style={{ marginTop: 8, fontSize: 11, color: 'var(--color-profit)', textAlign: 'center' }}>✓ On time (standard time)</div>
           )}
-          {!hasDST && <div style={{ marginTop: 8, fontSize: 11, color: '#22c55e', textAlign: 'center' }}>✓ No DST — always correct</div>}
+          {!hasDST && <div style={{ marginTop: 8, fontSize: 11, color: 'var(--color-profit)', textAlign: 'center' }}>✓ No DST — always correct</div>}
 
           {/* Activation bar */}
           <div style={{ marginTop: 8, height: 6, borderRadius: 3, background: inDST ? 'rgba(239,68,68,0.15)' : '#22c55e44', overflow: 'hidden' }}>
             <motion.div
               animate={{ width: inDST ? '70%' : '100%' }}
-              style={{ height: '100%', borderRadius: 3, background: inDST ? '#ef4444' : '#22c55e' }}
+              style={{ height: '100%', borderRadius: 3, background: inDST ? 'var(--color-loss)' : 'var(--color-profit)' }}
             />
           </div>
-          <div style={{ fontSize: 9, color: 'var(--ink-soft, #94a3b8)', marginTop: 2, textAlign: 'center' }}>
+          <div style={{ fontSize: 9, color: 'var(--ink-soft)', marginTop: 2, textAlign: 'center' }}>
             {inDST ? '⚠ 1 hour late for 8 months/year' : 'Directive active at correct time'}
           </div>
         </div>
 
         {/* Column B — IANA */}
         <div style={{ padding: 12, borderRadius: 8, background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)' }}>
-          <h4 style={{ margin: '0 0 8px', fontSize: 13, color: '#22c55e' }}>B: IANA ({tz.id})</h4>
+          <h4 style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--color-profit)' }}>B: IANA ({tz.id})</h4>
 
           <Clock hour={ianaClockHour} color="#22c55e" label="Market open (always correct)" />
 
@@ -151,8 +151,8 @@ export default function TimezoneDecisionDemo() {
                 key={m}
                 style={{
                   flex: 1, textAlign: 'center', fontSize: 9, padding: '3px 0', borderRadius: 3,
-                  background: i === month ? 'var(--accent, #0ea5a6)' : 'rgba(255,255,255,0.04)',
-                  color: i === month ? '#fff' : 'var(--ink-soft, #94a3b8)',
+                  background: i === month ? 'var(--accent)' : 'rgba(255,255,255,0.04)',
+                  color: i === month ? 'var(--on-accent)' : 'var(--ink-soft)',
                   fontWeight: i === month ? 700 : 400,
                 }}
               >
@@ -161,33 +161,33 @@ export default function TimezoneDecisionDemo() {
             ))}
           </div>
 
-          <div style={{ marginTop: 8, fontSize: 11, color: '#22c55e', textAlign: 'center', fontWeight: 600 }}>
+          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--color-profit)', textAlign: 'center', fontWeight: 600 }}>
             ✓ Always {formatHour(MARKET_OPEN)} — DST handled automatically
           </div>
 
           <div style={{ marginTop: 8, height: 6, borderRadius: 3, background: '#22c55e44', overflow: 'hidden' }}>
-            <div style={{ width: '100%', height: '100%', borderRadius: 3, background: '#22c55e' }} />
+            <div style={{ width: '100%', height: '100%', borderRadius: 3, background: 'var(--color-profit)' }} />
           </div>
-          <div style={{ fontSize: 9, color: 'var(--ink-soft, #94a3b8)', marginTop: 2, textAlign: 'center' }}>Directive active at correct time</div>
+          <div style={{ fontSize: 9, color: 'var(--ink-soft)', marginTop: 2, textAlign: 'center' }}>Directive active at correct time</div>
         </div>
 
         {/* Column C — Comparison */}
-        <div style={{ padding: 12, borderRadius: 8, background: 'rgba(0,0,0,0.08)', border: '1px solid var(--line, #1e2a45)' }}>
-          <h4 style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--ink, #e2e8f0)' }}>C: Comparison</h4>
+        <div style={{ padding: 12, borderRadius: 8, background: 'rgba(0,0,0,0.08)', border: '1px solid var(--line)' }}>
+          <h4 style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--ink)' }}>C: Comparison</h4>
           <table style={{ width: '100%', fontSize: 10, borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ color: 'var(--ink-soft, #94a3b8)', borderBottom: '1px solid var(--line, #1e2a45)' }}>
+              <tr style={{ color: 'var(--ink-soft)', borderBottom: '1px solid var(--line)' }}>
                 <th style={{ textAlign: 'left', padding: '3px 4px' }}></th>
-                <th style={{ textAlign: 'center', padding: '3px 4px', color: '#ef4444' }}>Offset</th>
-                <th style={{ textAlign: 'center', padding: '3px 4px', color: '#22c55e' }}>IANA</th>
+                <th style={{ textAlign: 'center', padding: '3px 4px', color: 'var(--color-loss)' }}>Offset</th>
+                <th style={{ textAlign: 'center', padding: '3px 4px', color: 'var(--color-profit)' }}>IANA</th>
               </tr>
             </thead>
             <tbody>
               {comparisonRows.map((row) => (
                 <tr key={row.label} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                  <td style={{ padding: '3px 4px', color: 'var(--ink-soft, #94a3b8)' }}>{row.label}</td>
-                  <td style={{ padding: '3px 4px', textAlign: 'center', fontWeight: 600, color: row.offset === '✗' || row.offset === 'HIGH' || row.offset.startsWith('✗') ? '#ef4444' : 'var(--ink, #e2e8f0)' }}>{row.offset}</td>
-                  <td style={{ padding: '3px 4px', textAlign: 'center', fontWeight: 600, color: row.iana === '✓' || row.iana === 'LOW' ? '#22c55e' : 'var(--ink, #e2e8f0)' }}>{row.iana}</td>
+                  <td style={{ padding: '3px 4px', color: 'var(--ink-soft)' }}>{row.label}</td>
+                  <td style={{ padding: '3px 4px', textAlign: 'center', fontWeight: 600, color: row.offset === '✗' || row.offset === 'HIGH' || row.offset.startsWith('✗') ? 'var(--color-loss)' : 'var(--ink)' }}>{row.offset}</td>
+                  <td style={{ padding: '3px 4px', textAlign: 'center', fontWeight: 600, color: row.iana === '✓' || row.iana === 'LOW' ? 'var(--color-profit)' : 'var(--ink)' }}>{row.iana}</td>
                 </tr>
               ))}
             </tbody>
@@ -231,7 +231,7 @@ function Clock({ hour, color, label }) {
         <circle cx={0} cy={0} r={2.5} fill={color} />
       </svg>
       <div style={{ fontSize: 13, fontWeight: 700, color, marginTop: 4 }}>{formatHour(hour)}</div>
-      <div style={{ fontSize: 9, color: 'var(--ink-soft, #94a3b8)' }}>{label}</div>
+      <div style={{ fontSize: 9, color: 'var(--ink-soft)' }}>{label}</div>
     </div>
   );
 }

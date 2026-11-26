@@ -121,13 +121,13 @@ export default function RiskControlsPage() {
             <span className="rc-health-lbl">Positions</span>
           </div>
           <div className="rc-health-card">
-            <span className="rc-health-val" style={{ color: (health.totalPositionPnl || 0) >= 0 ? '#22c55e' : '#ef4444' }}>
+            <span className="rc-health-val" style={{ color: (health.totalPositionPnl || 0) >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
               {(health.totalPositionPnl || 0) >= 0 ? '+' : ''}{(health.totalPositionPnl || 0).toFixed(0)}
             </span>
             <span className="rc-health-lbl">Position P&L</span>
           </div>
           <div className="rc-health-card">
-            <span className="rc-health-val" style={{ color: (health.tradeTotalPnl || 0) >= 0 ? '#22c55e' : '#ef4444' }}>
+            <span className="rc-health-val" style={{ color: (health.tradeTotalPnl || 0) >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
               {(health.tradeTotalPnl || 0) >= 0 ? '+' : ''}{(health.tradeTotalPnl || 0).toFixed(0)}
             </span>
             <span className="rc-health-lbl">Trade P&L</span>

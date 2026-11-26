@@ -486,7 +486,7 @@ export default function StrategyLibraryPage() {
                           </span>
                           {(feedsMap[dm.directiveId] || []).map((feed) => (
                             <span key={feed} style={{
-                              color: '#60a5fa', background: '#3b82f610',
+                              color: 'var(--notice-info-text)', background: '#3b82f610',
                               border: '1px solid #3b82f633',
                               padding: '1px 4px', borderRadius: '3px',
                               fontSize: '0.58rem', fontWeight: 600,

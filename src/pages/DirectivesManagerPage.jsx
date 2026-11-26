@@ -327,13 +327,13 @@ export default function DirectivesManagerPage() {
           <span><strong>{filtered.length}</strong> shown</span>
           <span className="directives-stat-dot stat-active" />
           <span><strong>{allDirectives.filter((item) => item.active).length}</strong> active</span>
-          <span style={{ marginLeft: '0.5rem', color: '#22c55e', fontSize: '0.78rem' }}>
+          <span style={{ marginLeft: '0.5rem', color: 'var(--color-profit)', fontSize: '0.78rem' }}>
             🟢 {allDirectives.filter((i) => i.readiness === 'ready').length}
           </span>
-          <span style={{ color: '#f59e0b', fontSize: '0.78rem' }}>
+          <span style={{ color: 'var(--color-warning)', fontSize: '0.78rem' }}>
             🟡 {allDirectives.filter((i) => i.readiness === 'beta').length}
           </span>
-          <span style={{ color: '#ef4444', fontSize: '0.78rem' }}>
+          <span style={{ color: 'var(--color-loss)', fontSize: '0.78rem' }}>
             🔴 {allDirectives.filter((i) => i.readiness === 'alpha').length}
           </span>
         </div>
@@ -372,7 +372,7 @@ export default function DirectivesManagerPage() {
                             <span style={{ color: 'var(--ink)', fontSize: '0.9rem', fontWeight: 600 }}>
                               {item.name}
                             </span>
-                            <small style={{ color: '#60a5fa', fontFamily: 'monospace', fontSize: '0.72rem' }}>{item.code}</small>
+                            <small style={{ color: 'var(--notice-info-text)', fontFamily: 'monospace', fontSize: '0.72rem' }}>{item.code}</small>
                           </div>
                         </span>
                       </td>
@@ -392,7 +392,7 @@ export default function DirectivesManagerPage() {
                           {item.status}
                         </span>
                       </td>
-                      <td style={{ fontWeight: 700, color: item.bias === 'bullish' ? '#22c55e' : item.bias === 'bearish' ? '#ef4444' : 'var(--ink-soft)' }}>{item.bias ?? '—'}</td>
+                      <td style={{ fontWeight: 700, color: item.bias === 'bullish' ? 'var(--color-profit)' : item.bias === 'bearish' ? 'var(--color-loss)' : 'var(--ink-soft)' }}>{item.bias ?? '—'}</td>
                       {(() => {
                         const cap = DIRECTION_CAPABILITY[item.direction] || DIRECTION_CAPABILITY.unknown;
                         const declared = item.bias === 'bullish' ? 'long' : item.bias === 'bearish' ? 'short' : 'both';
@@ -409,7 +409,7 @@ export default function DirectivesManagerPage() {
                               {cap.label}
                             </span>
                             {mismatch && (
-                              <span title={`Declared "${item.bias}" but the code emits ${item.direction}. The declaration is what protocols filter on.`} style={{ marginLeft: '0.3rem', color: '#f59e0b', fontSize: '0.72rem' }} aria-label="declaration disagrees with code">⚠</span>
+                              <span title={`Declared "${item.bias}" but the code emits ${item.direction}. The declaration is what protocols filter on.`} style={{ marginLeft: '0.3rem', color: 'var(--color-warning)', fontSize: '0.72rem' }} aria-label="declaration disagrees with code">⚠</span>
                             )}
                             {item.sharedInputs.length > 0 && (
                               <span title={`Reads ${item.sharedInputs.join(', ')} on its own. Two directives sharing a factor measure it twice in one protocol.`} style={{ marginLeft: '0.3rem', color: '#a78bfa', fontSize: '0.72rem' }} aria-label="shares an external factor">⇄</span>
@@ -469,7 +469,7 @@ export default function DirectivesManagerPage() {
                   })()}
                   <span
                     className="directive-detail-badge"
-                    style={{ color: COMPLEXITY_COLORS[selected.complexity] || '#94a3b8', border: `1px solid ${COMPLEXITY_COLORS[selected.complexity] || '#94a3b8'}40`, background: 'transparent' }}
+                    style={{ color: COMPLEXITY_COLORS[selected.complexity] || 'var(--ink-soft)', border: `1px solid ${COMPLEXITY_COLORS[selected.complexity] || 'var(--ink-soft)'}40`, background: 'transparent' }}
                   >
                     {selected.complexity}
                   </span>

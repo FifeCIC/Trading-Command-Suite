@@ -181,7 +181,7 @@ export default function ScoringActivityLogsPage() {
 
       {!apiOnline && <ApiOfflineBanner />}
       {apiOnline && runsFailed && (
-        <div className="api-offline-banner" style={{ borderColor: '#f59e0b' }}>
+        <div className="api-offline-banner" style={{ borderColor: 'var(--color-warning)' }}>
           <div className="api-offline-banner-icon">⏳</div>
           <div className="api-offline-banner-body">
             <strong className="api-offline-banner-title">Scoring data is taking too long</strong>

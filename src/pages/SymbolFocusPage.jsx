@@ -342,7 +342,7 @@ export default function SymbolFocusPage() {
                           <span title={decisionScore(d).title || undefined}>Score: {decisionScore(d).text}</span>
                         )}
                         {d.signal && (
-                          <span style={{ color: SIGNAL_COLORS[d.signal] || '#94a3b8' }}>{d.signal}</span>
+                          <span style={{ color: SIGNAL_COLORS[d.signal] || 'var(--ink-soft)' }}>{d.signal}</span>
                         )}
                         {d.ticket && <span>Ticket: {d.ticket}</span>}
                         {d.price && <span>@{d.price.toFixed(5)}</span>}
@@ -366,7 +366,7 @@ export default function SymbolFocusPage() {
                 {recentEvaluations.map((e) => (
                   <div key={e.id} className={`sf-eval-item ${e.traded ? 'sf-eval-traded' : ''}`}>
                     <div className="sf-eval-head">
-                      <span className="sf-eval-signal" style={{ color: SIGNAL_COLORS[e.signal] || '#94a3b8' }}>
+                      <span className="sf-eval-signal" style={{ color: SIGNAL_COLORS[e.signal] || 'var(--ink-soft)' }}>
                         {e.signal || 'HOLD'}
                       </span>
                       <span className="sf-eval-composite">{e.composite?.toFixed(1)}%</span>

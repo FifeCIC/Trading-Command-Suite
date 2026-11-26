@@ -241,7 +241,7 @@ export default function DailyBriefingPage() {
                     <div key={i} className="db-mover db-mover-up">
                       <span className="db-mover-rank">#{i + 1}</span>
                       <a href={`/research/symbol/${r.ticker || r.symbol}`} className="db-mover-ticker">{r.ticker || r.symbol}</a>
-                      <span className="db-mover-score" style={{color: '#22c55e'}}>{r.score || '—'}</span>
+                      <span className="db-mover-score" style={{color: 'var(--color-profit)'}}>{r.score || '—'}</span>
                       <span className="db-mover-signal">{r.signal || '—'}</span>
                     </div>
                   ))}
@@ -259,7 +259,7 @@ export default function DailyBriefingPage() {
                     <div key={i} className="db-mover db-mover-down">
                       <span className="db-mover-rank">#{i + 1}</span>
                       <a href={`/research/symbol/${r.ticker || r.symbol}`} className="db-mover-ticker">{r.ticker || r.symbol}</a>
-                      <span className="db-mover-score" style={{color: '#ef4444'}}>{r.score || '—'}</span>
+                      <span className="db-mover-score" style={{color: 'var(--color-loss)'}}>{r.score || '—'}</span>
                       <span className="db-mover-signal">{r.signal || '—'}</span>
                     </div>
                   ))}
@@ -373,7 +373,7 @@ export default function DailyBriefingPage() {
               >
                     <span className="db-brief-tier" style={{ background: tier.color }}>{tier.label}</span>
                     <span className="db-brief-symbol">{item.symbol}</span>
-                    <span className="db-brief-score" style={{ color: (item.score || 0) >= 50 ? '#22c55e' : (item.score || 0) >= 25 ? '#f59e0b' : '#ef4444' }}>
+                    <span className="db-brief-score" style={{ color: (item.score || 0) >= 50 ? 'var(--color-profit)' : (item.score || 0) >= 25 ? 'var(--color-warning)' : 'var(--color-loss)' }}>
                       {item.score || '—'}
                     </span>
                     <span className="db-brief-signal">{item.signal || '—'}</span>

@@ -221,7 +221,7 @@ export default function TrailingStopDemo() {
       {/* Chart */}
       <div
         ref={chartRef}
-        style={{ width: '100%', borderRadius: 8, overflow: 'hidden', background: 'rgba(0,0,0,0.15)', border: '1px solid var(--line, #1e2a45)' }}
+        style={{ width: '100%', borderRadius: 8, overflow: 'hidden', background: 'rgba(0,0,0,0.15)', border: '1px solid var(--line)' }}
       />
 
       {/* Controls */}
@@ -232,7 +232,7 @@ export default function TrailingStopDemo() {
           disabled={triggered}
           style={{
             padding: '6px 16px', borderRadius: 6, border: 'none', cursor: triggered ? 'default' : 'pointer',
-            background: 'var(--accent, #0ea5a6)', color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, opacity: triggered ? 0.5 : 1,
+            background: 'var(--accent)', color: 'var(--on-accent)', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, opacity: triggered ? 0.5 : 1,
           }}
         >
           {triggered ? '⏹ STOPPED' : playing ? '⏸ Pause' : '▶ Play'}
@@ -243,20 +243,20 @@ export default function TrailingStopDemo() {
             type="button"
             onClick={() => setSpeed(s)}
             style={{
-              padding: '4px 10px', borderRadius: 4, border: `1px solid ${speed === s ? 'var(--accent, #0ea5a6)' : 'var(--line, #1e2a45)'}`,
-              background: speed === s ? 'rgba(14,165,166,0.15)' : 'transparent', color: speed === s ? 'var(--accent, #0ea5a6)' : 'var(--ink-soft, #94a3b8)',
+              padding: '4px 10px', borderRadius: 4, border: `1px solid ${speed === s ? 'var(--accent)' : 'var(--line)'}`,
+              background: speed === s ? 'rgba(14,165,166,0.15)' : 'transparent', color: speed === s ? 'var(--accent)' : 'var(--ink-soft)',
               cursor: 'pointer', fontFamily: 'inherit', fontSize: 12,
             }}
           >
             {s}×
           </button>
         ))}
-        <button type="button" onClick={handleReset} style={{ padding: '4px 10px', borderRadius: 4, border: '1px solid var(--line, #1e2a45)', background: 'transparent', color: 'var(--ink-soft, #94a3b8)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }}>↺ Reset</button>
-        <label style={{ fontSize: 12, color: 'var(--ink-soft, #94a3b8)', display: 'flex', alignItems: 'center', gap: 4, marginLeft: 4 }}>
+        <button type="button" onClick={handleReset} style={{ padding: '4px 10px', borderRadius: 4, border: '1px solid var(--line)', background: 'transparent', color: 'var(--ink-soft)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }}>↺ Reset</button>
+        <label style={{ fontSize: 12, color: 'var(--ink-soft)', display: 'flex', alignItems: 'center', gap: 4, marginLeft: 4 }}>
           <input type="checkbox" checked={showATR} onChange={(e) => setShowATR(e.target.checked)} />
           Show ATR
         </label>
-        <span style={{ fontSize: 12, color: 'var(--ink-soft, #94a3b8)', marginLeft: 'auto' }}>
+        <span style={{ fontSize: 12, color: 'var(--ink-soft)', marginLeft: 'auto' }}>
           Bar {currentIdx}/{data.candles.length - 1} ({progressPct}%)
         </span>
       </div>
@@ -269,8 +269,8 @@ export default function TrailingStopDemo() {
             animate={{ opacity: 1, scale: 1 }}
             style={{ marginTop: 10, padding: '10px 16px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', textAlign: 'center' }}
           >
-            <strong style={{ color: '#ef4444', fontSize: 14 }}>🛑 STOP TRIGGERED</strong>
-            <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-soft, #94a3b8)', marginTop: 2 }}>
+            <strong style={{ color: 'var(--color-loss)', fontSize: 14 }}>🛑 STOP TRIGGERED</strong>
+            <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-soft)', marginTop: 2 }}>
               Price dropped to ${stopLevel} — trailing stop executed at bar {currentIdx}
             </span>
           </motion.div>
@@ -288,18 +288,18 @@ export default function TrailingStopDemo() {
       </div>
 
       {/* Math breakdown */}
-      <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 6, background: 'rgba(0,0,0,0.1)', border: '1px solid var(--line, #1e2a45)', fontSize: 12, color: 'var(--ink-soft, #94a3b8)', fontFamily: 'monospace' }}>
-        Stop = Highest High({lookback}) − 1.5 × ATR({data.atr.toFixed(2)}) = ${highestHigh.toFixed(2)} − ${(1.5 * data.atr).toFixed(2)} = <strong style={{ color: '#ef4444' }}>${stopLevel.toFixed(2)}</strong>
+      <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 6, background: 'rgba(0,0,0,0.1)', border: '1px solid var(--line)', fontSize: 12, color: 'var(--ink-soft)', fontFamily: 'monospace' }}>
+        Stop = Highest High({lookback}) − 1.5 × ATR({data.atr.toFixed(2)}) = ${highestHigh.toFixed(2)} − ${(1.5 * data.atr).toFixed(2)} = <strong style={{ color: 'var(--color-loss)' }}>${stopLevel.toFixed(2)}</strong>
       </div>
 
       {/* Trailing log */}
       {log.length > 0 && (
         <div style={{ marginTop: 10 }}>
-          <h4 style={{ fontSize: 12, color: 'var(--ink-soft, #94a3b8)', margin: '0 0 4px' }}>Stop Adjustments</h4>
-          <div style={{ maxHeight: 140, overflowY: 'auto', fontSize: 11, fontFamily: 'monospace', color: 'var(--ink-soft, #94a3b8)' }}>
+          <h4 style={{ fontSize: 12, color: 'var(--ink-soft)', margin: '0 0 4px' }}>Stop Adjustments</h4>
+          <div style={{ maxHeight: 140, overflowY: 'auto', fontSize: 11, fontFamily: 'monospace', color: 'var(--ink-soft)' }}>
             {log.map((entry, i) => (
               <div key={i} style={{ padding: '2px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                Bar {entry.idx}: Price ${entry.price.toFixed(2)} → Stop raised to <span style={{ color: '#ef4444' }}>${entry.stop.toFixed(2)}</span>
+                Bar {entry.idx}: Price ${entry.price.toFixed(2)} → Stop raised to <span style={{ color: 'var(--color-loss)' }}>${entry.stop.toFixed(2)}</span>
               </div>
             ))}
           </div>
@@ -311,8 +311,8 @@ export default function TrailingStopDemo() {
 
 function InfoCard({ label, value, color }) {
   return (
-    <div style={{ padding: '6px 10px', borderRadius: 6, background: 'rgba(0,0,0,0.1)', border: '1px solid var(--line, #1e2a45)' }}>
-      <div style={{ fontSize: 10, color: 'var(--ink-soft, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
+    <div style={{ padding: '6px 10px', borderRadius: 6, background: 'rgba(0,0,0,0.1)', border: '1px solid var(--line)' }}>
+      <div style={{ fontSize: 10, color: 'var(--ink-soft)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
       <div style={{ fontSize: 14, fontWeight: 700, color, marginTop: 2 }}>{value}</div>
     </div>
   );

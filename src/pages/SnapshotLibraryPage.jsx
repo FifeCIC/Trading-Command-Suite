@@ -188,7 +188,7 @@ export default function SnapshotLibraryPage() {
                           const first = snap.candleData[0]?.close;
                           const last = snap.candleData[snap.candleData.length - 1]?.close;
                           const chg = first && last ? ((last - first) / first * 100) : 0;
-                          return <span style={{ color: chg >= 0 ? '#22c55e' : '#ef4444' }}>{chg >= 0 ? '+' : ''}{chg.toFixed(2)}%</span>;
+                          return <span style={{ color: chg >= 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>{chg >= 0 ? '+' : ''}{chg.toFixed(2)}%</span>;
                         })()}
                       </div>
                     </motion.div>

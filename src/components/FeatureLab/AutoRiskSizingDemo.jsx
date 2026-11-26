@@ -97,7 +97,7 @@ export default function AutoRiskSizingDemo() {
       {/* Math */}
       <div style={{ padding: '8px 12px', borderRadius: 6, background: 'rgba(0,0,0,0.08)', border: '1px solid var(--line)', fontSize: 11, color: 'var(--ink-soft)', fontFamily: 'monospace' }}>
         MaxRisk = £{accountSize.toLocaleString()} × {riskPct}% = <strong style={{ color: 'var(--accent)' }}>£{maxRiskAmount.toFixed(0)}</strong> |
-        PerPosition = £{maxRiskAmount.toFixed(0)} ÷ {positionCount} = <strong style={{ color: '#f59e0b' }}>£{perPositionRisk.toFixed(0)}</strong>
+        PerPosition = £{maxRiskAmount.toFixed(0)} ÷ {positionCount} = <strong style={{ color: 'var(--color-warning)' }}>£{perPositionRisk.toFixed(0)}</strong>
       </div>
     </div>
   );

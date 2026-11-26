@@ -296,7 +296,7 @@ export default function DevOverlay({
             {inspectMode && inspectAction === 'copy' ? '🔎 Click element to copy info...' : '🔎 Inspect & Copy'}
           </button>
           {copiedMsg && (
-            <span style={{ fontSize: '0.68rem', color: '#22c55e', display: 'block', marginTop: '0.25rem' }}>
+            <span style={{ fontSize: '0.68rem', color: 'var(--color-profit)', display: 'block', marginTop: '0.25rem' }}>
               {copiedMsg}
             </span>
           )}

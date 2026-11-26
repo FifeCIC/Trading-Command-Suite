@@ -499,7 +499,7 @@ export default function HealthDashboardPage() {
               {(data?.slowQueries || []).map(q => (
                 <tr key={q.id}>
                   <td className="hd-td-name" title={q.endpoint}>{q.endpoint?.slice(-60)}</td>
-                  <td><span className="hd-method-badge" style={{ color: METHOD_COLOR[q.method] || '#94a3b8' }}>{q.method}</span></td>
+                  <td><span className="hd-method-badge" style={{ color: METHOD_COLOR[q.method] || 'var(--ink-soft)' }}>{q.method}</span></td>
                   <td className="hd-td-num" style={{ color: q.durationMs > 3000 ? 'var(--color-loss)' : 'var(--color-warning)' }}>{formatMs(q.durationMs)}</td>
                   <td className="hd-td-num">{q.statusCode}</td>
                   <td className="hd-td-age">{timeAgo(q.timestamp)}</td>
@@ -531,7 +531,7 @@ export default function HealthDashboardPage() {
                 <tr key={t.cacheKey + t.createdAt}>
                   <td className="hd-td-mono" title={t.cacheKey}>{t.cacheKey?.slice(0, 12)}…</td>
                   <td className="hd-td-name" title={t.url}>{t.url?.slice(-50)}</td>
-                  <td><span className="hd-method-badge" style={{ color: METHOD_COLOR[t.method] || '#94a3b8' }}>{t.method}</span></td>
+                  <td><span className="hd-method-badge" style={{ color: METHOD_COLOR[t.method] || 'var(--ink-soft)' }}>{t.method}</span></td>
                   <td className="hd-td-num">{formatMs(t.durationMs)}</td>
                   <td>{t.cached ? '♻️' : '🆕'}</td>
                   <td className="hd-td-age">{timeAgo(t.createdAt)}</td>

@@ -57,7 +57,7 @@ function GapCard({ symbol, data }) {
         </div>
         <div className="gs-stat">
           <span className="gs-stat-label">Score</span>
-          <span className="gs-stat-val" style={{ color: score >= 60 ? '#22c55e' : score >= 40 ? '#f59e0b' : '#94a3b8' }}>
+          <span className="gs-stat-val" style={{ color: score >= 60 ? 'var(--color-profit)' : score >= 40 ? 'var(--color-warning)' : 'var(--ink-soft)' }}>
             {score.toFixed(0)}/100
           </span>
         </div>

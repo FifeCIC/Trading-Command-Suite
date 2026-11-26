@@ -87,7 +87,7 @@ export default function RecentlyAnalysedSymbolsPage() {
                     transition={{ delay: i * 0.02 }}
                   >
                     <td><strong className="ra-ticker">{s.ticker}</strong></td>
-                    <td className="ra-num" style={{ color: s.latestScore >= 60 ? '#22c55e' : s.latestScore >= 40 ? '#f59e0b' : '#ef4444' }}>
+                    <td className="ra-num" style={{ color: s.latestScore >= 60 ? 'var(--color-profit)' : s.latestScore >= 40 ? 'var(--color-warning)' : 'var(--color-loss)' }}>
                       {s.latestScore.toFixed(1)}
                     </td>
                     <td className="ra-num">{s.latestConfidence > 0 ? `${s.latestConfidence}%` : '—'}</td>

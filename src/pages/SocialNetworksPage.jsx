@@ -132,7 +132,7 @@ export default function SocialNetworksPage() {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', delay: 0.2 }}
-                  style={{ color: d.sentiment > 0 ? '#22c55e' : d.sentiment < 0 ? '#ef4444' : '#94a3b8' }}
+                  style={{ color: d.sentiment > 0 ? 'var(--color-profit)' : d.sentiment < 0 ? 'var(--color-loss)' : 'var(--ink-soft)' }}
                 >
                   {d.sentiment > 0 ? '+' : ''}{d.sentiment}
                 </motion.span>

@@ -163,13 +163,16 @@ export const STANDARDS = [
   },
   {
     id: 'page-colour-literals',
-    name: 'A page declares no colour of its own',
-    why: '2,487 hex literals across 112 page files; a hex ignores every theme pack by construction.',
-    gate: null,
-    gap: 'No gate. `validate-css-tokens` covers stylesheets only, not inline styles in JSX.',
-    verify: null,
-    selfTest: null,
-    enforcedIn: 'none',
+    name: 'A page declares no colour of its own inside an inline style',
+    why: 'A hex in `style={{ }}` is invisible to the CSS cascade, so no theme pack can override it — and '
+      + 'the accessibility fix that replaced `#ef4444` with `--color-loss` never reached 50 of them. '
+      + '⚠️ The figure this replaced was "2,487 hex across 112 page files"; re-measured with a stated '
+      + 'basis (hex inside `style={{ }}`, 6/8-digit only) it was 263 in 48 files. The 2,487 also counted '
+      + 'issue references in prose (`#782`), `*.css`, and SVG diagram fills — content, not styling.',
+    gate: 'scripts/validate-colour-literals.cjs',
+    verify: 'npm run colours',
+    selfTest: 'npm run colours:self-test',
+    enforcedIn: 'prebuild',
   },
 ];
 

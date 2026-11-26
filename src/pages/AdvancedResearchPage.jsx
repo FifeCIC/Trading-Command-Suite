@@ -176,11 +176,11 @@ export default function AdvancedResearchPage() {
                 <div className="ar-sentiment-grid">
                   <div className="ar-sent-card">
                     <span className="ar-sent-label">News Bullish</span>
-                    <span className="ar-sent-val" style={{ color: '#22c55e' }}>{findings.newsSentiment?.bullish ?? '—'}</span>
+                    <span className="ar-sent-val" style={{ color: 'var(--color-profit)' }}>{findings.newsSentiment?.bullish ?? '—'}</span>
                   </div>
                   <div className="ar-sent-card">
                     <span className="ar-sent-label">News Bearish</span>
-                    <span className="ar-sent-val" style={{ color: '#ef4444' }}>{findings.newsSentiment?.bearish ?? '—'}</span>
+                    <span className="ar-sent-val" style={{ color: 'var(--color-loss)' }}>{findings.newsSentiment?.bearish ?? '—'}</span>
                   </div>
                   <div className="ar-sent-card">
                     <span className="ar-sent-label">Buzz Score</span>
@@ -188,13 +188,13 @@ export default function AdvancedResearchPage() {
                   </div>
                   <div className="ar-sent-card">
                     <span className="ar-sent-label">Reddit Sentiment</span>
-                    <span className="ar-sent-val" style={{ color: findings.socialSentiment?.reddit > 0 ? '#22c55e' : '#ef4444' }}>
+                    <span className="ar-sent-val" style={{ color: findings.socialSentiment?.reddit > 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
                       {findings.socialSentiment?.reddit?.toFixed(1) ?? '—'}
                     </span>
                   </div>
                   <div className="ar-sent-card">
                     <span className="ar-sent-label">Twitter Sentiment</span>
-                    <span className="ar-sent-val" style={{ color: findings.socialSentiment?.twitter > 0 ? '#22c55e' : '#ef4444' }}>
+                    <span className="ar-sent-val" style={{ color: findings.socialSentiment?.twitter > 0 ? 'var(--color-profit)' : 'var(--color-loss)' }}>
                       {findings.socialSentiment?.twitter?.toFixed(1) ?? '—'}
                     </span>
                   </div>
@@ -213,7 +213,7 @@ export default function AdvancedResearchPage() {
                 <div className="ar-analyst-grid">
                   <div className="ar-analyst-card">
                     <span className="ar-analyst-label">High</span>
-                    <span className="ar-analyst-val" style={{ color: '#22c55e' }}>${findings.analystTarget?.high?.toFixed(2) || at.high || '—'}</span>
+                    <span className="ar-analyst-val" style={{ color: 'var(--color-profit)' }}>${findings.analystTarget?.high?.toFixed(2) || at.high || '—'}</span>
                   </div>
                   <div className="ar-analyst-card">
                     <span className="ar-analyst-label">Mean</span>
@@ -221,7 +221,7 @@ export default function AdvancedResearchPage() {
                   </div>
                   <div className="ar-analyst-card">
                     <span className="ar-analyst-label">Low</span>
-                    <span className="ar-analyst-val" style={{ color: '#ef4444' }}>${findings.analystTarget?.low?.toFixed(2) || at.low || '—'}</span>
+                    <span className="ar-analyst-val" style={{ color: 'var(--color-loss)' }}>${findings.analystTarget?.low?.toFixed(2) || at.low || '—'}</span>
                   </div>
                   <div className="ar-analyst-card">
                     <span className="ar-analyst-label">Consensus</span>
@@ -230,7 +230,7 @@ export default function AdvancedResearchPage() {
                 </div>
                 {findings.price && findings.analystTarget?.mean && (
                   <div className="ar-upside">
-                    Upside to mean target: <strong style={{ color: findings.analystTarget.mean > findings.price ? '#22c55e' : '#ef4444' }}>
+                    Upside to mean target: <strong style={{ color: findings.analystTarget.mean > findings.price ? 'var(--color-profit)' : 'var(--color-loss)' }}>
                       {(((findings.analystTarget.mean - findings.price) / findings.price) * 100).toFixed(1)}%
                     </strong>
                   </div>
@@ -295,7 +295,7 @@ export default function AdvancedResearchPage() {
                   <div className="ar-tech-grid">
                     <div className="ar-tech-card">
                       <span className="ar-tech-label">RSI (14)</span>
-                      <span className="ar-tech-val" style={{ color: (ind.rsi || 50) > 70 ? '#ef4444' : (ind.rsi || 50) < 30 ? '#22c55e' : 'var(--ink)' }}>
+                      <span className="ar-tech-val" style={{ color: (ind.rsi || 50) > 70 ? 'var(--color-loss)' : (ind.rsi || 50) < 30 ? 'var(--color-profit)' : 'var(--ink)' }}>
                         {ind.rsi?.toFixed(1) || '—'}
                       </span>
                       <span className="ar-tech-sub">{(ind.rsi || 50) > 70 ? 'Overbought' : (ind.rsi || 50) < 30 ? 'Oversold' : 'Neutral'}</span>

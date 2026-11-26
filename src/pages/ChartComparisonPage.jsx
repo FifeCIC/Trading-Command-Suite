@@ -155,7 +155,7 @@ export default function ChartComparisonPage() {
         <div className="cc-dual-grid">
           <motion.div className="cc-panel" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div className="cc-panel-label">
-              <span className="cc-dot" style={{ background: '#0ea5a6' }} />
+              <span className="cc-dot" style={{ background: 'var(--accent)' }} />
               {symbolA} — {barsA.length} candles
               <ScoreOverlay data={scores.data} symbol={symbolA} />
             </div>
@@ -163,7 +163,7 @@ export default function ChartComparisonPage() {
           </motion.div>
           <motion.div className="cc-panel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }}>
             <div className="cc-panel-label">
-              <span className="cc-dot" style={{ background: '#f59e0b' }} />
+              <span className="cc-dot" style={{ background: 'var(--color-warning)' }} />
               {symbolB} — {barsB.length} candles
               <ScoreOverlay data={scores.data} symbol={symbolB} />
             </div>
@@ -176,13 +176,13 @@ export default function ChartComparisonPage() {
         <motion.div className="cc-metrics-bar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
           <div className="cc-metric-card">
             <span className="cc-metric-label">{symbolA} Score</span>
-            <span className="cc-metric-value" style={{ color: '#0ea5a6' }}>
+            <span className="cc-metric-value" style={{ color: 'var(--accent)' }}>
               {(() => { const s = (scores.data.ranked || []).find(r => r.ticker === symbolA); return s ? s.normalizedScore.toFixed(0) + '% (' + s.signal + ')' : '—'; })()}
             </span>
           </div>
           <div className="cc-metric-card">
             <span className="cc-metric-label">{symbolB} Score</span>
-            <span className="cc-metric-value" style={{ color: '#f59e0b' }}>
+            <span className="cc-metric-value" style={{ color: 'var(--color-warning)' }}>
               {(() => { const s = (scores.data.ranked || []).find(r => r.ticker === symbolB); return s ? s.normalizedScore.toFixed(0) + '% (' + s.signal + ')' : '—'; })()}
             </span>
           </div>

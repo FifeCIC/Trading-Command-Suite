@@ -37,12 +37,12 @@ export default function PartialTakeProfitDemo() {
             <div style={{ color: '#4ade80' }}>TP1 — ${tp1Price.toFixed(2)} {phase !== 'entry' && '✅'}</div>
             <motion.div
               animate={{ y: phase === 'running' ? -4 : 0 }}
-              style={{ color: phase === 'running' ? '#fbbf24' : '#94a3b8', fontWeight: 700 }}
+              style={{ color: phase === 'running' ? '#fbbf24' : 'var(--ink-soft)', fontWeight: 700 }}
             >
               Current — ${currentPrice.toFixed(2)}
             </motion.div>
-            <div style={{ color: '#94a3b8' }}>Entry — ${entryPrice.toFixed(2)}</div>
-            <div style={{ color: '#ef4444' }}>Stop — ${stopPrice.toFixed(2)}</div>
+            <div style={{ color: 'var(--ink-soft)' }}>Entry — ${entryPrice.toFixed(2)}</div>
+            <div style={{ color: 'var(--color-loss)' }}>Stop — ${stopPrice.toFixed(2)}</div>
           </div>
         </div>
 
@@ -53,7 +53,7 @@ export default function PartialTakeProfitDemo() {
             <motion.div
               initial={{ flex: shares }}
               animate={{ flex: phase === 'entry' ? shares : runnerShares }}
-              style={{ background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#fff' }}
+              style={{ background: 'var(--color-accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-accent)' }}
             >
               {phase === 'entry' ? `${shares} shares` : `${runnerShares} running`}
             </motion.div>
@@ -61,15 +61,15 @@ export default function PartialTakeProfitDemo() {
               <motion.div
                 initial={{ flex: 0 }}
                 animate={{ flex: tp1Shares }}
-                style={{ background: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#fff' }}
+                style={{ background: 'var(--color-profit)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: 'var(--on-accent)' }}
               >
                 {tp1Shares} locked
               </motion.div>
             )}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
-            <span style={{ color: '#3b82f6' }}>Runner: {phase === 'entry' ? shares : runnerShares} × ${(currentPrice - entryPrice).toFixed(2)}</span>
-            <span style={{ color: '#22c55e' }}>TP1: {phase === 'entry' ? 0 : tp1Shares} × $2.00</span>
+            <span style={{ color: 'var(--color-accent-blue)' }}>Runner: {phase === 'entry' ? shares : runnerShares} × ${(currentPrice - entryPrice).toFixed(2)}</span>
+            <span style={{ color: 'var(--color-profit)' }}>TP1: {phase === 'entry' ? 0 : tp1Shares} × $2.00</span>
           </div>
         </div>
       </div>
@@ -104,7 +104,7 @@ export default function PartialTakeProfitDemo() {
             style={{
               padding: '5px 14px', borderRadius: 6, border: '1px solid var(--line)',
               background: phase === p ? 'rgba(59,130,246,0.15)' : 'transparent',
-              color: phase === p ? '#3b82f6' : 'var(--ink-soft)',
+              color: phase === p ? 'var(--color-accent-blue)' : 'var(--ink-soft)',
               cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.72rem', fontWeight: 600,
             }}
           >

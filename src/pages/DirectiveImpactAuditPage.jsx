@@ -182,7 +182,7 @@ export default function DirectiveImpactAuditPage() {
                       </span>
                     </td>
                     <td>
-                      <span className="dia-readiness-dot" style={{ background: READINESS_COLORS[d.readiness] || '#64748b' }} />
+                      <span className="dia-readiness-dot" style={{ background: READINESS_COLORS[d.readiness] || 'var(--color-muted)' }} />
                       {d.readiness}
                     </td>
                     <td className="dia-num dia-impact">{d.impactScore.toFixed(1)}</td>
@@ -190,11 +190,11 @@ export default function DirectiveImpactAuditPage() {
                     <td className="dia-num">{d.maxContribution.toFixed(1)}</td>
                     <td className="dia-num">{d.volatility.toFixed(1)}</td>
                     <td className="dia-num">
-                      <span style={{ color: d.hitRate >= 80 ? '#22c55e' : d.hitRate >= 40 ? '#f59e0b' : '#ef4444' }}>
+                      <span style={{ color: d.hitRate >= 80 ? 'var(--color-profit)' : d.hitRate >= 40 ? 'var(--color-warning)' : 'var(--color-loss)' }}>
                         {d.hitRate}%
                       </span>
                     </td>
-                    <td className="dia-num" style={{ color: d.trend > 0 ? '#22c55e' : d.trend < 0 ? '#ef4444' : 'var(--textDim)' }}>
+                    <td className="dia-num" style={{ color: d.trend > 0 ? 'var(--color-profit)' : d.trend < 0 ? 'var(--color-loss)' : 'var(--textDim)' }}>
                       {d.trend > 0 ? '+' : ''}{d.trend.toFixed(1)}
                     </td>
                     <td className="dia-bar-cell">

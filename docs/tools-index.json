@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 212,
+  "count": 213,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1320,6 +1320,17 @@
       "category": "validator",
       "purpose": "#842. Stop the collation split coming back.",
       "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-colour-literals.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a colour written into an inline style cannot follow a theme pack.",
+      "selfTest": true,
       "reaches": [
         "prebuild",
         "npm"

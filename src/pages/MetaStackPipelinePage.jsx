@@ -254,7 +254,7 @@ export default function MetaStackPipelineBoard() {
                   className={`msp-node ${node.status === 'planned' ? 'msp-node-planned' : ''} ${node.critical ? 'msp-node-critical' : ''} ${node.action ? 'msp-node-action' : ''} ${selectedNode === node.id ? 'msp-node-selected' : ''}`}
                   style={{
                     top: node.y,
-                    borderColor: node.status === 'planned' ? lane.color + '66' : node.action ? '#f59e0b' : lane.color,
+                    borderColor: node.status === 'planned' ? lane.color + '66' : node.action ? 'var(--color-warning)' : lane.color,
                     borderStyle: node.status === 'planned' ? 'dashed' : 'solid',
                   }}
                   onClick={() => setSelectedNode(node.id === selectedNode ? null : node.id)}

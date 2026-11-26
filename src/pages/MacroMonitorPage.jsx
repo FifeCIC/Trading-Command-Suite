@@ -136,7 +136,7 @@ export default function MacroMonitorPage() {
           </div>
           <div className="mm-risk-item">
             <span className="mm-risk-label">Fed Stance</span>
-            <span className="mm-risk-value" style={{ color: '#f59e0b' }}>Hold</span>
+            <span className="mm-risk-value" style={{ color: 'var(--color-warning)' }}>Hold</span>
           </div>
           <div className="mm-risk-item">
             <span className="mm-risk-label">Inflation Trend</span>

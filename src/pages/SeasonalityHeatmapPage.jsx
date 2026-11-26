@@ -40,7 +40,7 @@ function Tooltip({ day, hour, pct, samples }) {
   return (
     <div className="sh-tooltip">
       <strong>{DAY_LABELS[day]} {hourLabel(hour)}:00</strong>
-      <span style={{ color: pct >= 0.55 ? '#22c55e' : pct <= 0.45 ? '#ef4444' : '#f59e0b' }}>
+      <span style={{ color: pct >= 0.55 ? 'var(--color-profit)' : pct <= 0.45 ? 'var(--color-loss)' : 'var(--color-warning)' }}>
         {(pct * 100).toFixed(0)}% bullish
       </span>
       <span className="sh-tooltip-samples">{samples} samples</span>

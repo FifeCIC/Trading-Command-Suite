@@ -86,7 +86,7 @@ export default function ProtocolQueuePage() {
 
       <motion.div className="eq-stats-bar" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}>
         {Object.entries(stats).map(([key, val]) => (
-          <div key={key} className="eq-stat-chip" style={{ borderColor: STATUS_COLORS[key] || '#94a3b8' }}>
+          <div key={key} className="eq-stat-chip" style={{ borderColor: STATUS_COLORS[key] || 'var(--ink-soft)' }}>
             <span className="eq-stat-count" style={{ color: STATUS_COLORS[key] }}>{val}</span>
             <span className="eq-stat-label">{key}</span>
           </div>
@@ -109,7 +109,7 @@ export default function ProtocolQueuePage() {
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.05 + i * 0.04 }}
-              style={{ borderLeftColor: STATUS_COLORS[job.status] || '#94a3b8' }}
+              style={{ borderLeftColor: STATUS_COLORS[job.status] || 'var(--ink-soft)' }}
             >
               <div className="eq-job-top">
                 <span className="eq-job-name">{job.name}</span>

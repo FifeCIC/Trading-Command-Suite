@@ -1023,10 +1023,10 @@ export default function PipelineGraphLabPage() {
         </h1>
         </div>
         <div className="pg-legend">
-          <span><span className="pg-dot" style={{ background: '#22c55e' }}/> Healthy</span>
-          <span><span className="pg-dot" style={{ background: '#f59e0b' }}/> Degraded</span>
-          <span><span className="pg-dot" style={{ background: '#ef4444' }}/> Down</span>
-          <span><span className="pg-dot" style={{ background: '#64748b' }}/> Unknown</span>
+          <span><span className="pg-dot" style={{ background: 'var(--color-profit)' }}/> Healthy</span>
+          <span><span className="pg-dot" style={{ background: 'var(--color-warning)' }}/> Degraded</span>
+          <span><span className="pg-dot" style={{ background: 'var(--color-loss)' }}/> Down</span>
+          <span><span className="pg-dot" style={{ background: 'var(--color-muted)' }}/> Unknown</span>
         </div>
       </header>
 

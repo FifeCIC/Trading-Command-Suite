@@ -282,7 +282,7 @@ export default function SpeedScannerPage() {
               {/* Composite score */}
               <div className="ss-score-col">
                 <div className="ss-composite">{sym.composite}</div>
-                <div className="ss-signal" style={{ color: sym.signal === 'buy' ? '#22c55e' : sym.signal === 'sell' ? '#ef4444' : '#f59e0b' }}>
+                <div className="ss-signal" style={{ color: sym.signal === 'buy' ? 'var(--color-profit)' : sym.signal === 'sell' ? 'var(--color-loss)' : 'var(--color-warning)' }}>
                   {sym.signal}
                 </div>
               </div>
@@ -314,7 +314,7 @@ export default function SpeedScannerPage() {
               <div className="ss-pattern-col">
                 {t.patternCount > 0 ? (
                   <>
-                    <span className="ss-pattern-signal" style={{ color: t.patternSignal === 'bullish' ? '#22c55e' : t.patternSignal === 'bearish' ? '#ef4444' : '#f59e0b' }}>
+                    <span className="ss-pattern-signal" style={{ color: t.patternSignal === 'bullish' ? 'var(--color-profit)' : t.patternSignal === 'bearish' ? 'var(--color-loss)' : 'var(--color-warning)' }}>
                       {t.patternSignal}
                     </span>
                     <span className="ss-pattern-count">{t.patternCount} patterns</span>

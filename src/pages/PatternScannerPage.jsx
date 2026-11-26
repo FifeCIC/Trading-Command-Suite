@@ -177,7 +177,7 @@ export default function PatternScannerPage() {
                 <div className="ps-confidence-bar">
                   <motion.div className="ps-confidence-fill" initial={{ width: 0 }} animate={{ width: `${p.confidence}%` }}
                     transition={{ duration: 0.5, delay: 0.1 }}
-                    style={{ background: p.confidence >= 70 ? '#22c55e' : p.confidence >= 45 ? '#f59e0b' : '#ef4444' }} />
+                    style={{ background: p.confidence >= 70 ? 'var(--color-profit)' : p.confidence >= 45 ? 'var(--color-warning)' : 'var(--color-loss)' }} />
                 </div>
                 <span className="ps-card-conf">{p.confidence}%</span>
               </div>

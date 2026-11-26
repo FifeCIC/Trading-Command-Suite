@@ -70,7 +70,7 @@ export default function ScheduledJobsPage() {
 
       <motion.div className="eq-stats-bar" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}>
         {['queued', 'running', 'complete', 'failed'].map((key) => (
-          <div key={key} className="eq-stat-chip" style={{ borderColor: STATUS_COLORS[key] || '#94a3b8' }}>
+          <div key={key} className="eq-stat-chip" style={{ borderColor: STATUS_COLORS[key] || 'var(--ink-soft)' }}>
             <span className="eq-stat-count" style={{ color: STATUS_COLORS[key] }}>{jobStats[key] ?? 0}</span>
             <span className="eq-stat-label">{key}</span>
           </div>
@@ -94,7 +94,7 @@ export default function ScheduledJobsPage() {
               className={`eq-job-card eq-job-${job.status}`}
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
-              style={{ borderLeftColor: STATUS_COLORS[job.status] || '#94a3b8' }}
+              style={{ borderLeftColor: STATUS_COLORS[job.status] || 'var(--ink-soft)' }}
             >
               <div className="eq-job-top">
                 <span className="eq-job-name">{job.type}</span>

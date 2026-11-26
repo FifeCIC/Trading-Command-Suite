@@ -257,7 +257,7 @@ export default function CandlePatternsGuidePage() {
               style={{
                 padding: '0.3rem 0.7rem', border: 'none', borderRadius: '4px', cursor: 'pointer',
                 fontSize: '0.76rem', fontWeight: 600, background: categoryFilter === c.key ? 'rgba(255,255,255,0.12)' : 'transparent',
-                color: categoryFilter === c.key ? '#f1f5f9' : '#64748b',
+                color: categoryFilter === c.key ? '#f1f5f9' : 'var(--color-muted)',
               }}>
               {c.label}
             </button>
@@ -290,7 +290,7 @@ export default function CandlePatternsGuidePage() {
           const isOpen = expanded === p.id;
           return (
             <div key={p.id} style={{
-              border: `1px solid ${isOpen ? TYPE_COLORS[p.type] + '60' : 'var(--line, #334155)'}`,
+              border: `1px solid ${isOpen ? TYPE_COLORS[p.type] + '60' : 'var(--line)'}`,
               borderRadius: '10px', marginBottom: '0.7rem', overflow: 'hidden',
               background: isOpen ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.12)',
               transition: 'border-color 0.15s, background 0.15s'
@@ -315,43 +315,43 @@ export default function CandlePatternsGuidePage() {
                     }}>{p.type}</span>
                     <span style={{
                       padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.62rem',
-                      fontWeight: 600, background: 'rgba(255,255,255,0.06)', color: '#94a3b8',
+                      fontWeight: 600, background: 'rgba(255,255,255,0.06)', color: 'var(--ink-soft)',
                       border: '1px solid rgba(255,255,255,0.08)',
                     }}>{SIGNAL_LABELS[p.signal]}</span>
                     <span style={{
                       padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.62rem',
-                      fontWeight: 600, background: 'rgba(255,255,255,0.04)', color: '#64748b',
+                      fontWeight: 600, background: 'rgba(255,255,255,0.04)', color: 'var(--color-muted)',
                     }}>{CATEGORIES.find(c => c.key === p.category)?.label}</span>
                   </div>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5 }}>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--ink-soft)', lineHeight: 1.5 }}>
                     {p.summary}
                   </p>
                 </div>
                 <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                  <span style={{ fontSize: '0.65rem', color: '#64748b' }}>Reliability</span>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--color-muted)' }}>Reliability</span>
                   <span style={{
                     fontSize: '0.72rem', fontWeight: 700,
-                    color: RELIABILITY_ORDER[p.reliability] >= 3 ? '#22c55e' : RELIABILITY_ORDER[p.reliability] >= 2 ? '#f59e0b' : '#ef4444'
+                    color: RELIABILITY_ORDER[p.reliability] >= 3 ? 'var(--color-profit)' : RELIABILITY_ORDER[p.reliability] >= 2 ? 'var(--color-warning)' : 'var(--color-loss)'
                   }}>{p.reliability}</span>
                 </div>
-                <span style={{ fontSize: '0.8rem', color: '#64748b', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▾</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▾</span>
               </button>
 
               {/* Expanded Detail */}
               {isOpen && (
-                <div style={{ borderTop: '1px solid var(--line, #334155)', padding: '1rem' }}>
+                <div style={{ borderTop: '1px solid var(--line)', padding: '1rem' }}>
                   <div style={{ marginBottom: '1rem' }}>
                     <PatternChartWidget data={p.chart} width={680} height={220} />
                   </div>
                   <div style={{ marginBottom: '0.8rem' }}>
-                    <h4 style={{ margin: '0 0 0.3rem', fontSize: '0.8rem', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pattern Overview</h4>
+                    <h4 style={{ margin: '0 0 0.3rem', fontSize: '0.8rem', color: 'var(--color-warning)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pattern Overview</h4>
                     {p.overview.split('\n\n').filter(Boolean).map((para, i) => (
-                      <p key={i} style={{ margin: '0 0 0.5rem', fontSize: '0.83rem', color: '#cbd5e1', lineHeight: 1.65 }}>{para}</p>
+                      <p key={i} style={{ margin: '0 0 0.5rem', fontSize: '0.83rem', color: 'var(--ink-soft)', lineHeight: 1.65 }}>{para}</p>
                     ))}
                   </div>
-                  <div style={{ marginBottom: '0.8rem', padding: '0.7rem', background: 'rgba(245,158,11,0.06)', borderRadius: '6px', borderLeft: '3px solid #f59e0b' }}>
-                    <h4 style={{ margin: '0 0 0.3rem', fontSize: '0.8rem', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🧠 Market Psychology</h4>
-                    <p style={{ margin: 0, fontSize: '0.83rem', color: '#cbd5e1', lineHeight: 1.65 }}>{p.psychology}</p>
+                  <div style={{ marginBottom: '0.8rem', padding: '0.7rem', background: 'rgba(245,158,11,0.06)', borderRadius: '6px', borderLeft: '3px solid var(--color-warning)' }}>
+                    <h4 style={{ margin: '0 0 0.3rem', fontSize: '0.8rem', color: 'var(--color-warning)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🧠 Market Psychology</h4>
+                    <p style={{ margin: 0, fontSize: '0.83rem', color: 'var(--ink-soft)', lineHeight: 1.65 }}>{p.psychology}</p>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                     <div style={{
@@ -359,25 +359,25 @@ export default function CandlePatternsGuidePage() {
                       background: 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.15)',
                       opacity: p.bullish.context === 'N/A' ? 0.35 : 1
                     }}>
-                      <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', color: '#22c55e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>📈 Bullish Scenario</h4>
-                      <p style={{ margin: '0 0 0.35rem', fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.55 }}><strong>Context:</strong> {p.bullish.context}</p>
-                      <p style={{ margin: '0 0 0.35rem', fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.55 }}><strong>Confirmation:</strong> {p.bullish.confirmation}</p>
-                      <p style={{ margin: 0, fontSize: '0.78rem', color: '#ef4444', lineHeight: 1.5 }}><strong>❌ Failure:</strong> {p.bullish.failure}</p>
+                      <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', color: 'var(--color-profit)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>📈 Bullish Scenario</h4>
+                      <p style={{ margin: '0 0 0.35rem', fontSize: '0.8rem', color: 'var(--ink-soft)', lineHeight: 1.55 }}><strong>Context:</strong> {p.bullish.context}</p>
+                      <p style={{ margin: '0 0 0.35rem', fontSize: '0.8rem', color: 'var(--ink-soft)', lineHeight: 1.55 }}><strong>Confirmation:</strong> {p.bullish.confirmation}</p>
+                      <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-loss)', lineHeight: 1.5 }}><strong>❌ Failure:</strong> {p.bullish.failure}</p>
                     </div>
                     <div style={{
                       padding: '0.7rem', borderRadius: '6px',
                       background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)',
                       opacity: p.bearish.context === 'N/A' ? 0.35 : 1
                     }}>
-                      <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>📉 Bearish Scenario</h4>
-                      <p style={{ margin: '0 0 0.35rem', fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.55 }}><strong>Context:</strong> {p.bearish.context}</p>
-                      <p style={{ margin: '0 0 0.35rem', fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.55 }}><strong>Confirmation:</strong> {p.bearish.confirmation}</p>
-                      <p style={{ margin: 0, fontSize: '0.78rem', color: '#ef4444', lineHeight: 1.5 }}><strong>❌ Failure:</strong> {p.bearish.failure}</p>
+                      <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', color: 'var(--color-loss)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>📉 Bearish Scenario</h4>
+                      <p style={{ margin: '0 0 0.35rem', fontSize: '0.8rem', color: 'var(--ink-soft)', lineHeight: 1.55 }}><strong>Context:</strong> {p.bearish.context}</p>
+                      <p style={{ margin: '0 0 0.35rem', fontSize: '0.8rem', color: 'var(--ink-soft)', lineHeight: 1.55 }}><strong>Confirmation:</strong> {p.bearish.confirmation}</p>
+                      <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-loss)', lineHeight: 1.5 }}><strong>❌ Failure:</strong> {p.bearish.failure}</p>
                     </div>
                   </div>
                   <div style={{ padding: '0.6rem 0.7rem', background: 'rgba(143,125,255,0.06)', borderRadius: '6px', borderLeft: '3px solid #8f7dff' }}>
                     <h4 style={{ margin: '0 0 0.25rem', fontSize: '0.78rem', color: '#8f7dff', textTransform: 'uppercase', letterSpacing: '0.5px' }}>💡 Trading Tips</h4>
-                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#cbd5e1', lineHeight: 1.6 }}>{p.tips}</p>
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--ink-soft)', lineHeight: 1.6 }}>{p.tips}</p>
                   </div>
                 </div>
               )}

@@ -179,7 +179,7 @@ export default function CandlePatternChart({ bars, patterns, onPatternClick, hig
             {[...new Set(patterns.map(p => p.patternId))].slice(0, 6).map(id => {
               const p = patterns.find(pp => pp.patternId === id);
               return (
-                <span key={id} className="legend-item" style={{ color: p ? PATTERN_COLORS[p.direction] : '#94a3b8' }}>
+                <span key={id} className="legend-item" style={{ color: p ? PATTERN_COLORS[p.direction] : 'var(--ink-soft)' }}>
                   {PATTERN_ICONS[id] || PATTERN_ICONS.default} {p?.patternName || id}
                 </span>
               );

@@ -333,7 +333,7 @@ export default function ObjectivesPage() {
                         )}
                         <span
                           className="ob-status-badge"
-                          style={{ background: (STATUS_COLORS[obj.status] || '#6b7280') + '20', color: STATUS_COLORS[obj.status] }}
+                          style={{ background: (STATUS_COLORS[obj.status] || 'var(--color-text-dim)') + '20', color: STATUS_COLORS[obj.status] }}
                         >
                           {obj.status}
                         </span>

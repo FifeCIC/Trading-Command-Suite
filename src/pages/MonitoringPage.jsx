@@ -355,7 +355,7 @@ function NotificationSettingsSection() {
 
       <SettingRow label="Active Alerts" hint={`${activeCount} alert${activeCount !== 1 ? 's' : ''} currently active. Dismiss clears all.`}>
         <div className="inline-actions">
-          <code style={{ fontSize: '0.85rem', fontWeight: 700, color: activeCount > 50 ? '#ef4444' : activeCount > 0 ? '#f59e0b' : '#22c55e' }}>
+          <code style={{ fontSize: '0.85rem', fontWeight: 700, color: activeCount > 50 ? 'var(--color-loss)' : activeCount > 0 ? 'var(--color-warning)' : 'var(--color-profit)' }}>
             {activeCount}
           </code>
           <button type="button" className="cta" onClick={handleDismissAll} disabled={activeCount === 0}>
