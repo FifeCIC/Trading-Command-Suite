@@ -67,7 +67,7 @@ const SOURCE_TONE = {
   'engine-default': 'default',
 };
 
-const fmt = (v, unit) => {
+const fmtWithUnit = (v, unit) => {
   if (v === null || v === undefined || v === '') return '—';
   if (typeof v === 'number') {
     const n = Number.isInteger(v) ? String(v) : String(Number(v.toFixed(3)));
@@ -370,7 +370,7 @@ export default function TradeConfigPanel({
     const v = parsed.ok ? parsed.value : null;
     const usePositive = typeof v === 'number' ? v > 0 : v !== null && v !== '';
     const text = usePositive ? (tmpl.positive ?? f.effect) : (tmpl.zero ?? f.effect);
-    return text.replace('{value}', fmt(v, f.unit));
+    return text.replace('{value}', fmtWithUnit(v, f.unit));
   };
 
   return (
@@ -446,18 +446,18 @@ export default function TradeConfigPanel({
                       <>
                         {control(f)}
                         {diverged(f) && (
-                          <span className="mvp-config-botv">run used {fmt(f.value, f.unit)}</span>
+                          <span className="mvp-config-botv">run used {fmtWithUnit(f.value, f.unit)}</span>
                         )}
                       </>
                     ) : (
                       <>
-                        {fmt(f.value, f.unit)}
+                        {fmtWithUnit(f.value, f.unit)}
                         {diverged(f) && (
                           <span
                             className="mvp-config-botv"
                             title="the bot's own value, which this run did not use"
                           >
-                            bot {fmt(f.botValue, f.unit)}
+                            bot {fmtWithUnit(f.botValue, f.unit)}
                           </span>
                         )}
                       </>

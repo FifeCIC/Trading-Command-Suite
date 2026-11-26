@@ -171,7 +171,7 @@ const TRACK_STATUS = {
  * "not configured", which is the opposite of the fact — and AC6 exists precisely because those two
  * states need telling apart.
  */
-function formatValue(v) {
+function describeValue(v) {
   if (v === null || v === undefined || v === '') return { text: 'not configured', unset: true };
   if (v === true) return { text: 'on', strong: true };
   if (v === false) return { text: 'off', strong: true };
@@ -1228,7 +1228,7 @@ export default function ViewStrategyPage() {
         <p className={styles.summaryNote}>
           {dormant.length > 0
             ? `${dormant.length} rule(s) hold a value the engine ignores: ${dormant
-                .map((r) => `${r.field}=${formatValue(bot[r.field]).text}`)
+                .map((r) => `${r.field}=${describeValue(bot[r.field]).text}`)
                 .join(', ')}.`
             : 'Every rule set on this bot is applied.'}
         </p>
@@ -1436,7 +1436,7 @@ export default function ViewStrategyPage() {
                 hint: 'Unrecognised enforcement level — treat as NOT applied.',
               };
               const raw = bot[rule.field];
-              const value = formatValue(raw);
+              const value = describeValue(raw);
               const configured = isConfigured(raw);
               const isNotLive = rule.enforcement !== 'live';
               const owner = exitMechanismFor.get(rule.field) || null;

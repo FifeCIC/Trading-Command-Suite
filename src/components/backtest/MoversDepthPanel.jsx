@@ -33,10 +33,9 @@
  */
 import { useMemo, useState } from 'react';
 import WhyPopover from '../WhyPopover.jsx';
+import { formatPct, formatPrice, formatAmount } from '../../core/format-utils';
 
-const fmtPct = (n) => (n == null || Number.isNaN(Number(n)) ? '—' : `${Number(n) >= 0 ? '+' : ''}${Number(n).toFixed(1)}%`);
-const fmtMoney = (n) => (n == null || Number.isNaN(Number(n)) ? '—' : Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-const fmtPrice = (n) => (n == null || Number.isNaN(Number(n)) ? '—' : Number(n).toFixed(2));
+
 
 /** `2026-11-11T15:35:00.000Z` → `15:35` (UTC — the whole page runs on the UTC cutoff). */
 const clock = (iso) => (typeof iso === 'string' && iso.length >= 16 ? iso.slice(11, 16) : '—');
@@ -119,7 +118,7 @@ function decisionText(bar) {
   if (bar.state === 'entry' || bar.state === 'entry+exit') {
     const parts = [];
     const first = bar.entries[0];
-    parts.push(`${first.direction} opened at ${fmtPrice(bar.price)}`);
+    parts.push(`${first.direction} opened at ${formatPrice(bar.price)}`);
     if (bar.exits.length) {
       parts.push(exitPhrase(bar.exits[0]));
     } else if (bar.orphanedExits > 0) {
@@ -146,7 +145,7 @@ function decisionText(bar) {
 
 /** `TP closed LONG for 471.75` — one phrasing, used by both the same-bar leg and a standalone exit. */
 function exitPhrase(x) {
-  return `${x.exitReason} closed ${x.direction} for ${fmtMoney(x.pnl)}`;
+  return `${x.exitReason} closed ${x.direction} for ${formatAmount(x.pnl)}`;
 }
 
 /**
@@ -239,9 +238,9 @@ export function SelectionSummaryTable({ trades }) {
                 <td className={`mvp-num ${r.other ? 'mvp-warn' : 'mvp-muted'}`}>{r.other || '—'}</td>
               )}
               <td className={`mvp-num ${r.pnlCounted > 0 ? 'mvp-pos' : r.pnlCounted < 0 ? 'mvp-neg' : 'mvp-muted'}`}>
-                {fmtMoney(r.pnlCounted)}
+                {formatAmount(r.pnlCounted)}
               </td>
-              <td className={`mvp-num mvp-muted`}>{anyIgnored && r.pnlIgnored ? fmtMoney(r.pnlIgnored) : '—'}</td>
+              <td className={`mvp-num mvp-muted`}>{anyIgnored && r.pnlIgnored ? formatAmount(r.pnlIgnored) : '—'}</td>
             </tr>
           ))}
         </tbody>
@@ -291,9 +290,9 @@ export function ExecutionsTable({ trades, symbol }) {
                   <tr key={`${t.symbol ?? symbol ?? ''}-${t.entryDate}-${i}`} className={t.kept ? '' : 'mvp-config-row--ignored'}>
                     <td className="mvp-nowrap">{t.symbol || symbol || '—'}</td>
                     <td className="mvp-nowrap">{clock(t.entryDate)}</td>
-                    <td className="mvp-num">{fmtPrice(t.entryPrice)}</td>
+                    <td className="mvp-num">{formatPrice(t.entryPrice)}</td>
                     <td className="mvp-nowrap">{clock(t.exitDate)}</td>
-                    <td className="mvp-num">{fmtPrice(t.exitPrice)}</td>
+                    <td className="mvp-num">{formatPrice(t.exitPrice)}</td>
                     <td className="mvp-nowrap mvp-muted">
                       {t.direction}
                       {!t.kept && (
@@ -318,7 +317,7 @@ export function ExecutionsTable({ trades, symbol }) {
                       className={`mvp-num ${t.kept && t.pnl > 0 ? 'mvp-pos' : t.kept && t.pnl < 0 ? 'mvp-neg' : 'mvp-muted'}`}
                       title={t.kept ? undefined : 'this trade is NOT in any total on the page'}
                     >
-                      {fmtMoney(t.pnl)}
+                      {formatAmount(t.pnl)}
                     </td>
                   </tr>
                 );
@@ -550,9 +549,9 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
                     {clock(b.time)}
                     {b.beforeCutoff && <span className="mvp-depth-pre" title="before the cutoff — could never trade">pre</span>}
                   </td>
-                  <td className="mvp-num">{fmtPrice(b.price)}</td>
+                  <td className="mvp-num">{formatPrice(b.price)}</td>
                   <td className={`mvp-num ${b.changePct > 0 ? 'mvp-pos' : b.changePct < 0 ? 'mvp-neg' : ''}`}>
-                    {fmtPct(b.changePct)}
+                    {formatPct(b.changePct)}
                   </td>
                   <td className="mvp-num">{Number(b.score).toFixed(1)}</td>
                   <td className="mvp-num">{Number(b.opportunityPct).toFixed(1)}</td>

@@ -22,6 +22,7 @@ import { decisionColor } from '../core/decision-display.js';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import './symbol-focus.css';
+import { formatPnl, formatDecimals } from '../core/format-utils';
 
 const SIGNAL_COLORS = { BUY: '#22c55e', SELL: '#ef4444', HOLD: '#94a3b8' };
 
@@ -86,11 +87,11 @@ export default function SymbolFocusPage() {
   const statsWindow = protocolsQuery.data?.statsWindowDays ?? null;
   const statsFailed = Boolean(protocolsQuery.data?.statsError);
 
-  const fmt = (v, d = 1) => (v === null || v === undefined ? '—' : Number(v).toFixed(d));
-  // ⚠️ NO local money formatter. `fmtCurrency` above already does exactly this, and a second copy
-  // is the duplication the repo's own `validate-duplication` exists to catch — the shorter-lived
-  // of two copies is the one that gets fixed. It was also an UNUSED local until this table needed
-  // it, which is why it read as dead code (pre-existing lint finding, 2026-09-28).
+  // ⚠️ NO local money or number formatter in this file. `formatPnl` (signed 2dp, NO currency
+  // symbol — the name used to be `fmtCurrency`, which was wrong) and `formatDecimals` (fixed dp, no
+  // sign) are the two that were copied here. A second copy is the duplication the repo gates on,
+  // because the shorter-lived copy is the one that gets the next fix — and one of these was an
+  // UNUSED local, which is why it read as dead code.
 
   if (loading) return <div className="sf-page"><LoadingSkeleton lines={8} /></div>;
   if (error || !data) {
@@ -108,11 +109,6 @@ export default function SymbolFocusPage() {
   const { protocols, tradingStrategies, recentDecisions, recentEvaluations } = data;
 
   // ── Helpers ──
-  const fmtCurrency = (v) => {
-    if (v == null) return '—';
-    return (v >= 0 ? '+' : '') + Number(v).toFixed(2);
-  };
-
   const protocolList = Object.values(protocols || {});
   const hasTrading = tradingStrategies?.length > 0;
   const hasDecisions = recentDecisions?.length > 0;
@@ -196,12 +192,12 @@ export default function SymbolFocusPage() {
                 {strongest && (
                   <div className="sf-cmp-highlights">
                     <span className="sf-cmp-hl">
-                      🟢 Strongest (avg): <strong>{strongest.name}</strong> {fmt(strongest.stats.avg)} over{' '}
+                      🟢 Strongest (avg): <strong>{strongest.name}</strong> {formatDecimals(strongest.stats.avg, 1)} over{' '}
                       {strongest.stats.samples} reading(s)
                     </span>
                     {weakest && (
                       <span className="sf-cmp-hl">
-                        🔴 Weakest (avg): <strong>{weakest.name}</strong> {fmt(weakest.stats.avg)} over{' '}
+                        🔴 Weakest (avg): <strong>{weakest.name}</strong> {formatDecimals(weakest.stats.avg, 1)} over{' '}
                         {weakest.stats.samples} reading(s)
                       </span>
                     )}
@@ -232,9 +228,9 @@ export default function SymbolFocusPage() {
                         <tr key={p.id} className={!p.stats ? 'sf-cmp-unmeasured' : ''}>
                           <td title={p.id}>{p.name}</td>
                           <td className="sf-cmp-dir">{p.directionMode === 'SHORT_ONLY' ? 'S' : p.directionMode === 'BOTH' ? 'L/S' : 'L'}</td>
-                          <td className="sf-num">{p.stats ? fmt(p.stats.avg) : '—'}</td>
-                          <td className="sf-num">{p.stats ? fmt(p.stats.high, 0) : '—'}</td>
-                          <td className="sf-num">{p.stats ? fmt(p.stats.low, 0) : '—'}</td>
+                          <td className="sf-num">{p.stats ? formatDecimals(p.stats.avg, 1) : '—'}</td>
+                          <td className="sf-num">{p.stats ? formatDecimals(p.stats.high, 0) : '—'}</td>
+                          <td className="sf-num">{p.stats ? formatDecimals(p.stats.low, 0) : '—'}</td>
                           <td className="sf-num sf-muted">{p.stats ? p.stats.samples : '—'}</td>
                           {/* ⚠️ `0` bots is not "worthless". gold-macro-v1-long has 0 bots AND +30.48
                               realised on XAUUSD — a rule that skipped it would have deleted a
@@ -244,7 +240,7 @@ export default function SymbolFocusPage() {
                           </td>
                           <td className="sf-num">{p.realised ? p.realised.trades : '—'}</td>
                           <td className={`sf-num ${p.realised?.pnl > 0 ? 'sf-pnl-up' : p.realised?.pnl < 0 ? 'sf-pnl-down' : ''}`}>
-                            {p.realised ? fmtCurrency(p.realised.pnl) : '—'}
+                            {p.realised ? formatPnl(p.realised.pnl) : '—'}
                           </td>
                           <td className="sf-cmp-src">{(p.sources || []).join(' · ')}</td>
                         </tr>

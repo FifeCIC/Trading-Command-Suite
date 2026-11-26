@@ -37,7 +37,7 @@ import { apiGet, apiPatch, apiPost, apiDelete } from '../../core/api/client.js';
 import NoticeBlock from '../NoticeBlock.jsx';
 import { noticeFromError } from '../../core/notices/from-error.js';
 
-const fmt = (v) => (v == null ? '—' : Number(v));
+const fmtInputValue = (v) => (v == null ? '—' : Number(v));
 
 export default function DirectiveSettingsPanel({ protocolSlug }) {
   const qc = useQueryClient();
@@ -203,7 +203,7 @@ export default function DirectiveSettingsPanel({ protocolSlug }) {
       <p className="pb-field-note">
         Precedence the engine applies: <strong>protocol override → global config → directive class</strong>.
         Total configured weight for this protocol:{' '}
-        <strong>{fmt(cfg.data.totalWeight)}</strong>.
+        <strong>{fmtInputValue(cfg.data.totalWeight)}</strong>.
       </p>
 
       {error && (
@@ -220,7 +220,7 @@ export default function DirectiveSettingsPanel({ protocolSlug }) {
         <section key={g.name} className="dp-group">
           <h4 className="dp-group-head">
             {g.name}
-            {g.weight != null && <span className="dp-group-weight">group weight {fmt(g.weight)}</span>}
+            {g.weight != null && <span className="dp-group-weight">group weight {fmtInputValue(g.weight)}</span>}
             {g.risk && <span className="dp-badge dp-badge--risk">risk gate</span>}
           </h4>
           <table className="bt-table dp-table">
@@ -246,9 +246,9 @@ export default function DirectiveSettingsPanel({ protocolSlug }) {
                       <strong>{d.name}</strong>
                       {descriptions.get(id) && <div className="dp-desc">{descriptions.get(id)}</div>}
                     </td>
-                    <td className="pb-mono">{fmt(d.classMaxScore)}</td>
-                    <td className="pb-mono">{fmt(d.globalMaxScore)}</td>
-                    <td className="pb-mono"><strong>{fmt(d.effectiveMaxScore)}</strong></td>
+                    <td className="pb-mono">{fmtInputValue(d.classMaxScore)}</td>
+                    <td className="pb-mono">{fmtInputValue(d.globalMaxScore)}</td>
+                    <td className="pb-mono"><strong>{fmtInputValue(d.effectiveMaxScore)}</strong></td>
                     <td>
                       <span className={`dp-badge ${d.source === 'override' ? 'dp-badge--override' : ''}`}>
                         {d.source === 'override' ? 'protocol' : 'inherited'}

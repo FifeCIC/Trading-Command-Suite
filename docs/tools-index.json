@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 211,
+  "count": 212,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1515,6 +1515,17 @@
       "where": "repo",
       "category": "validator",
       "purpose": "the anti-bloat guardrail for the fault registry.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-formatters.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "one formatter per concept, and no page-local copy of a canonical one.",
       "selfTest": true,
       "reaches": [
         "prebuild",

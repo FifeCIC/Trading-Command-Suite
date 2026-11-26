@@ -218,7 +218,7 @@ function buildPairs(strategies) {
 }
 
 /** fmtDuration — "3d 4h" / "5h 12m" / "8m". The running age of a test, for the data-period question. */
-function fmtDuration(ms) {
+function fmtSpan(ms) {
   if (ms == null || ms < 0) return '—';
   const d = Math.floor(ms / 86_400_000);
   const h = Math.floor((ms % 86_400_000) / 3_600_000);
@@ -1047,7 +1047,7 @@ export default function AbStrategiesPage() {
                   <span className={styles.testMeta}>
                     {t.startAt ? `started ${new Date(t.startAt).toLocaleString()}` : 'not started'}
                     {t.startAt && !t.endAt
-                      ? ` · ${fmtDuration(Date.now() - new Date(t.startAt).getTime())} in`
+                      ? ` · ${fmtSpan(Date.now() - new Date(t.startAt).getTime())} in`
                       : ''}
                     {t.endAt ? ` · ended ${new Date(t.endAt).toLocaleString()}` : ''}
                   </span>
@@ -1201,7 +1201,7 @@ export default function AbStrategiesPage() {
               <span className={styles.testMeta}>
                 {test.startAt ? `started ${new Date(test.startAt).toLocaleString()}` : 'not started'}
                 {test.startAt && !test.endAt
-                  ? ` · running ${fmtDuration(Date.now() - new Date(test.startAt).getTime())}`
+                  ? ` · running ${fmtSpan(Date.now() - new Date(test.startAt).getTime())}`
                   : ''}
                 {test.endAt ? ` · ended ${new Date(test.endAt).toLocaleString()}` : ''}
               </span>
@@ -1258,7 +1258,7 @@ export default function AbStrategiesPage() {
               <span aria-hidden="true">◉</span>{' '}
               Official A/B test running: <strong>{runningTest.name}</strong>
               {runningTest.startAt
-                ? ` · started ${new Date(runningTest.startAt).toLocaleDateString()} · ${fmtDuration(Date.now() - new Date(runningTest.startAt).getTime())} in`
+                ? ` · started ${new Date(runningTest.startAt).toLocaleDateString()} · ${fmtSpan(Date.now() - new Date(runningTest.startAt).getTime())} in`
                 : ''}
               {' · '}
               <Link className={styles.officialLink} to={`/trading/ab-strategies?test=${runningTest.id}`}>

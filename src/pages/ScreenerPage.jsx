@@ -71,7 +71,16 @@ function readTopPicks() {
   }
 }
 
-function fmtWhen(nextEventAt, latestTimestamp) {
+/**
+ * fmtNextEvent() — a FORWARD-looking "in 3d (date)" label.
+ *
+ * ⚠️ RENAMED FROM `fmtWhen` (2026-11-26, register row 296). It had the same name as a
+ * backward-looking "42m ago" helper in `BrokersPage` and `VendorsPage` — same name, opposite
+ * direction — so a reader who learned the name on one page got the wrong answer on this one. Those
+ * two now import `relativeAge()` from `core/format-utils`; this stays local because it answers a
+ * different question and has no shared equivalent.
+ */
+function fmtNextEvent(nextEventAt, latestTimestamp) {
   const now = Date.now()
   if (nextEventAt) {
     const t = new Date(nextEventAt).getTime()
@@ -417,7 +426,7 @@ export default function ScreenerPage() {
                   <span className={`screener-chip screener-chip--${h.source}`}>{h.source}</span>
                   <span className="screener-history-type">{h.catalystType}</span>
                   <span className="screener-history-nums">strength {h.catalystStrength ?? '—'} · reliability {h.sourceReliability ?? '—'}</span>
-                  <span className="screener-story-meta">{fmtWhen(null, h.timestamp)}</span>
+                  <span className="screener-story-meta">{fmtNextEvent(null, h.timestamp)}</span>
                 </li>
               ))}
             </ul>
@@ -436,7 +445,7 @@ export default function ScreenerPage() {
                   <a className="screener-story-headline" href={`https://www.google.com/search?q=${encodeURIComponent(s.headline)}`} target="_blank" rel="noreferrer">
                     {s.headline}
                   </a>
-                  <span className="screener-story-meta">{s.source} · {fmtWhen(null, s.publishedAt)}</span>
+                  <span className="screener-story-meta">{s.source} · {fmtNextEvent(null, s.publishedAt)}</span>
                 </li>
               ))}
             </ul>
@@ -533,7 +542,7 @@ export default function ScreenerPage() {
                       </span>
                     </div>
                   </td>
-                  {cols.when && <td className="screener-when" title={helpFor('when', 'When')}>{fmtWhen(r.nextEventAt, r.latestTimestamp)}</td>}
+                  {cols.when && <td className="screener-when" title={helpFor('when', 'When')}>{fmtNextEvent(r.nextEventAt, r.latestTimestamp)}</td>}
                   {cols.hits && <td title={helpFor('hits', `${r.hitCount} hit(s)`)}>{r.hitCount}</td>}
                 </motion.tr>
               ))}

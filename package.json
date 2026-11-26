@@ -1,6 +1,6 @@
 {
   "name": "tradingcs",
-  "version": "0.173.7",
+  "version": "0.174.0",
   "releaseStage": "alpha",
   "private": true,
   "license": "AGPL-3.0",
@@ -37,7 +37,7 @@
     "audit:unregistered-directives": "node scripts/why-unregistered.cjs",
     "audit:unregistered-directives:self-test": "node scripts/why-unregistered.cjs --self-test",
     "build": "vite build",
-    "prebuild": "node scripts/validate-phrasing.cjs && node scripts/validate-repo-hygiene.cjs && node scripts/validate-page-visibility.cjs && node scripts/validate-no-notice-bar.cjs && node scripts/validate-arch-card-shapes.cjs && node scripts/validate-route-params.cjs && node scripts/validate-fault-taxonomy.cjs && node scripts/validate-standards.cjs",
+    "prebuild": "node scripts/validate-phrasing.cjs && node scripts/validate-repo-hygiene.cjs && node scripts/validate-page-visibility.cjs && node scripts/validate-no-notice-bar.cjs && node scripts/validate-arch-card-shapes.cjs && node scripts/validate-route-params.cjs && node scripts/validate-fault-taxonomy.cjs && node scripts/validate-standards.cjs && node scripts/validate-formatters.cjs",
     "postbuild": "node ./scripts/check-bundle-budget.mjs",
     "build:guard": "npm run build",
     "canary:arch-docs": "node ./scripts/canary-architecture-docs.cjs",
@@ -172,6 +172,9 @@
     "audit:column-writers:self-test": "node scripts/audit-column-writers.cjs --self-test",
     "standards": "node scripts/validate-standards.cjs --report",
     "standards:check": "node scripts/validate-standards.cjs",
+    "formatters": "node scripts/validate-formatters.cjs",
+    "formatters:check": "node scripts/validate-formatters.cjs",
+    "formatters:self-test": "node scripts/validate-formatters.cjs --self-test",
     "standards:self-test": "node scripts/validate-standards.cjs --self-test",
     "audit:handoffs:self-test": "node scripts/check-handoff-staleness.cjs --self-test"
   },

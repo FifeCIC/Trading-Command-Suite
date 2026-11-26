@@ -3,6 +3,22 @@
  * ========================================================================
  * Every page that displays times, durations, or currency imports from here.
  *
+ * ── DECISION (2026-11-17, primary) ──
+ * WHAT:      this file is the ONE owner of every formatter, and a gate now enforces it.
+ * WHY:       measured — 13 files declared formatters of their own and four collided with a canonical
+ *            export: `fmtCurrency` that rendered no currency, `fmtDuration` that said "2d 0h" where
+ *            `formatDuration` says "2d", two different `fmtPrice` rules under one name, and three
+ *            meanings for `num2`. The call site cannot tell which copy it got, and the shorter-lived
+ *            copy is the one that gets the next fix.
+ * INSTEAD OF: Leaving them as declared duplication on the assumption that a page-local helper is
+ *            harmless. `src/features/movers-strategy/format.js` carried a docblock saying "do not
+ *            unify" — on a false premise (`formatPct` does sign positives), protecting two functions
+ *            that had become byte-identical.
+ * REVERSE BY: Delete `scripts/validate-formatters.cjs`, remove it from `prebuild` and from
+ *            `src/data/standards.js`, and the local copies can return.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 296
+ * GUARD:     scripts/validate-formatters.cjs (F1 shadow · F2 duplicate), `--self-test` in 7 cases
+ *
  * @file src/core/format-utils.js
  */
 
@@ -21,6 +37,27 @@ export function timeAgo(iso, { short = false } = {}) {
   const days = Math.floor(hr / 24);
   if (days < 7) return short ? `${days}d` : `${days}d ago`;
   return new Date(iso).toLocaleDateString();
+}
+
+/**
+ * relativeAge — "42m ago" / "3h ago" / "11d ago", with the caller's word for "no timestamp".
+ *
+ * ⚠️ THIS IS NOT A SECOND OPINION ABOUT `timeAgo`, and the distinction is why it exists rather than a
+ * flag on that function. `timeAgo` collapses anything past 7 days into a DATE ("12/11/2026") because
+ * it answers *when did this happen*; this keeps counting days because it answers *how stale is this*
+ * — the question a "last synced" column is actually asking. Two page files each carried their own
+ * copy of this with the same name and different rules (`fmtWhen` also meant a forward-looking
+ * "in 3d" in a third), so it now has one owner. Register row 296.
+ */
+export function relativeAge(iso, { empty = '—' } = {}) {
+  if (!iso) return empty;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return empty;
+  const mins = Math.round((Date.now() - t) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60 * 24) return `${Math.round(mins / 60)}h ago`;
+  return `${Math.round(mins / 1440)}d ago`;
 }
 
 /** Format ISO timestamp to locale time */
@@ -73,7 +110,51 @@ export function formatNumber(n) {
 /** Format percentage */
 export function formatPct(n, decimals = 1) {
   if (n == null) return '—';
-  return `${n >= 0 ? '+' : ''}${n.toFixed(decimals)}%`;
+  const v = Number(n);
+  // ⚠️ A NaN or an Infinity is "present but not a number" — the state the broker posts as a value
+  // rather than omitting (see PositionsMonitorPage's fmtUsd2 docblock). `${NaN.toFixed(1)}%` used to
+  // render "+NaN%", which reads as a number. "Cannot judge" must render as "—", never as a figure.
+  if (!Number.isFinite(v)) return '—';
+  return `${v >= 0 ? '+' : ''}${v.toFixed(decimals)}%`;
+}
+
+/**
+ * Format a price for display — 4 decimals below 1, otherwise 2.
+ *
+ * ⚠️ The rule is not cosmetic. The movers strategy trades sub-$10 names, and at 2dp a $0.1234 price
+ * renders "0.12" — a 3% error in the one number the whole page is about. Two panels each carried
+ * their own `fmtPrice`; one had this rule and one did not, under the same name. Register row 296.
+ */
+export function formatPrice(n) {
+  if (n == null) return '—';
+  const v = Number(n);
+  if (!Number.isFinite(v)) return '—';
+  return v.toFixed(Math.abs(v) < 1 ? 4 : 2);
+}
+
+/**
+ * Format a grouped amount — fixed decimals, thousands separators, NO currency symbol.
+ * Distinct from `formatDecimals` (no separators) and from `formatCurrency` (which adds a symbol and
+ * renders zero as an em dash).
+ */
+export function formatAmount(n, decimals = 2) {
+  if (n == null) return '—';
+  const v = Number(n);
+  if (!Number.isFinite(v)) return '—';
+  return v.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+/** Format a plain number to a fixed number of decimals — no sign, no currency, no thousands
+ * separators. The ONE owner of this: five pages and panels each carried a copy (`fmtNum`, `fmtDec2`,
+ * `fmt`) and two of them skipped the NaN guard, so a NaN rendered as "NaN" in one panel and "—" in
+ * the next. Anything needing a currency symbol, a sign, or a separator uses one of the functions
+ * above instead — those are different outputs, not different spellings of this one.
+ */
+export function formatDecimals(n, decimals = 2) {
+  if (n == null) return '—';
+  const v = Number(n);
+  if (!Number.isFinite(v)) return '—';
+  return v.toFixed(decimals);
 }
 
 /** Format P&L value with sign */

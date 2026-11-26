@@ -19,12 +19,15 @@ import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import { notice } from '../core/notices/registry.js';
 import './t212-portfolio.css';
+import { formatDecimals } from '../core/format-utils';
 
-const fmt = (n) => (n == null ? '—' : `£${Number(n).toFixed(2)}`);
-/** A NUMBER WITHOUT A CURRENCY — for prices and notionals, whose currency is the instrument's own. */
-const num2 = (n) => (n == null || !Number.isFinite(Number(n)) ? '—' : Number(n).toFixed(2));
+const fmtGbp = (n) => (n == null ? '—' : `£${Number(n).toFixed(2)}`);
+// Prices and notionals: no currency symbol, because the currency is the instrument's own.
 
-const fmtPct = (v) => (v == null || !Number.isFinite(v) ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(2)}%`);
+// ⚠️ NOT `formatPct` — this signs only a POSITIVE value, so zero renders `0.00%` where the shared
+// helper renders `+0.00%`. Renamed rather than merged so behaviour is unchanged, and renamed rather
+// than kept so it stops shadowing the canonical formatter of the same name.
+const fmtPctSigned = (v) => (v == null || !Number.isFinite(v) ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(2)}%`);
 
 /** "3d 4h" / "42m" — how long the position has been open, from its own open timestamp. */
 function holdingFor(openedAt) {
@@ -109,7 +112,7 @@ function PositionDetail({ p, busy, error, armed, onArm, onClose, onBreakeven, on
         <div>
           <dt>P&amp;L</dt>
           <dd className={p.pnl > 0 ? 't212p-profit' : p.pnl < 0 ? 't212p-loss' : ''}>
-            {p.pnl != null ? fmt(p.pnl) : '—'} · {fmtPct(p.movePct)} price move
+            {p.pnl != null ? fmtGbp(p.pnl) : '—'} · {fmtPctSigned(p.movePct)} price move
           </dd>
         </div>
         <div>
@@ -149,7 +152,7 @@ function PositionDetail({ p, busy, error, armed, onArm, onClose, onBreakeven, on
           <dt>Best seen</dt>
           <dd>
             {p.peakProfitPct != null
-              ? `${fmtPct(p.peakProfitPct)}${p.movePct != null ? ` · now ${fmtPct(p.movePct)}` : ''}`
+              ? `${fmtPctSigned(p.peakProfitPct)}${p.movePct != null ? ` · now ${fmtPctSigned(p.movePct)}` : ''}`
               : <span className="t212p-muted">not recorded for this source</span>}
           </dd>
         </div>
@@ -181,7 +184,7 @@ function PositionDetail({ p, busy, error, armed, onArm, onClose, onBreakeven, on
             <dt>Notional</dt>
             <dd>
               {p.value != null
-                ? `${num2(p.value)}${p.valueCurrency ? ` ${p.valueCurrency}` : ''}`
+                ? `${formatDecimals(p.value)}${p.valueCurrency ? ` ${p.valueCurrency}` : ''}`
                 : '— no contract size in the payload'}
               <span className="t212p-detail-hint"> — size × contract × price, in the instrument&apos;s own currency</span>
             </dd>
@@ -192,7 +195,7 @@ function PositionDetail({ p, busy, error, armed, onArm, onClose, onBreakeven, on
           <dd>
             {p.source === 'mt5'
               ? `${p.swap != null ? p.swap.toFixed(2) : '—'}${p.comment ? ` · ${p.comment}` : ''}`
-              : fmt(p.value)}
+              : fmtGbp(p.value)}
           </dd>
         </div>
       </dl>
@@ -790,7 +793,7 @@ export default function T212PortfolioPage() {
             title="The sum of the current value of every ENABLED account — each account's own balance, added together. Not a cost basis, and not comparable with the Cost basis tile below."
           >
             <span className="t212p-stat-label">Across enabled accounts</span>
-            <span className="t212p-stat-value">{fmt(grandTotal)}</span>
+            <span className="t212p-stat-value">{fmtGbp(grandTotal)}</span>
           </div>
 
           {investActive && (
@@ -809,32 +812,32 @@ export default function T212PortfolioPage() {
                   Order kept as a sum: cost → cash → value, then the profits, then the count. */}
               <div className="t212p-stat" title="Σ quantity × average price — what these holdings COST. It is not what they are worth now, so it does not subtract from Total Value.">
                 <span className="t212p-stat-label">Cost basis</span>
-                <span className="t212p-stat-value">{fmt(summary?.invested)}</span>
+                <span className="t212p-stat-value">{fmtGbp(summary?.invested)}</span>
               </div>
               <div className="t212p-stat" title="Cash the broker reports as available to trade. Zero here means the demo account is fully invested.">
                 <span className="t212p-stat-label">Free Cash</span>
-                <span className="t212p-stat-value">{fmt(summary?.free)}</span>
+                <span className="t212p-stat-value">{fmtGbp(summary?.free)}</span>
               </div>
               <div className="t212p-stat t212p-stat--total" title="Σ quantity × current price — what the holdings are worth right now. This is the account's value, and it is the figure the grand total above includes.">
                 <span className="t212p-stat-label">Total Value</span>
-                <span className="t212p-stat-value">{fmt(summary?.total)}</span>
+                <span className="t212p-stat-value">{fmtGbp(summary?.total)}</span>
               </div>
               <div className="t212p-stat t212p-stat--derived" title="Total Value − Cost basis. Computed here from the two tiles beside it, so it always reconciles with them.">
                 <span className="t212p-stat-label">Value − cost</span>
                 <span className={`t212p-stat-value ${valueCost > 0 ? 't212p-profit' : valueCost < 0 ? 't212p-loss' : ''}`}>
-                  {valueCost != null ? fmt(valueCost) : '—'}
+                  {valueCost != null ? fmtGbp(valueCost) : '—'}
                 </span>
               </div>
               <div className="t212p-stat" title="The broker's own unrealised profit/loss for OPEN positions, in account currency. Reported by Trading212, not derived here — which is why it is not equal to Value − cost (#1208).">
                 <span className="t212p-stat-label">P&amp;L (open)</span>
                 <span className={`t212p-stat-value ${summary?.ppl > 0 ? 't212p-profit' : summary?.ppl < 0 ? 't212p-loss' : ''}`}>
-                  {summary?.ppl != null ? fmt(summary.ppl) : '—'}
+                  {summary?.ppl != null ? fmtGbp(summary.ppl) : '—'}
                 </span>
               </div>
               <div className="t212p-stat" title="The broker's account result, including realised profit from positions already closed. Equals P&L (open) when nothing has been closed.">
                 <span className="t212p-stat-label">Result (incl. realised)</span>
                 <span className={`t212p-stat-value ${summary?.result > 0 ? 't212p-profit' : summary?.result < 0 ? 't212p-loss' : ''}`}>
-                  {summary?.result != null ? fmt(summary.result) : '—'}
+                  {summary?.result != null ? fmtGbp(summary.result) : '—'}
                 </span>
               </div>
               {/*
@@ -987,14 +990,14 @@ export default function T212PortfolioPage() {
                       {/* ⚠️ A price is not sterling. Only the imported sources carry GBP-equivalent
                           prices; an MT5 quote is in the instrument's own currency, so it is shown
                           bare rather than prefixed with a £ it does not have. Same for the notional. */}
-                      <td>{p.source === 'mt5' ? num2(p.currentPrice) : fmt(p.currentPrice)}</td>
+                      <td>{p.source === 'mt5' ? formatDecimals(p.currentPrice) : fmtGbp(p.currentPrice)}</td>
                       <td>
                         {p.source === 'mt5'
-                          ? (p.value == null ? '—' : `${num2(p.value)}${p.valueCurrency ? ` ${p.valueCurrency}` : ''}`)
-                          : fmt(p.value)}
+                          ? (p.value == null ? '—' : `${formatDecimals(p.value)}${p.valueCurrency ? ` ${p.valueCurrency}` : ''}`)
+                          : fmtGbp(p.value)}
                       </td>
                       <td className={p.pnl > 0 ? 't212p-profit' : p.pnl < 0 ? 't212p-loss' : ''}>
-                        {p.pnl != null ? fmt(p.pnl) : '—'}
+                        {p.pnl != null ? fmtGbp(p.pnl) : '—'}
                         {p.movePct != null && (
                           <span className="t212p-pnl-pct">{p.movePct > 0 ? '+' : ''}{p.movePct.toFixed(2)}%</span>
                         )}
@@ -1077,7 +1080,7 @@ export default function T212PortfolioPage() {
                       </td>
                       <td className={t.side === 'BUY' ? 't212p-profit' : 't212p-loss'}>{t.side || t.type}</td>
                       <td>{t.quantity?.toFixed(2) || '—'}</td>
-                      <td>{fmt(t.price)}</td>
+                      <td>{fmtGbp(t.price)}</td>
                       <td>{t.date ? new Date(t.date).toLocaleDateString() : '—'}</td>
                     </tr>
                   ))}

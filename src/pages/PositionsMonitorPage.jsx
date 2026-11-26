@@ -7,15 +7,20 @@ import { PageInfoSlotContent } from '../core/top-row-slot';
 import './positions-monitor.css';
 
 /**
- * num2() — a money/price cell, or an em dash.
+ * fmtUsd2() — a money/price cell, or an em dash.
  *
  * ⚠️ `pos.sl != null ? \`$${Number(pos.sl).toFixed(2)}\` : '—'` PRINTED "$NaN" ON A LIVE CARD
  * (measured 2026-11-07 on /trading/positions-monitor, FTAD). `Number(undefined)` is NaN, and
  * `NaN != null` is TRUE — so the null check passed and the formatter rendered the NaN. The broker
  * reports some fields as NaN rather than omitting them, so "present but not a number" is a real
  * state here and must render as "cannot judge", not as a number.
+ *
+ * ⚠️ Named for its OUTPUT, not `num2`: two other pages declared their own `num2` with different
+ * rules (one no currency, one 2dp without a thousands separator), so one name meant three formats.
+ * It is also not `formatCurrency()` — that inserts thousands separators ("$1,234.50") and renders
+ * zero as "—", both of which would change what this card shows.
  */
-function num2(v) {
+function fmtUsd2(v) {
   const n = Number(v);
   return Number.isFinite(n) ? `$${n.toFixed(2)}` : '—';
 }
@@ -145,13 +150,13 @@ function CFDPosition({ pos, index, onClose, isClosing, highlight }) {
         <div><span>Direction</span><span className={pos.direction === 'BUY' ? 'pm-buy' : 'pm-sell'}>{pos.direction}</span></div>
         <div><span>Volume</span><span>{pos.volume}</span></div>
         <div><span>Leverage</span><span>{pos.leverage || '—'}</span></div>
-        <div><span>Margin</span><span>{num2(pos.margin)}</span></div>
+        <div><span>Margin</span><span>{fmtUsd2(pos.margin)}</span></div>
         <div><span>Days Held</span><span>{pos.daysHeld}d</span></div>
         {pos.allocation != null && (
           <div><span>Allocation</span><span>{pos.allocation.toFixed(1)}%</span></div>
         )}
-        <div><span>Stop Loss</span><span>{num2(pos.sl)}</span></div>
-        <div><span>Take Profit</span><span>{num2(pos.tp)}</span></div>
+        <div><span>Stop Loss</span><span>{fmtUsd2(pos.sl)}</span></div>
+        <div><span>Take Profit</span><span>{fmtUsd2(pos.tp)}</span></div>
         {/* THE PEAK AND WHAT IT GAVE BACK (2026-11-05). A position that touched +0.35% and is now
             −0.60% is a different problem from one that never moved: the first had profit and lost
             it, the second never had any. `peakProfitPct` is the high-water mark maintained by

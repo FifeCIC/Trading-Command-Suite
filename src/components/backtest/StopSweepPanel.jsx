@@ -22,10 +22,11 @@ import InfoNote from '../InfoNote';
  */
 import { useQuery } from '@tanstack/react-query';
 import { apiPost } from '../../core/api/client.js';
+import { formatDecimals } from '../../core/format-utils';
 
 const CANDIDATES = [0.5, 1, 1.5, 2, 3, 4, 5];
 
-const fmt = (v, dp = 2) => (v == null ? '—' : Number(v).toFixed(dp));
+
 const signed = (v, dp = 2) =>
   v == null ? '—' : `${Number(v) > 0 ? '+' : Number(v) < 0 ? '−' : ''}${Math.abs(Number(v)).toFixed(dp)}`;
 const tone = (v) => (v == null ? '' : Number(v) > 0 ? 'bt-green' : Number(v) < 0 ? 'bt-red' : '');
@@ -73,7 +74,7 @@ export default function StopSweepPanel({ runId }) {
       <InfoNote
         tone={data.unmeasured > 0 ? 'warning' : 'neutral'}
         label="What this screen measured"
-        meta={`best net on this screen: a ${fmt(best.stopPct)}% stop, ${signed(best.deltaPnlPct)}% across the run`}
+        meta={`best net on this screen: a ${formatDecimals(best.stopPct)}% stop, ${signed(best.deltaPnlPct)}% across the run`}
       >
         <strong>{data.measured}</strong> of {data.measured + data.unmeasured} trade(s) carry a recorded
         adverse excursion.
@@ -107,7 +108,7 @@ export default function StopSweepPanel({ runId }) {
           <tbody>
             {rows.map((r) => (
               <tr key={r.stopPct} className={r.stopPct === best.stopPct ? 'bt-row-win' : undefined}>
-                <td className="pb-mono">{fmt(r.stopPct)}%</td>
+                <td className="pb-mono">{formatDecimals(r.stopPct)}%</td>
                 <td className="pb-mono bt-num">
                   {r.stopped}
                   <span className="bt-sweep-of"> / {data.measured}</span>

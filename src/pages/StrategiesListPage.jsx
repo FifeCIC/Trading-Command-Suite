@@ -200,7 +200,7 @@ function LegResults({ legs, unavailable }) {
   }
   if (!legs || !legs.paired) return <span className={styles.tdMuted}>—</span>;
 
-  const fmtPnl = (v) => (v === null || v === undefined ? '?' : `${v > 0 ? '+' : ''}${v.toFixed(2)}`);
+  const fmtPnlKnown = (v) => (v === null || v === undefined ? '?' : `${v > 0 ? '+' : ''}${v.toFixed(2)}`);
   const toneOf = (v) => (v > 0 ? 'var(--risk-normal)' : v < 0 ? 'var(--risk-critical)' : 'var(--ink-soft)');
 
   return (
@@ -218,12 +218,12 @@ function LegResults({ legs, unavailable }) {
           <em className={styles.legRole}>{String(leg.role || '?').toUpperCase().slice(0, 1)}</em>
           <span className={styles.legTrades}>{leg.trades === 0 ? '—' : leg.trades}</span>
           <span className={styles.legPnl} style={{ color: toneOf(leg.totalPnl) }}>
-            {leg.trades === 0 ? '' : fmtPnl(leg.totalPnl)}
+            {leg.trades === 0 ? '' : fmtPnlKnown(leg.totalPnl)}
           </span>
         </span>
       ))}
       <span className={styles.legCombined} title="Both legs together">
-        Σ <span style={{ color: toneOf(legs.combined.totalPnl) }}>{fmtPnl(legs.combined.totalPnl)}</span>
+        Σ <span style={{ color: toneOf(legs.combined.totalPnl) }}>{fmtPnlKnown(legs.combined.totalPnl)}</span>
       </span>
       {legs.unattributed?.trades > 0 && (
         // Named, not hidden: these closed before leg attribution existed and are NOT a leg.

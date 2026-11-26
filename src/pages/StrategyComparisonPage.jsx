@@ -34,6 +34,7 @@
  * up/down/buy/sell/win/lose. The direction classes here are `--pos` / `--neg` deliberately. Do
  * not rename them.
  */
+import { formatPnl } from '../core/format-utils';
 import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
@@ -60,15 +61,14 @@ const SORTERS = [
   { id: 'directiveMaxTotal', label: 'Weight', get: (s) => (s.directiveMaxTotal ?? null), nullish: -Infinity },
 ];
 
-const fmtMoney = (v) =>
-  v === null || v === undefined ? '—' : `${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}`;
+// ⚠️ A signed 2dp number is `formatPnl()` in `core/format-utils` — this was a local copy.
 
 /** P&L value with an explicit sign AND a word, so colour is never the only carrier of meaning. */
 function Pnl({ value }) {
   if (value === null || value === undefined) return <span className="strategycmp-muted">—</span>;
   return (
     <span className={`strategycmp-pnl ${value >= 0 ? 'strategycmp-pos' : 'strategycmp-neg'}`}>
-      {fmtMoney(value)}
+      {formatPnl(value)}
     </span>
   );
 }
@@ -84,7 +84,7 @@ function DailyBars({ values, days }) {
           key={days[i]}
           className={`strategycmp-bar ${v >= 0 ? 'strategycmp-pos' : 'strategycmp-neg'}`}
           style={{ height: `${Math.max(6, (Math.abs(v) / peak) * 100)}%` }}
-          title={`${days[i]}: ${fmtMoney(v)}`}
+          title={`${days[i]}: ${formatPnl(v)}`}
         />
       ))}
     </div>
@@ -267,19 +267,19 @@ export default function StrategyComparisonPage() {
               </tr>
               <tr>
                 <th scope="row">Avg win</th>
-                {strategies.map((s) => (<td key={s.strategy} className="strategycmp-pos">{fmtMoney(s.avgWinPnl)}</td>))}
+                {strategies.map((s) => (<td key={s.strategy} className="strategycmp-pos">{formatPnl(s.avgWinPnl)}</td>))}
               </tr>
               <tr>
                 <th scope="row">Avg loss</th>
-                {strategies.map((s) => (<td key={s.strategy} className="strategycmp-neg">{fmtMoney(s.avgLossPnl)}</td>))}
+                {strategies.map((s) => (<td key={s.strategy} className="strategycmp-neg">{formatPnl(s.avgLossPnl)}</td>))}
               </tr>
               <tr>
                 <th scope="row">Best / worst</th>
                 {strategies.map((s) => (
                   <td key={s.strategy}>
-                    <span className="strategycmp-pos">{fmtMoney(s.bestTrade)}</span>
+                    <span className="strategycmp-pos">{formatPnl(s.bestTrade)}</span>
                     {' / '}
-                    <span className="strategycmp-neg">{fmtMoney(s.worstTrade)}</span>
+                    <span className="strategycmp-neg">{formatPnl(s.worstTrade)}</span>
                   </td>
                 ))}
               </tr>
@@ -321,7 +321,7 @@ export default function StrategyComparisonPage() {
                   if (!d.length) return <td key={s.strategy}>—</td>;
                   const best = Math.max(...d);
                   const i = d.indexOf(best);
-                  return <td key={s.strategy}><span className="strategycmp-pos">{fmtMoney(best)}</span> <span className="strategycmp-muted">{days[i]}</span></td>;
+                  return <td key={s.strategy}><span className="strategycmp-pos">{formatPnl(best)}</span> <span className="strategycmp-muted">{days[i]}</span></td>;
                 })}
               </tr>
               <tr>
@@ -331,7 +331,7 @@ export default function StrategyComparisonPage() {
                   if (!d.length) return <td key={s.strategy}>—</td>;
                   const worst = Math.min(...d);
                   const i = d.indexOf(worst);
-                  return <td key={s.strategy}><span className="strategycmp-neg">{fmtMoney(worst)}</span> <span className="strategycmp-muted">{days[i]}</span></td>;
+                  return <td key={s.strategy}><span className="strategycmp-neg">{formatPnl(worst)}</span> <span className="strategycmp-muted">{days[i]}</span></td>;
                 })}
               </tr>
 

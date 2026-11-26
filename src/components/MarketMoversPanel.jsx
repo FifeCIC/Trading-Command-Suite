@@ -53,9 +53,9 @@ import { noticeFromError } from '../core/notices/from-error';
 import { useSort, SortableTh } from '../core/use-sort';
 import NoticeBlock from './NoticeBlock';
 import './market-movers-panel.css';
+import { formatPct, formatPrice } from '../core/format-utils';
 
-const fmtPct = (v) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}%`);
-const fmtPrice = (v) => (v == null ? '—' : Number(v).toFixed(v < 1 ? 4 : 2));
+
 const fmtVol = (v) => (v == null ? '—' : Number(v) >= 1e6 ? `${(Number(v) / 1e6).toFixed(1)}M` : Number(v).toLocaleString());
 const fmtAge = (m) => {
   if (m == null) return 'unknown';
@@ -118,8 +118,8 @@ function List({ title, rows, accent, defaultSort }) {
                     while `td.mm-num` only set font and colour, so every numeric column had a
                     right-aligned header over left-aligned values. A column's alignment is ONE fact and
                     must be declared on both ends. */}
-                <td className="num mm-num">{fmtPrice(r.price)}</td>
-                <td className={`num mm-num ${r.changePct >= 0 ? 'mm-up' : 'mm-down'}`}>{fmtPct(r.changePct)}</td>
+                <td className="num mm-num">{formatPrice(r.price)}</td>
+                <td className={`num mm-num ${r.changePct >= 0 ? 'mm-up' : 'mm-down'}`}>{formatPct(r.changePct, 2)}</td>
                 <td className="num mm-num">{fmtVol(r.volume)}</td>
               </tr>
             ))}

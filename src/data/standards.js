@@ -142,13 +142,14 @@ export const STANDARDS = [
   {
     id: 'shared-formatters',
     name: 'One formatter per concept across pages',
-    why: '`src/core/format-utils.js` exists and 26 pages import it, but 8 pages declare their own '
-      + '`fmtPct`/`fmtTime`/`fmtMoney`/`fmtWhen`/`num2` with DIFFERENT behaviour for the same name.',
-    gate: null,
-    gap: 'No gate. Needs a scan for locally-declared formatters that shadow format-utils.',
-    verify: null,
-    selfTest: null,
-    enforcedIn: 'none',
+    why: '`src/core/format-utils.js` is imported by 26 files, yet 13 more declared a formatter of their '
+      + 'own and four names collided with a canonical export — `fmtCurrency` that rendered no currency, '
+      + '`fmtDuration` that said "2d 0h" where the shared one says "2d", and two `fmtPrice` rules under '
+      + 'one name. The shorter-lived copy is the one that gets the next fix.',
+    gate: 'scripts/validate-formatters.cjs',
+    verify: 'node scripts/validate-formatters.cjs',
+    selfTest: 'node scripts/validate-formatters.cjs --self-test',
+    enforcedIn: 'prebuild',
   },
   {
     id: 'page-data-access',

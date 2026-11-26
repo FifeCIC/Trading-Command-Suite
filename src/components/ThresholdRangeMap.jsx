@@ -30,8 +30,9 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { formatDecimals } from '../core/format-utils';
 
-const fmt = (v, digits = 2) => (v == null ? '—' : Number(v).toFixed(digits));
+
 
 export default function ThresholdRangeMap() {
   const q = useQuery({
@@ -127,9 +128,9 @@ export default function ThresholdRangeMap() {
                       <span className="dg-range-sub">↳ same protocol</span>
                     )}
                   </td>
-                  <td className="dg-range-num">{fmt(b.thresholdPct, 2)}%</td>
-                  <td className="dg-range-num">{fmt(b.floorPct, 2)}%</td>
-                  <td className="dg-range-num">{fmt(band?.ceilingPct, 2)}%</td>
+                  <td className="dg-range-num">{formatDecimals(b.thresholdPct, 2)}%</td>
+                  <td className="dg-range-num">{formatDecimals(b.floorPct, 2)}%</td>
+                  <td className="dg-range-num">{formatDecimals(band?.ceilingPct, 2)}%</td>
                   <td>
                     {band?.floorPct == null ? (
                       <span className="dg-range-sub">
@@ -137,7 +138,7 @@ export default function ThresholdRangeMap() {
                       </span>
                     ) : (
                       <span className="dg-range-sub">
-                        {fmt(band.floorSharePct, 1)}% of {band.samples} readings ·{' '}
+                        {formatDecimals(band.floorSharePct, 1)}% of {band.samples} readings ·{' '}
                         {band.distinctValues} distinct value(s)
                       </span>
                     )}

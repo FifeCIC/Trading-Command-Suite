@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { formatDateTime } from '../core/format-utils';
 // ⚠️ ERRORS COME FROM THE REGISTRY, NOT FROM PROSE (#826). A code is the stable identity of a
 // message; the wording may change and the code must not. Hand-written error text also loses
 // everything structured about the failure.
@@ -43,11 +44,6 @@ function int(v) {
   return String(v);
 }
 
-function fmtTime(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? '—' : d.toLocaleString();
-}
 
 /** A figure with its own sample size — the page's one non-negotiable convention. */
 function Fig({ label, value, n, suffix }) {
@@ -207,7 +203,7 @@ export default function StopGuardianStatsPage() {
           <Fig label="carry a dist= figure" value={int(sample.withDistance)} n={sample.adjustments} />
         </div>
         <p className="sg-muted">
-          Window: {fmtTime(sample.firstAt)} → {fmtTime(sample.lastAt)}
+          Window: {formatDateTime(sample.firstAt)} → {formatDateTime(sample.lastAt)}
           {sample.withoutDistance > 0 && (
             <> · <strong>{sample.withoutDistance}</strong> adjustment(s) carry no <code>dist=</code> figure
             and are excluded from the distance statistics — not counted as zero.</>
@@ -321,7 +317,7 @@ export default function StopGuardianStatsPage() {
                     <td className={r.insideFloor ? 'sg-bad' : 'sg-ok'}>
                       {r.insideFloor ? 'INSIDE' : 'respects'}
                     </td>
-                    <td className="sg-muted">{fmtTime(r.adjustedAt)}</td>
+                    <td className="sg-muted">{formatDateTime(r.adjustedAt)}</td>
                   </tr>
                 ))}
               </tbody>

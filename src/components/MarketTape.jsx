@@ -6,6 +6,7 @@ import { usePreferences } from '../core/hooks/usePreferences';
 import './market-tape.css';
 import { computeSessionStates, nextSessionLabel } from '../core/session-utils';
 import { timeAgo } from '../core/format-utils';
+import { formatPnl } from '../core/format-utils';
 
 /* ── Preference keys ──
  *
@@ -129,10 +130,6 @@ function fmtUptime(seconds) {
 }
 
 /** Signed money, always 2dp, with an explicit + for gains. */
-function fmtMoney(v) {
-  const n = Number(v) || 0;
-  return `${n >= 0 ? '+' : ''}${n.toFixed(2)}`;
-}
 
 /* ── Sessions ──
  * Session definitions/state now come from the canonical DST-aware util
@@ -361,7 +358,7 @@ export default function MarketTape() {
     const pnlColor = pnl >= 0 ? 'var(--color-profit, #22c55e)' : 'var(--color-loss, #f87171)';
     sections.push({
       key: 'trade', label: 'Trade',
-      htmlContent: `↕ ${dir} ${sym} <span style="color:${pnlColor}">${fmtMoney(pnl)}</span>`,
+      htmlContent: `↕ ${dir} ${sym} <span style="color:${pnlColor}">${formatPnl(pnl)}</span>`,
       color: 'var(--ink-soft, #94a3b8)',
     });
   }
@@ -371,7 +368,7 @@ export default function MarketTape() {
     const sym = escapeHtml(lastWin.symbol || '');
     sections.push({
       key: 'profit', label: 'Profit',
-      htmlContent: `✅ ${sym} <span style="color:var(--color-profit)">${fmtMoney(lastWin.pnl)}</span>`
+      htmlContent: `✅ ${sym} <span style="color:var(--color-profit)">${formatPnl(lastWin.pnl)}</span>`
         + `<span style="color:var(--ink-soft)"> · ${escapeHtml(timeAgo(lastWin.closedAt))}</span>`,
       color: 'var(--ink-soft, #94a3b8)',
     });
@@ -384,7 +381,7 @@ export default function MarketTape() {
     const sym = escapeHtml(lastLoss.symbol || '');
     sections.push({
       key: 'loss', label: 'Loss',
-      htmlContent: `⚠ ${sym} <span style="color:var(--color-loss)">${fmtMoney(lastLoss.pnl)}</span>`
+      htmlContent: `⚠ ${sym} <span style="color:var(--color-loss)">${formatPnl(lastLoss.pnl)}</span>`
         + `<span style="color:var(--ink-soft)"> · ${escapeHtml(timeAgo(lastLoss.closedAt))}</span>`,
       color: 'var(--ink-soft, #94a3b8)',
     });

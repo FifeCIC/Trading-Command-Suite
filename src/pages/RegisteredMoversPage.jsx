@@ -47,6 +47,7 @@
  * and withheld from everyone else until it is deliberately released. New pages default to withheld —
  * `scripts/validate-page-visibility.cjs` fails the build otherwise.
  */
+import { formatPct, formatDecimals } from '../core/format-utils';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
@@ -54,9 +55,10 @@ import { hotStockReadiness } from '../core/hot-stock-readiness';
 import StatusCard from '../components/StatusCard';
 import './registered-movers.css';
 
-const fmtPct = (v) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}%`);
-const fmtNum = (v, d = 1) => (v == null ? '—' : Number(v).toFixed(d));
-const fmtTime = (iso) => (iso ? new Date(iso).toLocaleTimeString() : '—');
+// ⚠️ 2dp WITH a sign is `formatPct(v, 2)` from `core/format-utils`; this was a local copy of it.
+// `fmtClock` keeps the locale's own time string (seconds included), which is NOT `formatTime()` —
+// that forces a 2-digit hour and no seconds. Different output, so a different name.
+const fmtClock = (iso) => (iso ? new Date(iso).toLocaleTimeString() : '—');
 
 /**
  * ⚠️ `detail` IS THE SENTENCE THAT DOES NOT NEED TO BE ON SCREEN — the definition of each state,
@@ -109,7 +111,7 @@ function Row({ r }) {
         <strong>{r.ticker}</strong>
         <span className="rm-type">{r.type}</span>
       </td>
-      <td className={`rm-move ${r.changePct >= 0 ? 'rm-up' : 'rm-down'}`}>{fmtPct(r.changePct)}</td>
+      <td className={`rm-move ${r.changePct >= 0 ? 'rm-up' : 'rm-down'}`}>{formatPct(r.changePct, 2)}</td>
       <td className="rm-num">{r.lastPrice == null ? '—' : r.lastPrice.toFixed(4)}</td>
       <td className="rm-num" title="last bar volume ÷ the window's own average">
         {r.volumeRatio == null ? <span className="rm-dim">no vol</span> : `${r.volumeRatio.toFixed(2)}×`}
@@ -118,7 +120,7 @@ function Row({ r }) {
       <td>
         {r.score ? (
           <span title={`${r.score.protocolId} · ${r.score.signal ?? 'no signal'}`}>
-            {fmtNum(r.score.compositePct)}% <span className="rm-dim">{r.score.signal ?? '—'}</span>
+            {formatDecimals(r.score.compositePct, 1)}% <span className="rm-dim">{r.score.signal ?? '—'}</span>
           </span>
         ) : (
           // ⚠️ "no score" is not zero. Saying 0 would claim the symbol scored badly.
@@ -135,7 +137,7 @@ function Row({ r }) {
         {r.decision ? (
           <span title={r.decision.reason ?? ''}>
             <strong>{r.decision.decision}</strong>
-            <span className="rm-dim"> {fmtTime(r.decision.at)}</span>
+            <span className="rm-dim"> {fmtClock(r.decision.at)}</span>
           </span>
         ) : (
           <span className="rm-dim">—</span>
@@ -275,7 +277,7 @@ export default function RegisteredMoversPage() {
         <button type="button" onClick={() => q.refetch()} disabled={q.isFetching}>
           {q.isFetching ? 'Measuring…' : 'Re-measure'}
         </button>
-        {d && <span className="rm-stamp">measured {fmtTime(d.generatedAt)} · {d.measured} of {d.universe} symbols comparable</span>}
+        {d && <span className="rm-stamp">measured {fmtClock(d.generatedAt)} · {d.measured} of {d.universe} symbols comparable</span>}
       </div>
 
       {/* ⚠️ THREE OUTCOMES: loading · FAILED (unknown) · data. A failed query is never an empty list. */}

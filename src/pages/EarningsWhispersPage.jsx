@@ -13,8 +13,9 @@ Example:
 NVIDIA ([NVDA](https://www.earningswhispers.com/stocks/NVDA)) is confirmed to report earnings on Wednesday, August 26, 2026 at approximately 4:20 PM ET... The consensus calls for $2.09 per share on revenue of $91.71 billion... the Earnings Whisper number sits a touch higher at $2.12 per share...`
 
 function fmtBns(label) { return label ?? '—' }
-function fmtPct(n) { return n == null ? '—' : `${n.toFixed(1)}%` }
-function fmtMoney(n) { return n == null ? '—' : formatCurrency(n) }
+// ⚠️ UNSIGNED 1dp — deliberately NOT `formatPct()`, which always carries a sign. An earnings
+// surprise reads "+3.2% beat", so the sign comes from the word beside it, not the number.
+function fmtPctUnsigned(n) { return n == null ? '—' : `${n.toFixed(1)}%` }
 
 export default function EarningsWhispersPage() {
   const [text, setText] = useState('')
@@ -128,21 +129,21 @@ export default function EarningsWhispersPage() {
                     <td><strong>{e.symbol}</strong></td>
                     <td>{e.name ?? '—'}</td>
                     <td>{e.reportDateLabel ?? '—'}</td>
-                    <td>{fmtMoney(e.consensusEps)}</td>
+                    <td>{formatCurrency(e.consensusEps)}</td>
                     <td>{fmtBns(e.consensusRevenueLabel)}</td>
-                    <td>{fmtMoney(e.whisperEps)}</td>
+                    <td>{formatCurrency(e.whisperEps)}</td>
                     <td>
                       {e.guidanceEpsLow != null || e.guidanceEpsHigh != null
-                        ? `${fmtMoney(e.guidanceEpsLow)} – ${fmtMoney(e.guidanceEpsHigh)}`
+                        ? `${formatCurrency(e.guidanceEpsLow)} – ${formatCurrency(e.guidanceEpsHigh)}`
                         : '—'}
                     </td>
                     <td>
                       {e.beatPct != null
-                        ? `${fmtPct(e.beatPct)} ${e.beatSide === 'miss' ? 'miss' : 'beat'}`
+                        ? `${fmtPctUnsigned(e.beatPct)} ${e.beatSide === 'miss' ? 'miss' : 'beat'}`
                         : '—'}
                     </td>
-                    <td>{fmtPct(e.impliedMovePct)}</td>
-                    <td>{fmtPct(e.priceVs200dmaPct)}</td>
+                    <td>{fmtPctUnsigned(e.impliedMovePct)}</td>
+                    <td>{fmtPctUnsigned(e.priceVs200dmaPct)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -157,11 +158,11 @@ export default function EarningsWhispersPage() {
               <div className="ew-entry-grid">
                 <div><span className="ew-detail-label">Short interest</span>
                   {e.shortInterestChangePct != null
-                    ? `${e.shortInterestDirection === 'down' ? '▼' : '▲'} ${fmtPct(e.shortInterestChangePct)} since last quarter`
+                    ? `${e.shortInterestDirection === 'down' ? '▼' : '▲'} ${fmtPctUnsigned(e.shortInterestChangePct)} since last quarter`
                     : '—'}</div>
-                <div><span className="ew-detail-label">Recent avg move</span>{fmtPct(e.recentAvgMovePct)}</div>
-                <div><span className="ew-detail-label">Stock since last report</span>{fmtPct(e.stockChangePct)}</div>
-                <div><span className="ew-detail-label">200dma price</span>{fmtMoney(e.dma200Price)}</div>
+                <div><span className="ew-detail-label">Recent avg move</span>{fmtPctUnsigned(e.recentAvgMovePct)}</div>
+                <div><span className="ew-detail-label">Stock since last report</span>{fmtPctUnsigned(e.stockChangePct)}</div>
+                <div><span className="ew-detail-label">200dma price</span>{formatCurrency(e.dma200Price)}</div>
               </div>
               <p className="ew-raw-text">{e.rawText}</p>
             </details>

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { formatDateTime } from '../core/format-utils';
 import './position-lifecycle.css';
 
 /**
@@ -11,11 +12,6 @@ import './position-lifecycle.css';
  * stop adjustments. Backed by GET /api/trading/position-lifecycle.
  */
 
-function fmtTime(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? '—' : d.toLocaleString();
-}
 
 function SideBadge({ side }) {
   const s = (side || '').toLowerCase();
@@ -61,7 +57,7 @@ export default function PositionLifecyclePage() {
         <div className="poslife-stat"><span className="poslife-stat-num">{openTrades.length}</span><span>Open trades</span></div>
         <div className="poslife-stat"><span className="poslife-stat-num">{closedTrades.length}</span><span>Closed (recent)</span></div>
         <div className="poslife-stat"><span className="poslife-stat-num">{positions.length}</span><span>Broker positions</span></div>
-        <div className="poslife-stat"><span className="poslife-stat-num poslife-stat-time">{fmtTime(sync.lastSyncedAt)}</span><span>Last position sync</span></div>
+        <div className="poslife-stat"><span className="poslife-stat-num poslife-stat-time">{formatDateTime(sync.lastSyncedAt)}</span><span>Last position sync</span></div>
       </div>
 
       <section className="poslife-section">
@@ -82,7 +78,7 @@ export default function PositionLifecyclePage() {
                   <td className="pl-muted">{t.source || '—'}</td>
                   <td>{t.quantity ?? '—'}</td>
                   <td>{t.entryPrice ?? '—'}</td>
-                  <td className="pl-muted">{fmtTime(t.openedAt)}</td>
+                  <td className="pl-muted">{formatDateTime(t.openedAt)}</td>
                 </tr>
               ))}
             </tbody>
@@ -109,7 +105,7 @@ export default function PositionLifecyclePage() {
                   <td>{p.quantity ?? '—'}</td>
                   <td>{p.avgPrice ?? '—'}</td>
                   <td className={(p.pnl ?? 0) >= 0 ? 'poslife-green' : 'poslife-red'}>{(p.pnl ?? 0).toFixed(2)}</td>
-                  <td className="pl-muted">{fmtTime(p.lastQuotedAt)}</td>
+                  <td className="pl-muted">{formatDateTime(p.lastQuotedAt)}</td>
                 </tr>
               ))}
             </tbody>
@@ -130,7 +126,7 @@ export default function PositionLifecyclePage() {
                 <span className="poslife-mono">#{a.tradeTicket}</span>
                 <span className="pl-muted">SL {a.oldSl ?? '—'} → {a.newSl ?? '—'}</span>
                 <span className="poslife-reason">{a.reason}</span>
-                <span className="pl-muted">{fmtTime(a.adjustedAt)}</span>
+                <span className="pl-muted">{formatDateTime(a.adjustedAt)}</span>
               </li>
             ))}
           </ul>

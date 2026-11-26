@@ -22,6 +22,7 @@
  * the status chip says which. A credentials-less provider that needs no key (Binance market data)
  * reports `message` explaining that, and the page shows the message rather than a red badge.
  */
+import { relativeAge } from '../core/format-utils';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
@@ -41,16 +42,8 @@ const STATUS_TONE = {
   unknown: styles.chipNeutral,
 };
 
-const fmtWhen = (iso) => {
-  if (!iso) return 'never';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return 'never';
-  const mins = Math.round((Date.now() - d.getTime()) / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  if (mins < 60 * 24) return `${Math.round(mins / 60)}h ago`;
-  return `${Math.round(mins / 1440)}d ago`;
-};
+// ⚠️ `fmtWhen` lived here as a local copy of `relativeAge` (register row 296) — the same
+// name meant a different thing in `ScreenerPage`, which is the hazard the shared owner closes.
 
 export default function VendorsPage() {
   const healthQuery = useQuery({
@@ -183,7 +176,7 @@ export default function VendorsPage() {
                           {p.status || 'unknown'}
                         </span>
                       </td>
-                      <td className={styles.muted}>{fmtWhen(p.checkedAt)}</td>
+                      <td className={styles.muted}>{relativeAge(p.checkedAt, { empty: 'never' })}</td>
                       <td className="num">
                         {p.latencyMs != null ? `${p.latencyMs} ms` : <span className={styles.muted}>—</span>}
                       </td>

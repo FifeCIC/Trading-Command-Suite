@@ -33,6 +33,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiDelete } from '../core/api/client';
+import { relativeAge } from '../core/format-utils';
 import { noticeFromError } from '../core/notices/from-error.js';
 import { notice } from '../core/notices/registry.js';
 import NoticeBlock from '../components/NoticeBlock';
@@ -51,17 +52,8 @@ import styles from './accounts.module.css';
 
 const REFRESH_MS = 30_000;
 
-/** Relative age of a timestamp, so a stale sync is visible without arithmetic. */
-const fmtWhen = (iso) => {
-  if (!iso) return 'never';
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return 'never';
-  const mins = Math.round((Date.now() - t) / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  if (mins < 60 * 24) return `${Math.round(mins / 60)}h ago`;
-  return `${Math.round(mins / 1440)}d ago`;
-};
+// ⚠️ `fmtWhen` lived here as a local copy of `relativeAge` (register row 296). The shared
+// owner is `core/format-utils`, so a "last synced" column reads the same on every page.
 
 export default function BrokersPage() {
   const accountsQuery = useQuery({
@@ -585,7 +577,7 @@ export default function BrokersPage() {
                                       >
                                         symbols {b.state || 'unknown'}
                                       </span>
-                                      <span className={styles.muted}>last sync {fmtWhen(b.lastSuccessAt)}</span>
+                                      <span className={styles.muted}>last sync {relativeAge(b.lastSuccessAt, { empty: 'never' })}</span>
                                     </Fragment>
                                   ))}
                                 </div>
