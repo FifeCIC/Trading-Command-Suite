@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 210,
+  "count": 211,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1978,6 +1978,17 @@
       "where": "repo",
       "category": "validator",
       "purpose": "© 2026 Ryan Bayne / FifeCIC · AGPL-3.0 · https://github.com/FifeCIC/Trading-Command-Suite",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-standards.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a standards BADGE must name a gate that exists and is WIRED.",
       "selfTest": true,
       "reaches": [
         "prebuild",

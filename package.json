@@ -37,7 +37,7 @@
     "audit:unregistered-directives": "node scripts/why-unregistered.cjs",
     "audit:unregistered-directives:self-test": "node scripts/why-unregistered.cjs --self-test",
     "build": "vite build",
-    "prebuild": "node scripts/validate-phrasing.cjs && node scripts/validate-repo-hygiene.cjs && node scripts/validate-page-visibility.cjs && node scripts/validate-no-notice-bar.cjs && node scripts/validate-arch-card-shapes.cjs && node scripts/validate-route-params.cjs && node scripts/validate-fault-taxonomy.cjs",
+    "prebuild": "node scripts/validate-phrasing.cjs && node scripts/validate-repo-hygiene.cjs && node scripts/validate-page-visibility.cjs && node scripts/validate-no-notice-bar.cjs && node scripts/validate-arch-card-shapes.cjs && node scripts/validate-route-params.cjs && node scripts/validate-fault-taxonomy.cjs && node scripts/validate-standards.cjs",
     "postbuild": "node ./scripts/check-bundle-budget.mjs",
     "build:guard": "npm run build",
     "canary:arch-docs": "node ./scripts/canary-architecture-docs.cjs",
@@ -170,6 +170,9 @@
     "audit:handoffs": "node scripts/check-handoff-staleness.cjs",
     "audit:column-writers": "node scripts/audit-column-writers.cjs",
     "audit:column-writers:self-test": "node scripts/audit-column-writers.cjs --self-test",
+    "standards": "node scripts/validate-standards.cjs --report",
+    "standards:check": "node scripts/validate-standards.cjs",
+    "standards:self-test": "node scripts/validate-standards.cjs --self-test",
     "audit:handoffs:self-test": "node scripts/check-handoff-staleness.cjs --self-test"
   },
   "dependencies": {
