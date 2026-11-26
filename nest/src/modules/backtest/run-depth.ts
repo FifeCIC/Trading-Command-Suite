@@ -92,6 +92,18 @@ export interface DepthTrade {
   /** Did the ranked selection permit this trade? `false` = the engine took it, the strategy could not. */
   kept: boolean;
   /**
+   * The bracket this trade carried, as the engine recorded it — for the chart to draw the levels the
+   * trade was actually walked against (note m, 2026-11-26).
+   *
+   * ⚠️ `null` IS "NOT RECORDED", NEVER ZERO. Runs recorded before levels were stored (#R14) hold null,
+   * and a chart that plotted null as 0 would draw a stop at a price the instrument never traded.
+   * ⚠️ This is the level the trade ENDED with, not its path: a trailing stop moves, and the engine does
+   * not record each move. The chart draws one horizontal line per trade and says so — it must never imply
+   * a moving stop it cannot measure.
+   */
+  stopLoss?: number | null;
+  takeProfit?: number | null;
+  /**
    * WHY the selection did not count it — `null`/absent when it did.
    *
    * ⚠️ A REFUSED ROW STILL HAS AN EXIT (2026-11-23, owner report). Measured: a row read `LONG refused`

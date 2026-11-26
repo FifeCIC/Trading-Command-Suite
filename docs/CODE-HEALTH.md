@@ -27,13 +27,13 @@ line counts change on every edit and a guard that fires during normal work gets 
 ⚠️ This tool measures SHAPE, not correctness. It never reads the logic. A file here is not "wrong" —
 it is expensive to review and risky to change.
 
-## Files needing attention (15)
+## Files needing attention (16)
 
 ### `critical`
 
 | File | Lines | Comments | Longest fn | Fns over 60 |
 |---|---|---|---|---|
-| `nest/src/modules/backtest/backtest.service.ts` | 5,687 | 44.7% | 1588 | 5 |
+| `nest/src/modules/backtest/backtest.service.ts` | 5,717 | 44.8% | 1588 | 5 |
 | `nest/src/modules/trading/trading-strategy.service.ts` | 3,912 | 36.8% | 218 | 8 |
 | `nest/src/modules/automation/automation-loop.service.ts` | 3,534 | 37.8% | 417 | 4 |
 
@@ -53,10 +53,11 @@ it is expensive to review and risky to change.
 | `src/pages/ViewStrategyPage.jsx` | 1,823 | 19.7% | 841 | 1 |
 | `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts` | 1,770 | 26.2% | 87 | 3 |
 | `src/pages/MetaStackExplorerPage.jsx` | 1,695 | 15.0% | 1381 | 1 |
-| `src/pages/MoversStrategyBacktestPage.jsx` | 1,593 | 19.4% | 1457 | 1 |
+| `src/pages/MoversStrategyBacktestPage.jsx` | 1,617 | 19.7% | 1480 | 1 |
 | `nest/src/modules/trading/trade-history.controller.ts` | 1,542 | 27.4% | 413 | 4 |
 | `nest/src/modules/providers/adapters/mt5.adapter.ts` | 1,536 | 32.4% | 195 | 1 |
 | `src/pages/ArchitectureFrameworkPage.jsx` | 1,528 | 0.8% | 1281 | 1 |
+| `nest/src/modules/backtest/selection-run.service.ts` | 1,512 | 33.1% | 650 | 2 |
 
 ### `large-but-structured`
 

@@ -1667,6 +1667,7 @@
    ⚠️ Raised HERE rather than in `step-accordion.css` on purpose: the accordion is shared, this is one
    page's density decision, and editing the shared sheet would change every other page's steps. */
 .mvp-page .step-acc__num { font-size: 0.78rem; }
+.mvp-page .mvp-depth-title { font-size: 12px; letter-spacing: 0.05em; }
 .mvp-page .step-acc__stat span { font-size: 0.72rem; letter-spacing: 0.03em; }
 .mvp-page .step-acc__stat strong { font-size: 0.95rem; }
 
@@ -1692,3 +1693,18 @@
   color: var(--text-dim);
   white-space: nowrap;
 }
+
+/* ── The bar chart's frame (note m) ────────────────────────────────────────────────────────────────
+   The chart draws its own grid, so the frame is a plain bounded surface: no inner padding (the canvas
+   fills it), one border, and the same 6px radius as `.mvp-scroll` so it reads as one family of frames. */
+.mvp-chart {
+  width: 100%;
+  height: 300px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+/* Sections inside one depth panel get the page's block rhythm rather than touching each other. */
+.mvp-depth > section + section { margin-top: 18px; }

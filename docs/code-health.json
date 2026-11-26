@@ -19,9 +19,9 @@
     },
     {
       "path": "nest/src/modules/backtest/backtest.service.ts",
-      "lines": 5687,
+      "lines": 5717,
       "verdict": "critical",
-      "commentRatio": 0.447,
+      "commentRatio": 0.448,
       "maxFunctionLines": 1588
     },
     {
@@ -110,10 +110,10 @@
     },
     {
       "path": "src/pages/MoversStrategyBacktestPage.jsx",
-      "lines": 1593,
+      "lines": 1617,
       "verdict": "warn",
-      "commentRatio": 0.194,
-      "maxFunctionLines": 1457
+      "commentRatio": 0.197,
+      "maxFunctionLines": 1480
     },
     {
       "path": "nest/src/modules/trading/trade-history.controller.ts",
@@ -138,10 +138,10 @@
     },
     {
       "path": "nest/src/modules/backtest/selection-run.service.ts",
-      "lines": 1495,
-      "verdict": "ok",
-      "commentRatio": 0.324,
-      "maxFunctionLines": 649
+      "lines": 1512,
+      "verdict": "warn",
+      "commentRatio": 0.331,
+      "maxFunctionLines": 650
     },
     {
       "path": "nest/src/modules/providers/position-sync.service.ts",
@@ -187,9 +187,9 @@
     },
     {
       "path": "src/core/view-meta.js",
-      "lines": 1318,
+      "lines": 1330,
       "verdict": "ok",
-      "commentRatio": 0.145,
+      "commentRatio": 0.147,
       "maxFunctionLines": 13
     },
     {
@@ -579,9 +579,9 @@
     },
     {
       "path": "src/components/backtest/MoversDepthPanel.jsx",
-      "lines": 701,
+      "lines": 707,
       "verdict": "ok",
-      "commentRatio": 0.187,
+      "commentRatio": 0.185,
       "maxFunctionLines": 28
     },
     {
@@ -663,7 +663,7 @@
     },
     {
       "path": "src/core/nav-tree.js",
-      "lines": 628,
+      "lines": 631,
       "verdict": "ok",
       "commentRatio": 0.636,
       "maxFunctionLines": 8
@@ -709,6 +709,13 @@
       "verdict": "ok",
       "commentRatio": 0.49,
       "maxFunctionLines": 54
+    },
+    {
+      "path": "src/components/backtest/TradeConfigPanel.jsx",
+      "lines": 586,
+      "verdict": "ok",
+      "commentRatio": 0.261,
+      "maxFunctionLines": 89
     },
     {
       "path": "nest/src/modules/notifications/notifications.service.ts",
@@ -807,13 +814,6 @@
       "verdict": "ok",
       "commentRatio": 0.025,
       "maxFunctionLines": 498
-    },
-    {
-      "path": "src/components/backtest/TradeConfigPanel.jsx",
-      "lines": 556,
-      "verdict": "ok",
-      "commentRatio": 0.248,
-      "maxFunctionLines": 89
     },
     {
       "path": "src/pages/ScreenerPage.jsx",
@@ -1034,9 +1034,9 @@
     },
     {
       "path": "src/core/hidden-views.js",
-      "lines": 473,
+      "lines": 478,
       "verdict": "ok",
-      "commentRatio": 0.68,
+      "commentRatio": 0.681,
       "maxFunctionLines": 39
     },
     {
@@ -1047,18 +1047,18 @@
       "maxFunctionLines": 255
     },
     {
+      "path": "src/core/view-routes.jsx",
+      "lines": 467,
+      "verdict": "ok",
+      "commentRatio": 0.291,
+      "maxFunctionLines": 0
+    },
+    {
       "path": "nest/src/modules/trading/broker-capability.service.ts",
       "lines": 467,
       "verdict": "ok",
       "commentRatio": 0.312,
       "maxFunctionLines": 118
-    },
-    {
-      "path": "src/core/view-routes.jsx",
-      "lines": 465,
-      "verdict": "ok",
-      "commentRatio": 0.292,
-      "maxFunctionLines": 0
     },
     {
       "path": "nest/src/modules/scoring/micro-trend-detector.service.ts",
@@ -1873,6 +1873,13 @@
       "maxFunctionLines": 122
     },
     {
+      "path": "nest/src/modules/backtest/run-depth.ts",
+      "lines": 317,
+      "verdict": "ok",
+      "commentRatio": 0.423,
+      "maxFunctionLines": 7
+    },
+    {
       "path": "src/components/backtest/RsiDivergencePanel.jsx",
       "lines": 316,
       "verdict": "ok",
@@ -1997,13 +2004,6 @@
       "verdict": "ok",
       "commentRatio": 0.111,
       "maxFunctionLines": 36
-    },
-    {
-      "path": "nest/src/modules/backtest/run-depth.ts",
-      "lines": 305,
-      "verdict": "ok",
-      "commentRatio": 0.406,
-      "maxFunctionLines": 7
     },
     {
       "path": "nest/src/modules/directives/utils/divergence.ts",
@@ -2160,6 +2160,13 @@
       "maxFunctionLines": 9
     },
     {
+      "path": "nest/src/modules/backtest/settings-inventory.ts",
+      "lines": 287,
+      "verdict": "ok",
+      "commentRatio": 0.336,
+      "maxFunctionLines": 4
+    },
+    {
       "path": "src/core/signal-utils.js",
       "lines": 286,
       "verdict": "ok",
@@ -2291,13 +2298,6 @@
       "verdict": "ok",
       "commentRatio": 0.126,
       "maxFunctionLines": 55
-    },
-    {
-      "path": "nest/src/modules/backtest/settings-inventory.ts",
-      "lines": 277,
-      "verdict": "ok",
-      "commentRatio": 0.349,
-      "maxFunctionLines": 4
     },
     {
       "path": "src/pages/RoadmapPage.jsx",
@@ -2839,6 +2839,13 @@
       "maxFunctionLines": 3
     },
     {
+      "path": "src/features/movers-strategy/DirectiveRecordStep.jsx",
+      "lines": 227,
+      "verdict": "ok",
+      "commentRatio": 0.245,
+      "maxFunctionLines": 8
+    },
+    {
       "path": "src/pages/T212ISAPage.jsx",
       "lines": 227,
       "verdict": "ok",
@@ -3287,6 +3294,13 @@
       "maxFunctionLines": 7
     },
     {
+      "path": "src/features/movers-strategy/ScoringFunnelStep.jsx",
+      "lines": 201,
+      "verdict": "ok",
+      "commentRatio": 0.216,
+      "maxFunctionLines": 1
+    },
+    {
       "path": "nest/src/common/utils/style-thresholds.ts",
       "lines": 201,
       "verdict": "ok",
@@ -3623,6 +3637,13 @@
       "maxFunctionLines": 122
     },
     {
+      "path": "src/features/movers-strategy/steps.js",
+      "lines": 186,
+      "verdict": "ok",
+      "commentRatio": 0.459,
+      "maxFunctionLines": 0
+    },
+    {
       "path": "src/pages/PlatformComparisonsPage.jsx",
       "lines": 186,
       "verdict": "ok",
@@ -3847,13 +3868,6 @@
       "maxFunctionLines": 0
     },
     {
-      "path": "src/features/movers-strategy/steps.js",
-      "lines": 176,
-      "verdict": "ok",
-      "commentRatio": 0.357,
-      "maxFunctionLines": 0
-    },
-    {
       "path": "src/pages/OrderTestingPage.jsx",
       "lines": 176,
       "verdict": "ok",
@@ -3936,13 +3950,6 @@
       "verdict": "ok",
       "commentRatio": 0.238,
       "maxFunctionLines": 25
-    },
-    {
-      "path": "src/features/movers-strategy/DirectiveRecordStep.jsx",
-      "lines": 173,
-      "verdict": "ok",
-      "commentRatio": 0.225,
-      "maxFunctionLines": 8
     },
     {
       "path": "nest/src/common/trading/exit-guardian/pyramid-decision.ts",
@@ -4041,13 +4048,6 @@
       "verdict": "ok",
       "commentRatio": 0.197,
       "maxFunctionLines": 79
-    },
-    {
-      "path": "src/features/movers-strategy/ScoringFunnelStep.jsx",
-      "lines": 169,
-      "verdict": "ok",
-      "commentRatio": 0.253,
-      "maxFunctionLines": 1
     },
     {
       "path": "nest/src/modules/directives/implementations/mfi-overbought.directive.ts",
@@ -4328,6 +4328,13 @@
       "verdict": "ok",
       "commentRatio": 0.221,
       "maxFunctionLines": 61
+    },
+    {
+      "path": "src/features/movers-strategy/depth-chart.js",
+      "lines": 159,
+      "verdict": "ok",
+      "commentRatio": 0.356,
+      "maxFunctionLines": 11
     },
     {
       "path": "src/features/movers-strategy/fill-gap.js",
@@ -4834,6 +4841,13 @@
       "maxFunctionLines": 19
     },
     {
+      "path": "src/core/movers-funnel.test.js",
+      "lines": 147,
+      "verdict": "data",
+      "commentRatio": 0.121,
+      "maxFunctionLines": 1
+    },
+    {
       "path": "src/core/sw/dev-unregister.js",
       "lines": 147,
       "verdict": "ok",
@@ -4888,6 +4902,13 @@
       "verdict": "data",
       "commentRatio": 0.319,
       "maxFunctionLines": 20
+    },
+    {
+      "path": "src/components/backtest/MoversDepthChart.jsx",
+      "lines": 146,
+      "verdict": "ok",
+      "commentRatio": 0.242,
+      "maxFunctionLines": 3
     },
     {
       "path": "src/components/ExitDataRecoveryNotice.jsx",
@@ -5156,6 +5177,13 @@
       "maxFunctionLines": 121
     },
     {
+      "path": "src/core/movers-funnel.js",
+      "lines": 138,
+      "verdict": "ok",
+      "commentRatio": 0.317,
+      "maxFunctionLines": 20
+    },
+    {
       "path": "src/pages/PositionLifecyclePage.jsx",
       "lines": 138,
       "verdict": "ok",
@@ -5415,6 +5443,13 @@
       "maxFunctionLines": 1
     },
     {
+      "path": "src/features/movers-strategy/ResultByDayStep.jsx",
+      "lines": 129,
+      "verdict": "ok",
+      "commentRatio": 0.185,
+      "maxFunctionLines": 1
+    },
+    {
       "path": "src/pages/ScheduledJobsPage.jsx",
       "lines": 129,
       "verdict": "ok",
@@ -5616,13 +5651,6 @@
       "verdict": "data",
       "commentRatio": 0.393,
       "maxFunctionLines": 0
-    },
-    {
-      "path": "src/features/movers-strategy/ResultByDayStep.jsx",
-      "lines": 125,
-      "verdict": "ok",
-      "commentRatio": 0.192,
-      "maxFunctionLines": 1
     },
     {
       "path": "nest/src/common/alerts/pnl-alert.ts",
@@ -6360,6 +6388,13 @@
       "maxFunctionLines": 11
     },
     {
+      "path": "src/components/backtest/UnusedDataPanel.jsx",
+      "lines": 107,
+      "verdict": "ok",
+      "commentRatio": 0.232,
+      "maxFunctionLines": 1
+    },
+    {
       "path": "nest/src/modules/calendar/pre-open-session.ts",
       "lines": 107,
       "verdict": "ok",
@@ -6430,20 +6465,6 @@
       "maxFunctionLines": 1
     },
     {
-      "path": "src/core/movers-funnel.js",
-      "lines": 105,
-      "verdict": "ok",
-      "commentRatio": 0.271,
-      "maxFunctionLines": 20
-    },
-    {
-      "path": "src/core/movers-funnel.test.js",
-      "lines": 105,
-      "verdict": "data",
-      "commentRatio": 0.086,
-      "maxFunctionLines": 1
-    },
-    {
       "path": "src/theme/useThemeRuntime.js",
       "lines": 105,
       "verdict": "ok",
@@ -6477,13 +6498,6 @@
       "verdict": "ok",
       "commentRatio": 0.021,
       "maxFunctionLines": 70
-    },
-    {
-      "path": "src/components/backtest/UnusedDataPanel.jsx",
-      "lines": 104,
-      "verdict": "ok",
-      "commentRatio": 0.24,
-      "maxFunctionLines": 1
     },
     {
       "path": "src/components/SettingsControls.jsx",
@@ -6689,6 +6703,13 @@
       "maxFunctionLines": 1
     },
     {
+      "path": "src/features/movers-strategy/depth-chart.test.js",
+      "lines": 98,
+      "verdict": "data",
+      "commentRatio": 0,
+      "maxFunctionLines": 2
+    },
+    {
       "path": "nest/src/common/interceptors/pagination.interceptor.ts",
       "lines": 98,
       "verdict": "ok",
@@ -6722,6 +6743,13 @@
       "verdict": "data",
       "commentRatio": 0.282,
       "maxFunctionLines": 1
+    },
+    {
+      "path": "src/features/movers-strategy/price-reference.js",
+      "lines": 96,
+      "verdict": "ok",
+      "commentRatio": 0.517,
+      "maxFunctionLines": 22
     },
     {
       "path": "src/main.jsx",
@@ -6939,6 +6967,13 @@
       "verdict": "ok",
       "commentRatio": 0.417,
       "maxFunctionLines": 25
+    },
+    {
+      "path": "src/pages/StandardsPage.jsx",
+      "lines": 90,
+      "verdict": "ok",
+      "commentRatio": 0.202,
+      "maxFunctionLines": 69
     },
     {
       "path": "src/runtime/report.js",
@@ -7228,6 +7263,20 @@
       "maxFunctionLines": 40
     },
     {
+      "path": "src/features/movers-strategy/price-reference.test.js",
+      "lines": 82,
+      "verdict": "data",
+      "commentRatio": 0.072,
+      "maxFunctionLines": 1
+    },
+    {
+      "path": "src/features/movers-strategy/ResultBySymbolStep.jsx",
+      "lines": 82,
+      "verdict": "ok",
+      "commentRatio": 0.234,
+      "maxFunctionLines": 1
+    },
+    {
       "path": "src/utils/networkStatus.js",
       "lines": 82,
       "verdict": "ok",
@@ -7289,13 +7338,6 @@
       "verdict": "ok",
       "commentRatio": 0.563,
       "maxFunctionLines": 5
-    },
-    {
-      "path": "src/features/movers-strategy/ResultBySymbolStep.jsx",
-      "lines": 80,
-      "verdict": "ok",
-      "commentRatio": 0.24,
-      "maxFunctionLines": 1
     },
     {
       "path": "nest/src/modules/backtest/peak-change.ts",
@@ -7711,6 +7753,13 @@
       "maxFunctionLines": 22
     },
     {
+      "path": "src/features/movers-strategy/directive-run-stats.js",
+      "lines": 70,
+      "verdict": "ok",
+      "commentRatio": 0.492,
+      "maxFunctionLines": 43
+    },
+    {
       "path": "src/theme/packs/slate.js",
       "lines": 70,
       "verdict": "ok",
@@ -7946,6 +7995,13 @@
       "lines": 64,
       "verdict": "data",
       "commentRatio": 0.107,
+      "maxFunctionLines": 1
+    },
+    {
+      "path": "src/features/movers-strategy/directive-run-stats.test.js",
+      "lines": 64,
+      "verdict": "data",
+      "commentRatio": 0.036,
       "maxFunctionLines": 1
     },
     {

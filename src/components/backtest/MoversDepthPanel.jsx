@@ -33,6 +33,7 @@
  */
 import { useMemo, useState } from 'react';
 import WhyPopover from '../WhyPopover.jsx';
+import MoversDepthChart from './MoversDepthChart.jsx';
 import { formatPct, formatPrice, formatAmount } from '../../core/format-utils';
 
 
@@ -514,6 +515,9 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
           facts (State was removed — it labels the OUTCOME, not the reading) while the DECISION reason
           joins the row as a column. Executions stay a separate table because they are one row per
           TRADE, not per bar. */}
+      {/* ── 2 · the session as a picture, before the tables that detail it ─────────────────────── */}
+      <MoversDepthChart bars={bars} trades={trades} pinTime={pinned} symbol={symbol} />
+
       <section id="mvp-sec-bars" aria-label="Bars, scores and decisions">
         <h3 className="mvp-depth-title">Bars &amp; decisions <span className="mvp-muted">(UTC)</span></h3>
         <div className="mvp-scroll mvp-depth-scroll">

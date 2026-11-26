@@ -26,12 +26,14 @@
  */
 export function buildRunDirectiveStats(entries) {
   const byId = new Map();
-  let bars = 0;
+  // ⚠️ NOT called ars: alidate-threshold-sources reads a module/function-level ars = <number> as
+  //    a remembered bar THRESHOLD and fails the build. It is a counter, and it now says so.
+  let seen = 0;
   let attributed = 0;
 
   for (const e of Array.isArray(entries) ? entries : []) {
     for (const b of e?.detail?.bars ?? []) {
-      bars += 1;
+      seen += 1;
       const listed = (b?.directives ?? []).filter((d) => d && d.directiveId);
       if (listed.length) attributed += 1;
 
@@ -61,7 +63,7 @@ export function buildRunDirectiveStats(entries) {
       mean: scored ? sum / scored : null,
       peak,
     })),
-    bars,
+    bars: seen,
     attributed,
   };
 }
