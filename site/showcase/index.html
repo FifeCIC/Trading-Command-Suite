@@ -144,6 +144,9 @@
   }
   figcaption { margin-top: 8px; font-size: 0.9rem; color: var(--ink-soft); }
   figcaption b { color: var(--ink); }
+  /* The walkthrough sits above the grid, so it is not a gallery item. It is a LINK, not an embed:
+     the page renders from the repository alone, and an iframe would load YouTube on arrival. */
+  figure.watch { margin-top: 20px; }
 
   table.status { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.94rem; }
   table.status th, table.status td {
@@ -258,6 +261,15 @@
       17 captures from the alpha build, in no particular order. Every image is a real screen; none
       is a mockup.
     </p>
+
+    <figure class="watch">
+      <a href="https://www.youtube.com/watch?v=aBFBvRFL17w&amp;t=232s">
+        <img src="assets/video-overview.jpg" width="1280" height="300"
+             alt="Video walkthrough: the app's landing page, its API-online indicator and the Enter Dashboard button.">
+      </a>
+      <figcaption><b>Watch it run.</b> A walkthrough of the app on
+        <a href="https://www.youtube.com/watch?v=aBFBvRFL17w&amp;t=232s">YouTube</a>.</figcaption>
+    </figure>
 
     <div class="gallery" role="list">
 

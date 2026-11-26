@@ -19,7 +19,8 @@ through explicit rules, and — if you let it — places orders through your own
 runs on your machine, against your accounts.
 
 > 👉 **See it before reading about it:** [17 screens from the alpha](https://fifecic.github.io/Trading-Command-Suite/showcase/)
-> — each captioned in plain language, with a glossary for the words the app uses.
+> — each captioned in plain language, with a glossary for the words the app uses. Prefer motion?
+> [Watch the walkthrough on YouTube](https://www.youtube.com/watch?v=aBFBvRFL17w&t=232s).
 
 > ⚠️🛑 It is **not configured to profit by default** and no strategy it ships has been shown to be
 > profitable. Read the [Financial Disclaimer](Financial-Disclaimer) first.

@@ -36,6 +36,19 @@ system already knows — and the second copy is the one that rots. Current total
 [docs/GENERATED-FACTS.md](docs/GENERATED-FACTS.md), which is generated and **fails the build if it
 disagrees with the repo**.
 
+## See It Running
+
+Scoring, gating and dispatch are all visible in the UI — nothing is a black box.
+
+<a href="https://www.youtube.com/watch?v=aBFBvRFL17w&amp;t=232s"><img src="site/showcase/assets/video-overview.jpg" alt="Video walkthrough: the Trading Command Suite landing page with its API-online indicator and Enter Dashboard button." width="860"></a>
+
+<img src="site/showcase/assets/scoring-ladder.png" alt="Scoring Ladder: active protocols on the left, and protocol-ranked symbol cards on the right showing signal and opportunity scores." width="860">
+
+<img src="site/showcase/assets/metastack-status.png" alt="META.Stack Status: provider and broker readiness, a fresh XAUUSD score with its confidence, and the end-to-end readiness checks behind it." width="860">
+
+Full walkthrough on [YouTube](https://www.youtube.com/watch?v=aBFBvRFL17w&t=232s), and every screen on the
+[showcase page](https://fifecic.github.io/Trading-Command-Suite/showcase/).
+
 ## Architecture
 
 ```

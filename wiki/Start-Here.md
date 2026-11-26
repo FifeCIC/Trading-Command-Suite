@@ -25,6 +25,7 @@ Read in this order — each page is short, and none of them assumes you have run
 | [How it works](How-It-Works) | The pipeline: directives → protocol → gate → signal → order |
 | [Glossary](Glossary) | Directive, protocol, gate, composite, snapshot — the words used everywhere else |
 | [FAQ](FAQ) | The questions people ask first, including *"is it profitable?"* |
+| [Video walkthrough](https://www.youtube.com/watch?v=aBFBvRFL17w&t=232s) | The running app, if you would rather watch than read |
 
 ⚠️ **Before you connect any account**, read the [Financial Disclaimer](Financial-Disclaimer). It is
 short, and it is not boilerplate: the app ships unconfigured and no shipped strategy has been shown
