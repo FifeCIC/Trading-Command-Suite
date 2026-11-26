@@ -1493,8 +1493,21 @@ export default function MoversStrategyBacktestPage() {
             {...MOVERS_STEP['mvp-step-bars']}
             meta={(
               <>
-                <StepMeta value={daySymbols.length} label="symbols" />
-                <StepMeta value={mergedTrades.length} label="executions" />
+                {/**
+                  * ⚠️ THESE WERE 0 / 0 WHENEVER A SYMBOL CHIP WAS PICKED (found 2026-11-26). `daySymbols`
+                  * and `mergedTrades` are built from the "All symbols" day view only, so focusing one
+                  * instrument — the normal way to open this step — reported no symbols and no executions
+                  * above a panel holding 54 bars and 63 trades. A header that contradicts its own body is
+                  * worse than no header: it reads as "this step has nothing in it".
+                  */}
+                <StepMeta
+                  value={isAllSymbols ? daySymbols.length : 1}
+                  label={isAllSymbols && daySymbols.length !== 1 ? 'symbols' : 'symbol'}
+                />
+                <StepMeta
+                  value={isAllSymbols ? mergedTrades.length : (focusedDepth?.detail?.trades?.length ?? 0)}
+                  label="executions"
+                />
               </>
             )}
           >

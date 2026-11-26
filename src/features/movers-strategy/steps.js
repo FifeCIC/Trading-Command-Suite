@@ -149,9 +149,14 @@ export const MOVERS_STEPS = [
     title: 'Bar by bar',
     purpose: 'Every bar’s score and every decision, down to the directive that moved it.',
     defaultOpen: false,
-    audit: [
-      'A price chart with markers — score, entry, stop moves, exit — on the bar axis. The one change that turns reading into looking.',
-    ],
+    /**
+     * SHIPPED 2026-11-26 — `MoversDepthChart`: the bar close as a line with entry/exit markers and the
+     * composite score as a histogram on its own scale, plus the stop and target of the trade alive at
+     * the pinned bar. The transform (`depth-chart.js`) is separate from the drawing because everything
+     * that goes wrong with a chart — milliseconds for seconds, unsorted times, a trade that lands on no
+     * bar — fails SILENTLY, and none of it can be asserted from inside a canvas.
+     */
+    audit: [],
   },
   {
     id: 'mvp-step-inventory',
