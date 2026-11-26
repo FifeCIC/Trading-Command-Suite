@@ -168,6 +168,8 @@
     "audit:readiness": "node scripts/audit-project-readiness.cjs",
     "test:readiness": "node scripts/audit-project-readiness.cjs --self-test",
     "audit:handoffs": "node scripts/check-handoff-staleness.cjs",
+    "audit:column-writers": "node scripts/audit-column-writers.cjs",
+    "audit:column-writers:self-test": "node scripts/audit-column-writers.cjs --self-test",
     "audit:handoffs:self-test": "node scripts/check-handoff-staleness.cjs --self-test"
   },
   "dependencies": {

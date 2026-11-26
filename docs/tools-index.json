@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 209,
+  "count": 210,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -40,6 +40,16 @@
       "selfTest": true,
       "reaches": [
         "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "audit-column-writers.cjs",
+      "where": "repo",
+      "category": "audit",
+      "purpose": "WHICH COLUMNS HAVE NEVER HELD A VALUE, on any table with rows.",
+      "selfTest": true,
+      "reaches": [
         "npm"
       ]
     },
