@@ -34,7 +34,7 @@ import { ScoringModule } from '../scoring/scoring.module';
 import { ProgressionModule } from '../progression/progression.module';
 
 @Module({
-  imports: [DirectivesModule, DiversificationModule, RiskModule, NotificationsModule, DatabaseModule, ProvidersModule, AuthModule, forwardRef(() => ScoringModule), ProgressionModule],
+  imports: [DirectivesModule, DiversificationModule, RiskModule, NotificationsModule, DatabaseModule, ProvidersModule, AuthModule, forwardRef(() => ScoringModule), ProgressionModule, FaultsModule],
   controllers: [Mt5TradingController, SessionTrackerController, TradingStrategyController, TradeHistoryController, BrokerConfigController],
   providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, BrokerCapabilityService, TradeRecorderService, DuplicateGuardService, StopAdjustmentRecorder, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService, PyramidPolicyService, BotPerformanceService, FirstRunSeedService, ScoreOnlyProtocolService],
   exports: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, BrokerCapabilityService, TradeRecorderService, DuplicateGuardService, StopAdjustmentRecorder, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService, PyramidPolicyService, BotPerformanceService],

@@ -18,6 +18,23 @@ export default function SystemHealthPage() {
     refetchInterval: 60_000,
   });
 
+  /**
+   * The PERSISTENT fault registry (#1348 option A). Its whole purpose is that a fault which blocks
+   * trading must reach a page somebody already opens — a registry is a graveyard unless it is on a
+   * surface with a cadence beat beside it, which is why the "Reviewed" column exists.
+   *
+   * ⚠️ THE ERROR IS NOT AN EMPTY LIST. `data === undefined` (the request failed) and `rows: []`
+   * (the registry answered "nothing is open") are different facts, and rendering both as "no faults"
+   * is the defect this panel exists to end.
+   */
+  const faultQuery = useQuery({
+    queryKey: ['faults-open'],
+    queryFn: () => apiGet('/api/faults?status=open'),
+    refetchInterval: 60_000,
+  });
+  const faultRows = faultQuery.data?.rows ?? [];
+  const faultRead = faultQuery.isSuccess;
+
   const result = healthQuery.data;
   const checks = result?.checks || [];
   const overall = result?.overall || 'unknown';
@@ -72,6 +89,58 @@ export default function SystemHealthPage() {
             ))
           )}
         </div>
+      </section>
+
+      {/* ── Persistent faults ── */}
+      <section className="sh-section">
+        <h2>Persistent Faults</h2>
+        <p className="sh-subtitle">
+          Faults that survive a restart, counted in EPISODES. A quote that could not price an order
+          appears here by cause — stale, ahead-of-clock, no tick time, no quote — instead of
+          vanishing into the run totals as “this symbol never signalled” (#1348).
+        </p>
+        {!faultRead ? (
+          <p className="sh-empty">
+            {faultQuery.isLoading
+              ? 'Reading the fault registry…'
+              : 'The fault registry could not be read — this is NOT “no faults”. Is the API running?'}
+          </p>
+        ) : faultRows.length === 0 ? (
+          <p className="sh-empty">No open faults recorded.</p>
+        ) : (
+          <table className="sh-faults">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Severity</th>
+                <th>What it means</th>
+                <th>Count</th>
+                <th>Last seen</th>
+                <th>Reviewed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {faultRows.map((f) => (
+                <tr key={f.id} className={`sh-fault sh-fault-${f.severity}`}>
+                  <td className="sh-fault-code">
+                    {f.issueUrl
+                      ? <a href={f.issueUrl} target="_blank" rel="noreferrer">{f.code}</a>
+                      : f.code}
+                  </td>
+                  <td><span className={`sh-sev sh-sev-${f.severity}`}>{f.severity}</span></td>
+                  <td>
+                    {f.title}
+                    {f.evidence?.symbol && <span className="sh-fault-ev"> · {f.evidence.symbol}</span>}
+                  </td>
+                  <td className="sh-fault-num">{f.count}</td>
+                  <td>{f.lastSeen ? new Date(f.lastSeen).toLocaleString() : '—'}</td>
+                  {/* The cadence beat. A row nobody has ever reviewed says "never", never "0 days ago". */}
+                  <td>{f.neverReviewed ? 'never' : `${f.daysSinceReview}d ago`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </section>
 
       {/* ── Quick Actions ── */}
