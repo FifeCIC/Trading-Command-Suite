@@ -60,13 +60,17 @@ import UnusedDataPanel from '../components/backtest/UnusedDataPanel.jsx';
 // #1342 — the accordion a step is rendered in, from the shared library, plus this strategy's step list.
 import StepAccordion, { StepMeta } from '../components/StepAccordion.jsx';
 import { MOVERS_PAGE_ID, MOVERS_STEP } from '../features/movers-strategy/steps.js';
+import { groupCaveats, caveatDetail } from '../features/movers-strategy/caveats.js';
+import { summariseFillGaps, fillGapChips } from '../features/movers-strategy/fill-gap.js';
+import QualifierStrip from '../components/QualifierStrip.jsx';
 import ResultByDayStep from '../features/movers-strategy/ResultByDayStep.jsx';
 import ResultBySymbolStep from '../features/movers-strategy/ResultBySymbolStep.jsx';
 import ScoringFunnelStep from '../features/movers-strategy/ScoringFunnelStep.jsx';
 import DirectiveRecordStep from '../features/movers-strategy/DirectiveRecordStep.jsx';
 // #1335 — what this run cannot reproduce of the live account, read from the build-gated register.
 import ParityStep from '../features/movers-strategy/ParityStep.jsx';
-import { dayLabel, fmtMoney, fmtPct } from '../features/movers-strategy/format.js';
+import { dayLabel } from '../features/movers-strategy/format.js';
+import { formatPct, formatAmount } from '../core/format-utils.js';
 // The margin annotation between two steps: what the step above does not yet show, from data we already have.
 import StepAuditNote from '../components/StepAuditNote.jsx';
 import NoticeBlock from '../components/NoticeBlock.jsx';
@@ -268,12 +272,19 @@ export default function MoversStrategyBacktestPage() {
           dryRun: true,
         });
       } catch (err) {
-        // A REFUSAL IS THE PREVIEW'S MOST USEFUL ANSWER — recorded against that day, with the
-        // server's own wording, never folded into a "looks fine" row.
+        /**
+         * ⚠️ A SERVER REFUSAL AND AN UNANSWERED REQUEST ARE DIFFERENT FACTS (#1352, 2026-11-26).
+         * `apiPost` sets `err.status` only when a response arrived. Without this distinction a dropped
+         * connection rendered as "refused" in the coverage column — the server being absent reported as
+         * the server having judged the day, which is the silent-failure shape this page exists to avoid.
+         * Measured while verifying: a concurrent rebuild killed the API and all five days read
+         * "refused", none of which had been checked at all.
+         */
         byName[name] = {
           preview: true,
           datasetName: name,
           answerDate,
+          outcome: err && typeof err.status === 'number' ? 'refused' : 'unanswered',
           notice: noticeFromError(err, 'TCS-SYS-007', {
             operation: `preview the ${dayLabel(answerDate)} selection`,
           }),
@@ -375,24 +386,49 @@ export default function MoversStrategyBacktestPage() {
   }, [okRuns]);
 
   /**
-   * ⚠️ `caveats` IS NO LONGER RENDERED AS A LIST (owner requirement, 2026-11-23: too much to read), so this
-   * derivation is kept for ONE purpose: the count in step 2's header. Printing eleven sentences between
-   * the figures and the tables made the one caveat that changes an interpretation invisible among the
-   * other ten; a count says "there is something to know" without spending the whole screen saying it.
+   * ── THE CAVEATS AS TABLE ROWS, GROUPED BY CODE (2026-11-26) ─────────────────────────────────────
    *
-   * ⚠️ THE DATA IS STILL ON EVERY RUN RESPONSE, so a TABLE version (one row per caveat, with the figure
-   * it touches) needs no re-run — tracked in #1342 as step 2's cheapest win.
+   * ⚠️ GROUPED BY `code`, because the sentences are per-day and differ only in their figures — five
+   * days of "measured on <date>" is one qualification, not five. `days` counts the runs carrying it and
+   * `texts` keeps the distinct wording, so a differing sentence is shown as an EXAMPLE (`e.g.`) rather
+   * than presented as the only one.
    *
-   * ⚠️ THE CAVEAT THAT MATTERS MOST SURVIVES ON THE PAGE ITSELF: "no bot names this protocol, so these
-   * are the ENGINE's literals" is carried by step 10's `meta`, which reads `no bot` when
-   * `tradeConfig.bot` is null. Removing the list did not remove the ability to notice it.
+   * ⚠️ A SESSION-GATE SENTENCE IS FILTERED OUT of either list. The page renders that sentence once, in
+   * its own block; the server also pushes it onto `caveats`, and without this filter one fact appears
+   * as a statement and again as a table row.
    */
-  const caveatCount = useMemo(() => {
-    const gateSentences = new Set(
-      (sessionGateView ? okRuns.map((r) => r.sessionGate?.because) : []).filter(Boolean),
-    );
-    return [...new Set(okRuns.flatMap((r) => r.caveats ?? []))].filter((c) => !gateSentences.has(c)).length;
+  const caveatTable = useMemo(() => {
+    const gateSentences = (sessionGateView ? okRuns.map((r) => r.sessionGate?.because) : []).filter(Boolean);
+    return groupCaveats(okRuns, gateSentences);
   }, [okRuns, sessionGateView]);
+
+  /** The header figure must equal the rows the reader can now open — not a separate derivation. */
+  const caveatCount = caveatTable.length;
+
+  /**
+   * ── THE STOP-FILL ASSUMPTION (owner's audit note 'd', 2026-11-26) ─────────────────────────────
+   * The engine books every stop exit AT THE LEVEL; a broker fills at the market. `fillGap` measures how
+   * often the exit bar had already traded past that level, and by how much — it was returned on every
+   * run and rendered on none of them.
+   *
+   * ⚠️ The aggregation rules live in `fill-gap.js` and are tested there: counts sum, percentiles are a
+   * RANGE across days, and a day with `measured: 0` is "not recorded" rather than "no gap".
+   */
+  const fillGapView = useMemo(() => summariseFillGaps(okRuns), [okRuns]);
+
+  /**
+   * The bot's own stop distance, for judging how MATERIAL a stop overshoot is. Taken from the last run
+   * that declares one; `null` when none does, and the chip then reports `info` with the reason rather
+   * than inventing a severity.
+   */
+  const stopDistancePct = useMemo(() => {
+    for (let i = okRuns.length - 1; i >= 0; i -= 1) {
+      const field = (okRuns[i]?.tradeConfig?.fields ?? []).find((f) => f.id === 'slPct');
+      const n = Number(field?.value);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+    return null;
+  }, [okRuns]);
 
   /**
    * ── #1328 — CHANGE VS THE PREVIOUS TEST ────────────────────────────────────────────────────────
@@ -480,11 +516,17 @@ export default function MoversStrategyBacktestPage() {
     const bySymbol = new Map();
     for (const r of okRuns) {
       for (const s of r.perSymbol ?? []) {
-        const cur = bySymbol.get(s.symbol) ?? { symbol: s.symbol, days: 0, trades: 0, wins: 0, netPnl: 0 };
+        /**
+         * ⚠️ `errors` IS CARRIED, NOT DROPPED (2026-11-26). A symbol whose engine call threw arrives
+         * with `error` set and every figure at 0; discarding that made it identical to a symbol that was
+         * picked and simply made nothing — and the new P/L bar would have drawn it as break-even.
+         */
+        const cur = bySymbol.get(s.symbol) ?? { symbol: s.symbol, days: 0, trades: 0, wins: 0, netPnl: 0, errors: 0 };
         cur.days += 1;
         cur.trades += Number(s.trades ?? 0);
         cur.wins += Number(s.wins ?? 0);
         cur.netPnl += Number(s.netPnl ?? 0);
+        if (s.error) cur.errors += 1;
         bySymbol.set(s.symbol, cur);
       }
     }
@@ -784,7 +826,7 @@ export default function MoversStrategyBacktestPage() {
                                     {symbol ? (
                                       <>
                                         <span className="mvp-ds-ticker">{symbol}</span>
-                                        <span className="mvp-ds-pct">{fmtPct(d.symbolMoves?.[symbol])}</span>
+                                        <span className="mvp-ds-pct">{formatPct(d.symbolMoves?.[symbol])}</span>
                                       </>
                                     ) : (
                                       '—'
@@ -827,6 +869,7 @@ export default function MoversStrategyBacktestPage() {
                         <th scope="col" className="mvp-num">Usable</th>
                         <th scope="col" className="mvp-num">Picked</th>
                         <th scope="col" className="mvp-num">Rank basis</th>
+                        <th scope="col" className="mvp-num">Bar-scores</th>
                         <th scope="col">Coverage</th>
                       </tr>
                     </thead>
@@ -842,7 +885,10 @@ export default function MoversStrategyBacktestPage() {
                               <td className="mvp-num">—</td>
                               <td className="mvp-num">—</td>
                               <td className="mvp-num">—</td>
-                              <td className="mvp-warn">refused</td>
+                              <td className="mvp-num">—</td>
+                              <td className="mvp-warn">
+                                {p.outcome === 'unanswered' ? 'not checked' : 'refused'}
+                              </td>
                             </tr>
                           );
                         }
@@ -857,6 +903,7 @@ export default function MoversStrategyBacktestPage() {
                                 ? '—'
                                 : `${p.rankBasisBars} bar${p.rankBasisBars === 1 ? '' : 's'}`}
                             </td>
+                            <td className="mvp-num">{p.cost?.scoreEvaluations?.toLocaleString() ?? '—'}</td>
                             <td>
                               {p.status === 'ready' ? 'ready' : p.status === 'blocked' ? 'blocked' : 'thin'}
                             </td>
@@ -883,6 +930,47 @@ export default function MoversStrategyBacktestPage() {
                     </ul>
                   );
                 })}
+                {/* ── THE QUEUE TOTAL — the number the audit note asked for: days × picks ────────
+                    Work is a COUNT (exact, summed from each day's picks). The time is a BAND over a
+                    measured rate and says so, because six timed runs spanned 12–30 ms per bar scored
+                    and a single figure would claim precision this does not have. */}
+                {(() => {
+                  const answered = runQueue.map((n) => coverageForSettings.byName[n]).filter((p) => p && !p.notice);
+                  // A BLOCKED day is answered but cannot produce a result, so counting it as work would
+                  // understate the queue: it is called out separately rather than summed as zero.
+                  const producible = answered.filter((p) => p.status !== 'blocked');
+                  const blockedDays = answered.length - producible.length;
+                  const refusedDays = runQueue.filter((n) => coverageForSettings.byName[n]?.outcome === 'refused').length;
+                  const unansweredDays = runQueue.filter((n) => coverageForSettings.byName[n]?.outcome === 'unanswered').length;
+                  const scores = producible.reduce((a, p) => a + Number(p.cost?.scoreEvaluations ?? 0), 0);
+                  const low = producible.reduce((a, p) => a + Number(p.cost?.estimatedSeconds?.low ?? 0), 0);
+                  const high = producible.reduce((a, p) => a + Number(p.cost?.estimatedSeconds?.high ?? 0), 0);
+                  const basis = producible.find((p) => p.cost?.basis)?.cost?.basis ?? null;
+                  const skipped = [
+                    blockedDays ? `${blockedDays} blocked` : null,
+                    refusedDays ? `${refusedDays} refused` : null,
+                    unansweredDays ? `${unansweredDays} not checked` : null,
+                  ].filter(Boolean);
+                  if (!producible.length) {
+                    return (
+                      <p className="mvp-cost-total mvp-note--warn">
+                        No day can produce a result{skipped.length ? ` (${skipped.join(', ')})` : ''} — there
+                        is no cost to report, which is not the same as a cheap run.
+                      </p>
+                    );
+                  }
+                  return (
+                    <p className="mvp-cost-total">
+                      <strong>{producible.length} day{producible.length === 1 ? '' : 's'}</strong>
+                      {' · '}
+                      <strong>{scores.toLocaleString()}</strong> bar-scores
+                      {skipped.length > 0 && <> ({skipped.join(', ')}, not counted)</>}
+                      {' · '}
+                      <span className="mvp-muted">≈ {low.toFixed(1)}–{high.toFixed(1)} s</span>
+                      {basis && <span className="mvp-muted"> — {basis}</span>}
+                    </p>
+                  );
+                })()}
               </div>
             )}
 
@@ -952,12 +1040,19 @@ export default function MoversStrategyBacktestPage() {
         accordions away from the form. Step 1 stays open by default so a fresh run is always one click.
       */}
       {okRuns.length > 0 && comparisonView?.profileKey && (
-        <SelectionHistory
-          profileKey={comparisonView.profileKey}
-          profileLabel={comparisonView.profileLabel}
-          semanticsVersion={comparisonView.semanticsVersion}
-          currentRunIds={okRuns.map((r) => r.selectionRun?.id).filter(Boolean)}
-        />
+        // `mvp-sec-persistence` — the anchor the `db` phase in `src/core/pipeline-phases.js` names.
+        // ⚠️ The claim was TRUE but unanchored, so `pipeline-phases.test.js` reported the phase as
+        // rendering nowhere (red on HEAD, unrelated to the cost work beside it). The stored-run list IS
+        // the persistence surface, so it carries the id; it renders only once a run exists, and with no
+        // run there is nothing to reopen.
+        <div id="mvp-sec-persistence">
+          <SelectionHistory
+            profileKey={comparisonView.profileKey}
+            profileLabel={comparisonView.profileLabel}
+            semanticsVersion={comparisonView.semanticsVersion}
+            currentRunIds={okRuns.map((r) => r.selectionRun?.id).filter(Boolean)}
+          />
+        </div>
       )}
       </StepAccordion>
       )}
@@ -977,7 +1072,7 @@ export default function MoversStrategyBacktestPage() {
             meta={(
               <>
                 <StepMeta
-                  value={totals.netPnl == null ? '—' : fmtMoney(totals.netPnl)}
+                  value={totals.netPnl == null ? '—' : formatAmount(totals.netPnl)}
                   label="net P/L"
                   tone={totals.netPnl > 0 ? 'pos' : totals.netPnl < 0 ? 'neg' : ''}
                 />
@@ -1070,7 +1165,7 @@ export default function MoversStrategyBacktestPage() {
                 }
               />
               <StatCard
-                value={fmtMoney(totals.netPnl)}
+                value={formatAmount(totals.netPnl)}
                 label="Net P/L"
                 note="Sum of the kept trades' P/L, after the engine's own costs."
                 sub={
@@ -1085,12 +1180,10 @@ export default function MoversStrategyBacktestPage() {
               />
             </div>
 
-            {/*
-              #1341 — the BEST ever for this test, beside the delta against the PREVIOUS run. Two
-              different questions: the tile above answers "did I beat last time", this answers "have I
-              ever been better than this" — and prints the settings that got there.
-            */}
-            <BestRecordPanel okRuns={okRuns} />
+            {/* ⚠️ THE BEST-RECORD PANEL IS NOT RENDERED HERE (removed 2026-11-26). It was mounted in
+                BOTH step 2 and step 3, so the same table appeared twice on one page. Step 3 is titled
+                "Best recorded result" and its `meta` reads from `best`, so that is its home; this copy
+                was the stray. Caught while adding the attempt trend, which would have doubled as well. */}
 
             {/*
               #1242 — the session gate, in the two states that have something to say. Absent stays
@@ -1178,20 +1271,69 @@ export default function MoversStrategyBacktestPage() {
             )}
 
             {/**
-              * ⚠️ THE CAVEAT LIST WAS REMOVED (owner requirement, 2026-11-23: not worth printing, too
-              * much to read). It was eleven sentences of prose between the figures and the
-              * tables, and a reader skims a wall — which is worse than not printing it, because the one
-              * caveat that changes an interpretation is invisible inside the other ten.
+              * ── THE STOP-FILL FACTS, AS CHIPS (owner, 2026-11-26) ─────────────────────────────────
+              * This block used to be four paragraphs of prose — "17 of 17 stop exit(s) … median
+              * 0.61–9.65%, p90 … The engine fills every stop at the level … 3 of 5 day(s) recorded no
+              * stop exit". The owner: *"If I'm doing many tests I can't afford the time of reading
+              * those … the numbers don't stand out."*
               *
-              * ⚠️ THE DATA IS NOT GONE. `caveats` is still on every run response, so a TABLE version (one
-              * row per caveat, with the figure it touches) can be built without re-running anything —
-              * tracked in #1342 as step 2's cheapest win.
+              * It is now ONE row: a state, a subject and ONE figure per chip, with the sentence and the
+              * explanation on hover/click/keyboard. The severity is DERIVED — worst overshoot against
+              * the bot's own stop distance (`fillGapChips`) — because a chip is believed faster than a
+              * paragraph, and a colour chosen by feel would be worse than the prose it replaced.
               *
-              * ⚠️ THE ONE CAVEAT THAT CHANGES AN INTERPRETATION IS STILL ON THE PAGE: "no bot names this
-              * protocol, so these are the ENGINE's literals" is carried by step 10's `meta`, which reads
-              * `no bot` when `tradeConfig.bot` is null. That is why removing the list does not remove the
-              * ability to notice the run is unbracketed.
+              * ⚠️ `muted` means NOT MEASURED and never borrows `ok`. Nothing here is charged to the P&L.
               */}
+            {fillGapView.runs > 0 && (
+              <QualifierStrip items={fillGapChips(fillGapView, { stopPct: stopDistancePct })} />
+            )}
+
+            {/**
+              * ── THE CAVEATS, AS A TABLE (owner, 2026-11-26) ────────────────────────────────────────
+              * The prose list was removed on 2026-11-23 because eleven sentences between the figures and
+              * the tables read as a wall, and the one caveat that changed an interpretation was invisible
+              * inside the other ten. But removing it left step 2's header printing a COUNT — "4 caveats" —
+              * with the sentences nowhere on the page: a number the reader could never resolve.
+              *
+              * The table fixes both halves. `Qualifies` is the column that matters: it names the figure
+              * the caveat changes, so a reader who doubts a tile can find its qualifier without reading
+              * ten sentences.
+              *
+              * ⚠️ GROUPED BY `code`, NOT BY SENTENCE. Five days produce five variants of "measured on one
+              * session", so a row per sentence would rebuild the wall. `Days` says how many runs carry it,
+              * and a differing detail is prefixed `e.g.` — an example, never presented as the whole.
+              */}
+            {caveatTable.length > 0 && (
+              <div className="mvp-caveats">
+                <div className="mvp-scroll">
+                  <table className="mvp-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Caveat</th>
+                        <th scope="col">Qualifies</th>
+                        <th scope="col" className="mvp-num">Days</th>
+                        <th scope="col">Detail</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {caveatTable.map((c) => (
+                        <tr key={c.code}>
+                          <td className="mvp-nowrap">{c.label}</td>
+                          <td className="mvp-nowrap">{c.qualifies}</td>
+                          <td className="mvp-num">{c.days} of {okRuns.length}</td>
+                          <td className="mvp-caveat-text">
+                            {caveatDetail(c)}
+                            {c.texts.length > 1 && (
+                              <span className="mvp-muted"> (other days say much the same with their own figures)</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             </>
             )}
@@ -1210,7 +1352,7 @@ export default function MoversStrategyBacktestPage() {
                 <StepMeta
                   value={okRuns[okRuns.length - 1]?.best?.best?.perDay == null
                     ? '—'
-                    : fmtMoney(okRuns[okRuns.length - 1].best.best.perDay)}
+                    : formatAmount(okRuns[okRuns.length - 1].best.best.perDay)}
                   label="best per day"
                 />
                 <StepMeta
@@ -1221,7 +1363,13 @@ export default function MoversStrategyBacktestPage() {
               </>
             )}
           >
-            <BestRecordPanel okRuns={okRuns} />
+            <BestRecordPanel
+              okRuns={okRuns}
+              profileKey={comparisonView?.profileKey ?? null}
+              profileLabel={comparisonView?.profileLabel ?? null}
+              semanticsVersion={comparisonView?.semanticsVersion ?? null}
+              runCount={okRuns.length}
+            />
           </StepAccordion>
 
           <StepAuditNote afterStep={MOVERS_STEP['mvp-step-best'].step} ideas={MOVERS_STEP['mvp-step-best'].audit} />

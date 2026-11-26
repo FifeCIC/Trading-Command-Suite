@@ -52,4 +52,42 @@ describe('summariseFillGap — how optimistic is a fill at the stop level?', () 
     expect(summariseFillGap(undefined).note).toBeNull();
     expect(summariseFillGap(null).beyond).toBe(0);
   });
+
+  /**
+   * ── "NOTHING TO MEASURE" IS NOT ONE STATE (2026-11-26) ─────────────────────────────────────────
+   * `measured: 0` covered two possible facts: a population with NO stop exit, and a stop exit recorded
+   * WITHOUT the bar's adverse extreme. The counters below make them separable.
+   *
+   * 🛑 The second state was NOT observed when this was written — an apparent instance on
+   * `movers-winners-2026-11-19` turned out to be trades the SELECTION REFUSED, which are in the run's
+   * detail but not in the admitted population. The canary is precautionary; do not cite that day.
+   */
+  it('▶ CANARY — no stop exit and an unreadable stop exit are DIFFERENT states', () => {
+    const none = summariseFillGap([
+      { exitReason: 'TP', direction: 'LONG', exitPrice: 100, exitBarLow: 90, exitBarHigh: 110 },
+      { exitReason: 'TIME', direction: 'LONG', exitPrice: 100, exitBarLow: 90, exitBarHigh: 110 },
+    ]);
+    expect(none.stopExits).toBe(0);
+    expect(none.unrecorded).toBe(0);
+
+    const unreadable = summariseFillGap([
+      { exitReason: 'SL', direction: 'LONG', exitPrice: 100 },
+      { exitReason: 'SL', direction: 'LONG', exitPrice: 100 },
+    ]);
+    expect(unreadable.stopExits).toBe(2);
+    expect(unreadable.unrecorded).toBe(2);
+    expect(unreadable.measured).toBe(0);
+    // The note contract is unchanged, so no other page starts rendering because of this field.
+    expect(unreadable.note).toBeNull();
+  });
+
+  it('counts the unreadable stop exits ALONGSIDE the measured ones', () => {
+    const s = summariseFillGap([
+      { exitReason: 'SL', direction: 'LONG', exitPrice: 100, exitBarLow: 98, exitBarHigh: 110 },
+      { exitReason: 'SL', direction: 'LONG', exitPrice: 100 },
+    ]);
+    expect(s.stopExits).toBe(2);
+    expect(s.measured).toBe(1);
+    expect(s.unrecorded).toBe(1);
+  });
 });

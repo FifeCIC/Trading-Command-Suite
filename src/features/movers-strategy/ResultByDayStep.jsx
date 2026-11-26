@@ -14,7 +14,16 @@
  */
 import { SortableTh } from '../../core/use-sort';
 import WhyPopover from '../../components/WhyPopover.jsx';
-import { fmtMoney, fmtPct, dayLabel } from './format.js';
+import { dayLabel } from './format.js';
+import { formatAmount, formatPct } from '../../core/format-utils.js';
+/**
+ * Audit note 'f' (2026-11-26) — a sign-coloured bar beside each day's P/L, so "one day carried the
+ * whole total" is visible rather than summed by the reader.
+ *
+ * ⚠️ THE SCALE IS TO THE LARGEST DAY, NOT TO THE TOTAL, and the caption says so. Scaling to the total
+ * would draw five equal days as five short bars — the opposite of the question this answers.
+ */
+import { buildPnlBars } from './pnl-bars.js';
 
 export default function ResultByDayStep({ sort }) {
   const rows = sort?.sorted ?? [];
@@ -23,9 +32,19 @@ export default function ResultByDayStep({ sort }) {
     return <p className="mvp-note">No session finished, so there is nothing to show per day.</p>;
   }
 
+  const bars = buildPnlBars(rows);
+
   return (
     <div className="mvp-scroll">
       <table className="mvp-table">
+        {/*
+          The bar's scale is a claim, so it is stated with the numbers it draws. ⚠️ Colour is never the
+          only carrier: the sign is in the P/L text beside every bar.
+        */}
+        <caption className="mvp-caption">
+          The bar length is this day&rsquo;s P/L against the largest day in the table ({formatAmount(bars.maxAbs)}),
+          so a single day carrying the total is visible at a glance. The figure beside it is the value.
+        </caption>
         <thead>
           <tr>
             <SortableTh col="answerDate" label="Day" api={sort} buttonClassName="th-sort" firstDir="asc" />
@@ -61,7 +80,7 @@ export default function ResultByDayStep({ sort }) {
                         title={c.reason || (c.movePct == null ? 'not measurable' : `rank ${c.rank}`)}
                       >
                         {c.symbol}
-                        {c.movePct != null && <em>{fmtPct(c.movePct)}</em>}
+                        {c.movePct != null && <em>{formatPct(c.movePct)}</em>}
                       </span>
                     ))}
                   </span>
@@ -80,7 +99,20 @@ export default function ResultByDayStep({ sort }) {
                 {d.notice ? '—' : d.winRate == null ? '—' : `${Number(d.winRate).toFixed(1)}%`}
               </td>
               <td className={`mvp-num ${d.netPnl > 0 ? 'mvp-pos' : d.netPnl < 0 ? 'mvp-neg' : ''}`}>
-                {d.notice ? '—' : fmtMoney(d.netPnl)}
+                {d.notice ? '—' : formatAmount(d.netPnl)}
+                {/*
+                  ⚠️ `aria-hidden` — the figure beside it carries the same fact as text, so a screen
+                  reader gets the value rather than a bar with no axis. A failed day has no bar at all:
+                  "not measured" and "zero" must not draw the same way.
+                */}
+                {!d.notice && bars.fracById[d.id] !== undefined && (
+                  <span className="mvp-pnlbar" aria-hidden="true">
+                    <span
+                      className={`mvp-pnlbar-fill ${d.netPnl < 0 ? 'is-neg' : 'is-pos'}`}
+                      style={{ width: `${Math.round(bars.fracById[d.id] * 100)}%` }}
+                    />
+                  </span>
+                )}
               </td>
               <td className="mvp-num mvp-muted">{d.notice ? '—' : d.excluded}</td>
             </tr>

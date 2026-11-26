@@ -92,9 +92,15 @@
 .gold-chart-toggle, .btc-chart-toggle { display: flex; gap: 2px; }
 .gold-chart-btn, .btc-chart-btn {
   padding: 4px 8px; border-radius: 4px; border: 1px solid var(--line);
-  background: var(--panel); font-size: 0.75rem; cursor: pointer;
+  background: var(--panel); color: var(--ink); font-size: 0.75rem; cursor: pointer;
 }
-.gold-chart-btn.active, .btc-chart-btn.active { background: var(--cockpit-accent); border-color: var(--cockpit-accent); }
+/* ⚠️ `color: var(--bg)` is required, not decoration: the ACTIVE state paints a solid accent fill, and
+   without a colour of its own the label came from the global `button` rule — `#fff` before
+   2026-11-26, `var(--ink)` after, both of which measure 2.15:1 and 1.74:1 on `--color-warning`.
+   Inverted text measures 8.72:1 on the dark fill and 4.67:1 on the light one, which is the same
+   shape `.gold-tf-btn.active` already used (`#000`). A rule that paints a background owns its
+   foreground. */
+.gold-chart-btn.active, .btc-chart-btn.active { background: var(--cockpit-accent); border-color: var(--cockpit-accent); color: var(--bg); }
 
 /* ── Price Strip ─────────────────────────────────────── */
 .gold-price-strip, .btc-price-strip {

@@ -1,7 +1,9 @@
 /**
  * semantic-contrast.test.js — every semantic colour token must meet WCAG AA in its own mode (#861).
  * ==================================================================================================
- * Run with: `node --test src/theme/semantic-contrast.test.js` (and in `prebuild`).
+ * Run with: `node --test src/theme/semantic-contrast.test.js` — and it IS wired into `prebuild`
+ * (added 2026-11-26; until then this header claimed a gate that did not exist, so every pack could
+ * have shipped an unreadable token and the build stayed green).
  *
  * ⚠️ THE DEFECT THIS PINS. The semantic tokens (`--color-profit`, `--color-loss`, `--color-warning`,
  * …) are tuned for a BLACK background and used as BODY TEXT app-wide. The theme runtime supports a
@@ -130,6 +132,67 @@ test('the measurement itself can fail — the OLD dark-tuned green on white is r
  * the emitted values against that pack's OWN panel and page. A future pack is covered automatically
  * because the list comes from the registry, not from a literal.
  */
+test('a token named "dim" never outshines the body-secondary ink — the hierarchy claim, guarded', async () => {
+  // ⚠️ WHY THIS IS A SECOND CASE (2026-11-26). The AA case above cannot see the defect that four
+  // packs actually shipped: a DIM token resolving BRIGHTER than `--ink-soft`, so "muted" labels
+  // outshone the body text beside them. Every one of those values passed AA comfortably — void's
+  // fallback `--color-muted` was `#8896ab` at 6.26:1 against an `--ink-soft` of 5.37:1. Contrast is
+  // not hierarchy, so the guard has to assert the ordering explicitly.
+  //
+  // Measured pre-fix: void 6.26/7.33 vs 5.37 · terminal 5.71/7.18 vs 6.98 · scifi-dark 5.75/6.73 vs
+  // 5.86. A mutation that makes `muted` pass AA *and* break the ordering is the canary: it is
+  // silently accepted by the case above and rejected here.
+  const packs = await Promise.all([
+    import('./packs/core.js'),
+    import('./packs/void.js'),
+    import('./packs/terminal.js'),
+    import('./packs/scifi.js'),
+    import('./packs/oceanic.js'),
+    import('./packs/slate.js'),
+  ]);
+  const { toCssVariables } = await import('./adapters/vanilla.js');
+
+  // A 0.01 tolerance: two tokens of the same value on the same surface must compare equal.
+  const TOLERANCE = 0.01;
+  const failures = [];
+  let judged = 0;
+
+  for (const mod of packs) {
+    const pack = mod.themePack;
+    for (const mode of ['light', 'dark']) {
+      const tokens = pack.createTokens(mode);
+      const vars = toCssVariables(tokens);
+      const panel = tokens.palette?.panel;
+      if (!panel) { failures.push(`${pack.id}/${mode}: no panel colour`); continue; }
+      const inkSoft = vars['--ink-soft'];
+      if (!inkSoft) { failures.push(`${pack.id}/${mode}: --ink-soft not emitted`); continue; }
+      judged += 1;
+      const inkRatio = contrast(inkSoft, panel);
+      for (const tokenName of ['--color-muted', '--color-text-dim']) {
+        const value = vars[tokenName];
+        if (!value) { failures.push(`${pack.id}/${mode}: ${tokenName} not emitted`); continue; }
+        const ratio = contrast(value, panel);
+        if (ratio > inkRatio + TOLERANCE) {
+          failures.push(
+            `${pack.id}/${mode}: ${tokenName} ${value} is ${ratio.toFixed(2)}:1 on the panel — BRIGHTER than --ink-soft ${inkSoft} at ${inkRatio.toFixed(2)}:1`,
+          );
+        }
+      }
+    }
+  }
+
+  assert.ok(judged >= 12, `judged only ${judged} pack/mode pair(s) — the guard inspected nothing`);
+  assert.deepEqual(failures, []);
+});
+
+test('the hierarchy measurement can fail — the shipped void fallback is rejected', () => {
+  // The literal pre-fix pair, so a broken formula or a mis-wired surface is caught here rather than
+  // passing everything above. void's panel is `#111118`.
+  assert.ok(contrast('#8896ab', '#111118') > contrast('#8c82b8', '#111118'));
+  // …and void's replacement is accepted, because it sits below the ink.
+  assert.ok(contrast('#877fa4', '#111118') < contrast('#8c82b8', '#111118'));
+});
+
 test('every selectable theme pack emits AA-legible semantic colours on its own surfaces', async () => {
   const packs = await Promise.all([
     import('./packs/core.js'),

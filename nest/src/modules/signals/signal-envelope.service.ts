@@ -10,7 +10,12 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { ProtocolGatingService, GatedScore, DirectiveBreakout } from '../scoring/protocol-gating.service';
+import {
+  ProtocolGatingService,
+  GatedScore,
+  DirectiveBreakout,
+  SIGNAL_THRESHOLDS,
+} from '../scoring/protocol-gating.service';
 import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { MarketDataService } from '../market-data/market-data.service';
 // #R13 — the SAME predicate the dispatch path uses for feasibility, so "closed" means one thing
@@ -81,6 +86,35 @@ export interface SignalEnvelope {
   /** Risk-adjusted raw signal. Never compare this value with a percentage threshold. */
   composite: number;
   maxPossible: number;           // max achievable score for this envelope
+  /**
+   * ── BREADTH — how many directives actually read this tick (#1358) ──────────────────────────
+   *
+   * `composite / maxPossible` is NOT a strength. Measured 2026-11-26 over 800 stored scores: a
+   * median of 11 directives exist per protocol and **53% of readings fire exactly one of them**,
+   * so the ratio's structural ceiling is ~9–18% and its median is 7.2%. The numerator counts the
+   * one or two directives that fired; the denominator sums EVERY directive, ~10 of which read
+   * neutral. The two halves measure different things, which is why the quotient cannot be read as
+   * conviction — and why it must be shown beside these counts rather than instead of them.
+   *
+   * Both counts already exist in `gated.breakouts`. Exposing them changes no maths, no threshold
+   * and no classification; it is the same data the score was always computed from.
+   */
+  firedDirectives: number;
+  totalDirectives: number;
+  /**
+   * The entry and strong bars in the SAME unit as `composite` (#1358).
+   *
+   * `SIGNAL_THRESHOLDS` are percentages of the protocol's own capacity, and that capacity differs
+   * per protocol — 815 / 1005 / 1225 measured — so "13%" is 106 points on one protocol and 159 on
+   * another. A percentage is therefore comparable WITHIN a protocol and meaningless ACROSS them.
+   * Carrying the bars in points lets the UI say "174 — strong bar 106" rather than "14%", which
+   * also removes the false suggestion of a 0–100 scale.
+   *
+   * ⚠️ Derived from `SIGNAL_THRESHOLDS`, never re-typed here. A second copy of 6/13 is exactly the
+   * drift the single exported object exists to prevent.
+   */
+  entryPoints: number;
+  strongPoints: number;
   /** ⚠️ `NO_DATA` is a real outcome (#758), not a HOLD — no direction-eligible directive read
    *  this tick, so there was nothing to classify. It is carried here rather than filtered because
    *  the envelope is also the record of what the scorer said; a consumer deciding whether to ACT
@@ -1035,10 +1069,23 @@ export class SignalEnvelopeService {
       riskHardGate ||
       (Number.isFinite(gated.riskMultiplier) && gated.riskMultiplier !== 1);
 
+    // ── #1358 — breadth, and the bars in points ────────────────────────────────────────────────
+    // Both come from data the score was already computed from: `breakouts` is what the gate read,
+    // and `signalMax` is the denominator `signalPct` divides by. Nothing is recalculated.
+    const directiveRows = Object.values(gated.breakouts ?? {}).flat();
+    const totalDirectives = directiveRows.length;
+    const firedDirectives = directiveRows.filter((d) => d.inSignal === true).length;
+    const entryPoints = Math.ceil((SIGNAL_THRESHOLDS.entry / 100) * gated.signalMax);
+    const strongPoints = Math.ceil((SIGNAL_THRESHOLDS.strong / 100) * gated.signalMax);
+
     const envelope: SignalEnvelope = {
       symbol,
       composite: gated.composite,
       maxPossible: gated.signalMax,
+      firedDirectives,
+      totalDirectives,
+      entryPoints,
+      strongPoints,
       signal: gated.signal,
       confidence,
       rarity: gated.rarity?.label ?? null,
@@ -1650,6 +1697,12 @@ export class SignalEnvelopeService {
       symbol,
       composite: 50,
       maxPossible: 100,
+      // #1358 — nothing was read, so breadth is zero and the bars are the protocol-less default.
+      // `noData: true` is what makes these unreadable-as-a-score; the counts simply agree with it.
+      firedDirectives: 0,
+      totalDirectives: 0,
+      entryPoints: Math.ceil((SIGNAL_THRESHOLDS.entry / 100) * 100),
+      strongPoints: Math.ceil((SIGNAL_THRESHOLDS.strong / 100) * 100),
       signal: 'HOLD',
       noData: true,
       noDataReason:

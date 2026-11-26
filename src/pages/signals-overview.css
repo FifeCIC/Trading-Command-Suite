@@ -230,14 +230,21 @@
   border: 1px solid transparent;
   padding: 0.55rem 0.6rem;
   cursor: pointer;
-  color: #fff;
+  /* No `color` here on purpose (2026-11-26): this was `#fff`, which every FILL below then inherited
+     and could not override cheaply. Each variant now states its own foreground, and a variant that
+     states neither gets the panel-appropriate ink from the global `button` rule. */
 }
+/* ⚠️ `color: var(--bg)` on each FILL below is the inverted-label rule, not decoration: these
+   buttons paint a solid semantic colour, so they own their foreground. The inherited `#fff` measured
+   2.28:1 on `--color-buy` in dark mode (AA needs 4.5); inverted text measures 8.22 dark / 4.67 light. */
 .sig-opp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.sig-opp-btn--buy { background: var(--color-buy); }
-.sig-opp-btn--buy:hover { background: color-mix(in srgb, var(--color-buy) 78%, var(--bg)); }
-.sig-opp-btn--sell { background: var(--color-loss); }
+.sig-opp-btn--buy { background: var(--color-buy); color: var(--bg); }
+/* ⚠️ Hover mixes toward `--ink`, which is the OPPOSITE pole from the `--bg` label — so contrast rises
+   on hover instead of falling. Mixing toward `--bg` (as this did) measured 3.22:1 in light mode. */
+.sig-opp-btn--buy:hover { background: color-mix(in srgb, var(--color-buy) 82%, var(--ink)); }
+.sig-opp-btn--sell { background: var(--color-loss); color: var(--bg); }
 .sig-opp-btn--sell:hover { background: var(--color-sell); }
-.sig-opp-btn--confirm { background: var(--color-warning); }
+.sig-opp-btn--confirm { background: var(--color-warning); color: var(--bg); }
 .sig-opp-btn--confirm:hover { background: var(--color-warning); }
 .sig-opp-btn--dismiss {
   flex: 0 0 auto;
@@ -502,6 +509,47 @@
 }
 .sig-b-row-pct { font-size: 0.78rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 .sig-b-row-pct--combined { font-size: 0.95rem; font-weight: 800; color: var(--accent); }
+
+/*
+ * #1358 — WITHHELD rows. The owner sees every reading; other users do not see these three, so
+ * they are marked rather than removed (owner rule, 2026-11-26). Same signal as
+ * `rail-link--withheld` in the nav, so one colour means one thing across the app.
+ *
+ * ⚠️ `color-mix` toward `--ink` rather than `--color-warning` alone: amber on the light theme's
+ * white panel is about 2.2:1 and fails WCAG AA for text. Mixing toward the theme ink darkens it
+ * in light mode and lightens it in dark mode, so the token stays legible in both without a second
+ * hardcoded colour.
+ */
+.sig-b-row--withheld .sig-b-row-label,
+.sig-b-row--withheld .sig-b-row-pct {
+  color: color-mix(in srgb, var(--color-warning) 72%, var(--ink));
+  opacity: 0.9;
+}
+.sig-b-row--withheld .sig-b-row-fill { opacity: 0.4; }
+
+/* The ` / ` between composite and maxPossible must not compete with either number. */
+.sig-b-row-pct-sep { color: var(--ink-soft); font-weight: 600; }
+.sig-b-row-unit {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/*
+ * #1358 — breadth. The line that makes a small points total legible: 53% of readings fire one
+ * directive of a median of 11, so a small share of the maximum is the NORMAL case.
+ */
+.sig-b-breadth {
+  margin: 0.4rem 0 0;
+  font-size: 0.66rem;
+  line-height: 1.35;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.sig-b-breadth strong { color: var(--ink); font-weight: 700; }
+.sig-b-breadth-note { opacity: 0.85; }
 /*
  * Conviction — the SECOND reading, beside the Signal percentage (#915 Option C).
  *

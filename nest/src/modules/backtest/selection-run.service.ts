@@ -91,6 +91,24 @@ import { parityExposure, type ParityExposure } from '../../common/trading/parity
 // #1345 — can this run close a trade at all? The answer is arithmetic, not a hunch.
 import { viabilityOf, sessionSpanMinutes, type Viability } from '../../common/trading/backtest-viability';
 import { APP_VERSION } from '../../version';
+import {
+  rankBotCandidates,
+  type BotCandidate,
+  type BotResolution,
+  type BotResolutionResult,
+} from './bot-resolution';
+
+/**
+ * The resolution when there is nothing to resolve — a caller that passed `botId: null` deliberately, or
+ * a protocol no bot names. Exported shape rather than an inline literal so the response type and the
+ * "why is this empty" sentence cannot drift apart.
+ */
+const NO_RESOLUTION: BotResolution = {
+  candidateCount: 0,
+  ambiguous: false,
+  reason: 'no bot names this protocol, so the engine literals are what this run measures',
+  candidates: [],
+};
 
 /** The one numeric coercion this file needs, kept local (a `null` must not read as 0). */
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
@@ -261,6 +279,16 @@ export interface SelectionRunResult {
     bot: { id: string; name: string; active: boolean; mode: string | null } | null;
     /** `auto` = the service found the bot; `explicit` = the caller named it; `none` = nothing available. */
     resolvedBy: 'auto' | 'explicit' | 'none';
+    /**
+     * WHICH BOT, AND WHY THAT ONE — every candidate with its facts, plus a sentence naming the level that
+     * decided it (register row 299).
+     *
+     * ⚠️ An unnamed run used to resolve to whichever bot had been EDITED most recently, and report it as
+     * `resolvedBy: 'auto'`. On `movers-v1-long` that was a throwaway mechanism probe among five bots, four
+     * of which the signal queue has never been able to reach. `ambiguous: true` means the choice came down
+     * to edit time — a tiebreak, not a rule — and a reader deciding whether to trust the numbers needs it.
+     */
+    resolution: BotResolution;
     fields: TradeConfigField[];
     summary: string;
   };
@@ -320,7 +348,48 @@ export interface SelectionRunResult {
    */
   viability: Viability;
   best: BestRecord;
+  /**
+   * The same statements as `caveats`, as ROWS — one per qualification, naming the figure it touches.
+   *
+   * ⚠️ ADDED 2026-11-26 BECAUSE THE PAGE COULD ONLY COUNT THEM (owner's audit note: *"the caveats
+   * belong in a table — one row each, with the figure it touches"*). A page that prints "4 caveats" and
+   * no sentences tells the reader something needs knowing and gives no way to know it.
+   *
+   * `caveats` is kept as plain strings because it is a shared shape across other endpoints and its own
+   * tests join on it; the strings here are DERIVED from these rows, so the two cannot disagree.
+   */
+  caveatRows: SelectionCaveat[];
   caveats: string[];
+}
+
+/**
+ * One qualification of the run's numbers, addressed to the figure it changes.
+ *
+ * ⚠️ `qualifies` is the whole point. "Measured on one session" is trivia in a list of sentences; beside
+ * `Totals, day count` it tells a reader which tile to doubt.
+ */
+export interface SelectionCaveat {
+  /** Stable identity, so a surface groups and orders without parsing prose. */
+  code:
+    | 'single-session'
+    | 'trade-config'
+    | 'membership'
+    | 'side-source'
+    | 'admission'
+    | 'excluded-trades'
+    | 'symbol-failed'
+    | 'none-ranked'
+    /**
+     * The parity register's only remaining `gap`: the bot declares scale-in and the engine models one
+     * position per symbol, so trade count and exposure are understated. Register row 300.
+     */
+    | 'pyramid-not-modelled';
+  /** Two or three words, for scanning a column rather than reading sentences. */
+  label: string;
+  /** WHICH FIGURE this qualifies — the table's second column. */
+  qualifies: string;
+  /** The full statement. Never shortened here; the table is a presentation, not a summary. */
+  text: string;
 }
 
 const DEFAULT_TOP_N = 3;
@@ -379,7 +448,7 @@ export class SelectionRunService {
   private async resolveBotForRun(
     protocolId: string,
     explicit: string | null | undefined,
-  ): Promise<{ bot: TradeConfigBot | null; resolvedBy: 'auto' | 'explicit' | 'none' }> {
+  ): Promise<BotResolutionResult<TradeConfigBot>> {
     const select = {
       id: true,
       name: true,
@@ -414,7 +483,7 @@ export class SelectionRunService {
       simTslDistancePct: true,
     } as const;
 
-    if (explicit === null) return { bot: null, resolvedBy: 'none' };
+    if (explicit === null) return { bot: null, resolvedBy: 'none', resolution: NO_RESOLUTION };
 
     if (typeof explicit === 'string' && explicit.trim()) {
       const found = await this.prisma.tradingStrategy.findUnique({
@@ -424,20 +493,50 @@ export class SelectionRunService {
       if (!found) {
         throw new BadRequestException(`No trading_strategy is stored under id '${explicit}'.`);
       }
-      return { bot: found as unknown as TradeConfigBot, resolvedBy: 'explicit' };
+      return {
+        bot: found as unknown as TradeConfigBot,
+        resolvedBy: 'explicit',
+        resolution: {
+          candidateCount: 1,
+          ambiguous: false,
+          reason: 'the caller named this bot, so nothing was chosen on its behalf',
+          candidates: [
+            {
+              id: found.id,
+              name: found.name,
+              active: found.active === true,
+              subscribed: true,
+              primary: found.protocolId === protocolId,
+              chosen: true,
+            },
+          ],
+        },
+      };
     }
 
     const candidates = await this.prisma.tradingStrategy.findMany({
       where: { OR: [{ protocolId }, { shortProtocolId: protocolId }] },
-      select,
+      select: { ...select, shortProtocolId: true, updatedAt: true },
       orderBy: [{ active: 'desc' }, { updatedAt: 'desc' }],
     });
-    if (!candidates.length) return { bot: null, resolvedBy: 'none' };
+    if (!candidates.length) return { bot: null, resolvedBy: 'none', resolution: NO_RESOLUTION };
 
-    // A bot that names this protocol as its SHORT leg is a different strategy — prefer the primary.
-    const primary = candidates.filter((c) => c.protocolId === protocolId);
-    const chosen = (primary.length ? primary : candidates)[0];
-    return { bot: chosen as unknown as TradeConfigBot, resolvedBy: 'auto' };
+    /**
+     * ⚠️ THE SUBSCRIPTION IS THE RANKING FACT THAT WAS MISSING (measured 2026-11-26). Five bots name
+     * `movers-v1-long`, four with no `strategy_protocol` row at all — and `active desc, updatedAt desc`
+     * resolved an unnamed run to a throwaway mechanism probe whose config nothing has ever traded.
+     * `SignalQueueService` routes by subscription, so a bot without one is a CONFIGURATION, not a bot.
+     * Ranking and the reported reason both live in `bot-resolution.ts`; this method only supplies facts.
+     */
+    const subscribed = await this.prisma.strategyProtocol.findMany({
+      where: { strategyId: { in: candidates.map((c) => c.id) }, protocolId },
+      select: { strategyId: true },
+    });
+
+    return rankBotCandidates(candidates as unknown as BotCandidate[], {
+      protocolId,
+      subscribedIds: new Set(subscribed.map((s) => s.strategyId)),
+    }) as unknown as BotResolutionResult<TradeConfigBot>;
   }
 
   /**
@@ -588,7 +687,9 @@ export class SelectionRunService {
     // ── WHICH CONFIGURATION THIS RUN MEASURES ───────────────────────────────────────────────────
     // ⚠️ BEFORE the bars are loaded, because a bot decides the entry bar (`minComposite`) and a run
     // that scored first and applied the bar afterwards would have been a different measurement.
-    const { bot, resolvedBy } = await this.resolveBotForRun(request.protocolId, request.botId);
+    // ⚠️ Named `botResolution`, not `resolution` — `resolution` is already the SIDE of the run, decided
+    // three lines above by `resolveMoversSide()`. Two different answers to two different questions.
+    const { bot, resolvedBy, resolution: botResolution } = await this.resolveBotForRun(request.protocolId, request.botId);
     const tradeFields = buildTradeConfig(bot, {
       slPct: request.slPct,
       tpPct: request.tpPct,
@@ -605,6 +706,7 @@ export class SelectionRunService {
         }
         : null,
       resolvedBy,
+      resolution: botResolution,
       fields: tradeFields,
       summary: tradeConfigSummary(bot, tradeFields),
     };
@@ -987,51 +1089,123 @@ export class SelectionRunService {
       engineVersion: APP_VERSION,
     });
 
-    const caveats: string[] = [      `Measured on ${decl.value.answerDate} only — the session this dataset is a screen of. Its ` +
-        `${priorSessions} earlier session(s) are directive warm-up, not results.`,
-      tradeConfig.bot
-        ? `Trade management came from ${tradeConfig.bot.name}${tradeConfig.bot.active ? '' : ` (INACTIVE, ${tradeConfig.bot.mode ?? 'unknown'} mode)`}`
-          + ' — stop, target, entry bar and max hold are that record\'s own values.'
-        : 'NO BOT names this protocol, so stop, target and entry bar are the ENGINE\'S LITERALS. '
-          + 'The result describes the protocol\'s signals at a bracket nobody chose, not a deployed strategy.',
-      `The candidate list (${tickers.length} symbols) was built from ${decl.value.answerDate}'s ` +
-        'close-to-close move, so the LIST already knows how the day ended. The ranking inside it uses ' +
-        `bars up to ${cutoffUtc} UTC only, but membership is optimistic: a screen run live at the ` +
-        'cutoff would have picked from the whole market (#1321).',
+    /**
+     * ── THE CAVEATS, AS ROWS ADDRESSED TO A FIGURE (2026-11-26) ────────────────────────────────────
+     * Each row names the number it qualifies. `caveats` is then DERIVED from these, so the sentence list
+     * and the table cannot say different things.
+     */
+    const caveatRows: SelectionCaveat[] = [
+      {
+        code: 'single-session',
+        label: 'One session',
+        qualifies: 'Totals, day count',
+        text:
+          `Measured on ${decl.value.answerDate} only — the session this dataset is a screen of. Its ` +
+          `${priorSessions} earlier session(s) are directive warm-up, not results.`,
+      },
+      {
+        code: 'trade-config',
+        label: tradeConfig.bot ? 'Trade management' : 'No bot — engine literals',
+        qualifies: 'P/L, stop, target, hold',
+        text: tradeConfig.bot
+          ? `Trade management came from ${tradeConfig.bot.name}${tradeConfig.bot.active ? '' : ` (INACTIVE, ${tradeConfig.bot.mode ?? 'unknown'} mode)`}`
+            + ' — stop, target, entry bar and max hold are that record\'s own values.'
+          : 'NO BOT names this protocol, so stop, target and entry bar are the ENGINE\'S LITERALS. '
+            + 'The result describes the protocol\'s signals at a bracket nobody chose, not a deployed strategy.',
+      },
+      {
+        code: 'membership',
+        label: 'Candidate list',
+        qualifies: 'Top N selection',
+        text:
+          `The candidate list (${tickers.length} symbols) was built from ${decl.value.answerDate}'s ` +
+          'close-to-close move, so the LIST already knows how the day ended. The ranking inside it uses ' +
+          `bars up to ${cutoffUtc} UTC only, but membership is optimistic: a screen run live at the ` +
+          'cutoff would have picked from the whole market (#1321).',
+      },
     ];
     if (resolution.source !== 'protocol') {
-      caveats.push(
-        `Side came from the '${resolution.source}' source rather than the protocol's declared ` +
+      caveatRows.push({
+        code: 'side-source',
+        label: 'Direction source',
+        qualifies: 'Long/Short leg',
+        text:
+          `Side came from the '${resolution.source}' source rather than the protocol's declared ` +
           'direction — confirm the protocol id is the leg you meant.',
-      );
+      });
     }
     if (admission) {
-      caveats.push(
-        `ADMISSION: portfolio — ${admission.counts.refused} of ${admission.counts.considered} trade(s) the engine ` +
+      caveatRows.push({
+        code: 'admission',
+        label: 'Admitted population',
+        qualifies: 'Every total',
+        text:
+          `ADMISSION: portfolio — ${admission.counts.refused} of ${admission.counts.considered} trade(s) the engine ` +
           `decided were refused because the bot could not have taken them (${admission.counts.byCode.cooldown} inside the ` +
           `${admission.applied.cooldownMinutes}-minute cooldown, ${admission.counts.byCode.cap} while ` +
           `${admission.applied.maxConcurrent ?? 'no'}-position cap was full). Every figure above describes the ADMITTED ` +
           'population; the independent population is what every run stored before #1325 contains, so the two are not ' +
           'comparable with each other without saying so.',
-      );
+      });
     }
     if (engineTradesOutsideSelection > 0) {
-      caveats.push(
-        `${engineTradesOutsideSelection} trade(s) the engine produced were excluded by the selection ` +
+      caveatRows.push({
+        code: 'excluded-trades',
+        label: 'Excluded trades',
+        qualifies: 'Trades, win rate',
+        text:
+          `${engineTradesOutsideSelection} trade(s) the engine produced were excluded by the selection ` +
           `(${perSymbol.reduce((a, s) => a + s.excludedBeforeCutoff, 0)} entered before the ${cutoffUtc} ` +
           'cutoff; the remainder were on warm-up sessions or on symbols this day did not pick).',
-      );
+      });
     }
     const failed = perSymbol.filter((s) => s.error);
     if (failed.length) {
-      caveats.push(
-        `${failed.length} symbol(s) could not be run and are listed with their error rather than as zero trades: ` +
+      caveatRows.push({
+        code: 'symbol-failed',
+        label: 'Symbol failed',
+        qualifies: 'Per-symbol result',
+        text:
+          `${failed.length} symbol(s) could not be run and are listed with their error rather than as zero trades: ` +
           failed.map((f) => f.symbol).join(', '),
-      );
+      });
     }
     if (picked.day.selected.length === 0) {
-      caveats.push(`No candidate could be ranked on ${decl.value.answerDate}.`);
+      caveatRows.push({
+        code: 'none-ranked',
+        label: 'Nothing ranked',
+        qualifies: 'The whole run',
+        text: `No candidate could be ranked on ${decl.value.answerDate}.`,
+      });
     }
+    /**
+     * ⚠️ PYRAMIDING IS THE PARITY REGISTER'S ONLY REMAINING `gap`, AND THIS IS WHAT MAKES IT VISIBLE
+     * (2026-11-26). The engine models ONE position per symbol: `backtest.service.ts` opens a trade and
+     * walks forward to its exit. `PyramidPolicyService` in the live path may open a SECOND position on
+     * the same symbol when the bot declares `maxPyramidTiers > 1` and the existing one is green with its
+     * stop at breakeven-or-better. So a run against a bot that declares scale-in understates both its
+     * exposure and its trade count — silently, because nothing in the result said the mechanism was
+     * missing. Register row 300.
+     *
+     * The modelling itself is NOT landed here: it changes the trade population (concurrent positions
+     * instead of one at a time), which is a maths change and needs a copied configuration and a
+     * side-by-side run. Until then the run states which mechanism it could not model.
+     */
+    const botTiers = Number((bot as unknown as { maxPyramidTiers?: number | null } | null)?.maxPyramidTiers ?? 1);
+    if (Number.isFinite(botTiers) && botTiers > 1) {
+      caveatRows.push({
+        code: 'pyramid-not-modelled',
+        label: 'Scale-in not modelled',
+        qualifies: 'Trades, exposure, P/L',
+        text:
+          `${tradeConfig.bot?.name ?? 'This bot'} declares scale-in up to ${botTiers} tiers ` +
+          '(`maxPyramidTiers`), and the ENGINE MODELS ONE POSITION PER SYMBOL. When the live path would ' +
+          'have added a second position to a profitable, stop-locked one, this run recorded no such ' +
+          'trade — so its trade count and exposure are UNDERSTATED, and the gap widens the more often ' +
+          'the first position went green before the signal faded. Parity register row `pyramid`.',
+      });
+    }
+    const caveats = caveatRows.map((r) => r.text);
 
     /**
      * ⚠️ THE SPAN IS MEASURED FROM THE DATABASE, NOT FROM THE BREAKDOWN. `perSymbol[].detail.bars` only
@@ -1130,6 +1304,7 @@ export class SelectionRunService {
         cutoffUtc: cutoffUtc ?? null,
       }),
       best,
+      caveatRows,
       caveats,
     };
   }

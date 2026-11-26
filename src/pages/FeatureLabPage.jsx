@@ -43,8 +43,8 @@ export default function FeatureLabPage() {
           <div
             key={demo.id}
             style={{
-              background: 'var(--panel, #141a2e)',
-              border: `1px solid ${demo.status === 'active' ? 'rgba(99,102,241,0.3)' : 'var(--line, #1e2a45)'}`,
+              background: 'var(--panel)',
+              border: `1px solid ${demo.status === 'active' ? 'rgba(99,102,241,0.3)' : 'var(--line)'}`,
               borderRadius: 10,
               opacity: demo.status === 'planned' ? 0.6 : 1,
               overflow: 'hidden',
@@ -55,7 +55,7 @@ export default function FeatureLabPage() {
               onClick={() => demo.status === 'active' && setExpanded(expanded === demo.id ? null : demo.id)}
               style={{
                 width: '100%', textAlign: 'left', padding: '1rem', background: 'none', border: 'none',
-                color: 'var(--ink, #e2e8f0)', cursor: demo.status === 'active' ? 'pointer' : 'default',
+                color: 'var(--ink)', cursor: demo.status === 'active' ? 'pointer' : 'default',
                 fontFamily: 'inherit',
               }}
             >
@@ -111,8 +111,8 @@ export default function FeatureLabPage() {
           <div
             key={d.id}
             style={{
-              background: 'var(--panel, #141a2e)',
-              border: `1px solid ${d.status === 'active' ? 'rgba(34,197,94,0.25)' : 'var(--line, #1e2a45)'}`,
+              background: 'var(--panel)',
+              border: `1px solid ${d.status === 'active' ? 'rgba(34,197,94,0.25)' : 'var(--line)'}`,
               borderRadius: 10,
               opacity: d.status === 'planned' ? 0.6 : 1,
               overflow: 'hidden',
@@ -123,7 +123,7 @@ export default function FeatureLabPage() {
               onClick={() => d.status === 'active' && setExpanded(expanded === d.id ? null : d.id)}
               style={{
                 width: '100%', textAlign: 'left', padding: '1rem', background: 'none', border: 'none',
-                color: 'var(--ink, #e2e8f0)', cursor: d.status === 'active' ? 'pointer' : 'default',
+                color: 'var(--ink)', cursor: d.status === 'active' ? 'pointer' : 'default',
                 fontFamily: 'inherit',
               }}
             >

@@ -19,7 +19,7 @@
  * for a *specific* table, row or value — a local explanation attached to its subject, which is the one
  * thing the shell cannot position.
  */
-import { useEffect, useId, useRef, useState } from 'react';
+import { usePopover } from '../core/use-popover';
 import '../styles/why-popover.css';
 
 export default function WhyPopover({
@@ -37,44 +37,15 @@ export default function WhyPopover({
    */
   hover = false,
 }) {
-  const [open, setOpen] = useState(false);
-  const id = useId();
-  const ref = useRef(null);
-
-  // A transient overlay must not survive a click elsewhere — every other surface in the app closes on
-  // outside click, and a stuck popover covers the row underneath.
-  useEffect(() => {
-    if (!open) return undefined;
-    const onDown = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [open]);
-
-  // ⚠️ HOVER IS AN ENHANCEMENT, NEVER THE ONLY WAY IN. Click, Enter/Space and keyboard focus all still
-  // open it, because a hover-only help is unreachable on touch and by anyone using a keyboard — the
-  // accessibility policy forbids `title` for exactly this reason.
-  const hoverProps = hover
-    ? {
-        onMouseEnter: () => setOpen(true),
-        onMouseLeave: () => setOpen(false),
-      }
-    : {};
+  /**
+   * ⚠️ THE MECHANICS MOVED TO `usePopover` (2026-11-26) so the qualifier chips share them instead of
+   * copying outside-click / Escape / hover-on-enhancement. Behaviour here is unchanged.
+   */
+  const { open, ref, id, hoverProps, triggerProps } = usePopover({ hover });
 
   return (
     <span className={`why-pop why-pop--${variant}${hover ? ' why-pop--hover' : ''}`} ref={ref} {...hoverProps}>
-      <button
-        type="button"
-        className="why-pop-btn"
-        aria-label={title}
-        aria-expanded={open}
-        aria-controls={open ? id : undefined}
-        onClick={() => setOpen((v) => !v)}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') setOpen(false);
-        }}
-      >
+      <button type="button" className="why-pop-btn" aria-label={title} {...triggerProps}>
         {label === '?' ? (
           /* A borderless info glyph (info-in-a-circle), the modern convention (Linear, Stripe, the
              shadcn/Radix libraries) — not a bordered “?” pill, which reads as a button. */

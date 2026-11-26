@@ -5,26 +5,16 @@
  * The page needed them and the extracted step components need them. Two copies would drift and only
  * one would get the next fix, so there is one file and both import it.
  *
- * ⚠️ THESE ARE NOT `src/core/format-utils.js`. That module is the app-wide convention
- * (`formatCurrency` prefixes a currency symbol, `formatPct` returns an unsigned percentage), and this
- * page's figures are read beside each other in a table where a `$` on every cell is noise and the SIGN
- * of a percentage is the point. Keeping them separate is deliberate; do not "unify" them without
- * checking how the tables read.
+ * ⚠️ THE PERCENTAGE AND MONEY FORMATTERS THAT USED TO LIVE HERE ARE GONE — THEY WERE EXACT COPIES.
+ * The comment that justified them claimed `formatPct` "returns an unsigned percentage". It does not:
+ * it signs a positive value, exactly as this file did. Measured 2026-11-17, both produced identical
+ * strings, so the "do not unify" instruction was protecting a duplication with no reason to exist.
+ * `formatPct(n)` and `formatAmount(n)` in `src/core/format-utils.js` own them now, and the NaN guard
+ * that lived here ("present but not a number" must render as an em dash) moved into them.
+ *
+ * ⚠️ `dayLabel` stays because it is genuinely this feature's own: a DATE STRING in UTC, not a
+ * timestamp, and a layout (`Mon 10 Nov`) nothing else uses.
  */
-
-/** A signed percentage for a move: `+23.4%`, `−2.1%` (typographic minus), `—` when there is none. */
-export const fmtPct = (n) => (
-  n == null || Number.isNaN(Number(n))
-    ? '—'
-    : `${Number(n) >= 0 ? '+' : ''}${Number(n).toFixed(1)}%`
-);
-
-/** Money without a currency symbol — the account currency is the same across a table's rows. */
-export const fmtMoney = (n) => (
-  n == null || Number.isNaN(Number(n))
-    ? '—'
-    : Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-);
 
 /** `2026-11-10` → `Mon 10 Nov`. Formatted in UTC from the string so no local timezone can shift it. */
 export function dayLabel(date) {

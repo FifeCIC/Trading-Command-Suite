@@ -44,33 +44,12 @@ const defaultFormat = (v) => (v == null ? '—' : v.toFixed(2));
  * ⚠️ Requires 2+ finite points. One point has no shape, and drawing it as a flat line would assert
  * "no change", which is a claim the data does not support.
  */
-function Sparkline({ series, width = 64, height = 18, label }) {
-  const points = Array.isArray(series) ? series.filter((n) => Number.isFinite(n)) : [];
-  if (points.length < 2) return null;
-
-  const min = Math.min(...points);
-  const max = Math.max(...points);
-  const span = max - min || 1; // a flat series is drawn mid-height, not divided by zero
-  const stepX = width / (points.length - 1);
-
-  const d = points
-    .map((v, i) => `${(i * stepX).toFixed(2)},${(height - ((v - min) / span) * height).toFixed(2)}`)
-    .join(' ');
-
-  return (
-    <svg
-      className="change-stat__spark"
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      role="img"
-      aria-label={label || `Trend across ${points.length} points`}
-      preserveAspectRatio="none"
-    >
-      <polyline points={d} fill="none" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-    </svg>
-  );
-}
+/**
+ * ⚠️ THE SPARKLINE MOVED TO `components/Sparkline.jsx` (2026-11-26). It was a private helper here,
+ * and the movers page's attempt trend needs the same glyph. A second copy would drift; see that
+ * file's header for why it is inline SVG and why the stroke colour stays with the caller.
+ */
+import Sparkline from './Sparkline.jsx';
 
 /**
  * @param {object} props
@@ -134,6 +113,7 @@ export default function ChangeStat({
       {series?.length > 1 && (
         <Sparkline
           series={series}
+          className="change-stat__spark"
           label={`${label}: ${series.length} points from ${format(series[0])} to ${format(series[series.length - 1])}`}
         />
       )}

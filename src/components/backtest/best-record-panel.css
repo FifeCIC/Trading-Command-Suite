@@ -123,3 +123,38 @@
   color: var(--color-warning);
   font-weight: 600;
 }
+
+/* ── ATTEMPT TREND (audit note 'e', 2026-11-26) ────────────────────────────────────────────────
+   The stored attempts of this test as a shape. The stroke colour is the caller's (see
+   components/Sparkline.jsx) — here it is a neutral accent, because the sequence is not "good" or
+   "bad" on its own; the reader judges the direction against the record above it. */
+.brp-attempts {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.brp-attempts-spark {
+  max-width: 100%;
+}
+
+.brp-attempts-spark polyline {
+  stroke: var(--accent);
+}
+
+.brp-attempts-note {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+.brp-attempts-note--warn {
+  color: var(--color-warning);
+}
+.brp-attempts-title {
+  margin: 0 0 4px;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}

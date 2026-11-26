@@ -24,8 +24,14 @@
  * history this component is not in a position to make.
  */
 import { Fragment } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '../../core/api/client';
 // The view model lives in `src/core` so its states are testable without a browser (`node --test`).
 import { buildBestView, moneySigned } from '../../core/best-record.js';
+// Audit note 'e' (2026-11-26) — the stored attempts of this test, as a shape.
+import { buildAttemptSeries } from '../../core/attempt-series.js';
+// ONE sparkline in the app: extracted from `ChangeStat` rather than copied. See its header.
+import Sparkline from '../Sparkline.jsx';
 import './best-record-panel.css';
 
 const money = (n) => (n == null ? '—' : `$${Number(n).toFixed(2)}`);
@@ -38,11 +44,33 @@ const when = (iso) => {
   return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 };
 
-export default function BestRecordPanel({ okRuns }) {
+export default function BestRecordPanel({
+  okRuns,
+  profileKey = null,
+  profileLabel = null,
+  semanticsVersion = null,
+  runCount = 1,
+}) {
   const view = buildBestView(okRuns);
+
+  /**
+   * The stored attempts of this test, for the trend. Same endpoint step 1 lists, different question:
+   * this one wants EVERY attempt including the one just made, so it does not exclude current runs.
+   *
+   * ⚠️ Enabled only when a profileKey exists — "all history" is not a profile, and the endpoint refuses
+   * it rather than returning the last 20 unrelated tests (`selection-history`).
+   */
+  const attempts = useQuery({
+    queryKey: ['movers-attempts', profileKey, semanticsVersion],
+    queryFn: () => apiGet(`/api/backtest/selection-history?profileKey=${encodeURIComponent(profileKey)}&limit=20`),
+    enabled: Boolean(profileKey),
+    retry: 1,
+  });
+
   if (!view || view.state === 'unsupported') return null;
 
   const changed = (view.settingsDiff ?? []).filter((s) => s.state === 'differs');
+  const series = buildAttemptSeries(attempts.data?.selections, semanticsVersion);
 
   return (
     <section className="brp" aria-label="Best recorded result for this test">
@@ -110,6 +138,76 @@ export default function BestRecordPanel({ okRuns }) {
         "not beaten" and "we could not compare", and those two look identical without it.
       */}
       {view.because && <p className="brp-because">{view.because}</p>}
+
+      {/**
+        * ── EVERY ATTEMPT, AS A SHAPE (audit note 'e', 2026-11-26) ───────────────────────────────
+        * "Has this ever been better" is a comparison with one number. "Is it climbing or oscillating"
+        * is a question about the SEQUENCE, and the table above cannot show it.
+        *
+        * ⚠️ Four states, never collapsed: loading, a failed read, a reply with no list, and a list that
+        * is too short to draw. Each is a different fact, and "no sparkline" would report all four as
+        * "nothing to see".
+        */}
+      {profileKey && (
+        <div className="brp-attempts">
+          {attempts.isPending ? (
+            <p className="brp-attempts-note">Loading the stored attempts…</p>
+          ) : attempts.isError ? (
+            <p className="brp-attempts-note brp-attempts-note--warn">
+              The stored attempts could not be read, so the trend is not drawn. This is not &ldquo;no
+              attempts&rdquo;.
+            </p>
+          ) : !Array.isArray(attempts.data?.selections) ? (
+            <p className="brp-attempts-note brp-attempts-note--warn">
+              The server replied without a list of attempts, so the trend cannot be drawn.
+            </p>
+          ) : series.values.length < 2 ? (
+            <p className="brp-attempts-note">
+              {series.values.length === 1
+                ? 'One stored attempt is plottable — a single point has no shape, so no trend is drawn.'
+                : 'No stored attempt carries a readable P/L for this test, so there is no trend to draw.'}
+            </p>
+          ) : (
+            <>
+              {/**
+                * ⚠️ THE TREND IS ONE TEST, AND IT SAYS WHICH. `profileKey` is taken from the LAST run
+                * only, so beside five days' totals an unlabelled sparkline would silently describe one
+                * day. The label above it — and the sentence when more than one day ran — is what stops
+                * the shape being read as a trend across the whole queue.
+                */}
+              <p className="brp-attempts-title">
+                Attempts of <strong>{profileLabel ?? 'this test'}</strong>
+              </p>
+              <Sparkline
+                series={series.values}
+                width={220}
+                height={40}
+                className="brp-attempts-spark"
+                label={`Net P/L across ${series.values.length} stored attempts, oldest first: from ${money(series.values[0])} to ${money(series.values[series.values.length - 1])}`}
+              />
+              <p className="brp-attempts-note">
+                <strong>{series.values.length} stored attempt(s)</strong>, oldest on the left ·{' '}
+                {series.distinct} distinct P/L value(s)
+                {series.excludedSemantics > 0
+                  && ` · ${series.excludedSemantics} not plotted (different execution semantics — not comparable)`}
+                {series.skipped > 0 && ` · ${series.skipped} with no readable P/L`}
+              </p>
+              {series.distinct === 1 && (
+                <p className="brp-attempts-note brp-attempts-note--warn">
+                  Every attempt produced the same result — the same day re-run with unchanged settings,
+                  not progress. Change something before reading a trend here.
+                </p>
+              )}
+              {runCount > 1 && (
+                <p className="brp-attempts-note">
+                  This is one test — the last of the {runCount} days you ran. The totals above cover all{' '}
+                  {runCount}; the shape covers this test only.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {view.state === 'new-record' && changed.length > 0 && (
         <>

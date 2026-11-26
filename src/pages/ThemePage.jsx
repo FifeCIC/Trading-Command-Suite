@@ -18,6 +18,7 @@
  * has been visited (the failure `scripts/validate-css-imports.cjs` exists to catch).
  */
 import { useEffect, useState } from 'react';
+import QualifierStrip from '../components/QualifierStrip.jsx';
 import './theme-page.css';
 
 const PATTERNS = [
@@ -33,6 +34,7 @@ const PATTERNS = [
   { id: 'detail-rail', name: 'Detail Rail', tag: 'sidebar' },
   { id: 'theory-box', name: 'Theory Box', tag: 'text area' },
   { id: 'status-pills', name: 'Status Pills', tag: 'in-table status' },
+  { id: 'qualifier-strip', name: 'Qualifier Strip', tag: 'state · one figure · detail on demand' },
   { id: 'form-sections', name: 'Form Sections', tag: 'tinted form' },
   { id: 'signal-card', name: 'Signal Card', tag: 'busy card' },
   { id: 'compact-numbers', name: 'Compact Numbers', tag: 'summary' },
@@ -376,6 +378,76 @@ export default function ThemePage() {
                   <tr><td className="thm-sym">gap-scanner-v1-long</td><td><span className="thm-status thm-status--off"><i />Off</span></td><td><span className="thm-badge thm-badge--sell">SELL</span></td><td><span className="thm-badge thm-badge--hold">HOLD</span></td></tr>
                 </tbody>
               </table>
+            </div>
+          </Section>
+
+          {/*
+            ── QUALIFIER STRIP (2026-11-26) ──────────────────────────────────────────────────────
+            The owner's objection to the stop-fill block was not that it was long — it was that a
+            SENTENCE cannot be scanned: *"If I'm doing many tests I can't afford the time of reading
+            those … the numbers don't stand out, not that I would even understand the point of them."*
+
+            This specimen carries the REAL figures from `/lab/movers-strategy-backtest` (17 of 17 stop
+            exits, worst 25.52%, stop distance 20%, 3 of 5 days with no stop exit) so the pattern is
+            judged on the numbers it will actually hold — not on lorem ipsum, which flatters any layout.
+
+            ⚠️ It is LIVE, not a picture: hover, click or keyboard the chips and read the panel.
+            ⚠️ Five tones, and `muted` is the important one — NOT MEASURED must never look like OK.
+          */}
+          <Section id="qualifier-strip" name="Qualifier Strip" tag="state · one figure · detail on demand" wide>
+            <div className="thm-frame">
+              <p className="thm-qual-intro">
+                Each chip is a state, a subject and <strong>one</strong> figure. The sentence and the
+                explanation open on hover, click or keyboard — they are not printed.
+              </p>
+              <QualifierStrip
+                items={[
+                  {
+                    code: 'stops',
+                    tone: 'risk',
+                    label: 'Stops',
+                    value: 'worst 25.5% past · stop 20%',
+                    detail: '18 of 19 stop exits had a bar extreme beyond the stop level (median 5.19%, p90 24.38%).',
+                    meaning: 'The engine books every stop at the level; a broker fills at the market. The worst fill here is 1.3× your stop distance, so the P&L is optimistic.',
+                  },
+                  {
+                    code: 'coverage',
+                    tone: 'info',
+                    label: 'Coverage',
+                    value: '3 of 5 days had no stop exit',
+                    detail: 'Those days contained no SL/TRAIL exit in the admitted population, so the assumption could not be tested there.',
+                    meaning: 'An absence of stops, not a gap in recording — the figures for those days say nothing about slippage either way.',
+                  },
+                  {
+                    code: 'material',
+                    tone: 'warn',
+                    label: 'Gap is material',
+                    value: 'median 5.2% of stop',
+                    detail: 'Median overshoot across the measured exits was 5.19% of the stop price.',
+                    meaning: 'Half the measured stops filled 5% or more beyond the level — enough to change a break-even day into a losing one.',
+                  },
+                  {
+                    code: 'publisher',
+                    tone: 'ok',
+                    label: 'Publisher',
+                    value: 'yahoo only',
+                    detail: 'One publisher supplied every bar in this window, so no two price scales were mixed in the ranking.',
+                    meaning: 'Nothing to correct — stated so the absence of an ambiguity is visible rather than assumed.',
+                  },
+                  {
+                    code: 'semantics',
+                    tone: 'muted',
+                    label: 'Not measured',
+                    value: '2 of 5 days',
+                    detail: 'Two runs carry no exit-bar extreme, so their stops could not be read at all.',
+                    meaning: 'Not recorded, which is not the same as zero. A grey chip never means fine.',
+                  },
+                ]}
+              />
+              <p className="thm-qual-foot">
+                Five chips replace four paragraphs, and the one figure that changes a decision —
+                25.5% against a 20% stop — is the largest thing on the row.
+              </p>
             </div>
           </Section>
 

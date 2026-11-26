@@ -31,9 +31,12 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { query, connect } = require('./scripts/lib/mysql-cli.cjs');
+const { query, connect } = require('./lib/mysql-cli.cjs');
 
-const REPO = __dirname;
+// ⚠️ `__dirname` is `scripts/`, so every path below was resolved one level too deep:
+// `nest/app-settings.json` reported ENOENT (a "mirror unreadable / counts differ" false alarm) and the
+// raw export landed in `scripts/logs/`. The repo root is the parent.
+const REPO = path.resolve(__dirname, '..');
 const MIRROR = path.join(REPO, 'nest', 'app-settings.json');
 const OUT = path.join(REPO, 'logs', '2026-10-13-ui-review-export.json');
 

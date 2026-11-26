@@ -67,6 +67,12 @@ import {
 // All page CSS is bundled globally, but in DEV Vite injects CSS only when a module is
 // imported — so a page that mounts SignalCard without having imported
 // signals-overview.css itself renders completely unstyled. Vite dedupes the duplicate.
+// ⚠️ THE OWNER'S OWN RULE (2026-11-26): *"nothing should be hidden from me but we style things
+// differently to indicate to me what would be hidden for other users."* Same constant the nav rail
+// uses (`rail-link--withheld`) — one switch, not a second owner concept. When this is true the
+// three mislabelled readings stay on screen, visibly subordinate and explained; when a tester
+// build flips it false, they are absent.
+import { OWNER_SEES_WITHHELD } from '../core/hidden-views';
 import '../pages/signals-overview.css';
 
 /**
@@ -218,11 +224,13 @@ export default function SignalCard({ envelope, dismissHours, onDismissed, defaul
       {/* ── Strength: combined + metrics — one aligned list (Label | Bar | value) ── */}
       <section className="sig-b-strength">
         <div className="sig-b-bars">
-          <div className="sig-b-row sig-b-row--combined" title="Combined strength = the average of Signal and Opportunity, rounded.">
+          {OWNER_SEES_WITHHELD && (
+          <div className="sig-b-row sig-b-row--combined sig-b-row--withheld" title="Combined strength = the average of Signal and Opportunity, rounded. NOT SHOWN TO OTHER USERS — it is a sort rank, not a strength (#1358).">
             <span className="sig-b-row-label">Combined strength</span>
             <span className="sig-b-row-track"><span className="sig-b-row-fill" style={{ width: `${strength}%` }} /></span>
             <strong className="sig-b-row-pct sig-b-row-pct--combined">{envelope.combinedStrength}</strong>
           </div>
+          )}
           <div className="sig-b-row" title={`Signal = how much of the protocol's directional capacity agrees — it counts the directives that read NEUTRAL this tick. ${scaleTitle}`}>
             <span className="sig-b-row-label">Signal</span>
             <span className="sig-b-row-track">
@@ -256,7 +264,29 @@ export default function SignalCard({ envelope, dismissHours, onDismissed, defaul
               * Wrap, don't add a sibling.
               */}
             <span className="sig-b-row-value">
-              <strong className="sig-b-row-pct">{signalPct ?? '—'}{signalPct != null ? '%' : ''}</strong>
+              {/*
+                * #1358 — POINTS, not a percentage.
+                *
+                * `signalPct` is `composite ÷ a constant per protocol`, measured 2026-11-26 as
+                * 815 / 1005 / 1225 across three protocols. A percentage of that constant implies a
+                * 0–100 scale that does not exist, and means different evidence on different
+                * protocols. The pair below is the actual evidence; the breadth line under the bars
+                * says why the total is small.
+                *
+                * ⚠️ `signalPct` is UNCHANGED and still drives classification, the pre-trade gate
+                * and everything persisted. Only the headline unit changed.
+                */}
+              <strong
+                className="sig-b-row-pct"
+                title={
+                  `${signalPct ?? '—'}% of this protocol's configured capacity (${envelope.maxPossible ?? '—'} points).\n\n` +
+                  `Comparable WITHIN this protocol only — each protocol has its own capacity, so the same ` +
+                  `percentage is a different number of points elsewhere.`
+                }
+              >
+                {envelope.composite ?? '—'}<span className="sig-b-row-pct-sep"> / </span>{envelope.maxPossible ?? '—'}
+              </strong>
+              <span className="sig-b-row-unit" aria-hidden="true">pts</span>
               {/*
                 * #915 Option C — the SECOND reading of the same signal, beside the first.
                 *
@@ -307,17 +337,39 @@ export default function SignalCard({ envelope, dismissHours, onDismissed, defaul
               )}
             </span>
           </div>
-          <div className="sig-b-row" title="Opportunity = additive screen value on top of the setup. Measured against ALL directive capacity (including gates), so its scale differs from Signal's — do not compare the two bars directly.">
+          {OWNER_SEES_WITHHELD && (
+          <div className="sig-b-row sig-b-row--withheld" title="Opportunity = additive screen value on top of the setup. Measured against ALL directive capacity (including gates), so its scale differs from Signal's — do not compare the two bars directly. NOT SHOWN TO OTHER USERS (#1358).">
             <span className="sig-b-row-label">Opportunity</span>
             <span className="sig-b-row-track"><span className="sig-b-row-fill" style={{ width: `${Math.max(0, Math.min(100, oppPct || 0))}%` }} /></span>
             <strong className="sig-b-row-pct">{oppPct ?? '—'}{oppPct != null ? '%' : ''}</strong>
           </div>
-          <div className="sig-b-row" title="Confidence = how certain the model is (0–100, not a percentage band)">
+          )}
+          {OWNER_SEES_WITHHELD && (
+          <div className="sig-b-row sig-b-row--withheld" title="Confidence = a heuristic that STARTS AT 50 for every reading and adjusts for rarity, distance and agreement — not a measurement of strength. Banned by #915, still computed. NOT SHOWN TO OTHER USERS (#1358).">
             <span className="sig-b-row-label">Confidence</span>
             <span className="sig-b-row-track"><span className="sig-b-row-fill sig-b-row-fill--conf" style={{ width: `${Math.max(0, Math.min(100, envelope.confidence || 0))}%` }} /></span>
             <strong className="sig-b-row-pct">{envelope.confidence ?? '—'}</strong>
           </div>
+          )}
         </div>
+        {/*
+          * #1358 — the one line that makes the score legible.
+          *
+          * `composite` is the sum of the directives that FIRED. `maxPossible` sums EVERY
+          * direction-eligible directive, including the ones that read neutral this tick. Measured
+          * 2026-11-26 over 800 stored scores: a median of 11 directives exist per protocol and 53%
+          * of readings fire exactly one — so a small share of the maximum is the NORMAL case, not
+          * a weak reading. Without this sentence the points pair above looks like a failure.
+          */}
+        {envelope.totalDirectives > 0 && (
+          <p className="sig-b-breadth">
+            <strong>{envelope.firedDirectives}</strong> of {envelope.totalDirectives} directives agreed
+            <span className="sig-b-breadth-note">
+              {' '}— the {envelope.composite} pts come from what fired;
+              the maximum of {envelope.maxPossible} counts all {envelope.totalDirectives}
+            </span>
+          </p>
+        )}
       </section>
 
       {/* ── Uniform notices (all blockers/warnings/conflicts, one style) ── */}

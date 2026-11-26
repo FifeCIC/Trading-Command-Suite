@@ -880,3 +880,17 @@
 
 
 
+
+/* Qualifier Strip specimen (2026-11-26) — intro/foot copy only. The chips style themselves. */
+.thm-qual-intro,
+.thm-qual-foot {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.thm-qual-foot {
+  margin: 10px 0 0;
+  color: var(--text-dim);
+}

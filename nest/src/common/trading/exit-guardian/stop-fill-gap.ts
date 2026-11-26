@@ -38,6 +38,23 @@ export interface FillGapTrade {
 }
 
 export interface FillGapSummary {
+  /**
+   * SL/TRAIL exits in the population — the DENOMINATOR for `measured`, counted whether or not the exit
+   * bar's extremes were recorded.
+   *
+   * ⚠️ `measured: 0` HAD TWO POSSIBLE MEANINGS and now has an explicit separator: `stopExits: 0` means
+   * the population contains no stop exit to be optimistic about; `stopExits > 0` beside `measured: 0`
+   * would mean stop exits exist and could not be read — a gap in what was recorded.
+   *
+   * 🛑 CORRECTION (2026-11-26, same day). An apparent instance of the second state was investigated and
+   * was NOT one: `movers-winners-2026-11-19` showed 4 SL exits with blank bar extremes in the run's
+   * DETAIL, but `detail.trades` includes trades the SELECTION REFUSED, and none of those 4 were in the
+   * admitted population (`stopExits: 0`). **No recording gap was demonstrated.** The counters are kept
+   * because the distinction is real and cheap to carry — but do not cite that day as an instance of it.
+   */
+  stopExits: number;
+  /** Stop exits that could NOT be measured because the bar's adverse extreme was not recorded. */
+  unrecorded: number;
   /** Stop exits that could be measured (both the level and the bar's extreme were recorded). */
   measured: number;
   /** Of those, how many had an extreme beyond the stop — i.e. the fill may have been worse. */
@@ -63,9 +80,13 @@ export function summariseFillGap(trades: FillGapTrade[] | null | undefined): Fil
   const list = Array.isArray(trades) ? trades : [];
   const overshoots: number[] = [];
   let measured = 0;
+  let stopExits = 0;
 
   for (const t of list) {
     if (t?.exitReason !== 'SL' && t?.exitReason !== 'TRAIL') continue;
+    // Counted BEFORE the field checks, so "no stop exit" and "stop exit we could not read" stay
+    // distinguishable — see the interface docblock.
+    stopExits += 1;
     const stop = Number(t?.exitPrice);
     const low = Number(t?.exitBarLow);
     const high = Number(t?.exitBarHigh);
@@ -84,11 +105,22 @@ export function summariseFillGap(trades: FillGapTrade[] | null | undefined): Fil
   const worstPct = at(1);
 
   return {
+    stopExits,
+    unrecorded: stopExits - measured,
     measured,
     beyond: overshoots.length,
     medianPct,
     p90Pct,
     worstPct,
+    /**
+     * ⚠️ `note` KEEPS ITS ORIGINAL CONTRACT — a sentence only when something was measured, `null`
+     * otherwise — because `BacktestPage.jsx` renders on `fillGap.note` being truthy and a surface that
+     * suddenly appeared for old runs is a behaviour change in a page this work does not touch.
+     *
+     * The "there WERE stops but none could be read" case is therefore NOT in this string. It is in
+     * `stopExits`/`unrecorded`, so a caller that wants to state it precisely can — that is the movers
+     * page's new block, which reads those two fields rather than this sentence.
+     */
     note: measured
       ? `${overshoots.length} of ${measured} stop exit(s) had a bar extreme beyond the stop level — the engine filled at the level, a broker may not have (median overshoot ${medianPct}%, p90 ${p90Pct}%).`
       : null,

@@ -1,0 +1,6 @@
+/* Shared by every sparkline (extracted 2026-11-26). Only layout lives here — the stroke colour is
+   deliberately left to the call site, because its MEANING differs per surface. */
+.spark {
+  display: block;
+  overflow: visible;
+}

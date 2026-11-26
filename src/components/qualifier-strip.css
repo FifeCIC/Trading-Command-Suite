@@ -1,0 +1,122 @@
+/*
+ * qualifier-strip.css — the chip row that replaces a block of prose.
+ *
+ * Layout only + tone colours. The tone palette is deliberately narrow: three states a reader can act
+ * on (warn / risk), one that is simply true (info / ok), and `muted` which means NOT MEASURED.
+ * ⚠️ `muted` must never share a colour with `ok` — "cannot judge" and "fine" have to look different.
+ */
+
+.qstrip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.qstrip-item {
+  position: relative;
+}
+
+.qchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.35;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.qchip:hover,
+.qchip[aria-expanded='true'] {
+  background: var(--bg-elev);
+}
+
+.qchip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The dot carries the tone redundantly with the border, so a greyscale theme still reads the shape. */
+.qchip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex: none;
+  background: var(--ink-soft);
+}
+
+.qchip-label {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.qchip-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Tones ───────────────────────────────────────────────────────────────────────────────────── */
+.qchip--ok { border-color: color-mix(in srgb, var(--risk-normal) 45%, var(--border)); }
+.qchip--ok .qchip-dot { background: var(--risk-normal); }
+
+.qchip--info { border-color: var(--border); }
+.qchip--info .qchip-dot { background: var(--accent); }
+
+.qchip--warn { border-color: color-mix(in srgb, var(--color-warning) 55%, var(--border)); }
+.qchip--warn .qchip-dot { background: var(--color-warning); }
+
+.qchip--risk { border-color: color-mix(in srgb, var(--risk-critical) 60%, var(--border)); }
+.qchip--risk .qchip-dot { background: var(--risk-critical); }
+
+/* NOT MEASURED. Dashed, grey, no fill — it must not be mistakable for a passing state. */
+.qchip--muted {
+  border-style: dashed;
+  border-color: var(--text-dim);
+  color: var(--text-dim);
+  background: transparent;
+}
+.qchip--muted .qchip-dot { background: transparent; border: 1px solid var(--text-dim); }
+.qchip--muted .qchip-label,
+.qchip--muted .qchip-value { color: var(--text-dim); }
+
+/* ── The panel: layer 2 (the sentence) and layer 3 (what it means) ───────────────────────────── */
+.qchip-panel {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  left: 0;
+  display: grid;
+  gap: 6px;
+  width: max-content;
+  max-width: min(46ch, 88vw);
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elev);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--bg) 55%, transparent);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  white-space: normal;
+}
+
+.qchip-detail { display: block; }
+
+.qchip-meaning {
+  display: block;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.qchip-meaning b { color: var(--ink); }

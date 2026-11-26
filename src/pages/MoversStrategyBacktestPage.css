@@ -1375,6 +1375,16 @@
   color: var(--ink);
 }
 
+
+/* The caveat table (2026-11-26): the sentences that qualify the totals, addressed to the figure each
+   one changes. The Detail column is the only one that wraps — the other three are short and stay on
+   one line so the table stays scannable. */
+.mvp-caveats .mvp-caveat-text {
+  white-space: normal;
+  min-width: 280px;
+  line-height: 1.5;
+}
+
 .mvp-muted {
   color: var(--text-dim);
 }
@@ -1514,4 +1524,33 @@
   padding: 8px 10px;
   margin: 0 0 10px;
   background: color-mix(in srgb, var(--color-warning) 8%, var(--panel));
+}
+
+/* ── PER-DAY P/L BAR (audit note 'f', 2026-11-26) ─────────────────────────────────────────────
+   Length = |P/L| against the largest day in the table, so one day carrying the total is visible.
+   Sign is NOT carried by colour alone — the P/L text sits directly above each bar. */
+.mvp-pnlbar {
+  display: block;
+  height: 3px;
+  margin-top: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink-soft) 18%, transparent);
+  overflow: hidden;
+}
+
+.mvp-pnlbar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  min-width: 1px; /* a tiny day still shows it exists; a zero day is a 0-width bar */
+}
+
+.mvp-pnlbar-fill.is-pos { background: var(--risk-normal); }
+.mvp-pnlbar-fill.is-neg { background: var(--risk-high); }
+
+/* A symbol whose engine call threw — marked, because its 0 figures mean "not measured". */
+.mvp-sym-error {
+  font-size: 10px;
+  color: var(--color-warning);
+  white-space: nowrap;
 }

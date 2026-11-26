@@ -23,7 +23,24 @@ const SLATE_DARK = {
 export function createSlateTokens(mode = 'dark') {
   const normalizedMode = mode === 'light' ? 'light' : 'dark';
   const base = createThemeTokens(normalizedMode);
-  const palette = normalizedMode === 'light' ? SLATE_LIGHT : SLATE_DARK;
+  /**
+   * ⚠️ SPREADS THE BASE PALETTE INSTEAD OF REPLACING IT (2026-11-26).
+   *
+   * Replacing it dropped the `semantic` group, so slate was served by the adapter's
+   * `getSemanticPalette(isDarkSurface(panel))` fallback. That fallback happens to pick the right
+   * set for slate in both modes — so this **changes no pixel today**, and saying otherwise would be
+   * a false claim. What it changes is the wiring: slate now inherits the canonical per-mode set
+   * DELIBERATELY, so a retune of the neutral set reaches it, and the pack no longer depends on a
+   * luminance guess to arrive at the right answer.
+   *
+   * ⚠️ One known asymmetry, left alone on purpose: on the slate DARK panel (`#1e293b`) the base
+   * `neutral` (`#a1a9b5`) measures 6.17:1 against slate's own `--ink-soft` of 5.71:1, i.e. it sits
+   * *above* the secondary ink rather than below it as it does in core. `--color-neutral` is a
+   * semantic VALUE colour (HOLD), not a hierarchy step — the dim tokens (`muted`, `textDim`) are the
+   * ones that must recede, and they do (4.87 / 5.71). Guarded by the "dim never outshines ink-soft"
+   * case in `src/theme/semantic-contrast.test.js`.
+   */
+  const palette = { ...base.palette, ...(normalizedMode === 'light' ? SLATE_LIGHT : SLATE_DARK) };
 
   return {
     ...base,

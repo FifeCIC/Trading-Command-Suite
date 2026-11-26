@@ -57,11 +57,13 @@ export const MOVERS_STEPS = [
      *
      * ⚠️ ONE LINE EACH, ≤ 20 words. The owner's objection to the old caveat list was volume, so a note
      * that reads as a paragraph would recreate the problem it exists to solve.
+     *
+     * ⚠️ EVERY NOTE WAS DELETED AS ITS WORK SHIPPED (#1352/#1353/#1342, 2026-11-26): the per-day
+     * coverage preview, the run's cost estimate, the caveat list becoming a table, and `fillGap`. Both
+     * audit lists in this file are now empty, which is the intended end state — a note that outlives
+     * its implementation advertises work already done.
      */
-    audit: [
-      'Pre-run preview per day: candidate count and bar coverage, so a thin day is seen before a run is spent.',
-      'Estimate the run’s cost — days × top N symbols re-scored — before pressing Run.',
-    ],
+    audit: [],
   },
   {
     id: 'mvp-step-summary',
@@ -69,10 +71,7 @@ export const MOVERS_STEPS = [
     title: 'What the run returned',
     purpose: 'The totals, and whether they improved on the previous test of the same thing.',
     defaultOpen: true,
-    audit: [
-      'The caveats belong in a table — one row each, with the figure it touches.',
-      '`fillGap` is measurable on every run and shown nowhere: how far past each stop the bar traded.',
-    ],
+    audit: [],
   },
   {
     id: 'mvp-step-best',
@@ -80,9 +79,8 @@ export const MOVERS_STEPS = [
     title: 'Best recorded result',
     purpose: 'Has this test ever been better than it is now — and with which settings.',
     defaultOpen: false,
-    audit: [
-      'A per-attempt sparkline: every stored run already has a net P/L and a timestamp, so “improving or oscillating?” is one query.',
-    ],
+    // Audit note 'e' removed 2026-11-26: the attempt trend shipped in `BestRecordPanel`.
+    audit: [],
   },
   {
     id: 'mvp-step-day',
@@ -90,9 +88,9 @@ export const MOVERS_STEPS = [
     title: 'Result by day',
     purpose: 'What each session’s screen offered, what the ranking picked, and what it earned.',
     defaultOpen: false,
-    audit: [
-      'A per-day P/L bar, sign-coloured — it shows at a glance when one day carried the whole total.',
-    ],
+    // Audit notes 'f' and 'g' removed 2026-11-26: the P/L bars shipped in `ResultByDayStep` and
+    // `ResultBySymbolStep`, from one shared scaler (`pnl-bars.js`).
+    audit: [],
   },
   {
     id: 'mvp-step-symbol',
