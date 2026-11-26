@@ -69,7 +69,12 @@ export interface ScopeInput {
   feed: FeedSnapshot | null;
 }
 
-function isFeedList(v: string | null | undefined): v is FeedList {
+/**
+ * Narrowing predicate for `trading_strategy.feedList`, which is a free-form `varchar` — the column
+ * does not enforce the union. Exported so readers that must hand a typed value onward (e.g. the
+ * `findAll()` mapper) use THIS test rather than a second copy that would drift.
+ */
+export function isFeedList(v: string | null | undefined): v is FeedList {
   return v === 'winners' || v === 'losers';
 }
 

@@ -138,4 +138,33 @@ describe('findAll() must carry every column the trade path reads', () => {
     expect(summary.id).toBe('bot-1');
     expect(summary.symbol).toBe('XAUUSD');
   });
+
+  /**
+   * `scopeMode` and `feedList` are free-form `varchar` columns, but `StrategySummary` declares them
+   * as unions (`'fixed' | 'feed'`, `'winners' | 'losers'`). Until 2026-11-25 these two reads went
+   * through `(s as any)`, which let an arbitrary stored string satisfy the union silently.
+   *
+   * The narrowing must be a CLASSIFIER, not a blanket default: a declared pair has to survive
+   * intact, or every feed-scoped bot would be rendered as fixed with no list.
+   */
+  it('a declared feed scope round-trips intact through the mapping', async () => {
+    const [summary] = await make({ ...BOT_ROW, scopeMode: 'feed', feedList: 'losers' }).findAll();
+    expect(summary.scopeMode).toBe('feed');
+    expect(summary.feedList).toBe('losers');
+  });
+
+  it('an unrecognised stored scope classifies to the safe members the union declares', async () => {
+    // Routing already REFUSES these via `scopeVerdict()`; this asserts the LIST does not hand the UI
+    // a value its type says cannot exist. `fixed` / `null` is what the runtime already did for an
+    // unknown `scopeMode` (every consumer branches on `=== 'feed'`), now stated rather than assumed.
+    const [summary] = await make({ ...BOT_ROW, scopeMode: 'contunuous', feedList: 'mostActive' }).findAll();
+    expect(summary.scopeMode).toBe('fixed');
+    expect(summary.feedList).toBeNull();
+  });
+
+  it('a missing scope is fixed, not undefined — the default is a value, not an absence', async () => {
+    const [summary] = await make({ ...BOT_ROW, scopeMode: null, feedList: null }).findAll();
+    expect(summary.scopeMode).toBe('fixed');
+    expect(summary.feedList).toBeNull();
+  });
 });

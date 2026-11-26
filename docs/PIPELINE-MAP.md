@@ -81,12 +81,12 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**620** source files · **3432** declarations · **402** ratio sites · **1799** nodes · **190** unreferenced
+**620** source files · **3431** declarations · **403** ratio sites · **1798** nodes · **190** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
-| `exact` | the identical computation after normalisation | 49 |
-| `coarse` | the identical **shape**, different constants | 46 |
+| `exact` | the identical computation after normalisation | 50 |
+| `coarse` | the identical **shape**, different constants | 47 |
 | `idiom` | `(A−B)` **and** `(B−A)` in one expression | 1 |
 
 ## Divergent edges — the same maths, DIFFERENT rules
@@ -636,7 +636,7 @@ Identical after normalisation: variable names differ, the computation does not.
   - `peak>0?((peak-cum)/peak)*100:0`
   - guarded by: `peak>0`
 
-_… and 39 further group(s)._
+_… and 40 further group(s)._
 
 ## Q3b — the same shape, differing constants
 
@@ -865,7 +865,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - guarded by: `total>0`
 - … and 2 more
 
-_… and 36 further group(s)._
+_… and 37 further group(s)._
 
 ## Q3c — the same idea, re-derived
 
@@ -1086,9 +1086,9 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/trading/trade-history.controller.ts:933 median`
 - `nest/src/modules/trading/trade-history.controller.ts:939 r2`
 - `nest/src/modules/trading/trade-recorder.service.ts:195 reject`
-- `nest/src/modules/trading/trading-strategy.service.ts:1407 shape`
-- `nest/src/modules/trading/trading-strategy.service.ts:3041 evaluateAllActive`
-- `nest/src/modules/trading/trading-strategy.service.ts:365 num`
+- `nest/src/modules/trading/trading-strategy.service.ts:1424 shape`
+- `nest/src/modules/trading/trading-strategy.service.ts:3058 evaluateAllActive`
+- `nest/src/modules/trading/trading-strategy.service.ts:366 num`
 - `nest/src/modules/trend/trend-read.math.ts:173 round1`
 - `nest/src/modules/trend/trend-read.math.ts:174 round3`
 - `nest/src/modules/trend/trend-read.math.ts:175 round5`

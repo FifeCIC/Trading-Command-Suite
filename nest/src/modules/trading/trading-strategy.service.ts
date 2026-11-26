@@ -83,6 +83,7 @@ import { MarketBar } from '../directives/interfaces/directive.interface';
 // one the engine enforces with.
 import { parseSessionWindow, serialiseSessionWindow } from './session-window';
 import { normaliseBotName, botSlug } from './bot-slug';
+import { isFeedList } from './feed-scope';
 // #1085 — the quote-freshness refusal: a stale quote must not size an order (see the file header).
 import { checkQuoteFreshness } from '../../common/trading/quote-freshness';
 // ⚠️ #849 (2026-09-17): the three risk caps below were `process.env.MT5_MAX_*`. They are now declared
@@ -445,7 +446,7 @@ export class TradingStrategyService {
         ...new Set(
           strategies
             .flatMap((s) => [
-              ...(((s as any).protocols || []) as Array<{ protocolId: string }>).map((p) => p.protocolId),
+              ...((s.protocols || []) as Array<{ protocolId: string }>).map((p) => p.protocolId),
               s.protocolId,
             ])
             .filter((v): v is string => Boolean(v)),
@@ -507,7 +508,7 @@ export class TradingStrategyService {
       const lastEval = s.evaluations?.[0];
       // Prefer the subscription protocols; fall back to the legacy single link.
       const slugsForThis = [
-        ...((((s as any).protocols || []) as Array<{ protocolId: string }>).map((p) => p.protocolId)),
+        ...(((s.protocols || []) as Array<{ protocolId: string }>).map((p) => p.protocolId)),
         s.protocolId,
       ].filter((v): v is string => Boolean(v));
       const watchlists = [
@@ -518,10 +519,10 @@ export class TradingStrategyService {
       return {
         id: s.id,
         name: s.name,
-        version: (s as any).version ?? null,
+        version: s.version ?? null,
         protocolId: s.protocolId,
-        shortProtocolId: (s as any).shortProtocolId ?? null,
-        protocols: ((s as any).protocols || []).map((p: any) => ({
+        shortProtocolId: s.shortProtocolId ?? null,
+        protocols: (s.protocols || []).map((p: any) => ({
           id: p.id,
           protocolId: p.protocolId,
           role: p.role,
@@ -535,52 +536,68 @@ export class TradingStrategyService {
         // #1018 — MUST BE CARRIED. Omitting it here is what made every order fall back to the
         // bridge's DEFAULT_MAGIC (234000 = "no bot attributed") and left `trade.magic` NULL.
         // See the field's docblock for the full chain; guarded by bot-summary-mapping.spec.ts.
-        magic: (s as any).magic ?? null,
+        magic: s.magic ?? null,
         // #936/#995 — the OBSERVER slots `StopGuardianService` reads off THIS summary. Omitting
         // them made both observers bail silently (they were `undefined` on every position) —
         // see the StrategySummary docblock. Guarded by bot-summary-mapping.spec.ts.
-        simTslEnabled: (s as any).simTslEnabled ?? false,
-        simTslActivationPct: (s as any).simTslActivationPct ?? null,
-        simTslDistancePct: (s as any).simTslDistancePct ?? null,
-        exhaustionObserveEnabled: (s as any).exhaustionObserveEnabled ?? false,
-        exhaustionDecelPct: (s as any).exhaustionDecelPct ?? null,
+        simTslEnabled: s.simTslEnabled ?? false,
+        simTslActivationPct: s.simTslActivationPct ?? null,
+        simTslDistancePct: s.simTslDistancePct ?? null,
+        exhaustionObserveEnabled: s.exhaustionObserveEnabled ?? false,
+        exhaustionDecelPct: s.exhaustionDecelPct ?? null,
         minComposite: s.minComposite,
         baseSize: s.baseSize,
         slPct: s.slPct,
         tpPct: s.tpPct,
         cooldownMinutes: s.cooldownMinutes,
         // Session gate window — consumed by processSignalQueues (Gate 4.5).
-        sessionWindow: (s as any).sessionWindow ?? null,
+        sessionWindow: s.sessionWindow ?? null,
         // Same gate, normalised for display (see the field docs) — `london` and `["london"]` must
         // render identically or the table invents a difference that does not exist.
-        sessionTags: parseSessionWindow((s as any).sessionWindow),
+        sessionTags: parseSessionWindow(s.sessionWindow),
         maxPositions: s.maxPositions,
         // Position time-stop (#773) — consumed by PositionTimeStopService. Without this the
         // limit is unreadable and the time-stop silently no-ops.
-        maxHoldHours: (s as any).maxHoldHours ?? null,
+        maxHoldHours: s.maxHoldHours ?? null,
         // Exit-side session boundary (#928) — consumed by the SAME service. Carried for the same
         // reason: a field the engine reads off this summary is invisible if the summary drops it.
-        exitBeforeUtc: (s as any).exitBeforeUtc ?? null,
-        maxPyramidTiers: (s as any).maxPyramidTiers ?? 1,
+        exitBeforeUtc: s.exitBeforeUtc ?? null,
+        maxPyramidTiers: s.maxPyramidTiers ?? 1,
         // #1257 — the per-trade money-at-risk ceiling, in PERCENT of equity. ⚠️ `null` is a REAL
         // STATE, not a missing value: it means "inherit `risk.maxTradeRiskCeilingPct`", and the gate
         // resolves it either way. Carried on this summary because the mapper is a hand-written field
         // list — a column not named here vanishes from the strategies list, which is how `magic` was
         // lost (#1018). A configurable rule with no surface is a rule nobody can tune.
-        maxTradeRiskPct: (s as any).maxTradeRiskPct ?? null,
+        maxTradeRiskPct: s.maxTradeRiskPct ?? null,
         // #1314 — the symbol SCOPE. Same hand-written-list rule as `magic` above: a column not named
         // here vanishes from the strategies list, and the list would then render the PLACEHOLDER
         // ticker for a feed-scoped bot — stating an instrument it never trades. Derived in the UI
         // from these two fields, never guessed from an empty symbol list.
-        scopeMode: (s as any).scopeMode ?? 'fixed',
-        feedList: (s as any).feedList ?? null,
+        // ── DECISION (2026-11-25, primary) ──
+        // WHAT:      `scopeMode` and `feedList` are CLASSIFIED here, not passed through.
+        // WHY:       Both columns are free-form `varchar`; `StrategySummary` declares them as unions
+        //            (`'fixed' | 'feed'`, `'winners' | 'losers'`). Until the `(s as any)` casts came
+        //            out, an arbitrary stored string satisfied the union silently — so the type was
+        //            true by luck rather than by check. Every consumer branches on `=== 'feed'`, and
+        //            routing already REFUSES an unrecognised `feedList` (`feed-scope.ts` / `scopeVerdict`),
+        //            so the runtime answer is unchanged: fixed / null. This makes the summary say it.
+        //            A blanket default would have been the WRONG repair — it renders a declared feed
+        //            bot as fixed with no list, i.e. states the opposite of its configuration.
+        // INSTEAD OF: Widening the union to `string` and pushing the check into each of the two pages.
+        // REVERSE BY: Making the columns enums in the database, or restoring the cast (which re-arms
+        //            the silent hole). Register row 283 records both.
+        // ISSUE:     #1351 (the programme this slice belongs to)
+        // REGISTER:  docs/SETTLED-DECISIONS.md row 283
+        // GUARD:     nest/src/modules/trading/bot-summary-mapping.spec.ts (3 cases, canaried both ways)
+        scopeMode: s.scopeMode === 'feed' ? 'feed' : 'fixed',
+        feedList: isFeedList(s.feedList) ? s.feedList : null,
         // #1189 — THE NARRATIVE FLAGS. ⚠️ This mapper is a HAND-WRITTEN FIELD LIST, so a column not
         // named here silently vanishes from the strategies list — that is exactly how `magic` was
         // lost (#1018). `theory` itself is deliberately NOT carried: the list is a table, prose does
         // not fit, and shipping a few hundred chars per row for 67 rows to render one badge is the
         // wrong trade. `hasTheory` is the fact the table needs; the prose is one click away.
-        theoryKind: (s as any).theoryKind ?? null,
-        hasTheory: Boolean((s as any).theory && String((s as any).theory).trim().length > 0),
+        theoryKind: s.theoryKind ?? null,
+        hasTheory: Boolean(s.theory && String(s.theory).trim().length > 0),
         // null = the count could not be read (≠ 0, which is a real "nothing observed yet").
         trackRecordCount: trackCountsUnavailable ? null : (trackCounts.get(s.id) ?? 0),
         lastEvaluatedAt: lastEval?.evaluatedAt ? new Date(lastEval.evaluatedAt).toISOString() : null,
@@ -3201,6 +3218,47 @@ export class TradingStrategyService {
      * tuning.
      */
     maxTradeRiskPct?: number | null;
+    /**
+     * ── THE LEGACY / FLAT SHAPES THE SEEDER ALSO ACCEPTS (2026-11-25, #1351) ────────────────────
+     * Every field below was read through `s` — **91 casts in this file** — because the type
+     * did not declare it. Declaring them is additive: nothing new is written, and `tsc` now checks
+     * each read instead of trusting a cast.
+     *
+     * ⚠️ THEY ARE OPTIONAL AND THAT IS THE CONTRACT, not laziness. `strategy-seed-data.ts` declares
+     * the NESTED `simTsl` object while older callers present the three FLAT columns, and both must
+     * keep working (the convergence path reads whichever is present). `version` / `shortProtocolId` /
+     * `protocols` / `sessionTags` are carried by callers that mirror a database row.
+     */
+    version?: string | null;
+    shortProtocolId?: string | null;
+    /** Protocol subscriptions attached to the row, when the caller mirrors an existing bot. */
+    protocols?: Array<{ protocolId: string }>;
+    /** Flat form of the sim-TSL switch — see `simTsl` above for the nested form. */
+    simTslEnabled?: boolean | null;
+    simTslActivationPct?: number | null;
+    simTslDistancePct?: number | null;
+    /** Raw stored session tags, when the caller has not parsed them yet. */
+    sessionTags?: string[] | string | null;
+    /**
+     * ⚠️ THESE SIX WERE ALSO READ THROUGH THE CAST (#1351). Each mirrors the corresponding
+     * `SeedTradingStrategy` field, so a seeder and the hand-authored seed cannot disagree about
+     * whether a bot declares one.
+     */
+    exitBeforeUtc?: string | null;
+    scopeMode?: 'fixed' | 'feed';
+    feedList?: 'winners' | 'losers' | null;
+    cooldownMinutes?: number;
+    maxPyramidTiers?: number;
+    maxPositions?: number;
+    /**
+     * NESTED sim-TSL, exactly as `SeedTradingStrategy` declares it — and the reason the flat trio
+     * above also exists: a seed declares the object, an older caller presents three columns, and
+     * the convergence path accepts whichever arrived. Declaring both is what stops "the seed says
+     * the trail is on" and "the row says it is off" from being a silent disagreement.
+     */
+    simTsl?: { enabled: boolean; activationPct: number; distancePct: number };
+    theory?: string | null;
+    theoryKind?: 'asymmetry' | 'participation' | 'regime' | 'control' | null;
   }>, opts?: {
     /**
      * Report drift but write NOTHING (#833 acceptance criterion 3).
@@ -3284,7 +3342,7 @@ export class TradingStrategyService {
         // ⚠️ OPTIONAL FIELDS — ABSENT MEANS "NO OPINION", NEVER "SET TO NULL".
         //
         // 🛑 THIS IS NOT STYLE, IT IS A MEASURED REGRESSION. The first version of this fix wrote
-        // `maxHoldHours: (s as any).maxHoldHours ?? null` for EVERY bot. The seeder declares
+        // `maxHoldHours: s.maxHoldHours ?? null` for EVERY bot. The seeder declares
         // `maxHoldHours` for the FX session bots but OMITS it for the gold bots — so the first
         // live re-seed wrote **null** over four gold time-stops (72h, 120h, 4h, 24h) and Tokyo
         // USDJPY's (12h), silently removing the slot-releasing control that #773 exists to
@@ -3307,60 +3365,60 @@ export class TradingStrategyService {
           // comment here recorded).
           desired.sessionWindow = serialiseSessionWindow(s.sessionWindow as any);
         }
-        if ((s as any).requireDirection !== undefined) {
-          desired.requireDirection = (s as any).requireDirection;
+        if (s.requireDirection !== undefined) {
+          desired.requireDirection = s.requireDirection;
         }
-        if ((s as any).maxHoldHours !== undefined) {
-          desired.maxHoldHours = (s as any).maxHoldHours;
+        if (s.maxHoldHours !== undefined) {
+          desired.maxHoldHours = s.maxHoldHours;
         }
         // #928 — optional on the same contract. A seeder that does not mention the boundary
         // leaves whatever is on the row alone; only a real value (including an explicit null) is a
         // declaration worth writing.
-        if ((s as any).exitBeforeUtc !== undefined) {
-          desired.exitBeforeUtc = (s as any).exitBeforeUtc;
+        if (s.exitBeforeUtc !== undefined) {
+          desired.exitBeforeUtc = s.exitBeforeUtc;
         }
         // #894 — the rating's risk base. Optional like the rest: a bot that does not declare it
         // keeps its current value, and there is no default to fall back to on purpose.
-        if ((s as any).allocationAmount !== undefined) {
-          desired.allocationAmount = (s as any).allocationAmount;
+        if (s.allocationAmount !== undefined) {
+          desired.allocationAmount = s.allocationAmount;
         }
         // #995 — the up-move exhaustion OBSERVER (display-only). Same optional contract as
         // every slot above: absent means "no opinion", declared means "converge".
-        if ((s as any).exhaustionObserveEnabled !== undefined) {
-          desired.exhaustionObserveEnabled = (s as any).exhaustionObserveEnabled;
+        if (s.exhaustionObserveEnabled !== undefined) {
+          desired.exhaustionObserveEnabled = s.exhaustionObserveEnabled;
         }
-        if ((s as any).exhaustionDecelPct !== undefined) {
-          desired.exhaustionDecelPct = (s as any).exhaustionDecelPct;
+        if (s.exhaustionDecelPct !== undefined) {
+          desired.exhaustionDecelPct = s.exhaustionDecelPct;
         }
         // #1257 — the per-trade risk ceiling. Same optional contract as the two slots above:
         // absent means "no opinion", declared means "converge". Present in BOTH this path and the
         // `create` block, or a re-seed could insert a value and never repair one.
         //
         // REGISTER: docs/SETTLED-DECISIONS.md row 172
-        if ((s as any).maxTradeRiskPct !== undefined) {
-          desired.maxTradeRiskPct = (s as any).maxTradeRiskPct;
+        if (s.maxTradeRiskPct !== undefined) {
+          desired.maxTradeRiskPct = s.maxTradeRiskPct;
         }
         // #1314 — symbol SCOPE. Same optional contract as every slot above: the 76 fixed-scope bots
         // declare neither field, so absent must mean "no opinion" — NOT "reset to fixed". A
         // converging seeder that defaulted `scopeMode` would turn a feed-scoped bot back into one
         // that trades its PLACEHOLDER ticker, and nothing would report it.
-        if ((s as any).scopeMode !== undefined) {
-          desired.scopeMode = (s as any).scopeMode;
+        if (s.scopeMode !== undefined) {
+          desired.scopeMode = s.scopeMode;
         }
-        if ((s as any).feedList !== undefined) {
-          desired.feedList = (s as any).feedList;
+        if (s.feedList !== undefined) {
+          desired.feedList = s.feedList;
         }
         // 2026-11-13 (#1258) — the CONVERGENCE half of the three columns nothing wrote. Both paths
         // must carry them or a re-seed could insert a value and never repair one — the failure the
         // sim-TSL block above records, measured on 2026-11-03.
-        if ((s as any).cooldownMinutes !== undefined) {
-          desired.cooldownMinutes = (s as any).cooldownMinutes;
+        if (s.cooldownMinutes !== undefined) {
+          desired.cooldownMinutes = s.cooldownMinutes;
         }
-        if ((s as any).maxPyramidTiers !== undefined) {
-          desired.maxPyramidTiers = (s as any).maxPyramidTiers;
+        if (s.maxPyramidTiers !== undefined) {
+          desired.maxPyramidTiers = s.maxPyramidTiers;
         }
-        if ((s as any).maxPositions !== undefined) {
-          desired.maxPositions = (s as any).maxPositions;
+        if (s.maxPositions !== undefined) {
+          desired.maxPositions = s.maxPositions;
         }
         // armed 2026-11-03, record-only — the sim-TSL OBSERVER slot, same optional contract as #995 above.
         //
@@ -3372,19 +3430,19 @@ export class TradingStrategyService {
         // ⚠️ Converging this is safe in a way `active` is not: it arms an OBSERVER that writes
         // `sim_tsl_event` rows and places no order, so the worst case of a stray seed run is extra
         // measurement, not an unexpected trade. `active` keeps its one-way rule below.
-        if ((s as any).simTsl?.enabled !== undefined) {
-          desired.simTslEnabled = (s as any).simTsl.enabled;
-          desired.simTslActivationPct = (s as any).simTsl.activationPct ?? null;
-          desired.simTslDistancePct = (s as any).simTsl.distancePct ?? null;
+        if (s.simTsl?.enabled !== undefined) {
+          desired.simTslEnabled = s.simTsl.enabled;
+          desired.simTslActivationPct = s.simTsl.activationPct ?? null;
+          desired.simTslDistancePct = s.simTsl.distancePct ?? null;
         }
         // THEORY + KIND (2026-11-03) — the narrative half, on the same optional contract: absent
         // means "no opinion", declared means "converge". ⚠️ Present in BOTH this path and the
         // `create` block, or a re-seed could insert a theory and never repair one.
-        if ((s as any).theory !== undefined) {
-          desired.theory = (s as any).theory;
+        if (s.theory !== undefined) {
+          desired.theory = s.theory;
         }
-        if ((s as any).theoryKind !== undefined) {
-          desired.theoryKind = (s as any).theoryKind;
+        if (s.theoryKind !== undefined) {
+          desired.theoryKind = s.theoryKind;
         }
         // ── `active` converges ONE WAY ONLY: `false` yes, `true` no ──────────────────────
         // DECISION (2026-10-14, primary)
@@ -3413,8 +3471,8 @@ export class TradingStrategyService {
         // INSTEAD OF: converging `active` in both directions like every other declared field.
         //   The distinction is STATE vs CONFIGURATION — the database owns STATE, the seed owns
         //   CONFIGURATION. Register row 52 settled this for `protocol.active`.
-        // Replaced:   `if ((s as any).active !== undefined) desired.active = (s as any).active;`
-        if ((s as any).active === false) {
+        // Replaced:   `if (s.active !== undefined) desired.active = s.active;`
+        if (s.active === false) {
           desired.active = false;
         }
 
@@ -3457,7 +3515,7 @@ export class TradingStrategyService {
           continue;
         }
         const wantRole =
-          resolveEffectiveRole(null, (s as any).requireDirection) ??
+          resolveEffectiveRole(null, s.requireDirection) ??
           (/-short|short-/i.test(s.protocolId) ? 'short' : 'long');
         const sub = await this.prisma.strategyProtocol.findFirst({
           where: { strategyId: existing.id, protocolId: s.protocolId },
@@ -3501,7 +3559,7 @@ export class TradingStrategyService {
         }
 
         // #1185 — the ADDITIONAL legs (e.g. a short protocol paired to this bot's long one).
-        for (const [legIndex, leg] of ((s as any).legs ?? []).entries()) {
+        for (const [legIndex, leg] of (s.legs ?? []).entries()) {
           const legResult = await this.ensureLegSubscription(
             existing.id, leg.protocolId, leg.role, legIndex + 1, dryRun,
           );
@@ -3575,8 +3633,8 @@ export class TradingStrategyService {
             // as `fixed` and starts trading its placeholder ticker. The same CREATE-path omission
             // that gave every bot a null `magic` (#1258) — a field read by a consumer and written by
             // only one of the two seed paths.
-            ...((s as any).scopeMode !== undefined ? { scopeMode: (s as any).scopeMode } : {}),
-            ...((s as any).feedList !== undefined ? { feedList: (s as any).feedList } : {}),
+            ...(s.scopeMode !== undefined ? { scopeMode: s.scopeMode } : {}),
+            ...(s.feedList !== undefined ? { feedList: s.feedList } : {}),
             protocolId: s.protocolId,
             brokerId: s.brokerId,
             mode: s.mode,
@@ -3591,59 +3649,59 @@ export class TradingStrategyService {
             sessionWindow: serialiseSessionWindow(s.sessionWindow as any),
             // Direction constraint. A SHORT_ONLY protocol must not be allowed to
             // open longs; null = unconstrained (legacy behaviour).
-            requireDirection: (s as any).requireDirection ?? null,
+            requireDirection: s.requireDirection ?? null,
             // Position time-stop (#773) and start state — both optional in the seed,
             // defaulted here so every existing entry keeps its behaviour.
-            maxHoldHours: (s as any).maxHoldHours ?? null,
+            maxHoldHours: s.maxHoldHours ?? null,
             // #928 — the exit-side boundary, on the same terms as the hold limit above.
-            exitBeforeUtc: (s as any).exitBeforeUtc ?? null,
-            active: (s as any).active ?? true,
+            exitBeforeUtc: s.exitBeforeUtc ?? null,
+            active: s.active ?? true,
             // #894 — NULL, never a substituted default: "no allocation set" is a state the
             // rating reports by name (`allocation_not_set`) rather than a number to invent.
-            allocationAmount: (s as any).allocationAmount ?? null,
+            allocationAmount: s.allocationAmount ?? null,
             // #995 — observer slots, present only when the seed declares them (a fresh install
             // of a declared bot carries the same observation settings as the live one).
-            ...((s as any).exhaustionObserveEnabled !== undefined
-              ? { exhaustionObserveEnabled: (s as any).exhaustionObserveEnabled }
+            ...(s.exhaustionObserveEnabled !== undefined
+              ? { exhaustionObserveEnabled: s.exhaustionObserveEnabled }
               : {}),
-            ...((s as any).exhaustionDecelPct !== undefined
-              ? { exhaustionDecelPct: (s as any).exhaustionDecelPct }
+            ...(s.exhaustionDecelPct !== undefined
+              ? { exhaustionDecelPct: s.exhaustionDecelPct }
               : {}),
             // #1257 — the per-trade risk ceiling, on the same terms: present only when the seed
             // declares it. Absent leaves the column NULL, which the gate reads as "inherit the
             // global ceiling" — a REAL cap, not an absent one.
-            ...((s as any).maxTradeRiskPct !== undefined
-              ? { maxTradeRiskPct: (s as any).maxTradeRiskPct }
+            ...(s.maxTradeRiskPct !== undefined
+              ? { maxTradeRiskPct: s.maxTradeRiskPct }
               : {}),
             // 2026-11-13 (#1258) — the three columns NOTHING wrote, measured on the live fleet:
             // `cooldownMinutes` ran at 30 on two bots against a default of 5, and
             // `maxPyramidTiers` at 2 on one against a default of 1. Both reverted silently on any
             // reinstall. Same optional contract as every slot above.
-            ...((s as any).cooldownMinutes !== undefined
-              ? { cooldownMinutes: (s as any).cooldownMinutes }
+            ...(s.cooldownMinutes !== undefined
+              ? { cooldownMinutes: s.cooldownMinutes }
               : {}),
-            ...((s as any).maxPyramidTiers !== undefined
-              ? { maxPyramidTiers: (s as any).maxPyramidTiers }
+            ...(s.maxPyramidTiers !== undefined
+              ? { maxPyramidTiers: s.maxPyramidTiers }
               : {}),
-            ...((s as any).maxPositions !== undefined
-              ? { maxPositions: (s as any).maxPositions }
+            ...(s.maxPositions !== undefined
+              ? { maxPositions: s.maxPositions }
               : {}),
             // armed 2026-11-03, record-only — the sim-TSL OBSERVER slot, on the same terms as #995 above: present
             // only when the seed declares it. ⚠️ This arms an OBSERVER, not a trailing stop — the
             // recorder writes `action: 'recorded'` and places nothing. Without this block a fresh
             // install would carry `simTslEnabled = 0` and the measurement would silently not exist,
             // which is the same "configured, armed and blind" defect #936 records.
-            ...((s as any).simTsl?.enabled !== undefined
+            ...(s.simTsl?.enabled !== undefined
               ? {
-                  simTslEnabled: (s as any).simTsl.enabled,
-                  simTslActivationPct: (s as any).simTsl.activationPct ?? null,
-                  simTslDistancePct: (s as any).simTsl.distancePct ?? null,
+                  simTslEnabled: s.simTsl.enabled,
+                  simTslActivationPct: s.simTsl.activationPct ?? null,
+                  simTslDistancePct: s.simTsl.distancePct ?? null,
                 }
               : {}),
             // THEORY + KIND (2026-11-03) — the narrative half of a complete strategy. ⚠️ `undefined`
             // means the seed has no opinion and the slot is left alone; declared means converge.
-            ...((s as any).theory !== undefined ? { theory: (s as any).theory } : {}),
-            ...((s as any).theoryKind !== undefined ? { theoryKind: (s as any).theoryKind } : {}),
+            ...(s.theory !== undefined ? { theory: s.theory } : {}),
+            ...(s.theoryKind !== undefined ? { theoryKind: s.theoryKind } : {}),
           },
         });
 
@@ -3664,7 +3722,7 @@ export class TradingStrategyService {
         // removed until every seeded bot declares its direction, since removing it silently would
         // flip a short bot back to 'long'.
         try {
-          const declared = resolveEffectiveRole(null, (s as any).requireDirection);
+          const declared = resolveEffectiveRole(null, s.requireDirection);
           const shortFromName = /-short|short-/i.test(s.protocolId);
           await this.prisma.strategyProtocol.create({
             data: {
@@ -3679,7 +3737,7 @@ export class TradingStrategyService {
         }
 
         // #1185 — the ADDITIONAL legs, on a freshly created bot.
-        for (const [legIndex, leg] of ((s as any).legs ?? []).entries()) {
+        for (const [legIndex, leg] of (s.legs ?? []).entries()) {
           const legResult = await this.ensureLegSubscription(
             createdBot.id, leg.protocolId, leg.role, legIndex + 1, dryRun,
           );
