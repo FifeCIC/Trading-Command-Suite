@@ -5,10 +5,10 @@
  * Inline creation replaces the old standalone CreateWatchlistPage (#301).
  */
 
+import { apiGet, apiPost, apiDelete } from '../core/api/client';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { apiGet, apiPost, apiDelete } from '../core/api/client';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import { usePersistentState } from '../hooks/usePersistentState';
@@ -174,7 +174,7 @@ export default function UserWatchlistsPage() {
   // Remove symbol mutation
   const removeSymbolMutation = useMutation({
     mutationFn: ({ watchlistId, ticker }) =>
-      fetch(`/api/watchlists/${watchlistId}/symbols/${ticker}`, { method: 'DELETE' }).then(r => r.json()),
+      apiDelete(`/api/watchlists/${watchlistId}/symbols/${ticker}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['watchlist-symbols', selectedId] });
     },

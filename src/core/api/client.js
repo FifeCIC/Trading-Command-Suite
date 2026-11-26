@@ -74,8 +74,53 @@ export function apiUrl(path = '') {
   return `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-export async function apiGet(path) {
-  return fetchWithTimeout(apiUrl(path));
+/**
+ * fetchRaw(url, options, timeoutMs) — the SAME timeout and error contract as `fetchWithTimeout`, but
+ * it hands back the `Response` instead of parsed JSON.
+ *
+ * ⚠️ It exists so that a caller needing bytes — a CSV export, a JSON file download — still gets the
+ * 28 s abort and the server's own message on a non-2xx. Before this, those two call sites used a bare
+ * `fetch()` and were the only requests in the app with no timeout: a stalled export left the button
+ * spinning forever and reported nothing.
+ */
+export async function apiRaw(path, options = {}, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs ?? DEFAULT_TIMEOUT_MS);
+  try {
+    const res = await fetch(apiUrl(path), { ...options, signal: controller.signal });
+    if (!res.ok) {
+      const err = new Error(`Request failed with ${res.status}`);
+      err.status = res.status;
+      throw err;
+    }
+    return res;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      const timeout = new Error(`Request timed out after ${Math.round((timeoutMs ?? DEFAULT_TIMEOUT_MS) / 1000)}s`);
+      timeout.timedOut = true;
+      timeout.timeoutSeconds = Math.round((timeoutMs ?? DEFAULT_TIMEOUT_MS) / 1000);
+      throw timeout;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** A download: the response body as a Blob, under the same timeout and error contract. */
+export async function apiBlob(path, options = {}, timeoutMs) {
+  const res = await apiRaw(path, options, timeoutMs);
+  return res.blob();
+}
+
+/**
+ * apiGet(path, { timeoutMs }) — parsed JSON.
+ * ⚠️ `timeoutMs` IS PER-CALL, NOT A GLOBAL RAISE. The 28 s default is right for the 99%; a caller whose
+ * endpoint is KNOWN to be a fast probe (a 3 s health check on startup) or KNOWN to be slow (a multi-
+ * minute backtest) says so at the call site. One client, one default, explicit exceptions.
+ */
+export async function apiGet(path, options = {}) {
+  return fetchWithTimeout(apiUrl(path), {}, options.timeoutMs);
 }
 
 export async function apiPost(path, body, options = {}) {

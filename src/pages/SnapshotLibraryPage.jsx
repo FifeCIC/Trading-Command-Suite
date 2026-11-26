@@ -1,7 +1,7 @@
+import { apiGet, apiPost, apiDelete } from '../core/api/client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost } from '../core/api/client';
 import { createChart, CandlestickSeries } from 'lightweight-charts';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './snapshot-library.css';
@@ -68,7 +68,7 @@ export default function SnapshotLibraryPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => fetch(`/api/snapshots/${id}`, { method: 'DELETE' }),
+    mutationFn: (id) => apiDelete(`/api/snapshots/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['snapshots'] }),
   });
 

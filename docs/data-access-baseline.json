@@ -1,0 +1,5 @@
+{
+  "note": "Raw `fetch(` call sites still bypassing src/core/api/client.js. Frozen so the count cannot grow; regenerate with `node scripts/validate-page-data-access.cjs --write-baseline` when a file shrinks.",
+  "total": 0,
+  "files": {}
+}

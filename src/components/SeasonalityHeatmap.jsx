@@ -2,6 +2,7 @@
  * SeasonalityHeatmap — 7×24 grid showing historical bullish/bearish bias
  * by hour and day of week for the active symbol.
  */
+import { apiGet } from '../core/api/client';
 import { useEffect, useState, useRef } from 'react';
 import NoticeBlock from './NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
@@ -39,9 +40,7 @@ export default function SeasonalityHeatmap({ symbol }) {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API}/api/speed/seasonality/${encodeURIComponent(symbol)}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const d = await res.json();
+        const d = await apiGet(`${API}/api/speed/seasonality/${encodeURIComponent(symbol)}`);
         if (!cancelled) { setData(d); setError(null); }
       } catch (e) {
           if (!cancelled) setError(noticeFromError(e, 'TCS-SYS-007', { operation: 'load the seasonality data' }));

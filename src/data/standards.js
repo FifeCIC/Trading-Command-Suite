@@ -154,12 +154,14 @@ export const STANDARDS = [
   {
     id: 'page-data-access',
     name: 'A page reads data through the shared client',
-    why: '37 raw `fetch()` calls in `src/pages` bypass the client and its error handling.',
-    gate: null,
-    gap: 'No gate. Needs a scan for `fetch(` in `src/pages`.',
-    verify: null,
-    selfTest: null,
-    enforcedIn: 'none',
+    why: 'Measured 2026-11-26: 45 real `fetch(` calls across 21 files bypassed `src/core/api/client.js`, '
+      + 'which is not a convenience wrapper — it is the only thing that aborts a stalled request at 28 s '
+      + 'and the only thing that turns Nest\u2019s `{ message }` into `err.detail`, so "market closed" can '
+      + 'be shown as a reason instead of a bare status. A raw call has no timeout and no error path.',
+    gate: 'scripts/validate-page-data-access.cjs',
+    verify: 'npm run data-access',
+    selfTest: 'npm run data-access:self-test',
+    enforcedIn: 'prebuild',
   },
   {
     id: 'page-colour-literals',

@@ -1,3 +1,4 @@
+import { apiGet } from './core/api/client';
 import { useEffect, useState, useRef, useMemo, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -8,7 +9,6 @@ import ErrorBoundary from './components/ErrorBoundary';
 import MarketTape from './components/MarketTape';
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp';
 
-import { apiGet } from './core/api/client';
 import useTradeAttention from './core/use-trade-attention';
 import { withDevTag } from './dev-runtime/tags';
 import { getPerformanceSnapshot, startPerformanceMonitoring } from './performance/monitor';
@@ -409,9 +409,11 @@ function AppShell({ directContent = null, directArea = null, directView = null }
       await new Promise((r) => setTimeout(r, 3000));
       if (cancelled) return;
       try {
-        const res = await fetch('http://localhost:3201/api/version', { signal: AbortSignal.timeout(3000) });
+        // ⚠️ No literal host and no literal timeout: the base comes from the client's config, and
+        // 3 s says "this is a fast probe" rather than restating the client's 28 s default.
+        const v = await apiGet('/api/version', { timeoutMs: 3000 });
         if (cancelled) return;
-        pushActivity('BOOT', res.ok ? 'API reachable' : `API answered ${res.status} — some pages will show an error`);
+        pushActivity('BOOT', `API reachable (v${v?.version ?? '?'})`);
       } catch {
         if (cancelled) return;
         pushActivity(
@@ -498,31 +500,25 @@ function AppShell({ directContent = null, directArea = null, directView = null }
     const poll = async () => {
       try {
         // SEES scoring protocol activity
-        const sp = await fetch('/api/scoring/protocols', { signal: AbortSignal.timeout(5000) });
-        if (sp.ok) {
-          const data = await sp.json();
-          const acts = data?.recentActivity || [];
-          if (acts.length > 0) {
-            const latest = acts[0];
-            const key = `${latest.timestamp}-${latest.event}-${latest.protocolId}`;
-            if (key !== lastSeenScoreEvent) {
-              lastSeenScoreEvent = key;
-            }
+        const data = await apiGet('/api/scoring/protocols', { timeoutMs: 5000 });
+        const acts = data?.recentActivity || [];
+        if (acts.length > 0) {
+          const latest = acts[0];
+          const key = `${latest.timestamp}-${latest.event}-${latest.protocolId}`;
+          if (key !== lastSeenScoreEvent) {
+            lastSeenScoreEvent = key;
           }
         }
       } catch { /* silent */ }
 
       try {
         // Alerts
-        const ar = await fetch('/api/alerts/active', { signal: AbortSignal.timeout(5000) });
-        if (ar.ok) {
-          const alerts = await ar.json();
-          const active = Array.isArray(alerts) ? alerts : (alerts?.alerts || []);
-          if (active.length > 0) {
-            const latest = active[0];
-            if (latest.id !== lastSeenAlertId) {
-              lastSeenAlertId = latest.id;
-            }
+        const alerts = await apiGet('/api/alerts/active', { timeoutMs: 5000 });
+        const active = Array.isArray(alerts) ? alerts : (alerts?.alerts || []);
+        if (active.length > 0) {
+          const latest = active[0];
+          if (latest.id !== lastSeenAlertId) {
+            lastSeenAlertId = latest.id;
           }
         }
       } catch { /* silent */ }

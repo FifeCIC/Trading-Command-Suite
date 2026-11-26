@@ -1,8 +1,8 @@
+import { apiGet, apiDelete } from '../core/api/client';
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
 import { PageInfoSlotContent } from '../core/top-row-slot';
 import './positions-monitor.css';
 
@@ -563,7 +563,7 @@ export default function PositionsMonitorPage() {
 
   // Close mutation
   const closeMutation = useMutation({
-    mutationFn: ({ ticket }) => fetch(`/api/trading/mt5/close/${ticket}`, { method: 'DELETE' }).then(r => r.json()),
+    mutationFn: ({ ticket }) => apiDelete(`/api/trading/mt5/close/${ticket}`),
     onMutate: ({ ticket }) => setClosingTicket(ticket),
     onSettled: () => setClosingTicket(null),
     onSuccess: () => {

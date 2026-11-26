@@ -1,3 +1,4 @@
+import { apiGet } from '../core/api/client';
 import { useEffect, useState } from 'react';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './trading-platforms.css';
@@ -37,8 +38,7 @@ export default function PlatformComparisonsPage() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/providers')
-      .then((r) => r.json())
+    apiGet('/api/providers')
       .then((data) => {
         if (Array.isArray(data) && data.length) {
           setProviders((prev) => {

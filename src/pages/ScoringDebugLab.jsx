@@ -1,3 +1,4 @@
+import { apiGet } from '../core/api/client';
 import { useState, useEffect, useCallback } from 'react';
 import NoticeBlock from '../components/NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
@@ -57,8 +58,7 @@ export default function ScoringDebugLab() {
   /* Protocol list → pairs. Fail-open: a failed read leaves the fallback pair in place. */
   useEffect(() => {
     let cancelled = false;
-    fetch(`${API}/scoring/protocols`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+    apiGet(`${API}/scoring/protocols`)
       .then((list) => {
         if (cancelled) return;
         const found = pairsFrom(Array.isArray(list) ? list : list?.protocols);
@@ -79,8 +79,8 @@ export default function ScoringDebugLab() {
       const params = `protocol=${encodeURIComponent(activePair.long)}&bars=${barCount}&timeframe=${timeframe}`;
       const shortParams = `protocol=${encodeURIComponent(activePair.short)}&bars=${barCount}&timeframe=${timeframe}`;
       const [l, s] = await Promise.all([
-        fetch(`${API}/scoring/gated/${symbol}?${params}`).then(r => r.json()),
-        fetch(`${API}/scoring/gated/${symbol}?${shortParams}`).then(r => r.json()),
+        apiGet(`${API}/scoring/gated/${symbol}?${params}`),
+        apiGet(`${API}/scoring/gated/${symbol}?${shortParams}`),
       ]);
       setLongResult(l);
       setShortResult(s);

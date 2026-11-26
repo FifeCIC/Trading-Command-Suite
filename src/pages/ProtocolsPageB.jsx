@@ -9,9 +9,9 @@
  *
  * A/B toggle via ?variant=B in URL. Page A is ProtocolsPage.jsx.
  */
+import { apiGet, apiPatch, apiDelete } from '../core/api/client';
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPatch, apiDelete } from '../core/api/client';
 import { feedUnavailable } from '../core/api/feed-state.js';
 import { PageInfoSlotContent } from '../core/top-row-slot';
 import SuggestionQueue from '../components/SuggestionQueue';
@@ -307,12 +307,7 @@ export default function ProtocolsPageB({ initialProtocolId }) {
       };
     });
     try {
-      const res = await fetch(`/api/scoring/gated/protocols/${selectedProto.id}/toggle`, { method: 'PATCH' });
-      if (!res.ok) {
-        // Revert on failure — both selected and list
-        setSelected(prev => ({ ...prev, active: !newActive }));
-        queryClient.invalidateQueries({ queryKey: ['protocols-b'] });
-      }
+      await apiPatch(`/api/scoring/gated/protocols/${selectedProto.id}/toggle`);
     } catch {
       setSelected(prev => ({ ...prev, active: !newActive }));
       queryClient.invalidateQueries({ queryKey: ['protocols-b'] });
@@ -333,20 +328,13 @@ export default function ProtocolsPageB({ initialProtocolId }) {
     setAdaptiveBusy(true);
     setAdaptiveError(null);
     try {
-      const res = await fetch(
+      // ⚠️ The server REFUSES this with a reason (too few observations), and the client puts that
+      // reason on `err.detail` — the same text this block used to read out of the error body.
+      const body = await apiPatch(
         `/api/scoring/protocols/${encodeURIComponent(selectedProto.id)}/adaptive-target`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ enabled: next }),
-        },
+        { enabled: next },
       );
-      const body = await res.json().catch(() => null);
-      if (!res.ok) {
-        setAdaptiveError(body?.message || `Could not change Adaptive Target (${res.status}).`);
-      } else {
-        queryClient.setQueryData(['adaptive-target', selectedProto.id], body);
-      }
+      queryClient.setQueryData(['adaptive-target', selectedProto.id], body);
     } catch (err) {
       setAdaptiveError(err?.message || 'Could not reach the API.');
     }

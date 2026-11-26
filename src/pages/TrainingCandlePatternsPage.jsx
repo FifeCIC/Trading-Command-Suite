@@ -1,3 +1,4 @@
+import { apiGet } from '../core/api/client';
 import { useState, useEffect, useCallback } from 'react';
 import CandlePatternChart from '../components/CandlePatternChart';
 import PatternDetailPanel from '../components/PatternDetailPanel';
@@ -29,9 +30,7 @@ export default function TrainingCandlePatternsPage() {
         ? `/api/training/candle-patterns/history?symbol=${symbol}&bars=${barCount}`
         : `/api/training/candle-patterns?symbol=${symbol}&bars=${barCount}`;
 
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
-      const data = await res.json();
+      const data = await apiGet(url);
 
       // Convert API response to chart-usable bars
       const chartBars = data.bars || generateLocalBars(data.patterns, barCount);

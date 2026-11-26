@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../api/client';
 // The scanner's failure becomes a CODE at its SOURCE. Three pages render this string, so producing a
 // coded one-liner here fixes all three at once — and the alternative (each page converting a string it
 // cannot inspect) is how "Scanner offline —" ended up with no identity (#826 Phase 5).
 import { noticeLine } from '../notices/registry.js';
+import { apiGet, apiPost } from '../api/client';
 
 /**
  * useSpeedCockpit — shared behavioural core for the speed-trading cockpits
@@ -91,13 +91,7 @@ export function useSpeedScanner({ paused, locked, timeframe, symbols }) {
         const body = symbolsRef.current?.length
           ? { timeframe, symbols: symbolsRef.current }
           : { timeframe };
-        const res = await fetch('http://localhost:3201/api/speed/scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        setScanData(await res.json());
+        setScanData(await apiPost('/api/speed/scan', body));
         setScanError(null);
       } catch (e) {
         setScanError(noticeLine('TCS-SYS-007', { operation: 'connect to the speed scanner', detail: e }));
@@ -155,11 +149,7 @@ export function useTickRecording({ queryKey, symbol, refetchInterval = 5000 }) {
   const toggleRecording = useCallback(async () => {
     const endpoint = isRecording ? '/api/speed/record/stop' : '/api/speed/record/start';
     try {
-      await fetch(`http://localhost:3201${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol }),
-      });
+      await apiPost(endpoint, { symbol });
       activeRecQuery.refetch();
     } catch { /* silent */ }
   }, [isRecording, symbol, activeRecQuery]);

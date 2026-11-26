@@ -1,3 +1,4 @@
+import { apiGet } from '../../core/api/client';
 import { useQuery } from '@tanstack/react-query';
 import NoticeBlock from '../NoticeBlock';
 import { noticeFromError } from '../../core/notices/from-error.js';
@@ -32,10 +33,8 @@ const STATE_CLASS = {
   COMPARISON: 'bx-state--comparison',
 };
 
-async function fetchExperiments() {
-  const res = await fetch('/api/backtest/experiments');
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+function fetchExperiments() {
+  return apiGet('/api/backtest/experiments');
 }
 
 export default function BacktestExperimentsPanel() {

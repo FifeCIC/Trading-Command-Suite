@@ -12,6 +12,7 @@
  *
  * Merged from SpeedChart + CandlestickChart (#506).
  */
+import { apiGet } from '../core/api/client';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import NoticeBlock from './NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
@@ -115,9 +116,7 @@ export default function SpeedChart({
     if (useExternalData) return; // skip fetch in external mode
     const mt5tf = TF_MAP[timeframe] || '1m';
     try {
-      const res = await fetch(`${API_BASE}/api/trading/mt5/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${mt5tf}&limit=300`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await apiGet(`${API_BASE}/api/trading/mt5/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${mt5tf}&limit=300`);
       if (data.bars && data.bars.length > 0) {
         setBars(data.bars);
         const last = data.bars[data.bars.length - 1];

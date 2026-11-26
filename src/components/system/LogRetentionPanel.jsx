@@ -18,9 +18,9 @@
  * the window before the next run keeps the archived file. The panel says this, because "prune"
  * reads as "gone" and it is not.
  */
+import { apiGet, apiPut, apiPost } from '../../core/api/client';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPut } from '../../core/api/client';
 import { noticeFromError } from '../../core/notices/from-error';
 import { notice } from '../../core/notices/registry';
 import NoticeBlock from '../NoticeBlock';
@@ -116,19 +116,13 @@ export default function LogRetentionPanel() {
   });
 
   const previewMutation = useMutation({
-    mutationFn: () => fetch('/api/system/logs/prune?dryRun=true', { method: 'POST' }).then(async (r) => {
-      if (!r.ok) throw new Error(`prune preview failed (${r.status})`);
-      return r.json();
-    }),
+    mutationFn: () => apiPost('/api/system/logs/prune?dryRun=true', {}),
     onSuccess: (data) => { setPreview(data); setPreviewError(null); setResult(null); },
     onError: (e) => { setPreview(null); setPreviewError(e); },
   });
 
   const pruneMutation = useMutation({
-    mutationFn: () => fetch('/api/system/logs/prune?dryRun=false', { method: 'POST' }).then(async (r) => {
-      if (!r.ok) throw new Error(`prune failed (${r.status})`);
-      return r.json();
-    }),
+    mutationFn: () => apiPost('/api/system/logs/prune?dryRun=false', {}),
     onSuccess: (data) => {
       setResult(data);
       setPreview(null);

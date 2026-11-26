@@ -3,6 +3,7 @@ import { useCallback, useEffect, useSyncExternalStore } from 'react';
 // applying the notice locale THERE is what stops a language switch from being a silent no-op
 // (preference stored, messages still English until a reload). See apply-locale.js.
 import { applyNoticeLocale } from '../notices/apply-locale.js';
+import { apiGet, apiPut } from '../api/client';
 
 const STORAGE_KEY = 'tcs:preferences';
 const API = '/api/preferences';
@@ -124,11 +125,7 @@ function save(prefs) {
 
 /** Push a single key to server (fire-and-forget) */
 function pushKey(key, value) {
-  fetch(API, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key, value }),
-  }).catch(() => {});
+  apiPut(API, { key, value }).catch(() => {});
 }
 
 let listeners = [];
@@ -153,7 +150,7 @@ export function usePreferences() {
 
   // Hydrate from server on mount
   useEffect(() => {
-    fetch(API).then(r => r.json()).then(remote => {
+    apiGet(API).then(remote => {
       if (remote && typeof remote === 'object' && Object.keys(remote).length) {
         const merged = { ...DEFAULTS, ...load(), ...remote };
         save(merged);

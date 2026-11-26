@@ -1,3 +1,4 @@
+import { apiBlob } from '../core/api/client';
 import { useState } from 'react';
 
 export default function ReportsPage() {
@@ -7,8 +8,7 @@ export default function ReportsPage() {
   async function downloadCsv() {
     setCsvLoading(true);
     try {
-      const res = await fetch('/api/export/portfolio/csv');
-      const blob = await res.blob();
+      const blob = await apiBlob('/api/export/portfolio/csv');
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = `portfolio-${new Date().toISOString().split('T')[0]}.csv`;
@@ -20,8 +20,7 @@ export default function ReportsPage() {
     setJsonLoading(true);
     try {
       const date = new Date().toISOString().split('T')[0];
-      const res = await fetch(`/api/export/scores/${date}/json`);
-      const blob = await res.blob();
+      const blob = await apiBlob(`/api/export/scores/${date}/json`);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = `scores-${date}.json`;

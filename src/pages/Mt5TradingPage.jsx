@@ -1,3 +1,4 @@
+import { apiGet, apiPost, apiDelete } from '../core/api/client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import PositionsTable from '../components/mt5/PositionsTable';
 import OrderForm from '../components/mt5/OrderForm';
@@ -65,8 +66,7 @@ export default function Mt5TradingPage() {
   // ── Fetch Accounts ──
   const fetchAccounts = useCallback(async () => {
     try {
-      const res = await fetch('/api/providers/mt5/accounts');
-      const data = await res.json();
+      const data = await apiGet('/api/providers/mt5/accounts');
       setAccounts(Array.isArray(data.accounts) ? data.accounts : []);
     } catch { /* silent */ }
   }, []);
@@ -74,8 +74,7 @@ export default function Mt5TradingPage() {
   // ── Main Data Fetch ──
   const fetchData = useCallback(async () => {
     try {
-      const diagRes = await fetch('/api/providers/mt5/diagnostics');
-      const diag = await diagRes.json();
+      const diag = await apiGet('/api/providers/mt5/diagnostics');
       const isConnected = diag.connected === true;
       setConnected(isConnected);
       setAccount(diag.account
@@ -85,12 +84,10 @@ export default function Mt5TradingPage() {
       if (diag.brokerId != null) setDataBrokerId(diag.brokerId);
 
       if (isConnected) {
-        const [posRes, histRes] = await Promise.all([
-          fetch('/api/providers/mt5/positions'),
-          fetch('/api/providers/mt5/history'),
+        const [posData, histData] = await Promise.all([
+          apiGet('/api/providers/mt5/positions'),
+          apiGet('/api/providers/mt5/history'),
         ]);
-        const posData = await posRes.json();
-        const histData = await histRes.json();
         setPositions(Array.isArray(posData.positions) ? posData.positions : posData || []);
         setHistory(Array.isArray(histData.orders) ? histData.orders : histData || []);
       } else {
@@ -157,11 +154,10 @@ export default function Mt5TradingPage() {
   async function handleSwitchAccount(accountKey) {
     const [brokerId, accountNum] = String(accountKey).split(':');
     try {
-      const res = await fetch(
+      const data = await apiPost(
         `/api/providers/mt5/switch/${encodeURIComponent(accountNum)}?brokerId=${encodeURIComponent(brokerId)}`,
-        { method: 'POST' },
+        {},
       );
-      const data = await res.json();
       if (data.success) {
         setMsg(`Switched bridge ${brokerId} to account #${accountNum}`);
         setTimeout(() => setMsg(''), 4000);
@@ -186,12 +182,7 @@ export default function Mt5TradingPage() {
     if (!acct) return;
     if (!window.confirm(`Remove ${acct.login} (bridge ${acct.brokerId}) from this page?`)) return;
     try {
-      const res = await fetch('/api/providers/mt5/accounts/remove', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ number: acct.number, brokerId: acct.brokerId }),
-      });
-      const data = await res.json();
+      const data = await apiPost('/api/providers/mt5/accounts/remove', { number: acct.number, brokerId: acct.brokerId });
       if (data.success) {
         setMsg(`Removed account ${data.removed}`);
         setTimeout(() => setMsg(''), 4000);
@@ -232,12 +223,7 @@ export default function Mt5TradingPage() {
     }
 
     try {
-      const res = await fetch('/api/trading/mt5/order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...order, origin: 'user' }),
-      });
-      const data = await res.json();
+      const data = await apiPost('/api/trading/mt5/order', { ...order, origin: 'user' });
       if (data.success) {
         setMsg(`✅ Order placed: ${order.volume} ${order.symbol} — Ticket #${data.ticket || '—'}`);
         setTimeout(() => setMsg(''), 5000);
@@ -257,8 +243,7 @@ export default function Mt5TradingPage() {
       if (!confirmed) return;
     }
     try {
-      const res = await fetch(`/api/trading/mt5/close/${ticket}`, { method: 'DELETE' });
-      const data = await res.json();
+      const data = await apiDelete(`/api/trading/mt5/close/${ticket}`);
       if (data.success) {
         setMsg(`Position #${ticket} closed`);
         setTimeout(() => setMsg(''), 4000);
@@ -281,8 +266,7 @@ export default function Mt5TradingPage() {
     if (!window.confirm(warning)) return;
 
     try {
-      const res = await fetch('/api/trading/mt5/close-all', { method: 'POST' });
-      const data = await res.json();
+      const data = await apiPost('/api/trading/mt5/close-all', {});
       if (data.success) {
         setMsg(`Closed ${data.closed || 'all'} positions`);
         setTimeout(() => setMsg(''), 4000);
@@ -298,8 +282,7 @@ export default function Mt5TradingPage() {
   // ── Load History ──
   async function loadHistory() {
     try {
-      const res = await fetch('/api/providers/mt5/history');
-      const data = await res.json();
+      const data = await apiGet('/api/providers/mt5/history');
       setHistory(Array.isArray(data.orders) ? data.orders : data || []);
       setActiveTab('history');
     } catch { /* silent */ }

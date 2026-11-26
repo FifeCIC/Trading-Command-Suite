@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 213,
+  "count": 214,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1657,6 +1657,17 @@
       "where": "repo",
       "category": "validator",
       "purpose": "keeps page chrome OUT of pages.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-page-data-access.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "one HTTP transport, and it is the shared client.",
       "selfTest": true,
       "reaches": [
         "prebuild",

@@ -1,6 +1,6 @@
+import { apiGet, apiPost } from '../core/api/client';
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
 import { feedUnavailable } from '../core/api/feed-state.js';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import BacktestPeriodsPanel from '../components/backtest/BacktestPeriodsPanel';
@@ -68,11 +68,7 @@ export default function BacktestDataPage() {
     const isRec = recordingTickers.has(ticker.toUpperCase());
     const endpoint = isRec ? '/api/speed/record/stop' : '/api/speed/record/start';
     try {
-      await fetch(`http://localhost:3201${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol: ticker }),
-      });
+      await apiPost(endpoint, { symbol: ticker });
       activeRec.refetch();
       queryClient.invalidateQueries({ queryKey: ['bt-inventory'] });
     } catch { /* silent */ }

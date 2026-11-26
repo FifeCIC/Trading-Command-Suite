@@ -1,3 +1,5 @@
+import { apiGet, apiPut } from '../core/api/client';
+
 const STORAGE_KEY = 'TRADINGCS_FEATURE_FLAGS';
 const API = '/api/feature-flags';
 
@@ -26,11 +28,7 @@ function save(flags) {
 
 /** Push a flag change to server */
 function pushFlag(name, enabled) {
-  fetch(`${API}/${name}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ enabled }),
-  }).catch(() => {});
+  apiPut(`${API}/${name}`, { enabled }).catch(() => {});
 }
 
 let state = load();
@@ -42,7 +40,7 @@ function notify() {
 }
 
 /** Hydrate from server on init */
-fetch(API).then(r => r.json()).then(flags => {
+apiGet(API).then(flags => {
   if (Array.isArray(flags) && flags.length) {
     const map = {};
     for (const f of flags) map[f.id] = f.enabled;

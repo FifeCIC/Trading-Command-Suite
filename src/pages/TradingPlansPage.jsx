@@ -1,3 +1,4 @@
+import { apiGet, apiPost, apiPatch, apiDelete } from '../core/api/client';
 import { useState, useEffect } from 'react';
 import './trading-plans-page.css';
 
@@ -15,8 +16,7 @@ export default function TradingPlansPage() {
   const fetchPlans = async () => {
     setLoading(true);
     try {
-      const res = await fetch(API);
-      const data = await res.json();
+      const data = await apiGet(API);
       const list = Array.isArray(data) ? data : [];
       setPlans(list);
       if (list.length > 0 && !selected) setSelected(list[0]);
@@ -35,18 +35,13 @@ export default function TradingPlansPage() {
       } catch {
         content = { text: form.content };
       }
-      const res = await fetch(API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: form.title,
-          type: form.type,
-          content,
-          notes: form.notes || null,
-          status: 'draft',
-        }),
+      const data = await apiPost(API, {
+        title: form.title,
+        type: form.type,
+        content,
+        notes: form.notes || null,
+        status: 'draft',
       });
-      const data = await res.json();
       setPlans([data, ...plans]);
       setSelected(data);
       setCreating(false);
@@ -57,16 +52,12 @@ export default function TradingPlansPage() {
   };
 
   const updateStatus = async (id, status) => {
-    await fetch(`${API}/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    });
+    await apiPatch(`${API}/${id}`, { status });
     fetchPlans();
   };
 
   const deletePlan = async (id) => {
-    await fetch(`${API}/${id}`, { method: 'DELETE' });
+    await apiDelete(`${API}/${id}`);
     if (selected?.id === id) setSelected(null);
     fetchPlans();
   };

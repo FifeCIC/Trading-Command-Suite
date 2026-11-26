@@ -7,9 +7,9 @@
  * Route: /settings/data-management
  */
 
+import { apiGet, apiPost } from '../core/api/client';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
 import { feedUnavailable } from '../core/api/feed-state.js';
 import { formatDateTime } from '../core/format-utils';
 import LogRetentionPanel from '../components/system/LogRetentionPanel';
@@ -34,8 +34,7 @@ export default function DataManagementPage() {
     mutationFn: async ({ table, days }) => {
       const params = new URLSearchParams({ table });
       if (days) params.set('days', String(days));
-      const res = await fetch(`/api/system/data-retention/prune?${params}`, { method: 'POST' });
-      return res.json();
+      return apiPost(`/api/system/data-retention/prune?${params}`, {});
     },
     onSuccess: (data) => {
       setPruneResult(data);
@@ -46,7 +45,7 @@ export default function DataManagementPage() {
   });
 
   const pruneAllMutation = useMutation({
-    mutationFn: () => fetch('/api/system/data-retention/prune-all', { method: 'POST' }).then(r => r.json()),
+    mutationFn: () => apiPost('/api/system/data-retention/prune-all', {}),
     onSuccess: (data) => {
       setPruneResult({ all: true, results: data });
       queryClient.invalidateQueries({ queryKey: ['data-retention-stats'] });

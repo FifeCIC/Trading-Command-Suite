@@ -1,3 +1,4 @@
+import { apiGet, apiPost } from '../core/api/client';
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -22,8 +23,7 @@ export default function StarToggle({ itemType, itemId, size = 18, className = ''
   // Fetch current state from API on mount
   React.useEffect(() => {
     let cancelled = false;
-    fetch(`/api/stars?type=${itemType}`)
-      .then((r) => r.json())
+    apiGet(`/api/stars?type=${itemType}`)
       .then((data) => {
         if (cancelled) return;
         const ids = data?.byType?.[itemType] || [];
@@ -45,13 +45,7 @@ export default function StarToggle({ itemType, itemId, size = 18, className = ''
     setAnimKey((k) => k + 1);
 
     try {
-      const res = await fetch('/api/stars/toggle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemType, itemId }),
-      });
-      if (!res.ok) throw new Error('Toggle failed');
-      const data = await res.json();
+      const data = await apiPost('/api/stars/toggle', { itemType, itemId });
       setStarred(data.starred);
     } catch {
       // Rollback
