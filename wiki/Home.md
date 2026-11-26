@@ -18,11 +18,11 @@ audit chain that can answer *"why did it buy that?"* for every order.
 > This software is **not configured to profit by default**, no strategy it ships has been shown to be
 > profitable, and it is pre-release. **Use a demo account.**
 
-[![Watch the walkthrough: the Trading Command Suite landing page and its system status](https://raw.githubusercontent.com/FifeCIC/Trading-Command-Suite/master/site/showcase/assets/video-overview.jpg)](https://www.youtube.com/watch?v=aBFBvRFL17w&t=232s)
+### ▶ [Watch the walkthrough on YouTube](https://www.youtube.com/watch?v=aBFBvRFL17w&t=232s)
 
-**▶ [Watch the walkthrough on YouTube](https://www.youtube.com/watch?v=aBFBvRFL17w&t=232s)** — the app
-running, rather than described. If you would rather read, [17 screens from the alpha](https://fifecic.github.io/Trading-Command-Suite/showcase/)
-are captioned in plain language.
+The app running, rather than described. If you would rather read,
+[17 screens from the alpha](https://fifecic.github.io/Trading-Command-Suite/showcase/) are captioned
+in plain language.
 
 ---
 
