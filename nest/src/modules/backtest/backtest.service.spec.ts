@@ -19,7 +19,11 @@
  * A guard that has never been observed to fail is a decoration — every one of these was canaried
  * in both directions when it was written (see the issue comment for the observed failures).
  */
-import { BacktestService, mergeBotConfig, BotForBacktest } from './backtest.service';
+import { BacktestService } from './backtest.service';
+// ⚠️ `mergeBotConfig` moved to `bot-config.ts` on 2026-11-19 and this spec now imports it from where it
+// LIVES. It is deliberately not re-exported from the service: a re-export would let the next reader
+// import a 190-line function from a 5,282-line file and never discover the module.
+import { mergeBotConfig, type BotForBacktest } from './bot-config';
 
 /** One stored run, shaped as `findMany` returns it (symbol included). */
 function run(id: string, over: Record<string, unknown> = {}) {

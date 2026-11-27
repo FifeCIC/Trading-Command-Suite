@@ -308,7 +308,12 @@ export const PARITY_REGISTER: readonly ParityRow[] = [
     verdict: 'divergent',
     backtest: {
       label: 'applied — bot fields become a StopPlan (lockAtPct, trailPct)',
-      files: ['nest/src/modules/backtest/backtest.service.ts'],
+      // ⚠️ `bot-config.ts` ADDED 2026-11-19, and the gate is what caught the omission. `mergeBotConfig()`
+      // (which calls `simTslPlan()`) was EXTRACTED from `backtest.service.ts` into its own module, so the
+      // engine stopped naming `simTslPlan` in the file this row pointed at and the build failed with
+      // `divergent: the ENGINE does not reference 'simTslPlan' — this is a gap, not a divergence`. That is
+      // the guard doing exactly its job: a move that silently left the trail unapplied would look identical.
+      files: ['nest/src/modules/backtest/backtest.service.ts', 'nest/src/modules/backtest/bot-config.ts'],
       probe: 'simTslPlan',
     },
     live: {

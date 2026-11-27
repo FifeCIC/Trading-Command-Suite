@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { mergeBotConfig, type BotForBacktest } from './backtest.service';
+import { mergeBotConfig, type BotForBacktest } from './bot-config';
 import { buildSettingsInventory, DECLARED } from './settings-inventory';
 // ⚠️ The bar comes from its OWNER, not from a literal. `validate-threshold-literals` fails the build
 // on an out-of-scale number here (#839) — and it was right to: a fixture that writes `55` teaches the
