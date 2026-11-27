@@ -73,7 +73,7 @@ import ScoringFunnelStep from '../features/movers-strategy/ScoringFunnelStep.jsx
 import DirectiveRecordStep from '../features/movers-strategy/DirectiveRecordStep.jsx';
 // #1335 — what this run cannot reproduce of the live account, read from the build-gated register.
 import ParityStep from '../features/movers-strategy/ParityStep.jsx';
-import { dayLabel } from '../features/movers-strategy/format.js';
+import { dayLabel, progressLabel } from '../features/movers-strategy/format.js';
 import { formatPct, formatAmount } from '../core/format-utils.js';
 // The margin annotation between two steps: what the step above does not yet show, from data we already have.
 import StepAuditNote from '../components/StepAuditNote.jsx';
@@ -173,6 +173,8 @@ export default function MoversStrategyBacktestPage() {
   const leg = LEGS.find((l) => l.key === legKey) ?? LEGS[0];
   const pace = PACE_OPTIONS.find((p) => p.id === paceId) ?? PACE_OPTIONS[1];
   const running = Boolean(progress?.current);
+  /** `2/5` while a run is in flight, `null` when nothing has run — the recap line renders it as text. */
+  const runProgressLabel = progressLabel(progress, running);
 
   // ⚠️ NO `.catch(() => …)`. Swallowing the error makes a failed request render as "no datasets",
   // which reads as a fact about the data rather than a fact about the connection.
@@ -1088,10 +1090,13 @@ export default function MoversStrategyBacktestPage() {
 
       <StepAuditNote afterStep={MOVERS_STEP['mvp-step-settings'].step} ideas={MOVERS_STEP['mvp-step-settings'].audit} />
 
-      {/* The progress panel and the .mvp-progress bar were removed 2026-11-20 (owner): they took a lot
-          of space for little information, and there is no speed control yet to make a live progress
-          indicator worth watching. Run status and the settings recap now live in the Run summary
-          panel below. */}
+      {/*
+        The progress panel and the .mvp-progress bar were removed 2026-11-20 (owner): they took a lot of
+        space for little information. ⚠️ THIS COMMENT USED TO ADD "and there is no speed control yet to
+        make a live progress indicator worth watching" — that stopped being true when `PACE_OPTIONS`
+        shipped, and a stale justification in a comment reads as a current fact. What a reader needs is
+        not a bar but WHICH DAY OF HOW MANY, which the recap line now carries (`progressLabel`).
+      */}
       {/* ══ RESULTS ═════════════════════════════════════════════════════════════════════════════ */}
       {(results.length > 0 || progress) && (
         <div id="mvp-sec-outcome" className="mvp-outcome">
@@ -1129,6 +1134,14 @@ export default function MoversStrategyBacktestPage() {
                     : progress?.stopped
                       ? 'Stopped'
                       : 'Finished'}
+                  {/*
+                    ⚠️ WHICH DAY OF HOW MANY (2026-11-27). The line already named the current day and a
+                    clock, so a five-day run at "1.5 s per day" gave no way to tell whether it was
+                    working or stuck. `running` is why it is a function: `progress.done` counts finished
+                    days, so the running day is `done + 1` — and adding one after the run ends would
+                    report a sixth day for a five-day queue.
+                  */}
+                  {runProgressLabel ? ` · ${runProgressLabel}` : ''}
                   {progress ? ` · ${elapsedLabel(now - progress.startedAt)}` : ''}
                 </span>
               </div>

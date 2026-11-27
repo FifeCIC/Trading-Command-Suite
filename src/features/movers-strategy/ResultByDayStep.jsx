@@ -94,12 +94,30 @@ export default function ResultByDayStep({ sort }) {
                   <span className="mvp-muted">{d.notice.title}</span>
                 ) : (
                   <span className="mvp-chips mvp-chips--inline">
+                    {/*
+                      ⚠️ THE RANK IS VISIBLE NOW (2026-11-27). It lived only in a `title=`, which is
+                      hover-only and therefore unreachable by keyboard, touch and screen readers — the
+                      exact reason `WhyPopover` exists in this codebase and the lesson #824 already paid
+                      for. The rank is ONE character and it is the strategy's own ordering, so hiding it
+                      behind a hover was withholding the thing a reader needs to ask "why this name?".
+                      The long `reason` stays in the title (it is genuinely help, not content) and every
+                      chip carries an `aria-label` so the facts are announced rather than hovered.
+                    */}
                     {d.ranked.map((c) => (
                       <span
                         key={c.symbol}
                         className={`mvp-sym${c.selected ? ' mvp-sym--on' : ''}`}
                         title={c.reason || (c.movePct == null ? 'not measurable' : `rank ${c.rank}`)}
+                        aria-label={[
+                          c.symbol,
+                          c.movePct == null ? 'not measurable' : null,
+                          c.rank != null ? `rank ${c.rank}` : null,
+                          c.selected ? 'picked' : null,
+                        ]
+                          .filter(Boolean)
+                          .join(', ')}
                       >
+                        {c.rank != null && <span className="mvp-sym-rank">{c.rank}</span>}
                         {c.symbol}
                         {c.movePct != null && <em>{formatPct(c.movePct)}</em>}
                       </span>
@@ -114,8 +132,14 @@ export default function ResultByDayStep({ sort }) {
                     ? <strong>{d.selected.join(', ')}</strong>
                     : <span className="mvp-muted">nothing</span>}
               </td>
-              <td className="mvp-num">{d.notice ? '—' : d.candidates}</td>
-              <td className="mvp-num">{d.notice ? '—' : d.trades}</td>
+              {/*
+                ⚠️ `?? '—'` ON EVERY COUNT (2026-11-27). A day whose run returned no totals rendered a
+                BLANK cell, and a blank cell reads as zero or as "nothing to report" — the silent shape
+                this page exists to avoid. `null` is "the run did not say", which is a third state and
+                has to look like one.
+              */}
+              <td className="mvp-num">{d.notice ? '—' : (d.candidates ?? '—')}</td>
+              <td className="mvp-num">{d.notice ? '—' : (d.trades ?? '—')}</td>
               <td className="mvp-num">
                 {d.notice ? '—' : d.winRate == null ? '—' : `${Number(d.winRate).toFixed(1)}%`}
               </td>

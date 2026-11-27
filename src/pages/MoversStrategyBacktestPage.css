@@ -1493,6 +1493,20 @@
   background: var(--bg);
 }
 
+/*
+ * ⚠️ THE RANK IS TEXT, NOT A HOVER (2026-11-27). It used to exist only in a `title=`, so a keyboard,
+ * touch or screen-reader user could not learn the strategy's own ordering. It is one character, so it
+ * belongs on screen — faint enough not to compete with the symbol, present enough to read.
+ */
+.mvp-sym-rank {
+  font-size: 9px;
+  line-height: 1;
+  color: var(--text-faint);
+  border-right: 1px solid var(--line);
+  padding-right: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
 .mvp-sym--on {
   border-color: var(--accent);
   color: var(--ink);

@@ -78,6 +78,34 @@ describe('ResultByDayStep', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThan(1);
   });
 
+  it('renders an em dash for a count the run did not return — a blank cell reads as zero', () => {
+    renderRows([{ ...baseRow, candidates: null, trades: null, winRate: null }]);
+    const cells = screen.getAllByRole('cell');
+    // Day, ranked, traded, candidates, trades, win %, P/L bar cell, not-counted
+    const numeric = cells.slice(3, 6).map((c) => c.textContent);
+    expect(numeric).toEqual(['—', '—', '—']);
+  });
+
+  it('shows the strategy’s own ranking on screen, not only in a hover title', () => {
+    renderRows([
+      {
+        ...baseRow,
+        ranked: [
+          { symbol: 'NXXT', movePct: 6.8, rank: 1, selected: true },
+          { symbol: 'KPTI', movePct: null, rank: null, reason: 'no bars before the cutoff', selected: false },
+        ],
+      },
+    ]);
+
+    // The rank is VISIBLE — one character, in the chip, reachable by keyboard and screen reader.
+    expect(screen.getByText('1')).toBeTruthy();
+    // …and the chip carries the facts as an accessible name, so hovering is not the only way to learn them.
+    expect(screen.getByLabelText('NXXT, rank 1, picked')).toBeTruthy();
+    // A candidate that could not be measured says so, rather than rendering a rank of 0.
+    expect(screen.getByLabelText('KPTI, not measurable')).toBeTruthy();
+    expect(screen.getByTitle('no bars before the cutoff')).toBeTruthy();
+  });
+
   it('says there is nothing to show when no day finished, instead of rendering an empty table', () => {
     renderRows([]);
     expect(screen.getByText(/No session finished/)).toBeTruthy();
