@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 220,
+  "count": 221,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -911,6 +911,16 @@
       "category": "tool",
       "purpose": "does the SHORT leg of a pair fire at all, on STORED bars?",
       "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "measure-signal-breadth.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "is a protocol's score the SUM OF CO-OCCURRING EVIDENCE, or one directive?",
+      "selfTest": true,
       "reaches": [
         "npm"
       ]
