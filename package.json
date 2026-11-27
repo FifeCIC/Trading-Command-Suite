@@ -205,7 +205,8 @@
     "test:wiring": "node scripts/validate-test-wiring.cjs",
     "test:wiring:report": "node scripts/validate-test-wiring.cjs --report",
     "test:wiring:self-test": "node scripts/validate-test-wiring.cjs --self-test",
-    "test:wiring:canary": "node scripts/canary-test-wiring.cjs"
+    "test:wiring:canary": "node scripts/canary-test-wiring.cjs",
+    "debt:owners": "node scripts/validate-debt-expiry.cjs --owners"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.20",

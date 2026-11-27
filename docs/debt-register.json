@@ -1,5 +1,5 @@
 {
-  "note": "Debt this project has ACCEPTED, and when it must next be looked at. Every entry is a holding that a gate already prevents from GROWING — growth is handled elsewhere. What nothing handled before this file existed is AGE: a baseline that can only go down will sit at the same number for ever if nobody is forced to return to it. `node scripts/validate-debt-expiry.cjs` fails an entry whose `reviewedOn` is older than its `toleranceDays`, and `--review` refuses without a written reason. Register row 305.",
+  "note": "Debt this project has ACCEPTED, and when it must next be looked at. Every entry is a holding that a gate already prevents from GROWING — growth is handled elsewhere. What nothing handled before this file existed is AGE: a baseline that can only go down will sit at the same number for ever if nobody is forced to return to it. `node scripts/validate-debt-expiry.cjs` fails an entry whose `reviewedOn` is older than its `toleranceDays`, and `--review` refuses without a written reason. Register row 305. ⚠️ CORRECTED 2026-11-27: pipeline-contracts-held was REMOVED. Its five \no-unmeasured-calendar-claim deviations are not debt — they are the structural uses the invariant whitelists BY NAME WITH A REASON (session mechanics, the broker-set rollover window), and the invariant's own evidence records '5 structural uses whitelisted' as the FINISHED state of #879. Worse, #879 is CLOSED, so the entry named a dead owner and would have expired in 45 days demanding that someone revisit a correct whitelist. A reasoned exception is a settled decision, not outstanding work; the whitelist's own 'may only shrink' rule is its guard, and it does not need a date.",
   "entries": [
     {
       "id": "page-chrome",
@@ -30,16 +30,6 @@
       "reviewedOn": "2026-11-27",
       "toleranceDays": 60,
       "why": "The inline-style twin of this (colour-literals) went 263 -> 37 in one session, so the same method works here. Three files already report LOWER and are waiting to be banked."
-    },
-    {
-      "id": "pipeline-contracts-held",
-      "gate": "nest/scripts/validate-pipeline-contracts.cjs",
-      "holds": 5,
-      "holdsWhat": "INV-NO-UNMEASURED-CALENDAR-CLAIM violations held by a whitelist entry rather than fixed",
-      "owner": "#879",
-      "reviewedOn": "2026-11-27",
-      "toleranceDays": 45,
-      "why": "This is the gate that ADVERTISED itself as blocking and does not: its header calls these violations held, and the run exits 0. Five directive classes still emit a non-zero score off the calendar. Shorter tolerance than the cosmetic debt above because it is a scoring path."
     }
   ]
 }

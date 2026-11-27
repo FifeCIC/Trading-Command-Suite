@@ -31,6 +31,7 @@
  * Usage:
  *   node scripts/validate-debt-expiry.cjs                       # check (E1 + E2)
  *   node scripts/validate-debt-expiry.cjs --report              # every entry, its age and its budget
+ *   node scripts/validate-debt-expiry.cjs --owners              # E4, LIVE: every owner must be an OPEN issue
  *   node scripts/validate-debt-expiry.cjs --review <id> --reason "why this is still held"
  *   node scripts/validate-debt-expiry.cjs --self-test           # prove E1 and E2 can fail
  *
@@ -56,9 +57,12 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 
 const ROOT = path.join(__dirname, '..');
 const REGISTER = path.join(ROOT, 'docs', 'debt-register.json');
+/** The repo every registered debt owner must be an OPEN issue in. Named once, not typed per call. */
+const REPO = 'FifeCIC/Trading-Command-Suite';
 const PKG = path.join(ROOT, 'package.json');
 const NEST_PKG = path.join(ROOT, 'nest', 'package.json');
 
@@ -105,6 +109,31 @@ function evaluate(entries, today, opts) {
     out.push({ ...e, age, problems, ok: problems.length === 0 });
   }
   return out;
+}
+
+/**
+ * classifyOwners(pairs) — E4, PURE so the self-test can drive it without a network.
+ *
+ * ⚠️ E4 EXISTS BECAUSE E-OWNER ONLY CHECKED THE FORMAT (2026-11-27). An entry naming `#879` passed
+ * every rule while **#879 was CLOSED** — so the debt had no owner, and the only thing that would have
+ * happened is that it expired in 45 days and demanded somebody revisit work the closed issue had
+ * already finished. `#\d+` proves an issue exists in the text, not that anyone is still accountable.
+ *
+ * `pairs` is `[{ id, owner, state }]` where `state` came from a live lookup. A `state` that is null or
+ * unrecognised is `unknown` — reported, never counted as open, because "cannot judge" is not a pass.
+ *
+ * @returns {{ closed: Array, unknown: Array }} — both FAIL; an empty pair is what a clean run returns.
+ */
+function classifyOwners(pairs) {
+  const closed = [];
+  const unknown = [];
+  for (const p of pairs) {
+    const state = String(p.state ?? '').toUpperCase();
+    if (state === 'OPEN') continue;
+    if (state === 'CLOSED') closed.push(p);
+    else unknown.push(p);
+  }
+  return { closed, unknown };
 }
 
 function wiredScripts() {
@@ -185,7 +214,24 @@ function selfTest() {
   // ⚠️ The collector must SEE a problem, or every pass above is unearned.
   expect('the evaluator returns one row per entry', evaluate([base, { ...base, id: 'y' }], '2026-11-20', opts).length, 2);
 
-  console.log(failures === 0 ? '\n✅ self-test: E1 and E2 each report both directions' : `\n❌ self-test: ${failures} case(s) failed`);
+  // ── E4 · the owner must be OPEN, and the format check cannot tell ────────────────────────────────
+  // A CLOSED owner passed every rule above. Measured 2026-11-27: `#879` was closed while five
+  // whitelisted deviations were still registered against it.
+  expect('a CLOSED owner is reported', classifyOwners([{ owner: '#879', state: 'CLOSED' }]).closed.length, 1);
+  expect('an OPEN owner is clean', classifyOwners([{ owner: '#1', state: 'OPEN' }]).closed.length, 0);
+  expect('▶ CANARY — an UNREADABLE owner is "cannot judge", never open', classifyOwners([{ owner: '#2', state: null }]).unknown.length, 1);
+  expect('…and a missing state is unknown too, not open', classifyOwners([{ owner: '#3' }]).unknown.length, 1);
+  expect('▶ CANARY — lowercase "closed" still fails, because the API casing is not a contract', classifyOwners([{ owner: '#4', state: 'closed' }]).closed.length, 1);
+  expect('every entry is classified — nothing is silently skipped', (() => {
+    const r = classifyOwners([{ owner: '#5', state: 'OPEN' }, { owner: '#6', state: 'CLOSED' }, { owner: '#7', state: '?' }]);
+    return r.closed.length + r.unknown.length;
+  })(), 2);
+
+  console.log(
+    failures === 0
+      ? '\n✅ self-test: E1, E2 and E4 each report both directions'
+      : `\n❌ self-test: ${failures} case(s) failed`,
+  );
   process.exit(failures === 0 ? 0 : 1);
 }
 
@@ -227,9 +273,58 @@ function review(id, reason) {
   console.log(`  reason recorded: ${reason.trim()}`);
 }
 
+/**
+ * ownersCheck() — E4, the LIVE half. `--owners` only, because `prebuild` cannot reach GitHub.
+ *
+ * ⚠️ IT MUST NOT BE IN `prebuild`. The build has to work offline; a gate that needs the network would
+ * either fail every build on a plane or get allowlisted. So E1–E3 stay offline and this runs on demand —
+ * and when it cannot look something up it exits **2**, never 0. A check that reads nothing has checked
+ * nothing, which is the whole reason E4 exists.
+ */
+function ownersCheck() {
+  const parsed = JSON.parse(fs.readFileSync(REGISTER, 'utf8'));
+  const entries = Array.isArray(parsed.entries) ? parsed.entries : [];
+  const owners = [...new Set(entries.map((e) => String(e.owner ?? '')).filter((o) => /^#\d+$/.test(o)))];
+
+  const pairs = owners.map((owner) => {
+    const number = owner.slice(1);
+    try {
+      const out = execFileSync(
+        'pwsh',
+        ['-File', path.join(ROOT, 'scripts', 'gh-wrapper.ps1'), 'issue', 'view', number, '--repo', REPO, '--json', 'state'],
+        { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+      );
+      const json = JSON.parse(String(out).trim().split('\n').filter((l) => l.trim().startsWith('{')).pop() ?? '{}');
+      return { id: owner, owner, state: json.state ?? null };
+    } catch (err) {
+      return { id: owner, owner, state: null, error: err.message };
+    }
+  });
+
+  const { closed, unknown } = classifyOwners(pairs);
+  for (const p of pairs) {
+    const mark = closed.some((c) => c.owner === p.owner) ? '✖' : unknown.some((u) => u.owner === p.owner) ? '⚠' : '✅';
+    console.log(`  ${mark} ${p.owner} — ${p.state ?? 'could not read'}`);
+  }
+  if (closed.length) {
+    console.log('');
+    console.log('[debt-expiry] ✖ a debt owned by a CLOSED issue has no owner: nothing will fix it, and the');
+    console.log('    only thing that happens is that this entry expires. Re-point it at the open issue that');
+    console.log('    actually carries the work — or, if the work is DONE, remove the entry (it was not debt).');
+    return 1;
+  }
+  if (unknown.length) {
+    console.log('');
+    console.log('[debt-expiry] ✖ could not judge — every owner must be readable, and "cannot read" is not open.');
+    return 2;
+  }
+  console.log(`[debt-expiry] ✅ every debt owner is an OPEN issue (${pairs.length} checked)`);
+  return 0;
+}
+
 function main() {
   const argv = process.argv.slice(2);
-  const KNOWN = new Set(['--report', '--review', '--reason', '--self-test', '--help']);
+  const KNOWN = new Set(['--report', '--review', '--reason', '--self-test', '--owners', '--help']);
   const unknown = argv.filter((a) => a.startsWith('--') && !KNOWN.has(a));
   if (unknown.length) {
     console.error(`[debt-expiry] ✖ unknown flag(s): ${unknown.join(', ')}`);
@@ -237,9 +332,10 @@ function main() {
   }
   if (argv.includes('--self-test')) return selfTest();
   if (argv.includes('--help')) {
-    console.log('usage: node scripts/validate-debt-expiry.cjs [--report] [--review <id> --reason "<why>"] [--self-test]');
+    console.log('usage: node scripts/validate-debt-expiry.cjs [--report] [--owners] [--review <id> --reason "<why>"] [--self-test]');
     return;
   }
+  if (argv.includes('--owners')) return process.exit(ownersCheck());
   const reviewAt = argv.indexOf('--review');
   if (reviewAt !== -1) {
     const reasonAt = argv.indexOf('--reason');
