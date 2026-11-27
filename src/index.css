@@ -1297,7 +1297,7 @@ button.nav-active {
   border: 1px solid transparent;
   border-radius: 5px;
   color: var(--ink-soft);
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   padding: 0.3rem 0.6rem;
   cursor: pointer;
   white-space: nowrap;

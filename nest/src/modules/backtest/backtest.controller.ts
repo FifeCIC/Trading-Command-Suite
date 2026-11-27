@@ -85,7 +85,33 @@ export class BacktestController {
   @Get('movers-datasets')
   @ApiOperation({ summary: 'List only the day-scoped movers datasets, with their symbols' })
   @ApiOkResponse({ description: 'datasets: the offered ones. excluded: what was not, and why.' })
-  async getMoversDatasets() {
+  async getMoversDatasets(@Query('cutoffUtc') cutoffUtc?: string) {
+    /**
+     * ── TWO DIFFERENT MOVES, AND THE PAGE WAS SHOWING ONLY THE MORE FLATTERING ONE ────────────────
+     * Owner, 2026-11-27: *"The symbol for Wed 11 Nov NXXT is showing 1903.2% and I thought it was
+     * original around 401%."* Both numbers are right, and they measure different things:
+     *
+     *   PEAK  — the day's high against the previous session's close (`peakChangeOnDay`). 11 Nov's peak
+     *           was a 3.74 high at 19:00, which is **3½ hours after the 15:30 screen time**. 1903.2%.
+     *   CUTOFF — the close of the last bar at or before the cutoff, same denominator. That is the
+     *           number the RANKER sorts on, and it was 0.99 → 430.3%.
+     *
+     * The list showed the peak under a bare percentage, so the page displayed a move 4.4× larger than
+     * the one the strategy could act on, with nothing saying so. `symbolMovesAtCutoff` is computed with
+     * `moveSoFarPct` — the SAME function the ranker uses — so the preview cannot drift from the ranking
+     * it is previewing. `symbolMoves` keeps its meaning (peak) because it answers the other question:
+     * how far the name eventually ran.
+     */
+    let cutoffMinute = 15 * 60 + 30;
+    if (cutoffUtc) {
+      try {
+        cutoffMinute = parseCutoffUtc(cutoffUtc);
+      } catch {
+        // A malformed cutoff falls back to the page's default rather than failing the whole list: this
+        // endpoint is a picker, and refusing to list any day over an unreadable clock helps nobody.
+        cutoffMinute = 15 * 60 + 30;
+      }
+    }
     const periods = await this.prisma.backtestPeriod.findMany({
       select: {
         name: true,
@@ -148,32 +174,67 @@ export class BacktestController {
         select: { symbolId: true, timestamp: true, high: true, low: true, close: true },
         orderBy: { timestamp: 'asc' },
       });
-      const seriesBySymbol = new Map<string, Array<{ date: string; high: number; low: number; close: number }>>();
+      const seriesBySymbol = new Map<string, Array<{ at: string; date: string; high: number; low: number; close: number }>>();
       for (const b of bars) {
         const arr = seriesBySymbol.get(b.symbolId) ?? [];
-        arr.push({ date: b.timestamp.toISOString().slice(0, 10), high: b.high, low: b.low, close: b.close });
+        // `at` is kept for the cutoff move; `date` alone is enough for the peak.
+        arr.push({ at: b.timestamp.toISOString(), date: b.timestamp.toISOString().slice(0, 10), high: b.high, low: b.low, close: b.close });
         seriesBySymbol.set(b.symbolId, arr);
       }
       const symbolMoves: Record<string, number | null> = {};
+      const symbolMovesAtCutoff: Record<string, number | null> = {};
       for (const r of rows) {
         const ticker = tickerById.get(r.symbolId);
         if (!ticker) continue;
         const series = seriesBySymbol.get(r.symbolId) ?? [];
         let previousClose: number | null = null;
         const answerBars: Array<{ high: number; low: number; close: number }> = [];
+        const answerRankBars: Array<{ timestamp: string; close: number }> = [];
         for (const s of series) {
           if (s.date < answerDate) previousClose = s.close;
-          else if (s.date === answerDate) answerBars.push({ high: s.high, low: s.low, close: s.close });
+          else if (s.date === answerDate) {
+            answerBars.push({ high: s.high, low: s.low, close: s.close });
+            answerRankBars.push({ timestamp: s.at, close: s.close });
+          }
         }
         symbolMoves[ticker] = peakChangeOnDay(answerBars, previousClose, decl.value.side).peakPct;
+        // ⚠️ The canonical ranker function, not a second implementation of the same subtraction.
+        symbolMovesAtCutoff[ticker] = moveSoFarPct(answerRankBars, previousClose, cutoffMinute).movePct;
       }
+
+      /**
+       * ⚠️ ORDERED BY THE MOVE THE RANKER WILL USE, NOT ALPHABETICALLY (2026-11-27).
+       * This was `rows.map(...).sort()` — plain alphabetical — so the page's "Symbol 1…Symbol 5" columns
+       * were the first five tickers by spelling. The owner read a 1903% mover sitting under "Symbol 5"
+       * and reasonably asked whether the top-N pick ignored it. It did not; the column order was
+       * arbitrary and the header implied a rank it never had.
+       *
+       * The order below is the RANKER'S: largest move first for `winners`, most negative first for
+       * `losers`, unmeasured names last. It is the same ordering `rankCandidates()` applies, so column 1
+       * is the name `TRADE THE TOP = 1` would take whenever it clears the floor.
+       */
+      const ordered = rows
+        .map((r) => tickerById.get(r.symbolId))
+        .filter((t): t is string => !!t)
+        .sort((a, b) => {
+          const ma = symbolMovesAtCutoff[a];
+          const mb = symbolMovesAtCutoff[b];
+          const aMeasured = typeof ma === 'number';
+          const bMeasured = typeof mb === 'number';
+          if (!aMeasured && !bMeasured) return a.localeCompare(b);
+          if (!aMeasured) return 1;
+          if (!bMeasured) return -1;
+          return decl.value.side === 'winners' ? (mb as number) - (ma as number) : (ma as number) - (mb as number);
+        });
 
       datasets.push({
         name,
         answerDate,
         side: decl.value.side,
-        symbols: rows.map((r) => tickerById.get(r.symbolId)).filter((t): t is string => !!t).sort(),
+        symbols: ordered,
         symbolMoves,
+        symbolMovesAtCutoff,
+        cutoffUtc: `${String(Math.floor(cutoffMinute / 60)).padStart(2, '0')}:${String(cutoffMinute % 60).padStart(2, '0')}`,
         timeframe: timeframes[0],
         from: new Date(fromMs).toISOString(),
         to: new Date(toMs).toISOString(),
