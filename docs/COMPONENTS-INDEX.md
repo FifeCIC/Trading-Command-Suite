@@ -32,7 +32,7 @@ can use. Lift it into `src/components` when a SECOND page needs it, and not befo
 |---|---|---|---|---|---|---|---|---|
 | [`LoadingSkeleton`](../src/components/LoadingSkeleton.jsx) | Reusable loading skeleton component with variants. | primitive | 75 | `variant`, `count`, `rows`, `cols`, `lines`, `className` | yes | 4 | — | 78 |
 | [`NoticeBlock`](../src/components/NoticeBlock.jsx) | NoticeBlock — renders ONE registry notice (#826). | primitive | 61 | `notice`, `compact` | yes | — | 2 | 74 |
-| [`ApiOfflineBanner`](../src/components/ApiOfflineBanner.jsx) | *no description* | primitive | 27 | `serviceName`, `port`, `compact` | yes | — | — | 62 |
+| [`ApiOfflineBanner`](../src/components/ApiOfflineBanner.jsx) | *no description* | primitive | 27 | `serviceName`, `port`, `compact` | yes | — | — | 79 |
 | [`EmptyState`](../src/components/EmptyState.jsx) | Reusable "no data" placeholder with icon, title, description, and optional action button. | primitive | 23 | `icon`, `title`, `description`, `actionLabel`, `actionHref`, `actionOnClick`, `className` | — | — | — | 59 |
 | [`PageInfoPopover`](../src/components/PageInfoPopover.jsx) | PageInfoPopover — ℹ icon that shows a tooltip with page description | primitive | 17 | `children`, `label` | — | — | — | 43 |
 | [`InfoNote`](../src/components/InfoNote.jsx) | InfoNote — ONE structure for every sentence that annotates a result. | primitive | 16 | `neutral`, `info`, `success`, `warning`, `critical`, `ids`, `label`, `icon`, `children`, `meta`, `role`, `className` | — | — | 1 | 105 |

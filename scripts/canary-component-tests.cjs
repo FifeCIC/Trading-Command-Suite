@@ -35,16 +35,16 @@ function runSpec(specFile) {
   }
 }
 
-function canary(label, file, from, to, spec) {
+function canary(label, file, from, to, spec, expectedHits = 1) {
   const abs = path.join(ROOT, file);
   const original = fs.readFileSync(abs, 'utf8');
   const hits = original.split(from).length - 1;
-  if (hits !== 1) {
-    console.log(`  ✖ CANARY INVALID — ${label}: the anchor matched ${hits} times in ${file}, expected exactly 1`);
+  if (hits !== expectedHits) {
+    console.log(`  ✖ CANARY INVALID — ${label}: the anchor matched ${hits} times in ${file}, expected exactly ${expectedHits}`);
     results.push(false);
     return;
   }
-  const broken = original.replace(from, to);
+  const broken = expectedHits === 1 ? original.replace(from, to) : original.split(from).join(to);
   fs.writeFileSync(abs, broken, 'utf8');
   try {
     if (fs.readFileSync(abs, 'utf8') === original) throw new Error('the write did not land');
@@ -110,6 +110,23 @@ canary(
   '{d.exclusions.byCode.length > 0 && (',
   '{false && (',
   'src/features/movers-strategy/ResultByDayStep.test.jsx',
+);
+
+/**
+ * The offline banner's link (2026-11-27). The defect was a href pointing at port 5188 — a dead port — and
+ * the spec passed anyway because it asserted `.toContain`. This mutation restores the literal and
+ * requires the stronger assertion to fail.
+ */
+canary(
+  'an offline banner that hardcodes a host and port is caught',
+  'src/components/ApiOfflineBanner.jsx',
+  'href="/trading/server-controls"',
+  'href="http://localhost:5188/trading/server-controls"',
+  'src/components/ApiOfflineBanner.test.jsx',
+  // ⚠️ TWO anchors carry the link (the pill and the full banner), and BOTH must break for the spec to
+  // fail. Asserting 2 is the point: a mutation that silently hit only one would leave the other
+  // correct and the canary would report a pass it had not earned.
+  2,
 );
 
 // restore-then-clean

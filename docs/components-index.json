@@ -192,7 +192,7 @@
       "name": "ApiOfflineBanner",
       "file": "src/components/ApiOfflineBanner.jsx",
       "purpose": null,
-      "lines": 62,
+      "lines": 79,
       "consumers": 27,
       "consumerFiles": [
         "src/pages/AdvancedResearchPage.jsx",
