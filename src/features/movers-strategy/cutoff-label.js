@@ -27,6 +27,19 @@
  * it does not move the strategy**: regular hours stay 09:30–16:00 ET, which is what `SESSION_DEFS` and
  * the market calendar encode, and the app models no pre-market boundary at all. What DOES move is the
  * ET↔UTC mapping, twice a year — which is why the label is derived rather than typed.
+ *
+ * ── DECISION (2026-11-19, primary) ──
+ * WHAT:      The cutoff buttons derive their ET clock and their "how far in" wording from the DATASET's
+ *            date via `Intl.DateTimeFormat({ timeZone: 'America/New_York' })`. `CUTOFF_OPTIONS` no
+ *            longer carries an `et` field at all — it was deleted, not corrected.
+ * WHY:       The typed ET values were right only in EST and wrong for ~half the year (EDT), on the one
+ *            rule this page says must never be simplified.
+ * INSTEAD OF: Correcting the three literals to some other fixed value, which would be wrong again at the
+ *            next clock change and would still be a claim nothing checks.
+ * REVERSE BY: Restore `CUTOFF_OPTIONS` with hardcoded `et` values, render them directly, and delete this
+ *            module and its test.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 312
+ * GUARD:     src/features/movers-strategy/cutoff-label.test.js (asserts BOTH DST states for one UTC value)
  */
 
 const ET_ZONE = 'America/New_York';
