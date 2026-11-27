@@ -5,8 +5,8 @@
     "total": 119,
     "byTier": {
       "primitive": 29,
-      "shared": 60,
-      "single": 30,
+      "shared": 61,
+      "single": 29,
       "orphan": 0
     },
     "tested": 8,
@@ -1769,6 +1769,25 @@
       "hexLiterals": 6
     },
     {
+      "name": "PortfolioContributionPanel",
+      "file": "src/components/PortfolioContributionPanel.jsx",
+      "purpose": "PortfolioContributionPanel — what made (or lost) the money, by instrument, with metals isolated.",
+      "lines": 183,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/pages/PortfolioPage.jsx",
+        "src/pages/T212PortfolioPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "days",
+        "onDaysChange"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
       "name": "PositionsTable",
       "file": "src/components/mt5/PositionsTable.jsx",
       "purpose": null,
@@ -2623,24 +2642,6 @@
       "hasTest": false,
       "inlineStyles": 1,
       "hexLiterals": 0
-    },
-    {
-      "name": "PortfolioContributionPanel",
-      "file": "src/components/PortfolioContributionPanel.jsx",
-      "purpose": "PortfolioContributionPanel — what made (or lost) the money, by instrument, with metals isolated.",
-      "lines": 183,
-      "consumers": 1,
-      "consumerFiles": [
-        "src/pages/PortfolioPage.jsx"
-      ],
-      "tier": "single",
-      "props": [
-        "days",
-        "onDaysChange"
-      ],
-      "hasTest": false,
-      "inlineStyles": 0,
-      "hexLiterals": 1
     },
     {
       "name": "ProfitCapturePanel",

@@ -20,6 +20,7 @@ import { noticeFromError } from '../core/notices/from-error.js';
 import { notice } from '../core/notices/registry.js';
 import './t212-portfolio.css';
 import { formatDecimals } from '../core/format-utils';
+import PortfolioContributionPanel from '../components/PortfolioContributionPanel.jsx';
 
 const fmtGbp = (n) => (n == null ? '—' : `£${Number(n).toFixed(2)}`);
 // Prices and notionals: no currency symbol, because the currency is the instrument's own.
@@ -1090,6 +1091,15 @@ export default function T212PortfolioPage() {
           )}
         </section>
       )}
+
+      {/*
+        ── What made the money ──────────────────────────
+        ⚠️ THIS IS THE PAGE THE NAV ITEM LABELLED **Portfolio** OPENS (`t212-portfolio` →
+        `T212PortfolioPage`), which is where the owner reads account outcomes — so the split lives
+        here as well as on `/trading/portfolio-overview`. One COMPONENT on two pages, not two
+        implementations: the numbers come from one endpoint and one derivation.
+      */}
+      <PortfolioContributionPanel />
     </div>
   );
 }
