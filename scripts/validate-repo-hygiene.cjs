@@ -75,7 +75,7 @@ const ROOT_CONVENTION = [
   /^README\.md$/, /^\.gitignore$/,
   /^\.prettierrc(\.[\w]+)?$/, /^eslint\.config\.[cm]?js$/, /^\.editorconfig$/,
   /^nest-cli\.json$/, /^prisma\.config\.ts$/,
-  /^index\.html$/, /^vite\.config\.[cm]?[jt]s$/,
+  /^index\.html$/, /^(vite|vitest)\.config\.[cm]?[jt]s$/,
   /^(CHANGELOG|CONTRIBUTING|DEVELOPMENT|DISCLAIMER|SECURITY|SETUP|NEXT-AGENT|LICENSE)\.md$/,
   /^LICENSE$/,
 ];

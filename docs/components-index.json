@@ -9,7 +9,7 @@
       "single": 29,
       "orphan": 0
     },
-    "tested": 3,
+    "tested": 5,
     "withInlineStyles": 45,
     "withHex": 64
   },
@@ -106,7 +106,7 @@
         "lines",
         "className"
       ],
-      "hasTest": false,
+      "hasTest": true,
       "inlineStyles": 4,
       "hexLiterals": 0
     },
@@ -229,7 +229,7 @@
         "port",
         "compact"
       ],
-      "hasTest": false,
+      "hasTest": true,
       "inlineStyles": 0,
       "hexLiterals": 0
     },

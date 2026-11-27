@@ -30,9 +30,9 @@ can use. Lift it into `src/components` when a SECOND page needs it, and not befo
 
 | component | what it is | tier | consumers | declared props | test | inline styles | hex | lines |
 |---|---|---|---|---|---|---|---|---|
-| [`LoadingSkeleton`](../src/components/LoadingSkeleton.jsx) | Reusable loading skeleton component with variants. | primitive | 75 | `variant`, `count`, `rows`, `cols`, `lines`, `className` | — | 4 | — | 78 |
+| [`LoadingSkeleton`](../src/components/LoadingSkeleton.jsx) | Reusable loading skeleton component with variants. | primitive | 75 | `variant`, `count`, `rows`, `cols`, `lines`, `className` | yes | 4 | — | 78 |
 | [`NoticeBlock`](../src/components/NoticeBlock.jsx) | NoticeBlock — renders ONE registry notice (#826). | primitive | 61 | `notice`, `compact` | yes | — | 2 | 74 |
-| [`ApiOfflineBanner`](../src/components/ApiOfflineBanner.jsx) | *no description* | primitive | 27 | `serviceName`, `port`, `compact` | — | — | — | 62 |
+| [`ApiOfflineBanner`](../src/components/ApiOfflineBanner.jsx) | *no description* | primitive | 27 | `serviceName`, `port`, `compact` | yes | — | — | 62 |
 | [`EmptyState`](../src/components/EmptyState.jsx) | Reusable "no data" placeholder with icon, title, description, and optional action button. | primitive | 23 | `icon`, `title`, `description`, `actionLabel`, `actionHref`, `actionOnClick`, `className` | — | — | — | 59 |
 | [`PageInfoPopover`](../src/components/PageInfoPopover.jsx) | PageInfoPopover — ℹ icon that shows a tooltip with page description | primitive | 17 | `children`, `label` | — | — | — | 43 |
 | [`InfoNote`](../src/components/InfoNote.jsx) | InfoNote — ONE structure for every sentence that annotates a result. | primitive | 16 | `neutral`, `info`, `success`, `warning`, `critical`, `ids`, `label`, `icon`, `children`, `meta`, `role`, `className` | — | — | 1 | 105 |
@@ -153,9 +153,9 @@ can use. Lift it into `src/components` when a SECOND page needs it, and not befo
 These have the widest reach, so a change to one has the widest blast radius — and they are the
 ones worth a contract and a test before anything else.
 
-- **LoadingSkeleton** — 75 consumers · ⚠️ **no test**
+- **LoadingSkeleton** — 75 consumers
 - **NoticeBlock** — 61 consumers
-- **ApiOfflineBanner** — 27 consumers · ⚠️ **no test**
+- **ApiOfflineBanner** — 27 consumers
 - **EmptyState** — 23 consumers · ⚠️ **no test**
 - **PageInfoPopover** — 17 consumers · ⚠️ **no test**
 - **InfoNote** — 16 consumers · ⚠️ **no test**
@@ -228,7 +228,7 @@ at `/development/theme`; this file is the inventory, not the gallery.
 
 ## ⚠️ Testing — the third of the trio is missing entirely
 
-**3 of 117** components are even *named* in a test file. ⚠️ And the reason is not
+**5 of 117** components are even *named* in a test file. ⚠️ And the reason is not
 laziness: **there is no component test runner in this project at all.** Measured 2026-11-27 —
 no `vitest`, no `jest` in the frontend, no `testing-library`, no `jsdom`/`happy-dom`, no
 `playwright`. The frontend suite is `node --test src/core/*.test.js` (**38 files, every one of

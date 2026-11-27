@@ -128,6 +128,17 @@ function purposeOf(text) {
   return sentence.length > 150 ? `${sentence.slice(0, 147)}…` : sentence;
 }
 
+/**
+ * ⚠️ `.jsx` AND `.tsx` ARE TESTS TOO — measured 2026-11-19, the day a component runner arrived.
+ *
+ * This pattern used to be `.test.(js|ts)` only, in two separate places. The moment `vitest` landed, every
+ * component spec is a `.jsx` file, so `LoadingSkeleton.test.jsx` was read as a *consumer* — inflating
+ * that component's consumer count — while `hasTest` stayed false. The generated catalogue would have said
+ * a fully tested component had no test, and its own test file would have made it look more popular. One
+ * pattern, used by both halves.
+ */
+const TEST_FILE_RE = /\.(test|spec)\.(js|jsx|ts|tsx)$/;
+
 function walkFiles(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -135,7 +146,7 @@ function walkFiles(dir, out = []) {
     if (entry.isDirectory()) {
       if (entry.name === 'node_modules') continue;
       walkFiles(full, out);
-    } else if (/\.(jsx|js)$/.test(entry.name) && !/\.(test|spec)\.js$/.test(entry.name)) {
+    } else if (/\.(jsx|js)$/.test(entry.name) && !TEST_FILE_RE.test(entry.name)) {
       out.push(full);
     }
   }
@@ -166,7 +177,7 @@ function testSources() {
       if (entry.isDirectory()) {
         if (entry.name === 'node_modules') continue;
         walk(full);
-      } else if (/\.(test|spec)\.(js|ts)$/.test(entry.name)) {
+      } else if (TEST_FILE_RE.test(entry.name)) {
         out.push(fs.readFileSync(full, 'utf8'));
       }
     }
@@ -378,6 +389,13 @@ function selfTest() {
   expect('4 consumers is shared', tierOf(4), 'shared');
   expect('1 consumer is single', tierOf(1), 'single');
   expect('0 consumers is an orphan', tierOf(0), 'orphan');
+
+  // —— the test pattern, BOTH directions. A `.jsx` spec is a TEST (it must not become a consumer); a
+  //    component that merely ends in `Test` is not a test file, and neither is a plain `.jsx`.
+  expect('a .test.jsx spec is a test file', TEST_FILE_RE.test('LoadingSkeleton.test.jsx'), true);
+  expect('a .spec.tsx file is a test file', TEST_FILE_RE.test('Widget.spec.tsx'), true);
+  expect('a plain component is NOT a test file', TEST_FILE_RE.test('LoadingSkeleton.jsx'), false);
+  expect('a component ending in Test is NOT a test file', TEST_FILE_RE.test('SmokeTest.jsx'), false);
 
   // —— props parsing, in the shapes that actually occur.
   expect(

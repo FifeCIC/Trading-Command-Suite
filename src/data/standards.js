@@ -215,6 +215,22 @@ export const STANDARDS = [
     selfTest: 'npm run lint:gate:self-test',
     enforcedIn: 'prebuild',
   },
+  {
+    id: 'component-tests',
+    name: 'The components every page is built from have a test that fails when they break',
+    why: 'Measured 2026-11-27: **3 of 117** components were even *named* in a test, and **26 of 28 '
+      + 'primitives had none** — because there was **no component test runner in the project at all** (no '
+      + 'vitest, no frontend jest, no testing-library, no jsdom, no playwright; the 38 frontend tests were '
+      + 'all pure logic with `node --test`). The three most-reused components carry **162 call sites** between '
+      + 'them. ⚠️ A spec is only a guard if it fails on the component breaking, so each was canaried by '
+      + 'mutating the component: a failure notice demoted to `role="status"`, a dropped `Why` label, a lost '
+      + '`className`, ignored `rows`/`cols`, and a pill that loses its port — **five mutations, five '
+      + 'failures, tree restored byte-for-byte**.',
+    gate: 'vitest.config.js',
+    verify: 'npm run test:components',
+    selfTest: 'npm run test:components:self-test',
+    enforcedIn: 'prebuild',
+  },
 ];
 
 /** Grouped for display: met (a gate exists) versus declared gap (no gate). */

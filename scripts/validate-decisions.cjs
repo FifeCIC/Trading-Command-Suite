@@ -43,6 +43,9 @@ const fs = require('node:fs');
 const ROOT = path.join(__dirname, '..');
 const REGISTER = path.join(ROOT, 'docs', 'SETTLED-DECISIONS.md');
 const SCAN_DIRS = [path.join(ROOT, 'src'), path.join(ROOT, 'nest', 'src'), path.join(ROOT, 'scripts')];
+
+/** Package roots whose `*.config.*` files may carry a DECISION marker. See the loop in `collect()`. */
+const PACKAGE_ROOTS = [ROOT, path.join(ROOT, 'nest')];
 const MARKS = ['🟢', '🟡', '🔴'];
 
 /** ⚠️ Date + comma required — see the header note about false positives. */
@@ -284,6 +287,21 @@ function collectFiles() {
     }
   };
   for (const d of SCAN_DIRS) walk(d);
+  /**
+   * ⚠️ Package-root CONFIG FILES are decision sites too, and they were the one place this could not
+   * see. Measured 2026-11-19: a `DECISION` marker at the top of `vitest.config.js` — the file that
+   * constrains the component test runner — was invisible, and the marker count did not move. A decision
+   * recorded only in a file the guard cannot read is indistinguishable from one that was never recorded.
+   * Narrow: config basenames at a package root, which is a closed class; nothing else at a root is code.
+   */
+  for (const root of PACKAGE_ROOTS) {
+    if (!fs.existsSync(root)) continue;
+    for (const e of fs.readdirSync(root, { withFileTypes: true })) {
+      if (!e.isFile() || !/^[\w.-]+\.config\.(js|cjs|mjs|ts)$/.test(e.name)) continue;
+      const full = path.join(root, e.name);
+      out.push({ file: path.relative(ROOT, full).replace(/\\/g, '/'), text: fs.readFileSync(full, 'utf8') });
+    }
+  }
   return out;
 }
 

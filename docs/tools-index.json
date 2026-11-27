@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 217,
+  "count": 218,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -564,6 +564,16 @@
       "where": "repo",
       "category": "tool",
       "purpose": "Canary for validate-bridge-recovery-bounds.cjs.",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "canary-component-tests.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "proves each component spec FAILS when its component breaks.",
       "selfTest": false,
       "reaches": [
         "npm"
