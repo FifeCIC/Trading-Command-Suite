@@ -99,7 +99,9 @@ describe('ResultByDayStep', () => {
 
     // The rank is VISIBLE — one character, in the chip, reachable by keyboard and screen reader.
     expect(screen.getByText('1')).toBeTruthy();
-    // …and the chip carries the facts as an accessible name, so hovering is not the only way to learn them.
+    // The chip also carries the facts as an attribute. ⚠️ This asserts the attribute, NOT that a screen
+    // reader announces it — `aria-label` on a generic span may be ignored, which is why the rank and the
+    // symbol are rendered as text as well.
     expect(screen.getByLabelText('NXXT, rank 1, picked')).toBeTruthy();
     // A candidate that could not be measured says so, rather than rendering a rank of 0.
     expect(screen.getByLabelText('KPTI, not measurable')).toBeTruthy();

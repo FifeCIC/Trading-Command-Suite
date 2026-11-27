@@ -1504,7 +1504,7 @@
       "name": "ResultByDayStep",
       "file": "src/features/movers-strategy/ResultByDayStep.jsx",
       "purpose": "ResultByDayStep — one row per session: what the screen offered, what the ranking picked, what it made.",
-      "lines": 190,
+      "lines": 194,
       "consumers": 3,
       "consumerFiles": [
         "src/features/movers-strategy/selection-exclusions.js",

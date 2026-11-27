@@ -84,7 +84,7 @@ can use. Lift it into `src/components` when a SECOND page needs it, and not befo
 | [`PwaInstallPrompt`](../src/components/PwaInstallPrompt.jsx) | *no description* | shared | 3 | — | — | — | — | 94 |
 | [`QualifierStrip`](../src/components/QualifierStrip.jsx) | QualifierStrip — what qualifies a set of figures, as a ROW OF CHIPS, with the sentences on demand. | shared | 3 | `item` | — | — | — | 86 |
 | [`RegisterSymbolOverlay`](../src/components/RegisterSymbolOverlay.jsx) | RegisterSymbolOverlay — ONE overlay for "register this symbol and add it to a watchlist", | shared | 3 | `ticker`, `onClose` | — | — | 1 | 229 |
-| [`ResultByDayStep`](../src/features/movers-strategy/ResultByDayStep.jsx) | ResultByDayStep — one row per session: what the screen offered, what the ranking picked, what it made. | shared | 3 | `sort` | yes | 1 | 2 | 190 |
+| [`ResultByDayStep`](../src/features/movers-strategy/ResultByDayStep.jsx) | ResultByDayStep — one row per session: what the screen offered, what the ranking picked, what it made. | shared | 3 | `sort` | yes | 1 | 2 | 194 |
 | [`StatusBadge`](../src/components/StatusBadge.jsx) | StatusBadge — Reusable themed status pill/chip. | shared | 3 | `status`, `children`, `className` | — | — | — | 17 |
 | [`TradeTable`](../src/components/backtest/TradeTable.jsx) | TradeTable — one row per CLOSED TRADE, with money on it (requirement, 2026-10-29). | shared | 3 | `trades`, `totals`, `timeframe`, `limit`, `compare` | — | 1 | 5 | 478 |
 | [`UnusedDataPanel`](../src/components/backtest/UnusedDataPanel.jsx) | UnusedDataPanel — WHAT THE RUN ALREADY KNOWS AND THIS PAGE DOES NOT SHOW (#1340). | shared | 3 | `runs`, `bare` | — | — | 2 | 213 |

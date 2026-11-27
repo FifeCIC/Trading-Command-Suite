@@ -100,8 +100,12 @@ export default function ResultByDayStep({ sort }) {
                       exact reason `WhyPopover` exists in this codebase and the lesson #824 already paid
                       for. The rank is ONE character and it is the strategy's own ordering, so hiding it
                       behind a hover was withholding the thing a reader needs to ask "why this name?".
-                      The long `reason` stays in the title (it is genuinely help, not content) and every
-                      chip carries an `aria-label` so the facts are announced rather than hovered.
+                      The long `reason` stays in the title (it is genuinely help, not content).
+
+                      ⚠️ THE VISIBLE TEXT IS THE ACCESSIBILITY FIX, NOT THE `aria-label`. An
+                      `aria-label` on a generic `<span>` may be ignored by assistive tech, so it is
+                      carried as a hint and nothing depends on it: symbol, move % and rank are all
+                      rendered as text, and "which one was picked" is stated in the Traded column.
                     */}
                     {d.ranked.map((c) => (
                       <span
