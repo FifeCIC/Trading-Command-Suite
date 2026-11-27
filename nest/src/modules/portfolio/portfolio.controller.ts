@@ -4,6 +4,7 @@ import { PortfolioPriceService } from './portfolio-price.service';
 import { CorrelationService } from './correlation.service';
 import { EarningsService } from '../earnings/earnings.service';
 import { ExitSignalService } from './exit-signal.service';
+import { PnlContributionService } from './pnl-contribution.service';
 
 @Controller('portfolio')
 export class PortfolioController {
@@ -15,6 +16,7 @@ export class PortfolioController {
     private readonly correlationService: CorrelationService,
     private readonly earningsService: EarningsService,
     private readonly exitSignalService: ExitSignalService,
+    private readonly contributionService: PnlContributionService,
   ) {}
 
   @Get()
@@ -32,6 +34,18 @@ export class PortfolioController {
   async getSummary(@Query('source') source?: string) {
     const data = await this.portfolioService.getPortfolio(source || 'all');
     return { source: source || 'all', summary: data.summary };
+  }
+
+  /**
+   * GET /api/portfolio/contribution — what made or lost the money, by instrument (#owner, 2026-11-27).
+   *
+   * ⚠️ SEPARATE FROM `summary`, DELIBERATELY. `summary` reports OPEN positions (a mark); this reports
+   * CLOSED trades (a fact). Folding realised P&L into an unrealised headline would produce one number
+   * that two different questions could each misread.
+   */
+  @Get('contribution')
+  async getContribution(@Query('days') days?: string) {
+    return this.contributionService.getContribution(Number(days) || 30);
   }
 
   @Get('scores')

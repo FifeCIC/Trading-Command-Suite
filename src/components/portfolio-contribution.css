@@ -1,0 +1,149 @@
+/**
+ * portfolio-contribution.css — the per-instrument P&L panel.
+ *
+ * ⚠️ EVERY COLOUR IS A THEME TOKEN. A literal here is invisible to the cascade, so no theme pack could
+ * override it and the accessibility fix that moved `#ef4444` to `--color-loss` would never reach it
+ * (`validate-colour-literals.cjs` enforces this repo-wide).
+ *
+ * ⚠️ SIGN IS NEVER CARRIED BY COLOUR ALONE. Every coloured figure also carries a minus sign in its text,
+ * so the meaning survives a monochrome theme and a colour-blind reader.
+ */
+
+.pc-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 14px 16px;
+  margin-top: 16px;
+}
+
+.pc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.pc-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* The three figures. `wrap` rather than a grid so a narrow pane stacks instead of clipping. */
+.pc-split {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.pc-split-item {
+  flex: 1 1 160px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  padding: 8px 10px;
+}
+
+/*
+ * ⚠️ THE EX-METALS FIGURE IS EMPHASISED, because it is the one that answers the question the panel
+ * exists for. The other two are context — the reader must not be able to read the total as the finding.
+ */
+.pc-split-item--key {
+  border-color: var(--accent);
+}
+
+.pc-split-label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.pc-split-value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 17px;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.pc-split-meta {
+  display: block;
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.pc-caption {
+  margin: 0 0 10px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.pc-caption code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.pc-scroll {
+  overflow-x: auto;
+}
+
+.pc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.pc-table th {
+  text-align: left;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--line);
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+
+.pc-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+
+.pc-num {
+  text-align: right;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.pc-pos {
+  color: var(--color-profit);
+}
+
+.pc-neg {
+  color: var(--color-loss);
+}
+
+/* A metal row is marked, not just coloured — the badge carries the meaning. */
+.pc-row--metal td:first-child {
+  border-left: 2px solid var(--accent);
+}
+
+.pc-tag {
+  margin-left: 6px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 1px 4px;
+}

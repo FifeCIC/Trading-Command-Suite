@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { feedUnavailable } from '../core/api/feed-state.js';
+import PortfolioContributionPanel from '../components/PortfolioContributionPanel.jsx';
 import { timeAgo } from '../core/format-utils';
 import OrderModal from '../components/OrderModal';
 // ⚠️ ADDED 2026-11-14. The page applied `pf-page`, `pf-hero`, `pf-summary`, `pf-alloc-bar` and 4 more
@@ -364,6 +365,14 @@ export default function PortfolioPage() {
           <p className="pf-hint">Account details from Trading212.</p>
         </div>
       )}
+
+      {/*
+        ── What made the money ──────────────────────────
+        Read-only, and deliberately a SIBLING of the holdings table rather than part of it: holdings is a
+        mark on open positions, this is realised P&L on closed trades. They answer different questions and
+        must not be blended into one headline (see the panel's own docblock).
+      */}
+      <PortfolioContributionPanel />
 
       {/* ── Order Modal ────────────────────────────────── */}
       {sellPosition && (

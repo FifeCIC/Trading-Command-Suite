@@ -1,17 +1,17 @@
 {
   "generated": "scripts/components-index.cjs",
-  "total": 118,
+  "total": 119,
   "counts": {
-    "total": 118,
+    "total": 119,
     "byTier": {
       "primitive": 29,
       "shared": 60,
-      "single": 29,
+      "single": 30,
       "orphan": 0
     },
     "tested": 8,
     "withInlineStyles": 45,
-    "withHex": 66
+    "withHex": 67
   },
   "components": [
     {
@@ -19,10 +19,11 @@
       "file": "src/components/LoadingSkeleton.jsx",
       "purpose": "Reusable loading skeleton component with variants.",
       "lines": 78,
-      "consumers": 75,
+      "consumers": 76,
       "consumerFiles": [
         "src/components/LoadingOrbit.jsx",
         "src/components/MetaStackPipeline.jsx",
+        "src/components/PortfolioContributionPanel.jsx",
         "src/components/SeesScoringPanel.jsx",
         "src/core/architecture-reference.js",
         "src/data/standards.js",
@@ -115,7 +116,7 @@
       "file": "src/components/NoticeBlock.jsx",
       "purpose": "NoticeBlock — renders ONE registry notice (#826).",
       "lines": 74,
-      "consumers": 62,
+      "consumers": 63,
       "consumerFiles": [
         "src/components/ExitDataRecoveryNotice.jsx",
         "src/components/InfoNote.jsx",
@@ -123,6 +124,7 @@
         "src/components/MetaStackLayerSwitch.jsx",
         "src/components/Notice.jsx",
         "src/components/OrderModal.jsx",
+        "src/components/PortfolioContributionPanel.jsx",
         "src/components/ProtocolSymbolsPanel.jsx",
         "src/components/SeasonalityHeatmap.jsx",
         "src/components/SignalCard.jsx",
@@ -239,8 +241,9 @@
       "file": "src/components/EmptyState.jsx",
       "purpose": "Reusable \"no data\" placeholder with icon, title, description, and optional action button.",
       "lines": 59,
-      "consumers": 23,
+      "consumers": 24,
       "consumerFiles": [
+        "src/components/PortfolioContributionPanel.jsx",
         "src/components/ScreenOptions.jsx",
         "src/components/SeesScoringPanel.jsx",
         "src/components/backtest/charts/BacktestChart.jsx",
@@ -2620,6 +2623,24 @@
       "hasTest": false,
       "inlineStyles": 1,
       "hexLiterals": 0
+    },
+    {
+      "name": "PortfolioContributionPanel",
+      "file": "src/components/PortfolioContributionPanel.jsx",
+      "purpose": "PortfolioContributionPanel — what made (or lost) the money, by instrument, with metals isolated.",
+      "lines": 183,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/PortfolioPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "days",
+        "onDaysChange"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
     },
     {
       "name": "ProfitCapturePanel",
