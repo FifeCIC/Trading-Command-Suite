@@ -89,10 +89,15 @@ export const UNUSED_FIELD_INVENTORY = [
    * reads `r.candidates?.length` (a full run returns the array of tickers). Listed here it claimed the
    * page did not show what the reader was looking at.
    *
-   * ⚠️ AND IT EXPOSED A CONTRACT SPLIT WORTH KNOWING: `dryRun: true` returns `candidates` as a NUMBER
-   * (the count) while a full run returns the ARRAY. The page happens to read the array form only, but
-   * anything that read both would get `undefined.length`. Recorded here because the field that exposed
-   * it is exactly the one a reader would expect to be uniform.
+   * ⚠️ **AND IT EXPOSED A CONTRACT SPLIT THAT IS ACTIVE, NOT LATENT — corrected the same day, because my
+   * first version of this note said "the page reads the array form only" and that was false.**
+   * `dryRun: true` returns `candidates` as a **number** (the count); a full run returns the **array**.
+   * The PRE-RUN COVERAGE table (`MoversStrategyBacktestPage.jsx`, the `Usable`/`Picked`/`Rank basis` row)
+   * reads the NUMBER form as `{p.candidates}`; the DAY table reads the ARRAY form as `r.candidates?.length`.
+   * Both render correctly today because they are two tables reading two different responses — so this is
+   * not a live bug, but it is a contract that changes shape by mode, and the next reader who assumes one
+   * shape will get `undefined.length` or a stringified array. Verified 2026-11-27 against a live preview
+   * (`"candidates":10`) and a live run (`["SCKT","NWTG",…]`).
    */
   {
     path: 'priorSessions',
