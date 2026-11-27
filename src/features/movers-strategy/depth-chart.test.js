@@ -64,10 +64,21 @@ test('markers are sorted by time — the library requires it, so input order can
   assert.deepEqual(times, [...times].sort((a, b) => a - b));
 });
 
-test('a refused trade is DRAWN and labelled — the engine still opened it', () => {
+test('a refused trade is DRAWN in the muted colour — the engine still opened it', () => {
+  // ⚠️ The MARKER is the evidence, not a label on it: entry labels were removed on 2026-11-27 because
+  // 63 of them overlapped into a band of text. Refusal is still reported — by colour, by the sign in
+  // the executions table — so assert the colour, which is what the reader actually sees.
   const c = buildDepthChart([bar('15:30', 1)], [trade({ kept: false })]);
-  assert.match(c.markers[0].text, /refused/);
   assert.equal(c.markers[0].color, '#6b7280');
+  assert.equal(c.markers.length, 2, 'entry and exit both drawn — nothing is hidden for being refused');
+});
+
+test('an entry carries NO text, an exit carries its reason', () => {
+  const c = buildDepthChart([bar('15:30', 1), bar('15:40', 2)], [trade()]);
+  const entry = c.markers.find((m) => m.shape === 'arrowUp');
+  const exit = c.markers.find((m) => m.shape === 'square');
+  assert.equal(entry.text, '', 'a label repeated 63 times is texture, not information');
+  assert.equal(exit.text, 'TP', 'the reason is what colour cannot carry');
 });
 
 test('direction decides which side the marker sits on, so a short is not read as a long', () => {

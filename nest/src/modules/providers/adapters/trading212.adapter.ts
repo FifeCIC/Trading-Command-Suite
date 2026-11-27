@@ -564,7 +564,7 @@ export class Trading212Adapter implements IProviderAdapter {
    * fill price or an explicit FILLED status. Anything else is 'queued', and `position-sync`
    * promotes the row when the position actually appears.
    *
-   * REGISTER: docs/SETTLED-DECISIONS.md row 273 · ISSUE: #1359
+   * REGISTER: docs/SETTLED-DECISIONS.md row 315 · ISSUE: #1359
    */
   static orderFilled(result: T212OrderResult | null | undefined): boolean {
     if (!result?.success) return false;

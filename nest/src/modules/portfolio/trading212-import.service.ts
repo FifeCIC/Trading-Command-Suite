@@ -624,9 +624,8 @@ export class Trading212ImportService {
    *    position, quantity and funds, and nothing else. So an equity order could be sent at any
    *    hour with no indication that it would execute (or queue) outside the regular session.
    *    The assessment is attached to the RESULT rather than blocking the order: this path is
-   *    WARN-AND-ALLOW. ⚠️ See the DECISION marker below — that choice is recorded here because it
-   *    was previously stated in this comment as "the owner's decision (2026-11-27)" while appearing
-   *    in NO register row and NO issue comment, which is an attribution nothing could check.
+   *    WARN-AND-ALLOW. See the DECISION marker below — the owner confirmed that choice directly on
+   *    #1359, where the alternatives offered were warn / block / explicit per-order opt-in.
    *
    * 2. The trade row was written `status: 'open'` for ANY accepted order. A market order accepted
    *    outside hours is not necessarily filled — and a row that says 'open' for an unfilled order
@@ -641,14 +640,14 @@ export class Trading212ImportService {
    *            already live and warn-and-allow is the only reading of it in the repo; changing it to a
    *            refusal here would be a silent halt on a money path, which is strictly worse than a
    *            logged risk.
-   * ⚠️ PROVENANCE, STATED HONESTLY: the docblock above used to assert *"the owner's decision
-   *            (2026-11-27) was warn-and-allow"*. Measured 2026-11-27: **#1359 has zero comments and
-   *            `docs/SETTLED-DECISIONS.md` had no row for it**, so no reader could check that
-   *            attribution. It is now a recorded decision with a stated basis, not a claim about who
-   *            said it.
-   * INSTEAD OF: Refusing when `!inRegularSession`. That is the SAFER behaviour and it is one line — it
-   *            is deliberately not taken unilaterally, because a refusal halts order placement and the
-   *            owner has not been recorded asking for that.
+   * ⚠️ PROVENANCE: this docblock originally asserted *"the owner's decision (2026-11-27) was
+   *            warn-and-allow"* while #1359 carried no comment and the register had no row — an
+   *            attribution nothing could check, corrected by the audit that produced row 315. The
+   *            owner then confirmed the choice on #1359, so the rule now exists in all three homes:
+   *            this marker, row 315, and the issue.
+   * INSTEAD OF: Refusing when `!inRegularSession`. That is the SAFER behaviour and it is one line —
+   *            deliberately not taken, because a refusal halts order placement and the owner chose
+   *            warn-and-allow when given the choice.
    * REVERSE BY: Add a `market-hours` gate to `validatePreTrade()` that returns
    *            `{ passed: false, gate: 'market-hours' }` when `!extendedHours.inRegularSession`, and
    *            thread an explicit `allowExtendedHours` opt-in through `placeOrder()`.

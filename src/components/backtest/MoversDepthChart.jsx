@@ -31,6 +31,7 @@ import {
   ColorType,
 } from 'lightweight-charts';
 import { buildDepthChart } from '../../features/movers-strategy/depth-chart.js';
+import Explanation from '../Explanation.jsx';
 
 const HEIGHT = 300;
 
@@ -124,7 +125,18 @@ export default function MoversDepthChart({ bars, trades, pinTime, symbol }) {
         <span className="mvp-muted"> ({shape.priced} bar(s) of {shape.bars} priced, {shape.markers.length} marker(s))</span>
       </h3>
       <div className="mvp-chart" ref={boxRef} />
-      <p className="mvp-note">
+      {/**
+        * ⚠️ ONE EXPLANATION, COLLAPSED — the 74-word legend that used to sit under this chart was the
+        * single longest block of prose on the page (measured 2026-11-27). The STATE stays in the open
+        * because it is a fact about THIS chart: how many bars were priced, and whether any trade could
+        * not be placed at all. How to read the glyphs is an explanation, so it collapses.
+        */}
+      {shape.unplaced > 0 && (
+        <p className="mvp-note mvp-note--warn">
+          {shape.unplaced} trade(s) off the axis — no bar at their instant
+        </p>
+      )}
+      <Explanation summary="How to read the chart">
         One point per bar — the close the engine recorded, so this is a line and not candles.
         <strong> Arrows</strong> are entries (up long, down short, grey when the selection refused the
         trade) and <strong>squares</strong> are exits, labelled with the reason and price. The histogram
@@ -132,14 +144,7 @@ export default function MoversDepthChart({ bars, trades, pinTime, symbol }) {
         {shape.levels.length > 0
           ? ' The dashed lines are the stop and target of the trade alive at the bar you picked — one horizontal level each, because the engine records where a bracket ended, not each move of a trailing stop.'
           : ' Pick a bar in the table below to draw the stop and target the trade was walking against.'}
-        {shape.unplaced > 0 && (
-          <>
-            {' '}
-            <strong>{shape.unplaced} trade(s) could not be placed</strong> — their instants do not fall on
-            any bar this run recorded, so they are counted here rather than left off the chart silently.
-          </>
-        )}
-      </p>
+      </Explanation>
     </section>
   );
 }

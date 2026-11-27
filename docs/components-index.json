@@ -357,6 +357,35 @@
       "hexLiterals": 1
     },
     {
+      "name": "Explanation",
+      "file": "src/components/Explanation.jsx",
+      "purpose": "Explanation — the \"how to read this table\" sentence, inline or one click away.",
+      "lines": 41,
+      "consumers": 11,
+      "consumerFiles": [
+        "src/components/backtest/MoversDepthChart.jsx",
+        "src/components/backtest/MoversDepthPanel.jsx",
+        "src/components/backtest/TradeConfigPanel.jsx",
+        "src/components/backtest/UnusedDataPanel.jsx",
+        "src/core/use-explanations.js",
+        "src/features/movers-strategy/DirectiveRecordStep.jsx",
+        "src/features/movers-strategy/ParityStep.jsx",
+        "src/features/movers-strategy/ResultByDayStep.jsx",
+        "src/features/movers-strategy/ResultBySymbolStep.jsx",
+        "src/features/movers-strategy/ScoringFunnelStep.jsx",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "primitive",
+      "props": [
+        "summary",
+        "children",
+        "className"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
       "name": "Notice",
       "file": "src/components/Notice.jsx",
       "purpose": "Notice — Reusable theme-consistent notice/alert banner.",
@@ -442,33 +471,6 @@
       "hasTest": false,
       "inlineStyles": 0,
       "hexLiterals": 1
-    },
-    {
-      "name": "Explanation",
-      "file": "src/components/Explanation.jsx",
-      "purpose": "Explanation — the \"how to read this table\" sentence, inline or one click away.",
-      "lines": 41,
-      "consumers": 9,
-      "consumerFiles": [
-        "src/components/backtest/MoversDepthPanel.jsx",
-        "src/components/backtest/UnusedDataPanel.jsx",
-        "src/core/use-explanations.js",
-        "src/features/movers-strategy/DirectiveRecordStep.jsx",
-        "src/features/movers-strategy/ParityStep.jsx",
-        "src/features/movers-strategy/ResultByDayStep.jsx",
-        "src/features/movers-strategy/ResultBySymbolStep.jsx",
-        "src/features/movers-strategy/ScoringFunnelStep.jsx",
-        "src/pages/MoversStrategyBacktestPage.jsx"
-      ],
-      "tier": "primitive",
-      "props": [
-        "summary",
-        "children",
-        "className"
-      ],
-      "hasTest": false,
-      "inlineStyles": 0,
-      "hexLiterals": 0
     },
     {
       "name": "RunComparisonPanels",
@@ -1163,7 +1165,7 @@
       "name": "TradeConfigPanel",
       "file": "src/components/backtest/TradeConfigPanel.jsx",
       "purpose": "TradeConfigPanel — WHERE EACH TRADE-MANAGEMENT NUMBER CAME FROM, AND HOW TO CHANGE IT.",
-      "lines": 586,
+      "lines": 602,
       "consumers": 4,
       "consumerFiles": [
         "src/core/trade-config-edit.js",
@@ -1745,7 +1747,7 @@
       "name": "MoversDepthChart",
       "file": "src/components/backtest/MoversDepthChart.jsx",
       "purpose": "MoversDepthChart — ONE session's price with its decisions on it (note m).",
-      "lines": 146,
+      "lines": 151,
       "consumers": 2,
       "consumerFiles": [
         "src/components/backtest/MoversDepthPanel.jsx",

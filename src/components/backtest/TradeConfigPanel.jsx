@@ -55,6 +55,7 @@ import {
   autoRevertDecision,
 } from '../../core/trade-config-revert.js';
 import WhyPopover from '../WhyPopover.jsx';
+import Explanation from '../Explanation.jsx';
 
 const SOURCE_LABEL = {
   bot: 'bot',
@@ -579,7 +580,22 @@ export default function TradeConfigPanel({
         </div>
       )}
 
-      <p className="mvp-note">{tradeConfig.summary}</p>
+      {/**
+        * ⚠️ THE PROVENANCE IS THE FACT; THE REST IS EXPLANATION (2026-11-27). This line ran to ~45 words
+        * — "Resolved from <bot> (INACTIVE — manual mode). Stop, target, entry bar and max hold are that
+        * record's own values…" — and it is the same sentence on every run of the same bot: pure caption.
+        * The part a reader must see is WHICH RECORD the numbers came from, so that stays in the open as
+        * a labelled value and the sentence behind it collapses.
+        */}
+      {tradeConfig?.bot?.name ? (
+        <p className="mvp-inline-stat">
+          <span className="mvp-inline-stat__value">{tradeConfig.bot.name}</span>
+          <span className="mvp-inline-stat__label">
+            {tradeConfig.bot.active ? 'source of these values' : 'inactive — source of these values'}
+          </span>
+        </p>
+      ) : null}
+      {tradeConfig.summary ? <Explanation summary="Where these values came from">{tradeConfig.summary}</Explanation> : null}
     </section>
   );
 }

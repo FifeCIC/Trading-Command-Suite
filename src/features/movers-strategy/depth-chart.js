@@ -14,7 +14,6 @@
  * drawn as the level it ended at, for the life of its trade, and never as a moving line.
  */
 
-import { formatPrice } from '../../core/format-utils.js';
 
 /** Bars are ISO strings; lightweight-charts wants UNIX seconds. ⚠️ NOT milliseconds. */
 export function barSeconds(iso) {
@@ -108,7 +107,15 @@ export function buildDepthChart(bars, trades, { pinTime = null } = {}) {
        * under-report what the engine did, which is the opposite of what this panel is for.
        */
       color: refused ? '#6b7280' : long ? '#22c55e' : '#ef4444',
-      text: `${long ? 'LONG' : 'SHORT'} ${formatPrice(tr?.entryPrice)}${refused ? ' (refused)' : ''}`,
+      /**
+       * ⚠️ NO TEXT ON AN ENTRY (measured 2026-11-27). A session produced 63 executions, so 63 entry
+       * arrows plus 63 exit squares on one 5-minute axis — and every entry carried `LONG 0.60`, which
+       * drew as a solid band of overlapping words across the whole chart. The arrow's SHAPE (up/down)
+       * and COLOUR (green/red, grey when refused) already carry direction and verdict, and the
+       * executions table beside the chart carries every price. A label repeated 63 times is not
+       * information, it is texture.
+       */
+      text: '',
     });
     if (out !== null) {
       const pnl = num(tr?.pnl) ?? 0;
@@ -117,7 +124,12 @@ export function buildDepthChart(bars, trades, { pinTime = null } = {}) {
         position: long ? 'aboveBar' : 'belowBar',
         shape: 'square',
         color: pnl >= 0 ? '#22c55e' : '#ef4444',
-        text: `${tr?.exitReason || 'EXIT'} ${formatPrice(tr?.exitPrice)}`,
+        /**
+         * Exits DO keep a label: there are far fewer distinct moments than entries, and the reason
+         * (`SL`, `TP`, `TIME`, `EOD`) is the one thing a reader cannot infer from colour — it says WHY
+         * the trade ended, which is the question this chart exists to answer at a glance.
+         */
+        text: `${tr?.exitReason || 'EXIT'}`,
       });
     }
     spans.push({ at, out: out ?? at, trade: tr });

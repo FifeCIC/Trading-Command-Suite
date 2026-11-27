@@ -36,10 +36,10 @@ can use. Lift it into `src/components` when a SECOND page needs it, and not befo
 | [`EmptyState`](../src/components/EmptyState.jsx) | Reusable "no data" placeholder with icon, title, description, and optional action button. | primitive | 23 | `icon`, `title`, `description`, `actionLabel`, `actionHref`, `actionOnClick`, `className` | yes | — | — | 59 |
 | [`PageInfoPopover`](../src/components/PageInfoPopover.jsx) | PageInfoPopover — ℹ icon that shows a tooltip with page description | primitive | 17 | `children`, `label` | — | — | — | 43 |
 | [`InfoNote`](../src/components/InfoNote.jsx) | InfoNote — ONE structure for every sentence that annotates a result. | primitive | 16 | `neutral`, `info`, `success`, `warning`, `critical`, `ids`, `label`, `icon`, `children`, `meta`, `role`, `className` | — | — | 1 | 105 |
+| [`Explanation`](../src/components/Explanation.jsx) | Explanation — the "how to read this table" sentence, inline or one click away. | primitive | 11 | `summary`, `children`, `className` | — | — | — | 41 |
 | [`Notice`](../src/components/Notice.jsx) | Notice — Reusable theme-consistent notice/alert banner. | primitive | 11 | `level`, `icon`, `children`, `className` | yes | — | 2 | 51 |
 | [`ScoreCard`](../src/components/ScoreCard.jsx) | ScoreCard — the ONE score-card presentation, shared by the Ladder and the META.Stack Cockpit. | primitive | 10 | `label`, `score`, `max`, `pct`, `mode`, `active` | — | — | 2 | 296 |
 | [`WhyPopover`](../src/components/WhyPopover.jsx) | WhyPopover — an explanation that is READ ON DEMAND, not dumped into the page. | primitive | 10 | `children` | — | — | 1 | 69 |
-| [`Explanation`](../src/components/Explanation.jsx) | Explanation — the "how to read this table" sentence, inline or one click away. | primitive | 9 | `summary`, `children`, `className` | — | — | — | 41 |
 | [`RunComparisonPanels`](../src/components/backtest/RunComparisonPanels.jsx) | RunComparisonPanels — tabs A, B and the A-vs-B difference (requirement, 2026-10-27). | primitive | 7 | `scoreSeries` | — | 1 | 4 | 1250 |
 | [`RunSettingsDiff`](../src/components/backtest/RunSettingsDiff.jsx) | *no description* | primitive | 7 | `differences`, `runs` | — | — | — | 82 |
 | [`SettingsControls`](../src/components/SettingsControls.jsx) | SettingsControls — the shared primitives every Settings page is built from. | primitive | 7 | `label`, `children`, `hint` | — | — | 1 | 104 |
@@ -68,7 +68,7 @@ can use. Lift it into `src/components` when a SECOND page needs it, and not befo
 | [`StatCard`](../src/components/backtest/StatCard.jsx) | StatCard — one tile in the backtest Result grid, with an explanation that appears on HOVER AFTER | shared | 4 | `toneClass`, `valueClass`, `value`, `label` | — | — | — | 89 |
 | [`StepAccordion`](../src/components/StepAccordion.jsx) | StepAccordion — one STEP of a working page, collapsible, with the answer in its header. | shared | 4 | `pageId`, `id`, `step`, `title`, `purpose`, `meta`, `defaultOpen`, `openSignal`, `actions`, `children` | — | — | — | 161 |
 | [`ThemePacksChooser`](../src/components/ThemePacksChooser.jsx) | ThemePacksChooser — the one place a theme pack is selected. | shared | 4 | — | — | 4 | — | 71 |
-| [`TradeConfigPanel`](../src/components/backtest/TradeConfigPanel.jsx) | TradeConfigPanel — WHERE EACH TRADE-MANAGEMENT NUMBER CAME FROM, AND HOW TO CHANGE IT. | shared | 4 | `bot`, `request`, `onRetest`, `retestBusy`, `price`, `count` | yes | — | 1 | 586 |
+| [`TradeConfigPanel`](../src/components/backtest/TradeConfigPanel.jsx) | TradeConfigPanel — WHERE EACH TRADE-MANAGEMENT NUMBER CAME FROM, AND HOW TO CHANGE IT. | shared | 4 | `bot`, `request`, `onRetest`, `retestBusy`, `price`, `count` | yes | — | 1 | 602 |
 | [`BacktestChart`](../src/components/backtest/charts/BacktestChart.jsx) | *no description* | shared | 3 | `data`, `type`, `height` | — | 1 | 37 | 351 |
 | [`BacktestChartPane`](../src/components/backtest/charts/BacktestChartPane.jsx) | *no description* | shared | 3 | `initialSymbol`, `initialTimeframe` | — | — | — | 82 |
 | [`BacktestPeriodsPanel`](../src/components/backtest/BacktestPeriodsPanel.jsx) | BacktestPeriodsPanel — capture a WINDOW, name it, and reuse it (#986). | shared | 3 | `symbol`, `timeframe`, `from`, `to`, `fetched`, `inserted`, `alreadyPresent`, `provider` | — | — | 3 | 571 |
@@ -95,7 +95,7 @@ can use. Lift it into `src/components` when a SECOND page needs it, and not befo
 | [`DirectiveRecordStep`](../src/features/movers-strategy/DirectiveRecordStep.jsx) | DirectiveRecordStep — WHAT EACH DIRECTIVE HAS ACTUALLY SCORED AND PREDICTED. | shared | 2 | `insufficient`, `negative`, `days` | — | — | — | 247 |
 | [`ErrorBoundary`](../src/components/ErrorBoundary.jsx) | React class component that catches render errors in its subtree. | shared | 2 | — | — | — | — | 62 |
 | [`LadderPanels`](../src/components/LadderPanels.jsx) | LadderPanels — the Ladder family's shared page furniture. | shared | 2 | `rankBy`, `onRankBy`, `ageFilter`, `onAgeFilter`, `marketFilter`, `onMarketFilter`, `search`, `onSearch`, `searchAriaLabel`, `children` | — | — | — | 153 |
-| [`MoversDepthChart`](../src/components/backtest/MoversDepthChart.jsx) | MoversDepthChart — ONE session's price with its decisions on it (note m). | shared | 2 | `stop`, `target`, `trades`, `pinTime`, `symbol` | — | — | 6 | 146 |
+| [`MoversDepthChart`](../src/components/backtest/MoversDepthChart.jsx) | MoversDepthChart — ONE session's price with its decisions on it (note m). | shared | 2 | `stop`, `target`, `trades`, `pinTime`, `symbol` | — | — | 6 | 151 |
 | [`PositionsTable`](../src/components/mt5/PositionsTable.jsx) | *no description* | shared | 2 | `positions`, `onClose` | — | — | — | 52 |
 | [`ProgressionPanel`](../src/components/ProgressionPanel.jsx) | ProgressionPanel — the earned level, the XP behind it, and the active-bot ceiling it decides. | shared | 2 | `row` | — | 1 | 4 | 180 |
 | [`ProtocolSymbolsPanel`](../src/components/ProtocolSymbolsPanel.jsx) | ProtocolSymbolsPanel — assign the symbols a protocol scores (#1124). | shared | 2 | `protocolSlug` | — | — | 5 | 195 |
@@ -160,10 +160,10 @@ ones worth a contract and a test before anything else.
 - **EmptyState** — 23 consumers
 - **PageInfoPopover** — 17 consumers · ⚠️ **no test**
 - **InfoNote** — 16 consumers · ⚠️ **no test**
+- **Explanation** — 11 consumers · ⚠️ **no test**
 - **Notice** — 11 consumers
 - **ScoreCard** — 10 consumers · ⚠️ **no test**
 - **WhyPopover** — 10 consumers · ⚠️ **no test**
-- **Explanation** — 9 consumers · ⚠️ **no test**
 - **RunComparisonPanels** — 7 consumers · ⚠️ **no test**
 - **RunSettingsDiff** — 7 consumers · ⚠️ **no test**
 - **SettingsControls** — 7 consumers · ⚠️ **no test**

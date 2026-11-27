@@ -714,8 +714,20 @@ export default function MoversStrategyBacktestPage() {
   }, [daysForLeg, selected]);
 
   return (
+    /* ═══════════════════════════════════════════════════════════════════════════════════════════════
+       THE PAGE IS FOUR REGIONS, IN THIS ORDER — navigate by these markers, not by line number:
+         1. THE FORM (this mount) — leg, top-N, cutoff, pace, detail, plus the day picker and the
+            pre-run coverage check. The only region a reader acts on before a run.
+         2. THE RUN — the summary row (tiles, qualifier strip, caveat table) and its notices.
+         3. THE RESULTS — one accordion per META.Stack stage (`MOVERS_STEP` in
+            `features/movers-strategy/steps.js`); each renders a component from that folder.
+         4. THE CONFIGURATION — the trade settings the numbers were produced under.
+       ⚠️ A NEW SURFACE GOES IN THE REGION THAT OWNS ITS QUESTION, never as a new top-level block. The
+       right-hand rail, the status chips and the accordion list are the page's whole navigation; a fifth
+       region makes all four harder to find. The rules for writing its text are at the top of this file.
+       ═══════════════════════════════════════════════════════════════════════════════════════════════ */
     <div className="mvp-page">
-      {/* ══ STEP 1 — THE FORM ═════════════════════════════════════════════════════════════════ */}
+      {/* ══ REGION 1 — THE FORM ═════════════════════════════════════════════════════════════════ */}
       {formOpen && (
       <StepAccordion
         pageId={MOVERS_PAGE_ID}
@@ -1313,6 +1325,12 @@ export default function MoversStrategyBacktestPage() {
 
             {results.length > 0 && (
             <>
+            {/* ══ REGION 2 — THE RUN: what it returned, and whether it may be read as a result ═══════
+                Order matters and is deliberate: viability warning → tiles → qualifier strip → caveat
+                table → failure/unstored notices → comparison. A warning below the tiles would describe
+                a number the reader has already believed; the strip exists because a chip is believed
+                faster than the paragraph it replaced; the caveat table names the FIGURE each caveat
+                qualifies, so a doubted tile can be traced without reading all of them. */}
             {/**
               * ── #1345 — THIS SITS ABOVE THE TOTALS ON PURPOSE ─────────────────────────────────────
               * A warning eight accordions down cannot protect a headline number. When every trade in the
