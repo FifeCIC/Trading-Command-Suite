@@ -129,6 +129,22 @@ canary(
   2,
 );
 
+canary(
+  'an empty state that drops the action precedence is caught',
+  'src/components/EmptyState.jsx',
+  '{actionLabel && (actionOnClick ? (',
+  '{actionLabel && (actionHref ? (',
+  'src/components/EmptyState.test.jsx',
+);
+
+canary(
+  'a critical notice that loses its role is caught',
+  'src/components/Notice.jsx',
+  ' role={role}',
+  '',
+  'src/components/Notice.test.jsx',
+);
+
 // restore-then-clean
 const clean = runSpec('src/components/LoadingSkeleton.test.jsx');
 const allGreen = clean === 0;

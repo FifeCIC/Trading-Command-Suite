@@ -31,12 +31,12 @@ can use. Lift it into `src/components` when a SECOND page needs it, and not befo
 | component | what it is | tier | consumers | declared props | test | inline styles | hex | lines |
 |---|---|---|---|---|---|---|---|---|
 | [`LoadingSkeleton`](../src/components/LoadingSkeleton.jsx) | Reusable loading skeleton component with variants. | primitive | 75 | `variant`, `count`, `rows`, `cols`, `lines`, `className` | yes | 4 | — | 78 |
-| [`NoticeBlock`](../src/components/NoticeBlock.jsx) | NoticeBlock — renders ONE registry notice (#826). | primitive | 61 | `notice`, `compact` | yes | — | 2 | 74 |
+| [`NoticeBlock`](../src/components/NoticeBlock.jsx) | NoticeBlock — renders ONE registry notice (#826). | primitive | 62 | `notice`, `compact` | yes | — | 2 | 74 |
 | [`ApiOfflineBanner`](../src/components/ApiOfflineBanner.jsx) | *no description* | primitive | 27 | `serviceName`, `port`, `compact` | yes | — | — | 79 |
-| [`EmptyState`](../src/components/EmptyState.jsx) | Reusable "no data" placeholder with icon, title, description, and optional action button. | primitive | 23 | `icon`, `title`, `description`, `actionLabel`, `actionHref`, `actionOnClick`, `className` | — | — | — | 59 |
+| [`EmptyState`](../src/components/EmptyState.jsx) | Reusable "no data" placeholder with icon, title, description, and optional action button. | primitive | 23 | `icon`, `title`, `description`, `actionLabel`, `actionHref`, `actionOnClick`, `className` | yes | — | — | 59 |
 | [`PageInfoPopover`](../src/components/PageInfoPopover.jsx) | PageInfoPopover — ℹ icon that shows a tooltip with page description | primitive | 17 | `children`, `label` | — | — | — | 43 |
 | [`InfoNote`](../src/components/InfoNote.jsx) | InfoNote — ONE structure for every sentence that annotates a result. | primitive | 16 | `neutral`, `info`, `success`, `warning`, `critical`, `ids`, `label`, `icon`, `children`, `meta`, `role`, `className` | — | — | 1 | 105 |
-| [`Notice`](../src/components/Notice.jsx) | Notice — Reusable theme-consistent notice/alert banner. | primitive | 11 | `level`, `icon`, `children`, `className` | — | — | — | 26 |
+| [`Notice`](../src/components/Notice.jsx) | Notice — Reusable theme-consistent notice/alert banner. | primitive | 11 | `level`, `icon`, `children`, `className` | yes | — | 2 | 51 |
 | [`ScoreCard`](../src/components/ScoreCard.jsx) | ScoreCard — the ONE score-card presentation, shared by the Ladder and the META.Stack Cockpit. | primitive | 10 | `label`, `score`, `max`, `pct`, `mode`, `active` | — | — | 2 | 296 |
 | [`WhyPopover`](../src/components/WhyPopover.jsx) | WhyPopover — an explanation that is READ ON DEMAND, not dumped into the page. | primitive | 10 | `children` | — | — | 1 | 69 |
 | [`Explanation`](../src/components/Explanation.jsx) | Explanation — the "how to read this table" sentence, inline or one click away. | primitive | 9 | `summary`, `children`, `className` | — | — | — | 41 |
@@ -155,12 +155,12 @@ These have the widest reach, so a change to one has the widest blast radius — 
 ones worth a contract and a test before anything else.
 
 - **LoadingSkeleton** — 75 consumers
-- **NoticeBlock** — 61 consumers
+- **NoticeBlock** — 62 consumers
 - **ApiOfflineBanner** — 27 consumers
-- **EmptyState** — 23 consumers · ⚠️ **no test**
+- **EmptyState** — 23 consumers
 - **PageInfoPopover** — 17 consumers · ⚠️ **no test**
 - **InfoNote** — 16 consumers · ⚠️ **no test**
-- **Notice** — 11 consumers · ⚠️ **no test**
+- **Notice** — 11 consumers
 - **ScoreCard** — 10 consumers · ⚠️ **no test**
 - **WhyPopover** — 10 consumers · ⚠️ **no test**
 - **Explanation** — 9 consumers · ⚠️ **no test**
@@ -230,7 +230,7 @@ at `/development/theme`; this file is the inventory, not the gallery.
 
 ## Testing — the third of the trio
 
-**6 of 118** components are even *named* in a test file.
+**8 of 118** components are even *named* in a test file.
 
 ⚠️ **CORRECTED 2026-11-19.** This section used to read *"there is no component test runner in
 this project at all"* — no vitest, no testing-library, no jsdom — and that was TRUE when it was

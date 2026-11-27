@@ -9,9 +9,9 @@
       "single": 29,
       "orphan": 0
     },
-    "tested": 6,
+    "tested": 8,
     "withInlineStyles": 45,
-    "withHex": 65
+    "withHex": 66
   },
   "components": [
     {
@@ -115,12 +115,13 @@
       "file": "src/components/NoticeBlock.jsx",
       "purpose": "NoticeBlock — renders ONE registry notice (#826).",
       "lines": 74,
-      "consumers": 61,
+      "consumers": 62,
       "consumerFiles": [
         "src/components/ExitDataRecoveryNotice.jsx",
         "src/components/InfoNote.jsx",
         "src/components/MarketMoversPanel.jsx",
         "src/components/MetaStackLayerSwitch.jsx",
+        "src/components/Notice.jsx",
         "src/components/OrderModal.jsx",
         "src/components/ProtocolSymbolsPanel.jsx",
         "src/components/SeasonalityHeatmap.jsx",
@@ -274,7 +275,7 @@
         "actionOnClick",
         "className"
       ],
-      "hasTest": false,
+      "hasTest": true,
       "inlineStyles": 0,
       "hexLiterals": 0
     },
@@ -359,7 +360,7 @@
       "name": "Notice",
       "file": "src/components/Notice.jsx",
       "purpose": "Notice — Reusable theme-consistent notice/alert banner.",
-      "lines": 26,
+      "lines": 51,
       "consumers": 11,
       "consumerFiles": [
         "src/core/architecture-reference.js",
@@ -381,9 +382,9 @@
         "children",
         "className"
       ],
-      "hasTest": false,
+      "hasTest": true,
       "inlineStyles": 0,
-      "hexLiterals": 0
+      "hexLiterals": 2
     },
     {
       "name": "ScoreCard",
