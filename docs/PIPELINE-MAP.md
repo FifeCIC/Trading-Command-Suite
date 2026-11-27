@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **627** backend source files (specs excluded). Two access paths, because one
+Scanned **628** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -15,7 +15,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 ### `symbol`
 
 - **writers (10):** `backtest-period.service.ts`, `import-jobs.service.ts`, `symbol-discovery.service.ts`, `portfolio.service.ts`, `trading212-import.service.ts`, `mt5.controller.ts`, `symbol-name-enricher.service.ts`, `symbols.controller.ts`, `symbols.service.ts`, `webhooks.controller.ts`
-- **readers (50):** `alert-trigger.service.ts`, `architecture.service.ts`, `automation-loop.service.ts`, `experiment-review.service.ts`, `protocol-runner.service.ts`, `backtest-period.service.ts`, `backtest.controller.ts`, `backtest.service.ts`, `selection-run.service.ts`, `directives.controller.ts`, `data-import-orchestrator.service.ts`, `import-jobs.service.ts`, `indicators.service.ts`, `isa.service.ts`, `bar-refresh.service.ts`, `freshness.service.ts`, `market-data.service.ts`, `symbol-discovery.service.ts`, `correlation.service.ts`, `trading212-import.service.ts`, `replay.service.ts`, `research-import.service.ts`, `trading-scheduler.service.ts`, `arena.controller.ts`, `decision-chain.service.ts`, `directive-impact.service.ts`, `exit-consensus.service.ts`, `outcome-tracker.service.ts`, `protocol-consensus.service.ts`, `protocol-gating.controller.ts`, `protocol-gating.service.ts`, `score-history.service.ts`, `score-velocity.service.ts`, `scoring.service.ts`, `sector-rotation.service.ts`, `speed-scan.controller.ts`, `speed-scan.service.ts`, `screener.service.ts`, `signal-envelope.service.ts`, `snapshot-comparison.service.ts`, `snapshots.module.ts`, `suitability.controller.ts`, `broker-symbol-discovery.service.ts`, `symbol-name-enricher.service.ts`, `symbol-resolver.service.ts`, `symbols.controller.ts`, `symbols.service.ts`, `trading-strategy.service.ts`, `trend-read.service.ts`, `webhooks.controller.ts`
+- **readers (51):** `alert-trigger.service.ts`, `architecture.service.ts`, `automation-loop.service.ts`, `experiment-review.service.ts`, `protocol-runner.service.ts`, `backtest-period.service.ts`, `backtest.controller.ts`, `backtest.service.ts`, `selection-run.service.ts`, `directives.controller.ts`, `data-import-orchestrator.service.ts`, `import-jobs.service.ts`, `indicators.service.ts`, `isa.service.ts`, `bar-refresh.service.ts`, `freshness.service.ts`, `market-data.service.ts`, `symbol-discovery.service.ts`, `correlation.service.ts`, `pnl-contribution.service.ts`, `trading212-import.service.ts`, `replay.service.ts`, `research-import.service.ts`, `trading-scheduler.service.ts`, `arena.controller.ts`, `decision-chain.service.ts`, `directive-impact.service.ts`, `exit-consensus.service.ts`, `outcome-tracker.service.ts`, `protocol-consensus.service.ts`, `protocol-gating.controller.ts`, `protocol-gating.service.ts`, `score-history.service.ts`, `score-velocity.service.ts`, `scoring.service.ts`, `sector-rotation.service.ts`, `speed-scan.controller.ts`, `speed-scan.service.ts`, `screener.service.ts`, `signal-envelope.service.ts`, `snapshot-comparison.service.ts`, `snapshots.module.ts`, `suitability.controller.ts`, `broker-symbol-discovery.service.ts`, `symbol-name-enricher.service.ts`, `symbol-resolver.service.ts`, `symbols.controller.ts`, `symbols.service.ts`, `trading-strategy.service.ts`, `trend-read.service.ts`, `webhooks.controller.ts`
 
 ### `symbol_route`
 
@@ -68,7 +68,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 ### `trade`
 
 - **writers (5):** `automation-loop.service.ts`, `paper-trading.service.ts`, `mt5.controller.ts`, `position-sync.service.ts`, `trade-recorder.service.ts`
-- **readers (26):** `ab-test.service.ts`, `experiment-review.service.ts`, `backtest.controller.ts`, `paper-trading.service.ts`, `performance.service.ts`, `progression.service.ts`, `position-sync.service.ts`, `research-overview.service.ts`, `risk.controller.ts`, `decision-chain.service.ts`, `edge-statistics.service.ts`, `movers-treatment.service.ts`, `pnl-statistics.service.ts`, `stack-performance.service.ts`, `screener.service.ts`, `signal-envelope.service.ts`, `symbols.service.ts`, `bot-performance.service.ts`, `duplicate-guard.service.ts`, `execution-feasibility.service.ts`, `exit-quality-bars.ts`, `mt5-trading.service.ts`, `trade-history.controller.ts`, `trade-recorder.service.ts`, `trading-strategy.service.ts`, `watchlists.controller.ts`
+- **readers (27):** `ab-test.service.ts`, `experiment-review.service.ts`, `backtest.controller.ts`, `paper-trading.service.ts`, `performance.service.ts`, `pnl-contribution.service.ts`, `progression.service.ts`, `position-sync.service.ts`, `research-overview.service.ts`, `risk.controller.ts`, `decision-chain.service.ts`, `edge-statistics.service.ts`, `movers-treatment.service.ts`, `pnl-statistics.service.ts`, `stack-performance.service.ts`, `screener.service.ts`, `signal-envelope.service.ts`, `symbols.service.ts`, `bot-performance.service.ts`, `duplicate-guard.service.ts`, `execution-feasibility.service.ts`, `exit-quality-bars.ts`, `mt5-trading.service.ts`, `trade-history.controller.ts`, `trade-recorder.service.ts`, `trading-strategy.service.ts`, `watchlists.controller.ts`
 
 ### `order`
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**627** source files · **3460** declarations · **407** ratio sites · **1815** nodes · **196** unreferenced
+**628** source files · **3465** declarations · **409** ratio sites · **1819** nodes · **196** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -796,6 +796,33 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `Math.abs(currFast-currSlow)/currSlow`
 - … and 3 more
 
+### 11 sites — `Math.round((VN/VN)*N)/N`
+
+- `nest/src/common/trading/overfit-verdict.ts:114` — `assessOverfit()` → `retention`
+  - `Math.round((facts.outOfSampleWinRate/facts.inSampleWinRate)*1e4)/1e4`
+- `nest/src/modules/ai/portfolio-lab.service.ts:154` — `analyze()`
+  - `totalCost>0?Math.round((totalPnl/totalCost)*1000)/10:0`
+  - guarded by: `totalCost>0`
+- `nest/src/modules/backtest/backtest.service.ts:4381` — `runDirectiveCoverage()`
+  - `total5d>0?Math.round((sumReturn5d/total5d)*100)/100:0`
+  - guarded by: `total5d>0`
+- `nest/src/modules/backtest/backtest.service.ts:4383` — `runDirectiveCoverage()`
+  - `total10d>0?Math.round((sumReturn10d/total10d)*100)/100:0`
+  - guarded by: `total10d>0`
+- `nest/src/modules/performance/performance.service.ts:244` — `computeStrategyStats()`
+  - `wins.length>0?Math.round((totalWin/wins.length)*100)/100:0`
+  - guarded by: `wins.length>0`
+- `nest/src/modules/performance/performance.service.ts:245` — `computeStrategyStats()`
+  - `losses.length>0?Math.round((totalLoss/losses.length)*100)/100:0`
+  - guarded by: `losses.length>0`
+- `nest/src/modules/portfolio/pnl-contribution.service.ts:111` — `summariseInstrument()`
+  - `n?Math.round((wins/n)*10000)/100:null`
+  - guarded by: `n`
+- `nest/src/modules/scoring/outcome-tracker.service.ts:276` — `getRecordingStats()`
+  - `considered>0?Math.round((identity/considered)*1000)/10:0`
+  - guarded by: `considered>0`
+- … and 3 more
+
 ### 10 sites — `(VN-VN)/Math.max(N,VN)*N`
 
 - `nest/src/modules/directives/implementations/momentum-and-macro.directives.ts:493` — `calculate()` → `recentReturn`
@@ -836,33 +863,6 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
   - `(highs[i]+lows[i]+closes[i])/3`
 - `nest/src/modules/indicators/indicators.service.ts:71` — `computeSupportResistance()` → `pivot`
   - `(prev.high+prev.low+prev.close)/3`
-- … and 2 more
-
-### 10 sites — `Math.round((VN/VN)*N)/N`
-
-- `nest/src/common/trading/overfit-verdict.ts:114` — `assessOverfit()` → `retention`
-  - `Math.round((facts.outOfSampleWinRate/facts.inSampleWinRate)*1e4)/1e4`
-- `nest/src/modules/ai/portfolio-lab.service.ts:154` — `analyze()`
-  - `totalCost>0?Math.round((totalPnl/totalCost)*1000)/10:0`
-  - guarded by: `totalCost>0`
-- `nest/src/modules/backtest/backtest.service.ts:4381` — `runDirectiveCoverage()`
-  - `total5d>0?Math.round((sumReturn5d/total5d)*100)/100:0`
-  - guarded by: `total5d>0`
-- `nest/src/modules/backtest/backtest.service.ts:4383` — `runDirectiveCoverage()`
-  - `total10d>0?Math.round((sumReturn10d/total10d)*100)/100:0`
-  - guarded by: `total10d>0`
-- `nest/src/modules/performance/performance.service.ts:244` — `computeStrategyStats()`
-  - `wins.length>0?Math.round((totalWin/wins.length)*100)/100:0`
-  - guarded by: `wins.length>0`
-- `nest/src/modules/performance/performance.service.ts:245` — `computeStrategyStats()`
-  - `losses.length>0?Math.round((totalLoss/losses.length)*100)/100:0`
-  - guarded by: `losses.length>0`
-- `nest/src/modules/scoring/outcome-tracker.service.ts:276` — `getRecordingStats()`
-  - `considered>0?Math.round((identity/considered)*1000)/10:0`
-  - guarded by: `considered>0`
-- `nest/src/modules/scoring/outcome-tracker.service.ts:882` — `getAccuracy()`
-  - `total>0?Math.round((correct/total)*1000)/1000:0`
-  - guarded by: `total>0`
 - … and 2 more
 
 _… and 39 further group(s)._
