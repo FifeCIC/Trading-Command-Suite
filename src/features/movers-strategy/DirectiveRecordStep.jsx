@@ -77,10 +77,14 @@ export default function DirectiveRecordStep({ entries, days: windowDays = 30 }) 
   const rows = Array.isArray(data.byDirective) ? data.byDirective : [];
   if (rows.length === 0) {
     return (
-      <p className="mvp-note">
-        No directive outcome has matured in the last {windowDays} days, so there is nothing to
-        summarise. The table fills as predictions reach their horizons.
-      </p>
+      <>
+        {/* A measurement first (the window), the consequence second, the reason behind a marker. */}
+        <p className="mvp-note mvp-note--warn">No matured predictions in {windowDays} days</p>
+        <Explanation summary="When this table fills">
+          A prediction matures only when its horizon has passed. The table fills as stored predictions
+          reach theirs — an empty table here is a young sample, not a broken one.
+        </Explanation>
+      </>
     );
   }
 
@@ -116,25 +120,40 @@ export default function DirectiveRecordStep({ entries, days: windowDays = 30 }) 
         * beside a run that recorded no per-bar breakdown reads as "these directives explain these
         * numbers". `attributed: 0` is a REPORTED state — the run has no breakdown — and must never be
         * drawn as "no directive fired".
+        *
+        * ⚠️ THE MEASUREMENT STAYS IN THE OPEN; THE EXPLANATION MOVES BEHIND A MARKER (2026-11-27).
+        * "260 of 260 bars" is the fact a reader checks against the table; "it is a different population
+        * from the hit rates beside it" is a sentence explaining why the two columns do not add — that is
+        * a caption, not a state.
         */}
-      <p className="mvp-note">
-        {runStats.bars === 0 ? (
-          <>This run recorded no bars, so no directive can be attributed to it.</>
-        ) : runStats.attributed === 0 ? (
-          <>
-            <strong>This run recorded no per-bar directive breakdown</strong> ({runStats.bars} bar
-            {runStats.bars === 1 ? '' : 's'}), so the <em>This run</em> column is empty — that is missing
-            data, not evidence that no directive scored.
-          </>
-        ) : (
-          <>
-            <em>This run</em> is counted from the run’s own {runStats.bars} bar
-            {runStats.bars === 1 ? '' : 's'}, {runStats.attributed} of which carry at least one scored
-            directive. It is a different population from the hit rates beside it — bars here, matured
-            predictions there.
-          </>
-        )}
-      </p>
+      {runStats.bars === 0 ? (
+        <p className="mvp-note mvp-note--warn">No bars recorded in this run</p>
+      ) : runStats.attributed === 0 ? (
+        <>
+          <p className="mvp-note mvp-note--warn">
+            No per-bar breakdown — {runStats.bars} bar{runStats.bars === 1 ? '' : 's'}
+          </p>
+          <Explanation summary="Why the “This run” column is empty">
+            Missing data is not evidence that no directive scored. A run records one composite per bar
+            unless <strong>Bar-by-bar detail</strong> is on, which is what stores each directive&apos;s
+            own score.
+          </Explanation>
+        </>
+      ) : (
+        <>
+          <p className="mvp-inline-stat">
+            <span className="mvp-inline-stat__value">
+              {runStats.attributed} of {runStats.bars}
+            </span>
+            <span className="mvp-inline-stat__label">bars attributed</span>
+          </p>
+          <Explanation summary="Why these two columns do not add up">
+            <em>This run</em> is counted from the run&rsquo;s own bars; the hit rates beside it are
+            matured predictions across every strategy and symbol. Two populations, two denominators —
+            neither can be summed into the other.
+          </Explanation>
+        </>
+      )}
 
       {thinSample && (
         <p className="mvp-note mvp-note--warn">

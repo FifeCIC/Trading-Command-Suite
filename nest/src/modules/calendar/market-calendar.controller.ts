@@ -3,6 +3,7 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { MarketCalendarService, type MarketStatus, HolidayEntry } from './market-calendar.service';
 import type { SessionInfo } from './market-calendar.service';
 import { MarketSessionsService, type MarketSession, type SessionState } from './market-sessions.service';
+import { assessTickerExtendedHours, type ExtendedHoursAssessment } from './extended-hours';
 
 @ApiTags('calendar')
 @Controller('calendar')
@@ -28,6 +29,26 @@ export class MarketCalendarController {
       }
     }
     return this.calendar.getMarketStatus(exchange || 'US', referenceDate);
+  }
+
+  /**
+   * Trading-window assessment for ONE instrument (#1359).
+   *
+   * The order modal asks this before confirming, so the extended-hours risks are shown to the
+   * person placing the order rather than discovered after a thin-liquidity fill. It is on the
+   * calendar route because the answer belongs to the VENUE axis — the T212 order client calls it
+   * from there rather than duplicating the symbol→venue map in the frontend.
+   */
+  @Get('order-hours')
+  @ApiOperation({
+    summary: 'Trading-window assessment for one instrument — regular session live, or extended-hours risk',
+  })
+  @ApiOkResponse({ description: 'Whether the regular session is live, plus the risks that apply outside it' })
+  getOrderHours(@Query('ticker') ticker?: string): ExtendedHoursAssessment {
+    if (!ticker || !ticker.trim()) {
+      throw new BadRequestException("ticker: required, e.g. 'AAPL'");
+    }
+    return assessTickerExtendedHours(ticker.trim(), (exchange) => this.calendar.getMarketStatus(exchange));
   }
 
   @Get('holidays')

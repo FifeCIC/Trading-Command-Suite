@@ -457,10 +457,15 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
 
   if (!bars.length) {
     return (
-      <p className="mvp-note">
-        No per-bar detail was returned for {symbol}. The run reported no scored bars on {day}, which is
-        different from “nothing happened” — it means the window held no bars this engine could read.
-      </p>
+      <>
+        <p className="mvp-note mvp-note--warn">
+          No scored bars — {symbol}, {day}
+        </p>
+        <Explanation summary="Why this is not “nothing happened”">
+          The run reported no scored bars, which means the window held no bars this engine could read —
+          a data fact, not a quiet session.
+        </Explanation>
+      </>
     );
   }
 
@@ -605,10 +610,13 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
         </h3>
 
         {!focused?.directives?.length ? (
-          <p className="mvp-note">
-            This run did not return a directive breakdown. Only a run made with <code>includeBreakdown</code>{' '}
-            records one — re-run with the detail switch on.
-          </p>
+          <>
+            <p className="mvp-note mvp-note--warn">No directive breakdown on this bar</p>
+            <Explanation summary="What records a breakdown">
+              Only a run made with <code>includeBreakdown</code> stores per-directive scores — re-run with
+              <strong> Bar-by-bar detail</strong> on and this table fills.
+            </Explanation>
+          </>
         ) : (
           <>
             {focused.groups && Object.keys(focused.groups).length > 0 && (
@@ -697,10 +705,10 @@ export default function MoversDepthPanel({ symbol, day, detail }) {
             </div>
           </>
         )}
-        <p className="mvp-note">
+        <Explanation summary="Why a big move can score low">
           A directive that reads neutral contributes 0 and cannot lift the composite, however far the
           price has run. That is the mechanism to inspect first when a large move produces a small score.
-        </p>
+        </Explanation>
       </section>
     </div>
   );

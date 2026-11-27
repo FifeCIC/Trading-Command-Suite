@@ -1,8 +1,39 @@
 import { useState, useEffect, useCallback } from 'react';
-import { placeSellOrder, placeBuyOrder } from '../core/api/orders';
+import { placeSellOrder, placeBuyOrder, getOrderHours } from '../core/api/orders';
 import NoticeBlock from './NoticeBlock';
 import { noticeFromError } from '../core/notices/from-error.js';
 import './order-modal.css';
+
+/**
+ * TradingWindowNotice — the extended-hours risk, shown BEFORE the order is confirmed (#1359).
+ *
+ * ⚠️ `state === 'failed'` is its own case, not "fine". A lookup that could not run has not
+ * established that the regular session is live, and rendering nothing would convert "cannot
+ * judge" into a silent pass.
+ */
+function TradingWindowNotice({ hours, state }) {
+  if (state === 'loading') return null;
+  if (state === 'failed') {
+    return (
+      <div className="om-warning om-warning-hours" role="status">
+        <strong>⚠️ Trading window unknown</strong>
+        <p>This venue could not be checked, so the order may be placed outside regular trading hours.</p>
+      </div>
+    );
+  }
+  if (!hours || hours.inRegularSession) return null;
+  return (
+    <div className="om-warning om-warning-hours" role="status">
+      <strong>{hours.judged ? '⚠️ Outside regular trading hours' : '⚠️ Trading window unknown'}</strong>
+      <p>{hours.message}</p>
+      <ul className="om-hours-risks">
+        {hours.risks.map((r) => (
+          <li key={r.id}><strong>{r.label}.</strong> {r.detail}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 /**
  * OrderModal — Two-step order confirmation modal with safety gates.
@@ -26,6 +57,9 @@ export default function OrderModal({ position, accountCash, mode = 'sell', onClo
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [accountType, setAccountType] = useState('investment');
+  /** #1359 — the venue-axis assessment for this ticker, and whether asking for it worked. */
+  const [hours, setHours] = useState(null);
+  const [hoursState, setHoursState] = useState('loading');
 
   const isDemo = adapterMode === 'demo';
   const isLive = adapterMode === 'live';
@@ -38,6 +72,32 @@ export default function OrderModal({ position, accountCash, mode = 'sell', onClo
   const pnlPct = position.pnlPct || 0;
   const estimatedProceeds = quantity * currentPrice;
   const remainingShares = Math.max(0, shares - quantity);
+
+  // ── #1359 — ask the VENUE axis whether the regular session is live ───────────────────────────
+  // A broker notice (2026-11-27) changed extended-hours times and named three risks. The decision
+  // was warn-and-allow, so the risk is shown here rather than blocking the order. The symbol→venue
+  // map stays on the server: this asks, it does not reimplement it.
+  useEffect(() => {
+    let cancelled = false;
+    if (!ticker) {
+      setHours(null);
+      setHoursState('failed');
+      return () => { cancelled = true; };
+    }
+    setHoursState('loading');
+    getOrderHours(ticker)
+      .then((h) => {
+        if (cancelled) return;
+        setHours(h);
+        setHoursState('ok');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setHours(null);
+        setHoursState('failed');
+      });
+    return () => { cancelled = true; };
+  }, [ticker]);
 
   // Cooldown timer for step 2
   useEffect(() => {
@@ -100,6 +160,8 @@ export default function OrderModal({ position, accountCash, mode = 'sell', onClo
               {!isDemo && !isLive && '⚠️ No API key configured'}
               <span className="om-mode-tag">{adapterMode.toUpperCase()}</span>
             </div>
+
+            <TradingWindowNotice hours={hours} state={hoursState} />
 
             <div className="om-info-grid">
               <div className="om-info-item">
@@ -224,6 +286,8 @@ export default function OrderModal({ position, accountCash, mode = 'sell', onClo
               )}
             </div>
 
+            <TradingWindowNotice hours={hours} state={hoursState} />
+
             <div className="om-order-summary">
               <h3>Order Summary</h3>
               <div className="om-summary-row">
@@ -287,9 +351,15 @@ export default function OrderModal({ position, accountCash, mode = 'sell', onClo
               {result.success ? (
                 <div className="om-result-details">
                   <div><span>Order ID</span><strong>{result.orderId || '—'}</strong></div>
-                  <div><span>Status</span><strong>{result.status || 'filled'}</strong></div>
-                  {result.filledPrice && <div><span>Filled at</span><strong>£{Number(result.filledPrice).toFixed(2)}</strong></div>}
-                  {result.filledQuantity && <div><span>Filled Qty</span><strong>{result.filledQuantity}</strong></div>}
+                  <div><span>Status</span><strong>{result.filled === true ? (result.status || 'filled') : `Accepted — not filled${result.status ? ` (${result.status})` : ''}`}</strong></div>
+                  {result.filled === true && result.filledPrice && <div><span>Filled at</span><strong>£{Number(result.filledPrice).toFixed(2)}</strong></div>}
+                  {result.filled === true && result.filledQuantity && <div><span>Filled Qty</span><strong>{result.filledQuantity}</strong></div>}
+                  {result.filled !== true && (
+                    <p className="om-queued-note">
+                      The broker accepted this order but has not reported a fill. It may execute at
+                      the broker's next available trading session, outside regular hours.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <p className="om-error-msg">{result.error || 'Unknown error'}</p>

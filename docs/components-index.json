@@ -11,7 +11,7 @@
     },
     "tested": 6,
     "withInlineStyles": 45,
-    "withHex": 64
+    "withHex": 65
   },
   "components": [
     {
@@ -812,7 +812,7 @@
       "name": "MoversDepthPanel",
       "file": "src/components/backtest/MoversDepthPanel.jsx",
       "purpose": "MoversDepthPanel — ONE session, taken apart: the ladder, the bars, the decisions, the decomposition.",
-      "lines": 708,
+      "lines": 716,
       "consumers": 5,
       "consumerFiles": [
         "src/core/architecture-reference.js",
@@ -1681,7 +1681,7 @@
       "name": "DirectiveRecordStep",
       "file": "src/features/movers-strategy/DirectiveRecordStep.jsx",
       "purpose": "DirectiveRecordStep — WHAT EACH DIRECTIVE HAS ACTUALLY SCORED AND PREDICTED.",
-      "lines": 228,
+      "lines": 247,
       "consumers": 2,
       "consumerFiles": [
         "src/data/qa-checklist.js",
@@ -1897,7 +1897,7 @@
       "name": "ScoringFunnelStep",
       "file": "src/features/movers-strategy/ScoringFunnelStep.jsx",
       "purpose": "ScoringFunnelStep — SCORES → SIGNALS → TRADES, per symbol, with the speed rating beside them.",
-      "lines": 202,
+      "lines": 208,
       "consumers": 2,
       "consumerFiles": [
         "src/data/qa-checklist.js",
@@ -2565,23 +2565,19 @@
       "name": "OrderModal",
       "file": "src/components/OrderModal.jsx",
       "purpose": null,
-      "lines": 307,
+      "lines": 377,
       "consumers": 1,
       "consumerFiles": [
         "src/pages/PortfolioPage.jsx"
       ],
       "tier": "single",
       "props": [
-        "position",
-        "accountCash",
-        "mode",
-        "onClose",
-        "onComplete",
-        "adapterMode"
+        "hours",
+        "state"
       ],
       "hasTest": false,
       "inlineStyles": 0,
-      "hexLiterals": 0
+      "hexLiterals": 3
     },
     {
       "name": "PartialTakeProfitDemo",

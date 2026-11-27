@@ -33,6 +33,38 @@
  * ⚠️ NO SYMBOL LIST IS SHOWN BEFORE A RUN. Live, nobody knows which names will be featured — the bot
  * reads a feed at the cutoff. Showing today's ten names up front invites the reader to think the
  * strategy chose them; it will show what it PICKED, after the fact, in the results.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════════
+ * HOW TO EDIT THIS PAGE — read before adding a line of prose
+ * ══════════════════════════════════════════════════════════════════════════════════════════════════
+ * The owner uses this page for hours at a time and has said, repeatedly and specifically, that text
+ * volume is what makes it hard to use: *"still too much text presented instantly … sentences all the
+ * way down the page"*. Every rule below came from that, and each one exists because the page regrew.
+ *
+ * 1. ⚠️ FIVE WORDS. An inline line is a LABEL or a MEASUREMENT, not a sentence. "5 of 12 days shown"
+ *    is right; "Showing the latest 5 of the stored days for this leg." is the fault. If a line needs
+ *    more than about five words, it is an explanation — see rule 2.
+ * 2. EXPLANATIONS COLLAPSE. `<Explanation summary="…">` (from `src/components/Explanation.jsx`) renders
+ *    the text inline only when the reader has turned **Read notes: on**; otherwise it is a labelled
+ *    marker with the text in a popover. Every "how to read this table" caption on the page uses it.
+ * 3. ⚠️ A WARNING IS NEVER COLLAPSED, AND THE FIVE-WORD RULE DOES NOT APPLY TO IT. Anything about the
+ *    RUN rather than about reading it — totals that are a mark, a fill the engine assumed, days that
+ *    failed and are excluded, a leg that cannot run — stays in the open, keeps `mvp-note--warn` (or
+ *    `role="alert"`), and may take a full sentence. A reader who has hidden explanations must still be
+ *    told when a number is invalid. Getting this backwards hides the one thing that matters.
+ * 4. A MEASUREMENT GETS A SHAPE. Where a fact is a count, a ratio or a status, prefer
+ *    `.mvp-inline-stat` (figure + two-word label), a `QualifierStrip` chip, a `.mvp-state` badge or a
+ *    bar over a sentence that states it. The owner asked for indicators of strength, status, severity
+ *    and progress — not prose describing them.
+ * 5. ONE TABLE, ONE EXPLANATION, ABOVE THE FRAME. `Explanation` sits immediately above the
+ *    `.mvp-scroll` it describes, never inside it and never below it — a caption below a table reads as
+ *    belonging to the next one.
+ * 6. NOTHING IS RE-DERIVED HERE. Rows arrive built from the feature modules (`features/movers-strategy/`)
+ *    and the page mounts them. A second roll-up in this file is how a tile and a table start
+ *    disagreeing; the modules that own the maths are imported, never reimplemented.
+ *
+ * ⚠️ WHY THE COMMENTS HERE ARE LONG AND THE PAGE TEXT IS SHORT. The comments are for whoever edits this
+ * file next; the page is for the person reading it. Do not shorten the former to match the latter.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -867,10 +899,14 @@ export default function MoversStrategyBacktestPage() {
                   <p className="mvp-note">Loading the stored day lists…</p>
                 </div>
               ) : daysForLeg.length === 0 ? (
-                <p className="mvp-note">
-                  No stored list is a <strong>{leg.side}</strong> day — a day without a list cannot be
-                  tested, because the list IS that day’s screen.
-                </p>
+                <>
+                  {/* State first, in four words. The reason is the explanation, not the fact. */}
+                  <p className="mvp-note mvp-note--warn">No {leg.side} day lists</p>
+                  <Explanation summary="Why a day without a list cannot be tested">
+                    A day without a stored list cannot be tested, because the list <em>is</em> that
+                    day&rsquo;s screen — it is what the ranking chooses from.
+                  </Explanation>
+                </>
               ) : (
                 <>
                   <div className="mvp-scroll">
@@ -956,8 +992,15 @@ export default function MoversStrategyBacktestPage() {
                     )}
                   </Explanation>
                   {daysForLeg.length > 5 && (
-                    <p className="mvp-note">
-                      Showing the latest 5 of {daysForLeg.length} stored {leg.side} days.
+                    /**
+                     * A MEASUREMENT, NOT A SENTENCE. "Latest 5 of 12 days" is a ratio a reader takes in
+                     * at a glance; "Showing the latest 5 of the 12 stored winners days." is a sentence
+                     * that says the same thing and has to be read. This is the five-word rule, applied:
+                     * the only place it may be broken is a WARNING, which must be unambiguous.
+                     */
+                    <p className="mvp-inline-stat">
+                      <span className="mvp-inline-stat__value">5 of {daysForLeg.length}</span>
+                      <span className="mvp-inline-stat__label">{leg.side} days shown</span>
                     </p>
                   )}
                 </>
@@ -1395,9 +1438,15 @@ export default function MoversStrategyBacktestPage() {
 
             {failedRuns.length > 0 && (
               <div className="mvp-failures" role="alert">
-                <p className="mvp-note">
-                  {failedRuns.length} day(s) failed and are excluded from the totals above. They are shown
-                  here rather than as zero-trade days.
+                {/**
+                  * ⚠️ A FAILURE IS NEVER COLLAPSED — it keeps its colour, its `role="alert"` and a
+                  * sentence, because "3 days failed" without the consequence would leave a reader
+                  * comparing totals that silently exclude three days. This is the one place the
+                  * five-word rule is deliberately exceeded.
+                  */}
+                <p className="mvp-note mvp-note--warn">
+                  <strong>{failedRuns.length} of {runQueue.length} day(s) failed</strong> — excluded from the
+                  totals above, not counted as zero-trade days.
                 </p>
                 {failedRuns.map((r) => (
                   <NoticeBlock key={r.datasetName} notice={r.notice} compact />
@@ -1485,10 +1534,10 @@ export default function MoversStrategyBacktestPage() {
                     complaint about this page was text volume, and this is text that scales with the
                     table rather than with the information. */}
                 {caveatTable.some((c) => c.texts.length > 1) && (
-                  <p className="mvp-note">
+                  <Explanation summary="What e.g. means in this table">
                     <code>e.g.</code> marks a row whose days each state their own figures — the example
-                    stands for <em>Days</em> runs, it is not a five-day total.
-                  </p>
+                    stands for <em>Days</em> runs, it is not a total across them.
+                  </Explanation>
                 )}
               </div>
             )}
@@ -1694,19 +1743,22 @@ export default function MoversStrategyBacktestPage() {
                   <span className="mvp-muted"> ({mergedTrades.length} row(s) across {daySymbols.length} symbol(s))</span>
                 </h3>
                 <ExecutionsTable trades={mergedTrades} />
-                <p className="mvp-note">
+                <Explanation summary="Why this view is per day, not per symbol">
                   The ladder and the per-bar table are per symbol — pick a chip above for those. This
-                  table is the day&apos;s whole set of executions so the prices can be read against the
-                  right ticker.
-                </p>
+                  table is the day&apos;s whole set of executions, so each price can be read against the
+                  ticker it belongs to.
+                </Explanation>
               </section>
             ) : focusedDepth ? (
               <MoversDepthPanel symbol={focusedDepth.symbol} day={focusedDepth.day} detail={focusedDepth.detail} />
             ) : (
-              <p className="mvp-note">
-                No per-bar detail was returned. Turn on <strong>Bar-by-bar detail</strong> above and run
-                again — a run without it keeps one composite per bar and no decomposition.
-              </p>
+              <>
+                {/* The state, then the fix. Both short enough to keep in the open. */}
+                <p className="mvp-note mvp-note--warn">No per-bar detail in this run</p>
+                <p className="mvp-note">
+                  Turn on <strong>Bar-by-bar detail</strong> in step 1 and run again.
+                </p>
+              </>
             )}
           </StepAccordion>
 

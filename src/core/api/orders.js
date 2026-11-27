@@ -23,6 +23,22 @@ export function placeBuyOrder(params) {
 }
 
 /**
+ * Get the trading-window assessment for one ticker (#1359).
+ *
+ * ⚠️ IT LIVES ON THE CALENDAR ROUTE, not the T212 one, because the answer belongs to the VENUE
+ * axis — which exchange governs this instrument and whether its regular session is live. The
+ * symbol→venue map is backend-only (`market-patterns.ts`); duplicating it here would be a second
+ * copy that drifts.
+ *
+ * @param {string} ticker
+ * @returns {Promise<{ticker:string, venueStatus:string, inRegularSession:boolean, judged:boolean,
+ *   nextOpen:string|null, message:string, risks:Array<{id:string,label:string,detail:string}>}>}
+ */
+export function getOrderHours(ticker) {
+  return apiGet(`/api/calendar/order-hours?ticker=${encodeURIComponent(ticker)}`);
+}
+
+/**
  * Get open orders
  */
 export function getOpenOrders() {

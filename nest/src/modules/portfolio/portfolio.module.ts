@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { ProvidersModule } from '../providers/providers.module';
+import { CalendarModule } from '../calendar/calendar.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { TradingModule } from '../trading/trading.module';
 import { EarningsModule } from '../earnings/earnings.module';
@@ -18,7 +19,7 @@ import { ExitSignalService } from './exit-signal.service';
 import { T212ReferenceModule } from './t212-reference.module';
 
 @Module({
-  imports: [ProvidersModule, EarningsModule, IsaModule, T212ReferenceModule, forwardRef(() => ScoringModule), forwardRef(() => TradingModule)],
+  imports: [ProvidersModule, EarningsModule, IsaModule, T212ReferenceModule, CalendarModule, forwardRef(() => ScoringModule), forwardRef(() => TradingModule)],
   controllers: [PortfolioController, Trading212PortfolioController, Trading212HistoryController, PortfolioAccountsController],
   providers: [PortfolioService, PortfolioPriceService, Trading212Adapter, Trading212ImportService, PortfolioAccountsService, CorrelationService, ExitSignalService],
   exports: [PortfolioService, PortfolioPriceService, ExitSignalService],

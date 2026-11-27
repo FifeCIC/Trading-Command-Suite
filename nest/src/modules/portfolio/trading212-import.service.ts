@@ -6,6 +6,8 @@ import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { SystemLogService } from '../system/log.service';
 import { cleanT212Ticker } from '../providers/t212-ticker-map';
 import { Trading212ReferenceService } from './t212-reference.service';
+import { MarketCalendarService } from '../calendar/market-calendar.service';
+import { assessTickerExtendedHours, type ExtendedHoursAssessment } from '../calendar/extended-hours';
 
 interface T212Position {
   ticker: string;
@@ -100,6 +102,7 @@ export class Trading212ImportService {
     private readonly tradeRecorder: TradeRecorderService,
     private readonly syslog: SystemLogService,
     private readonly reference: Trading212ReferenceService,
+    private readonly marketCalendar: MarketCalendarService,
   ) {
     this.cache.setCooldown('trading212', 60_000);
   }
@@ -612,13 +615,36 @@ export class Trading212ImportService {
     return { passed: true, gate: 'all' };
   }
 
+  /**
+   * ── #1359 — EXTENDED-HOURS VISIBILITY AND AN HONEST FILL RECORD ──────────────────────────────
+   *
+   * Two separate gaps closed here, both measured:
+   *
+   * 1. This path had NO trading-window check at all — `validatePreTrade()` looks at account,
+   *    position, quantity and funds, and nothing else. So an equity order could be sent at any
+   *    hour with no indication that it would execute (or queue) outside the regular session.
+   *    The assessment is attached to the RESULT rather than blocking the order: the owner's
+   *    decision (2026-11-27) was warn-and-allow, so the risk is shown, not hidden.
+   *
+   * 2. The trade row was written `status: 'open'` for ANY accepted order. A market order accepted
+   *    outside hours is not necessarily filled — and a row that says 'open' for an unfilled order
+   *    is the repo's standard failure shape: plausible output, no error. It is now `'queued'`
+   *    unless the broker's own response evidences a fill, and `position-sync` promotes it when
+   *    the position appears (see `reconcileTrade` step 2b).
+   */
   async placeOrder(params: {
     ticker: string;
     quantity: number;
     side: 'buy' | 'sell';
     accountType?: 'investment' | 'isa';
     limitPrice?: number;
-  }): Promise<T212OrderResult & { preTrade?: { passed: boolean; gate: string; error?: string } }> {
+  }): Promise<T212OrderResult & {
+    preTrade?: { passed: boolean; gate: string; error?: string };
+    /** The venue-axis assessment at the moment the order was sent (#1359). */
+    extendedHours?: ExtendedHoursAssessment;
+    /** True only when the broker's response evidences a fill — see `orderFilled()`. */
+    filled?: boolean;
+  }> {
     // ── #1256 — the controller's `accountType` USED TO BE DROPPED HERE ─────────────────────────
     //
     // It was accepted, logged, and never forwarded, so every order went to whichever account
@@ -630,6 +656,13 @@ export class Trading212ImportService {
         : params.accountType === 'investment' ? 'live'
           : undefined;
 
+    const extendedHours = assessTickerExtendedHours(params.ticker, (exchange) =>
+      this.marketCalendar.getMarketStatus(exchange),
+    );
+    if (!extendedHours.inRegularSession) {
+      this.logger.warn(`Extended-hours order (${extendedHours.judged ? 'confirmed' : 'UNJUDGED'}): ${extendedHours.message}`);
+    }
+
     // Run pre-trade safety gates — against THE ACCOUNT BEING TRADED.
     const preTrade = await this.validatePreTrade({
       ticker: params.ticker,
@@ -640,7 +673,7 @@ export class Trading212ImportService {
 
     if (!preTrade.passed) {
       this.logger.warn(`Order blocked by gate "${preTrade.gate}": ${preTrade.error}`);
-      return { success: false, error: preTrade.error, preTrade };
+      return { success: false, error: preTrade.error, preTrade, extendedHours, filled: false };
     }
 
     this.logger.log(`Placing ${accountTarget ?? this.t212Adapter.mode} ${params.side} order: ${params.ticker} ×${params.quantity}${params.limitPrice ? ` @${params.limitPrice}` : ''}`);
@@ -663,19 +696,28 @@ export class Trading212ImportService {
       });
     }
 
+    const filled = result?.success === true && Trading212Adapter.orderFilled(result);
+
     // Record to DB audit trail
     this.tradeRecorder.record({
       symbol: params.ticker,
       side: params.side,
       quantity: params.quantity,
-      exitPrice: result?.filledPrice,
+      exitPrice: filled ? result.filledPrice : undefined,
       pnl: undefined, // unknown for buys
       provider: 'trading212',
-      status: result?.success ? 'open' : 'rejected',
+      // ⚠️ A QUEUED ORDER IS NOT AN OPEN POSITION. Readers that filter `status: 'open'` (open-trade
+      // counts, A/B open legs, performance) must not count an order the broker has not filled.
+      status: result?.success ? (filled ? 'open' : 'queued') : 'rejected',
+      // The broker's own order id + status, so a queued row can be traced back to the order it
+      // came from. `position-sync` overwrites this when the position is promoted to 'open'.
+      brokerComment: result?.orderId
+        ? `t212-order:${result.orderId} status:${result.status ?? 'unknown'}`.slice(0, 200)
+        : undefined,
     });
-    this.syslog.order('T212', `${params.side} ${params.quantity}×${params.ticker} → ${result?.success ? 'OK' : 'FAILED: ' + (result?.error || 'unknown')}`);
+    this.syslog.order('T212', `${params.side} ${params.quantity}×${params.ticker} → ${result?.success ? (filled ? 'OK' : `QUEUED (${result.status ?? 'unconfirmed'})`) : 'FAILED: ' + (result?.error || 'unknown')}`);
 
-    return result;
+    return { ...result, extendedHours, filled };
   }
 
   async getOpenOrders(): Promise<T212OrderResult[]> {

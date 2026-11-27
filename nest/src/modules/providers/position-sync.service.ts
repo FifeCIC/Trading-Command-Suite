@@ -786,7 +786,11 @@ export class PositionSyncService {
    */
   private async reconcileTrade(provider: string, pos: BrokerPosition): Promise<number> {
     const side = pos.side || 'buy';
-    const openWhere = { provider, status: 'open' };
+    // ── #1359 — a T212 order row is written 'queued' until the broker EVIDENCES a fill. It is the
+    //    same logical position this snapshot reports, so it must be promoted here. Without this,
+    //    step 2c below ("opened outside the app") would create a SECOND row for one position.
+    const pendingStatuses = provider === 'trading212' ? ['open', 'queued'] : ['open'];
+    const openWhere = { provider, status: { in: pendingStatuses } };
 
     // 2a. Exact match by broker ticket (the primary 64-bit-safe link).
     if (pos.brokerTicket) {
@@ -882,6 +886,8 @@ export class PositionSyncService {
       await this.prisma.trade.update({
         where: { id: bySymbol.id },
         data: {
+          // Promotion from 'queued' (#1359). A no-op for a row that was already 'open'.
+          status: 'open',
           // Backfill the broker ticket we were missing (#616)
           brokerTicket: pos.brokerTicket || bySymbol.brokerTicket,
           sl: pos.sl ?? bySymbol.sl,

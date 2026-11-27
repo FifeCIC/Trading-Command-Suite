@@ -59,10 +59,12 @@ export default function ScoringFunnelStep({ entries }) {
 
   if (rows.length === 0) {
     return (
-      <p className="mvp-note">
-        No per-bar detail was returned, so there is nothing to count. Turn on
-        <strong> Bar-by-bar detail</strong> in step 1 and run again.
-      </p>
+      <>
+        <p className="mvp-note mvp-note--warn">No per-bar detail in this run</p>
+        <p className="mvp-note">
+          Turn on <strong>Bar-by-bar detail</strong> in step 1 and run again.
+        </p>
+      </>
     );
   }
 
@@ -191,10 +193,14 @@ export default function ScoringFunnelStep({ entries }) {
           </div>
         </>
       ) : (
-        <p className="mvp-note">
-          This run carried no per-directive breakdown, so the speed directive’s own score was not
-          recorded. It is scored on every bar regardless — turning on the detail switch records it.
-        </p>
+        <>
+          <p className="mvp-note mvp-note--warn">No directive breakdown in this run</p>
+          <Explanation summary="Why the speed score is missing">
+            The speed directive is scored on every bar regardless; turning on <strong>Bar-by-bar
+            detail</strong> is what records its score. Without it the run keeps one composite per bar
+            and no decomposition.
+          </Explanation>
+        </>
       )}
     </>
   );

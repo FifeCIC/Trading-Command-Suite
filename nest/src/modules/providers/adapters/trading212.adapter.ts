@@ -555,6 +555,24 @@ export class Trading212Adapter implements IProviderAdapter {
   }
 
   /**
+   * orderFilled() — does the broker's response EVIDENCE a fill (#1359)?
+   *
+   * ⚠️ Deliberately strict, because the alternative is a plausible-looking claim. A market order
+   * accepted outside regular hours can be QUEUED for the next open, and the previous
+   * `status: data?.status || 'filled'` default called every such acceptance "filled" — including
+   * when the broker sent no status at all. A fill is now claimed only when the response carries a
+   * fill price or an explicit FILLED status. Anything else is 'queued', and `position-sync`
+   * promotes the row when the position actually appears.
+   *
+   * REGISTER: docs/SETTLED-DECISIONS.md row 273 · ISSUE: #1359
+   */
+  static orderFilled(result: T212OrderResult | null | undefined): boolean {
+    if (!result?.success) return false;
+    if (result.filledPrice != null && Number.isFinite(Number(result.filledPrice))) return true;
+    return String(result.status ?? '').toUpperCase() === 'FILLED';
+  }
+
+  /**
    * assertOrderAllowed() — refuse a LIVE order unless it is switched on deliberately.
    *
    * ⚠️ Same precedent as the constructor's #24 guard ("a live key without an explicit live mode must
@@ -622,7 +640,9 @@ export class Trading212Adapter implements IProviderAdapter {
         // reads as though the order went the other way.
         filledQuantity: Math.abs(data?.filledQuantity ?? quantity),
         filledPrice: data?.fillPrice || data?.price,
-        status: data?.status || 'filled',
+        // ⚠️ NOT `|| 'filled'` (#1359). A market order can be accepted and queued for the next
+        // open; defaulting to 'filled' turned that into a claim the broker never made.
+        status: typeof data?.status === 'string' && data.status ? data.status : 'UNCONFIRMED',
         rawResponse: data,
       };
     } catch (err) {

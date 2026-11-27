@@ -30,7 +30,12 @@ export interface TradeRecord {
   provider: 'trading212' | 'mt5' | 'manual';
   strategy?: string;
   scoringStrategyId?: string;
-  status: 'open' | 'closed' | 'rejected';
+  /**
+   * ⚠️ `'queued'` (#1359) — the broker ACCEPTED the order but has not evidenced a fill. It is a
+   * request, not a position: readers that count open trades must not include it. `position-sync`
+   * promotes it to `'open'` when the position appears.
+   */
+  status: 'open' | 'closed' | 'rejected' | 'queued';
   origin?: 'user' | 'agent' | 'strategy' | 'system';
   /** Pipeline identifier — which system generated this trade (#525) */
   source?: 'meta-stack' | 'speed-scanner' | 'manual' | 'backtest' | 'directive-direct';

@@ -1857,3 +1857,32 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* ── Inline statistic (2026-11-27) ─────────────────────────────────────────────────────────────────
+   The owner's rule: *"I don't think there should be many places where more than 5 words are used: more
+   than five is verging on a sentence and not a quickly grasped impression."*
+   A MEASUREMENT therefore gets a shape, not a sentence: a figure and a label, side by side, where the
+   figure carries the eye and the label names it in two or three words. It replaces lines like
+   "Showing the latest 5 of the 12 stored winners days." — same fact, read in one glance.
+
+   ⚠️ NEVER FOR A WARNING. A warning keeps its sentence, because an instruction that can be misread as
+   "fine" is worse than a sentence that takes a moment. Severity is the one thing text serves better. */
+.mvp-inline-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 6px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.mvp-inline-stat__value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.mvp-inline-stat__label {
+  font-size: 12px;
+  color: var(--text-dim);
+}

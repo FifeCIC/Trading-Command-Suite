@@ -279,6 +279,31 @@
 .om-warning strong { display: block; margin-bottom: 0.25rem; font-size: 0.95rem; }
 .om-warning p { margin: 0; font-size: 0.8rem; opacity: 0.9; }
 
+/* ── Extended-hours risk (#1359) ───────────────────────────── */
+.om-warning-hours {
+  background: var(--notice-warning-bg);
+  border: 1px solid var(--notice-warning-border);
+  color: var(--notice-warning-text);
+}
+
+.om-hours-risks {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.om-hours-risks li + li { margin-top: 0.25rem; }
+
+/* `.om-warning strong` is block-level for the heading; a risk label must stay inline. */
+.om-hours-risks strong { display: inline; font-size: inherit; margin-bottom: 0; }
+
+.om-queued-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-warning);
+}
+
 /* ── Order Summary ───────────────────────────────────────── */
 .om-order-summary {
   padding: 0.75rem;
