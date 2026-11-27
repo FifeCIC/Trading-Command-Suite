@@ -1708,3 +1708,48 @@
 
 /* Sections inside one depth panel get the page's block rhythm rather than touching each other. */
 .mvp-depth > section + section { margin-top: 18px; }
+
+/* ── The inventory picker (note n) ─────────────────────────────────────────────────────────────────
+   A band of questions, not a filter row: each chip is the reader's own doubt, so it reads as a sentence
+   and needs room to wrap. Centred, like `.qstrip`, because the table under it is full width and a
+   left-hugging control row beside a centred table was one of the faults reported on 2026-11-26.
+
+   ⚠️ THE CHIP IS A ROW HERE, NOT THE PAGE'S STACKED SYMBOL CHIP. `.mvp-chip` stacks `day` over `meta`,
+   which is right for "SYMBOL / 11 Nov" and wrong for "Can I compare this with another run? / 2" — the
+   count wrapped onto its own line under a long question and read as a stray figure. Measured on sight
+   2026-11-27: the count belongs beside the question, on one line. */
+.mvp-inv-picker {
+  justify-content: center;
+  margin: 4px 0 12px;
+}
+
+.mvp-inv-picker .mvp-chip {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.mvp-inv-picker .mvp-chip-day {
+  font-size: 12.5px;
+}
+
+.mvp-inv-picker .mvp-chip-meta {
+  font-size: 12px;
+}
+
+/* A question nobody declared a field for is DISABLED, so the gap is visible rather than absent. */
+.mvp-inv-picker .mvp-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* The `Answers` column — one line per question the field answers, dim so it never competes with the
+   field itself. Dropped entirely when the table is already filtered to one question. */
+.mvp-inv-answers { min-width: 200px; }
+
+.mvp-inv-answer {
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-dim);
+}

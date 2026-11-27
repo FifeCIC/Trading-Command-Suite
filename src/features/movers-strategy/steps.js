@@ -164,9 +164,17 @@ export const MOVERS_STEPS = [
     title: 'Recorded, not shown',
     purpose: 'What this run already knows and no table above uses — with this run’s own values.',
     defaultOpen: false,
-    audit: [
-      'Turn the inventory into a pick-list per reader, so choosing what to surface is a mechanism not a conversation.',
-    ],
+    /**
+     * SHIPPED 2026-11-27 — the inventory is now a PICK-LIST OF READER QUESTIONS. Each field declares
+     * `answers: [...]` in `backtest-unused-fields.js`; the panel offers the questions as chips, and a
+     * field added later appears under the right question without anyone being asked. Choosing what to
+     * surface is a declaration, not a conversation.
+     *
+     * ⚠️ `fillGap` was RETIRED from the list in the same change — note d built the stop-fill strip in
+     * step 2, so the row's "shown nowhere" claim had become false. A field that stops being unused has
+     * no automatic signal; deleting its row is a manual step and it is now stated in the module.
+     */
+    audit: [],
   },
   {
     id: 'mvp-step-config',

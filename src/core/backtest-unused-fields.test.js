@@ -7,7 +7,15 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { inventoryRows, formatValue, readPath, UNUSED_FIELD_INVENTORY } from './backtest-unused-fields.js';
+import {
+  inventoryRows,
+  formatValue,
+  readPath,
+  pickListFor,
+  inventoryFindings,
+  UNUSED_FIELD_INVENTORY,
+  INVENTORY_CONCERNS,
+} from './backtest-unused-fields.js';
 
 const payload = {
   rankingProvider: { provider: 'yahoo', available: ['yahoo'], ambiguous: false, note: null },
@@ -71,4 +79,66 @@ test('formatValue summarises objects and never leaks [object Object]', () => {
   assert.equal(formatValue(1.23456), '1.23');
   assert.equal(formatValue(7), '7');
   assert.equal(formatValue(true), 'yes');
+});
+
+// ── note n · the pick-list ───────────────────────────────────────────────────────────────────────
+
+test('the declaration is healthy in BOTH directions — every field answers a question, every question has fields', () => {
+  const f = inventoryFindings();
+  assert.deepEqual(f.unassigned, [], 'a field no reader is ever offered');
+  assert.deepEqual(f.empty, [], 'a chip that opens an empty table');
+  assert.deepEqual(f.unknown, [], 'an `answers` id that is not a declared concern');
+});
+
+test('▶ CANARY — a field with NO question is reported, so the pick-list cannot silently drop it', () => {
+  const f = inventoryFindings([{ path: 'mystery', answers: [] }]);
+  assert.deepEqual(f.unassigned, ['mystery']);
+});
+
+test('▶ CANARY — a question with NO field is reported, because an empty chip reads as "nothing to say"', () => {
+  const f = inventoryFindings([{ path: 'a', answers: ['comparable'] }]);
+  assert.deepEqual(f.empty, ['decision', 'assumed']);
+});
+
+test('▶ CANARY — a mistyped `answers` id is reported, or the field vanishes from every pick-list', () => {
+  const f = inventoryFindings([{ path: 'a', answers: ['comparabel'] }]);
+  assert.deepEqual(f.unknown, ['comparabel']);
+  assert.deepEqual(f.unassigned, [], 'it HAS an answer; the answer is just not a real question');
+});
+
+test('a pick-list returns the fields that answer ONE question, and says how many it left out', () => {
+  const rows = inventoryRows(payload);
+  const { rows: picked, concern, hidden } = pickListFor(rows, 'decision');
+  assert.equal(concern.question, 'Did the strategy actually choose?');
+  assert.deepEqual(picked.map((r) => r.path), ['candidates', 'sideSource', 'datasetSide']);
+  assert.equal(hidden, rows.length - picked.length);
+  assert.equal(picked.length + hidden, rows.length, 'nothing may be lost between the two counts');
+});
+
+test('"all" is the whole inventory with nothing hidden — the default must not filter silently', () => {
+  const rows = inventoryRows(payload);
+  const all = pickListFor(rows, 'all');
+  assert.equal(all.rows.length, rows.length);
+  assert.equal(all.hidden, 0);
+  assert.equal(all.concern, null);
+});
+
+test('an UNKNOWN question returns everything rather than an empty table', () => {
+  const rows = inventoryRows(payload);
+  const { rows: picked, concern } = pickListFor(rows, 'no-such-concern');
+  assert.equal(picked.length, rows.length);
+  assert.equal(concern, null);
+});
+
+test('a retired field is GONE from the inventory — fillGap is rendered now, so it may not be listed', () => {
+  // Measured 2026-11-27: step 2 renders `fillGapChips(fillGapView)`, so the declaration's own claim
+  // ("computed on every run and shown nowhere") became false. This asserts the correction holds.
+  assert.equal(UNUSED_FIELD_INVENTORY.some((i) => i.path === 'fillGap'), false);
+});
+
+test('every concern names a question and a reason a reader can act on', () => {
+  for (const c of INVENTORY_CONCERNS) {
+    assert.ok(c.id && c.question && c.why, `${c.id} is incomplete`);
+    assert.match(c.question, /\?$/, 'a concern is a question, not a noun');
+  }
 });
