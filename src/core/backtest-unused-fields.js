@@ -15,8 +15,20 @@
  * ⚠️ MEASURED, NOT REMEMBERED. Every path below was confirmed by counting its occurrences across the
  * movers page and its four panels on 2026-11-23: `rankingProvider`, `candidates`, `priorSessions`,
  * `sideSource`, `datasetSide`, `fillGap` and `admission` were each **0** (or comment-only).
- * `exitDivergence`, `caveats`, `comparison`, `selectionRun`, `best`, and the two per-symbol exclusion
- * counts ARE rendered and are therefore NOT listed.
+ *
+ * ⚠️ **THIS PARAGRAPH USED TO LIST THE FIELDS THAT ARE RENDERED, AND ONE OF THEM WAS A LIE — corrected
+ * 2026-11-27.** It said *"and the two per-symbol exclusion counts ARE rendered"*. They were rendered
+ * **nowhere**: `excludedNotSelected` and `excludedBeforeCutoff` appeared only in this file's own test.
+ * So two fields that answer the owner's standing question — *"430% moved and we made 2%"* — were
+ * invisible AND excluded from the inventory on the strength of a sentence. The day table showed a bare
+ * `Excluded: 34` with nothing saying it was `25 + 9`, and those two halves mean opposite things (the
+ * strategy's selectivity vs the test's cutoff rule). `features/movers-strategy/selection-exclusions.js`
+ * now derives and renders the split.
+ *
+ * **The enumeration is gone on purpose.** A prose list of what IS rendered is a claim nothing checks,
+ * which is exactly how it went wrong. The rule is now the only statement, and it is checkable in both
+ * directions by `backtest-unused-fields.test.js`: **listed here ⇒ matched nowhere in the movers UI**.
+ * A field that starts being rendered must leave this list, and the test fails until it does.
  *
  * ⚠️ ONLY PATHS THIS PAYLOAD ACTUALLY CARRIES. `runCounters`, `sharpeRatio` and `maxDrawdown` are
  * recorded on the per-symbol `backtestrun`, not on a selection run — listing them here would put a
@@ -72,14 +84,16 @@ export const UNUSED_FIELD_INVENTORY = [
       'Which provider ranked the day\'s candidates, and whether it was ambiguous. A different provider '
       + 'is a different candidate list — the run is not comparable with one ranked by another.',
   },
-  {
-    path: 'candidates',
-    answers: ['decision'],
-    label: 'Candidates the ranker could choose from',
-    tells:
-      'The full list before the top-N cut. It shows whether a pick won a contest or was the only '
-      + 'option, which is the difference between a strategy and an artefact of a short list.',
-  },
+  /**
+   * ⚠️ RETIRED 2026-11-27 — `candidates` IS rendered, as the day table's Candidates column. The page
+   * reads `r.candidates?.length` (a full run returns the array of tickers). Listed here it claimed the
+   * page did not show what the reader was looking at.
+   *
+   * ⚠️ AND IT EXPOSED A CONTRACT SPLIT WORTH KNOWING: `dryRun: true` returns `candidates` as a NUMBER
+   * (the count) while a full run returns the ARRAY. The page happens to read the array form only, but
+   * anything that read both would get `undefined.length`. Recorded here because the field that exposed
+   * it is exactly the one a reader would expect to be uniform.
+   */
   {
     path: 'priorSessions',
     answers: ['comparable'],

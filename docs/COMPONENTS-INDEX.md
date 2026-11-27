@@ -38,7 +38,7 @@ can use. Lift it into `src/components` when a SECOND page needs it, and not befo
 | [`InfoNote`](../src/components/InfoNote.jsx) | InfoNote — ONE structure for every sentence that annotates a result. | primitive | 16 | `neutral`, `info`, `success`, `warning`, `critical`, `ids`, `label`, `icon`, `children`, `meta`, `role`, `className` | — | — | 1 | 105 |
 | [`Notice`](../src/components/Notice.jsx) | Notice — Reusable theme-consistent notice/alert banner. | primitive | 11 | `level`, `icon`, `children`, `className` | — | — | — | 26 |
 | [`ScoreCard`](../src/components/ScoreCard.jsx) | ScoreCard — the ONE score-card presentation, shared by the Ladder and the META.Stack Cockpit. | primitive | 10 | `label`, `score`, `max`, `pct`, `mode`, `active` | — | — | 2 | 296 |
-| [`WhyPopover`](../src/components/WhyPopover.jsx) | WhyPopover — an explanation that is READ ON DEMAND, not dumped into the page. | primitive | 8 | `children` | — | — | 1 | 69 |
+| [`WhyPopover`](../src/components/WhyPopover.jsx) | WhyPopover — an explanation that is READ ON DEMAND, not dumped into the page. | primitive | 9 | `children` | — | — | 1 | 69 |
 | [`RunComparisonPanels`](../src/components/backtest/RunComparisonPanels.jsx) | RunComparisonPanels — tabs A, B and the A-vs-B difference (requirement, 2026-10-27). | primitive | 7 | `scoreSeries` | — | 1 | 4 | 1250 |
 | [`RunSettingsDiff`](../src/components/backtest/RunSettingsDiff.jsx) | *no description* | primitive | 7 | `differences`, `runs` | — | — | — | 82 |
 | [`SettingsControls`](../src/components/SettingsControls.jsx) | SettingsControls — the shared primitives every Settings page is built from. | primitive | 7 | `label`, `children`, `hint` | — | — | 1 | 104 |
@@ -84,6 +84,7 @@ can use. Lift it into `src/components` when a SECOND page needs it, and not befo
 | [`PwaInstallPrompt`](../src/components/PwaInstallPrompt.jsx) | *no description* | shared | 3 | — | — | — | — | 94 |
 | [`QualifierStrip`](../src/components/QualifierStrip.jsx) | QualifierStrip — what qualifies a set of figures, as a ROW OF CHIPS, with the sentences on demand. | shared | 3 | `item` | — | — | — | 86 |
 | [`RegisterSymbolOverlay`](../src/components/RegisterSymbolOverlay.jsx) | RegisterSymbolOverlay — ONE overlay for "register this symbol and add it to a watchlist", | shared | 3 | `ticker`, `onClose` | — | — | 1 | 229 |
+| [`ResultByDayStep`](../src/features/movers-strategy/ResultByDayStep.jsx) | ResultByDayStep — one row per session: what the screen offered, what the ranking picked, what it made. | shared | 3 | `sort` | yes | 1 | 1 | 166 |
 | [`StatusBadge`](../src/components/StatusBadge.jsx) | StatusBadge — Reusable themed status pill/chip. | shared | 3 | `status`, `children`, `className` | — | — | — | 17 |
 | [`TradeTable`](../src/components/backtest/TradeTable.jsx) | TradeTable — one row per CLOSED TRADE, with money on it (requirement, 2026-10-29). | shared | 3 | `trades`, `totals`, `timeframe`, `limit`, `compare` | — | 1 | 5 | 478 |
 | [`UnusedDataPanel`](../src/components/backtest/UnusedDataPanel.jsx) | UnusedDataPanel — WHAT THE RUN ALREADY KNOWS AND THIS PAGE DOES NOT SHOW (#1340). | shared | 3 | `runs`, `bare` | — | — | 2 | 213 |
@@ -97,7 +98,6 @@ can use. Lift it into `src/components` when a SECOND page needs it, and not befo
 | [`PositionsTable`](../src/components/mt5/PositionsTable.jsx) | *no description* | shared | 2 | `positions`, `onClose` | — | — | — | 52 |
 | [`ProgressionPanel`](../src/components/ProgressionPanel.jsx) | ProgressionPanel — the earned level, the XP behind it, and the active-bot ceiling it decides. | shared | 2 | `row` | — | 1 | 4 | 180 |
 | [`ProtocolSymbolsPanel`](../src/components/ProtocolSymbolsPanel.jsx) | ProtocolSymbolsPanel — assign the symbols a protocol scores (#1124). | shared | 2 | `protocolSlug` | — | — | 5 | 195 |
-| [`ResultByDayStep`](../src/features/movers-strategy/ResultByDayStep.jsx) | ResultByDayStep — one row per session: what the screen offered, what the ranking picked, what it made. | shared | 2 | `sort` | — | 1 | 1 | 129 |
 | [`ResultBySymbolStep`](../src/features/movers-strategy/ResultBySymbolStep.jsx) | ResultBySymbolStep — which instruments carried the total. | shared | 2 | `sort` | — | 1 | — | 82 |
 | [`RsiDivergenceChart`](../src/components/backtest/RsiDivergenceChart.jsx) | RsiDivergenceChart — price + RSI with the pivots and the divergence pairs drawn. | shared | 2 | `dashed`, `label`, `pane`, `marker`, `height` | — | 4 | 15 | 211 |
 | [`RsiDivergencePanel`](../src/components/backtest/RsiDivergencePanel.jsx) | RsiDivergencePanel — the settings, the chart, and the honest line between them. | shared | 2 | `rsiPeriod`, `leftLookback`, `rightLookback`, `minGapBars`, `maxGapBars`, `showRegularBullish`, `showHiddenBullish`, `showRegularBearish`, `showHiddenBearish`, `label`, `unit`, `min`, `max`, `pine`, `hint`, `timeframe`, `days`, `periodId`, `inSelectedProtocol` | — | — | — | 316 |
@@ -161,7 +161,7 @@ ones worth a contract and a test before anything else.
 - **InfoNote** — 16 consumers · ⚠️ **no test**
 - **Notice** — 11 consumers · ⚠️ **no test**
 - **ScoreCard** — 10 consumers · ⚠️ **no test**
-- **WhyPopover** — 8 consumers · ⚠️ **no test**
+- **WhyPopover** — 9 consumers · ⚠️ **no test**
 - **RunComparisonPanels** — 7 consumers · ⚠️ **no test**
 - **RunSettingsDiff** — 7 consumers · ⚠️ **no test**
 - **SettingsControls** — 7 consumers · ⚠️ **no test**
@@ -228,7 +228,7 @@ at `/development/theme`; this file is the inventory, not the gallery.
 
 ## Testing — the third of the trio
 
-**5 of 117** components are even *named* in a test file.
+**6 of 117** components are even *named* in a test file.
 
 ⚠️ **CORRECTED 2026-11-19.** This section used to read *"there is no component test runner in
 this project at all"* — no vitest, no testing-library, no jsdom — and that was TRUE when it was

@@ -100,6 +100,18 @@ canary(
   'src/components/ApiOfflineBanner.test.jsx',
 );
 
+/**
+ * The day table's split (2026-11-27). The bug this guards is not a crash — it is a bare number with no
+ * explanation, which renders perfectly and tells the reader nothing.
+ */
+canary(
+  'a day table that drops the exclusion SPLIT is caught',
+  'src/features/movers-strategy/ResultByDayStep.jsx',
+  '{d.exclusions.byCode.length > 0 && (',
+  '{false && (',
+  'src/features/movers-strategy/ResultByDayStep.test.jsx',
+);
+
 // restore-then-clean
 const clean = runSpec('src/components/LoadingSkeleton.test.jsx');
 const allGreen = clean === 0;

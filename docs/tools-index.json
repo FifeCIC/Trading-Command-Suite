@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 218,
+  "count": 220,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -594,6 +594,16 @@
       "where": "nest",
       "category": "tool",
       "purpose": "Canary for the #1033 rule — proves `NO_ARG_SERVICE_GETPOSITIONS` fires on the REAL tree, not just",
+      "selfTest": false,
+      "reaches": [
+        "npm"
+      ]
+    },
+    {
+      "name": "canary-test-wiring.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "proves the test-wiring guard FAILS on the real tree.",
       "selfTest": false,
       "reaches": [
         "npm"
@@ -2097,6 +2107,17 @@
       "where": "repo",
       "category": "validator",
       "purpose": "every table in the app uses the ONE arrangement.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-test-wiring.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a test that nothing runs is a decoration.",
       "selfTest": true,
       "reaches": [
         "prebuild",

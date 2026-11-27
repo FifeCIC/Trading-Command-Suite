@@ -62,6 +62,9 @@ import StepAccordion, { StepMeta } from '../components/StepAccordion.jsx';
 import { MOVERS_PAGE_ID, MOVERS_STEP } from '../features/movers-strategy/steps.js';
 import { groupCaveats, caveatDetail } from '../features/movers-strategy/caveats.js';
 import { summariseFillGaps, fillGapChips } from '../features/movers-strategy/fill-gap.js';
+// 2026-11-27 — WHY THE RUN COUNTED FEWER TRADES THAN THE ENGINE PRODUCED. The two drop codes mean
+// opposite things and neither was named on the page.
+import { summariseExclusions } from '../features/movers-strategy/selection-exclusions.js';
 import { buildPriceReference } from '../features/movers-strategy/price-reference.js';
 import QualifierStrip from '../components/QualifierStrip.jsx';
 import ResultByDayStep from '../features/movers-strategy/ResultByDayStep.jsx';
@@ -496,6 +499,14 @@ export default function MoversStrategyBacktestPage() {
     () =>
       results.map((r) => {
         const day = r.days?.[0] ?? null;
+        /**
+         * ⚠️ DERIVED FROM `perSymbol`, NOT READ FROM `totals` (2026-11-27). The day table used to show
+         * `totals.engineTradesOutsideSelection` — a bare number with nothing saying what it was. The
+         * split now comes from one place and the total is its sum, so the cell and its explanation
+         * cannot describe different runs. Measured on `movers-winners-2026-11-11`: the 34 was 25 + 9,
+         * and the two halves mean opposite things.
+         */
+        const exclusions = summariseExclusions(r.perSymbol);
         return {
           id: r.datasetName,
           answerDate: r.answerDate ?? datasetByName.get(r.datasetName)?.answerDate ?? '',
@@ -505,7 +516,8 @@ export default function MoversStrategyBacktestPage() {
           trades: r.totals?.trades ?? null,
           winRate: r.totals?.winRate ?? null,
           netPnl: r.totals?.netPnl ?? null,
-          excluded: r.totals?.engineTradesOutsideSelection ?? null,
+          exclusions,
+          excluded: exclusions ? exclusions.total : null,
           notice: r.notice ?? null,
         };
       }),

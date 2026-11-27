@@ -64,7 +64,25 @@ export default function ResultByDayStep({ sort }) {
             <SortableTh col="trades" label="Trades" api={sort} className="mvp-num" buttonClassName="th-sort" />
             <SortableTh col="winRate" label="Win %" api={sort} className="mvp-num" buttonClassName="th-sort" />
             <SortableTh col="netPnl" label="Net P/L" api={sort} className="mvp-num" buttonClassName="th-sort" />
-            <SortableTh col="excluded" label="Excluded" api={sort} className="mvp-num" buttonClassName="th-sort" />
+            <th scope="col" className="mvp-num">
+              Not counted
+              <WhyPopover title="What “not counted” means">
+                <p>
+                  The engine produced trades this run did not count. They are dropped for one of two
+                  reasons, and the two mean opposite things:
+                </p>
+                <p>
+                  <strong>Not picked</strong> — the engine would have traded a name the ranking did not
+                  choose. This includes every trade on the dataset&rsquo;s warm-up sessions, which can
+                  never be selected. It is the strategy&rsquo;s selectivity.
+                </p>
+                <p>
+                  <strong>Pre-cutoff</strong> — the pick was right but the entry came before the screen
+                  time, so the ranking did not exist yet. This is the test&rsquo;s own rule: moving the
+                  cutoff earlier makes this number bigger.
+                </p>
+              </WhyPopover>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -117,7 +135,26 @@ export default function ResultByDayStep({ sort }) {
                   </span>
                 )}
               </td>
-              <td className="mvp-num mvp-muted">{d.notice ? '—' : d.excluded}</td>
+              {/*
+                ⚠️ THE SPLIT IS THE POINT, NOT THE TOTAL (2026-11-27). "Not counted: 34" left the reader
+                to guess, and the two halves mean opposite things — 25 the strategy declined, 9 the
+                test's cutoff removed. The total stays as the sortable figure; the breakdown is what
+                explains a run that made far less than the day's move.
+              */}
+              <td className="mvp-num">
+                {d.notice || !d.exclusions ? (
+                  '—'
+                ) : (
+                  <>
+                    <span className="mvp-muted">{d.exclusions.total}</span>
+                    {d.exclusions.byCode.length > 0 && (
+                      <span className="mvp-exclusions">
+                        {d.exclusions.byCode.map((c) => `${c.count} ${c.label}`).join(' · ')}
+                      </span>
+                    )}
+                  </>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

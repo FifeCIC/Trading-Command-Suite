@@ -37,7 +37,7 @@
     "audit:unregistered-directives": "node scripts/why-unregistered.cjs",
     "audit:unregistered-directives:self-test": "node scripts/why-unregistered.cjs --self-test",
     "build": "vite build",
-    "prebuild": "node scripts/validate-phrasing.cjs && node scripts/validate-repo-hygiene.cjs && node scripts/validate-page-visibility.cjs && node scripts/validate-no-notice-bar.cjs && node scripts/validate-arch-card-shapes.cjs && node scripts/validate-route-params.cjs && node scripts/validate-fault-taxonomy.cjs && node scripts/validate-standards.cjs && node scripts/validate-formatters.cjs && node scripts/validate-colour-literals.cjs && node scripts/validate-page-data-access.cjs && node scripts/components-index.cjs --check && node scripts/validate-debt-expiry.cjs && node scripts/validate-lint.cjs && node --test src/theme/semantic-contrast.test.js && vitest run --config vitest.config.js --reporter=dot",
+    "prebuild": "node scripts/validate-phrasing.cjs && node scripts/validate-repo-hygiene.cjs && node scripts/validate-page-visibility.cjs && node scripts/validate-no-notice-bar.cjs && node scripts/validate-arch-card-shapes.cjs && node scripts/validate-route-params.cjs && node scripts/validate-fault-taxonomy.cjs && node scripts/validate-standards.cjs && node scripts/validate-formatters.cjs && node scripts/validate-colour-literals.cjs && node scripts/validate-page-data-access.cjs && node scripts/components-index.cjs --check && node scripts/validate-debt-expiry.cjs && node scripts/validate-lint.cjs && node scripts/validate-test-wiring.cjs && node --test \"src/**/*.test.js\" && vitest run --config vitest.config.js --reporter=dot",
     "postbuild": "node ./scripts/check-bundle-budget.mjs",
     "build:guard": "npm run build",
     "canary:arch-docs": "node ./scripts/canary-architecture-docs.cjs",
@@ -200,7 +200,12 @@
     "test:components": "vitest run --config vitest.config.js",
     "test:components:watch": "vitest --config vitest.config.js",
     "test:core": "node --test \"src/core/**/*.test.js\"",
-    "test:components:self-test": "node scripts/canary-component-tests.cjs"
+    "test:components:self-test": "node scripts/canary-component-tests.cjs",
+    "test:frontend": "node --test \"src/**/*.test.js\"",
+    "test:wiring": "node scripts/validate-test-wiring.cjs",
+    "test:wiring:report": "node scripts/validate-test-wiring.cjs --report",
+    "test:wiring:self-test": "node scripts/validate-test-wiring.cjs --self-test",
+    "test:wiring:canary": "node scripts/canary-test-wiring.cjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.20",

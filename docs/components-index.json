@@ -9,7 +9,7 @@
       "single": 29,
       "orphan": 0
     },
-    "tested": 5,
+    "tested": 6,
     "withInlineStyles": 45,
     "withHex": 64
   },
@@ -421,7 +421,7 @@
       "file": "src/components/WhyPopover.jsx",
       "purpose": "WhyPopover — an explanation that is READ ON DEMAND, not dumped into the page.",
       "lines": 69,
-      "consumers": 8,
+      "consumers": 9,
       "consumerFiles": [
         "src/components/backtest/MoversDepthPanel.jsx",
         "src/components/backtest/MoversSelectionComparison.jsx",
@@ -430,6 +430,7 @@
         "src/core/use-popover.js",
         "src/data/qa-checklist.js",
         "src/features/movers-strategy/ResultByDayStep.jsx",
+        "src/features/movers-strategy/selection-exclusions.js",
         "src/pages/MoversStrategyBacktestPage.jsx"
       ],
       "tier": "primitive",
@@ -1500,6 +1501,25 @@
       "hexLiterals": 1
     },
     {
+      "name": "ResultByDayStep",
+      "file": "src/features/movers-strategy/ResultByDayStep.jsx",
+      "purpose": "ResultByDayStep — one row per session: what the screen offered, what the ranking picked, what it made.",
+      "lines": 166,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/features/movers-strategy/selection-exclusions.js",
+        "src/features/movers-strategy/steps.js",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "sort"
+      ],
+      "hasTest": true,
+      "inlineStyles": 1,
+      "hexLiterals": 1
+    },
+    {
       "name": "StatusBadge",
       "file": "src/components/StatusBadge.jsx",
       "purpose": "StatusBadge — Reusable themed status pill/chip.",
@@ -1768,24 +1788,6 @@
       "hasTest": false,
       "inlineStyles": 0,
       "hexLiterals": 5
-    },
-    {
-      "name": "ResultByDayStep",
-      "file": "src/features/movers-strategy/ResultByDayStep.jsx",
-      "purpose": "ResultByDayStep — one row per session: what the screen offered, what the ranking picked, what it made.",
-      "lines": 129,
-      "consumers": 2,
-      "consumerFiles": [
-        "src/features/movers-strategy/steps.js",
-        "src/pages/MoversStrategyBacktestPage.jsx"
-      ],
-      "tier": "shared",
-      "props": [
-        "sort"
-      ],
-      "hasTest": false,
-      "inlineStyles": 1,
-      "hexLiterals": 1
     },
     {
       "name": "ResultBySymbolStep",

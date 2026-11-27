@@ -231,6 +231,19 @@ export const STANDARDS = [
     selfTest: 'npm run test:components:self-test',
     enforcedIn: 'prebuild',
   },
+  {
+    id: 'test-wiring',
+    name: 'A test nothing runs is a decoration',
+    why: 'Measured 2026-11-27: the frontend had **38 `node --test` files and `prebuild` ran exactly ONE** — '
+      + '`semantic-contrast.test.js`, named literally. The rest were reachable only through 17 '
+      + 'individually-named npm scripts nothing invokes. Running the whole set at once: **385 tests, 385 '
+      + 'passing, 7.1 s** — so 378 tests existed, passed, and gated nothing at all. The fix was one line '
+      + 'in `prebuild`; this guard is what stops the next test folder going dark.',
+    gate: 'scripts/validate-test-wiring.cjs',
+    verify: 'npm run test:wiring',
+    selfTest: 'npm run test:wiring:canary',
+    enforcedIn: 'prebuild',
+  },
 ];
 
 /** Grouped for display: met (a gate exists) versus declared gap (no gate). */

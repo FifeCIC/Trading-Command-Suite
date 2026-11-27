@@ -1427,6 +1427,19 @@
   white-space: nowrap;
 }
 
+/*
+ * ⚠️ THE BREAKDOWN UNDER THE TOTAL (2026-11-27). `.mvp-num` is `nowrap`, so the split has to be its own
+ * block or it forces the column wide. It is deliberately the faintest ink on the row: the total is the
+ * figure you sort by, the split is what explains a day that made far less than the day's move.
+ */
+.mvp-num .mvp-exclusions {
+  display: block;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
 /* ⚠️ `.mvp-table th` (0,1,1) sets text-align:left and OUTRANKS a bare `.mvp-num` (0,1,0), so numeric
    HEADERS stayed left while numeric CELLS (no td text-align is set) were pushed right — the "columns
    aren't under their headers" defect. This pair wins at BOTH ends (0,2,1), so a number column's header
