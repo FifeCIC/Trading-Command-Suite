@@ -28,125 +28,125 @@ can use. Lift it into `src/components` when a SECOND page needs it, and not befo
 
 ## All components
 
-| component | tier | consumers | declared props | test | inline styles | hex | lines |
-|---|---|---|---|---|---|---|---|
-| [`LoadingSkeleton`](../src/components/LoadingSkeleton.jsx) | primitive | 74 | `variant`, `count`, `rows`, `cols`, `lines`, `className` | — | 4 | — | 78 |
-| [`NoticeBlock`](../src/components/NoticeBlock.jsx) | primitive | 61 | `notice`, `compact` | yes | — | 2 | 74 |
-| [`ApiOfflineBanner`](../src/components/ApiOfflineBanner.jsx) | primitive | 27 | `serviceName`, `port`, `compact` | — | — | — | 62 |
-| [`EmptyState`](../src/components/EmptyState.jsx) | primitive | 23 | `icon`, `title`, `description`, `actionLabel`, `actionHref`, `actionOnClick`, `className` | — | — | — | 59 |
-| [`PageInfoPopover`](../src/components/PageInfoPopover.jsx) | primitive | 17 | `children`, `label` | — | — | — | 43 |
-| [`InfoNote`](../src/components/InfoNote.jsx) | primitive | 16 | `neutral`, `info`, `success`, `warning`, `critical`, `ids`, `label`, `icon`, `children`, `meta`, `role`, `className` | — | — | 1 | 105 |
-| [`Notice`](../src/components/Notice.jsx) | primitive | 11 | `level`, `icon`, `children`, `className` | — | — | — | 26 |
-| [`ScoreCard`](../src/components/ScoreCard.jsx) | primitive | 10 | `label`, `score`, `max`, `pct`, `mode`, `active` | — | — | 2 | 296 |
-| [`WhyPopover`](../src/components/WhyPopover.jsx) | primitive | 8 | `children` | — | — | 1 | 69 |
-| [`RunComparisonPanels`](../src/components/backtest/RunComparisonPanels.jsx) | primitive | 7 | `scoreSeries` | — | 1 | 4 | 1250 |
-| [`RunSettingsDiff`](../src/components/backtest/RunSettingsDiff.jsx) | primitive | 7 | `differences`, `runs` | — | — | — | 82 |
-| [`SettingsControls`](../src/components/SettingsControls.jsx) | primitive | 7 | `label`, `children`, `hint` | — | — | 1 | 104 |
-| [`WidgetBoard`](../src/components/WidgetBoard.jsx) | primitive | 7 | `lg`, `md`, `sm`, `xs`, `lo`, `onNudge`, `onGrow`, `onClose` | — | — | 1 | 712 |
-| [`ScreenOptions`](../src/components/ScreenOptions.jsx) | primitive | 6 | `sections`, `label`, `description`, `type`, `key`, `defaultValue`, `options`, `desc` | — | 3 | 3 | 1227 |
-| [`SignalBadge`](../src/components/SignalBadge.jsx) | primitive | 6 | `display`, `className`, `arrowOnly` | — | — | — | 53 |
-| [`StatusCard`](../src/components/StatusCard.jsx) | primitive | 6 | `value`, `label`, `icon`, `detail`, `tone`, `className` | — | — | — | 97 |
-| [`SuggestionQueue`](../src/components/SuggestionQueue.jsx) | primitive | 6 | `queued`, `accepted`, `applied`, `rejected`, `blocked`, `param`, `botId`, `mode`, `title` | — | — | — | 179 |
-| [`Breadcrumbs`](../src/components/Breadcrumbs.jsx) | primitive | 5 | — | — | — | — | 55 |
-| [`ChangeStat`](../src/components/ChangeStat.jsx) | primitive | 5 | `label`, `current`, `previous`, `series`, `format`, `hint`, `invert`, `unavailableReason` | — | — | — | 128 |
-| [`LoadingOrbit`](../src/components/LoadingOrbit.jsx) | primitive | 5 | `label`, `size`, `onAccent`, `className` | — | — | — | 44 |
-| [`MainTopInfo`](../src/components/MainTopInfo.jsx) | primitive | 5 | `explanation` | — | — | — | 44 |
-| [`MarketTape`](../src/components/MarketTape.jsx) | primitive | 5 | `sessions`, `events`, `providers`, `auto`, `next`, `news`, `trade`, `uptime`, `label`, `defaultOn`, `set`, `queryFn`, `refetchInterval`, `staleTime`, `retry` | — | 1 | 30 | 542 |
-| [`MoversDepthPanel`](../src/components/backtest/MoversDepthPanel.jsx) | primitive | 5 | `entry`, `exit`, `quiet`, `TARGET`, `SL`, `TIME`, `SESSION`, `TRAIL`, `EOD` | yes | 1 | 4 | 707 |
-| [`ReplayPlayer`](../src/components/backtest/replay/ReplayPlayer.jsx) | primitive | 5 | `runId` | — | — | 5 | 414 |
-| [`SignalCard`](../src/components/SignalCard.jsx) | primitive | 5 | `envelope`, `dismissHours`, `onDismissed`, `defaults` | — | 5 | 8 | 481 |
-| [`Sparkline`](../src/components/Sparkline.jsx) | primitive | 5 | `series`, `width`, `height`, `label`, `className` | — | — | — | 54 |
-| [`SpeedChart`](../src/components/SpeedChart.jsx) | primitive | 5 | `high`, `low`, `close`, `volume`, `timeframe`, `chartMode`, `scanScore`, `chartSettings`, `ticks`, `historicalCandles`, `intervalMs`, `maxBars` | — | 4 | 21 | 427 |
-| [`TypeTag`](../src/components/TypeTag.jsx) | primitive | 5 | `proto`, `bot`, `strategy` | — | — | 1 | 29 |
-| [`BacktestRunsPanel`](../src/components/backtest/BacktestRunsPanel.jsx) | shared | 4 | `value`, `digits`, `suffix` | — | — | 8 | 463 |
-| [`BestRecordPanel`](../src/components/backtest/BestRecordPanel.jsx) | shared | 4 | `okRuns`, `profileKey`, `profileLabel`, `semanticsVersion`, `runCount` | — | — | 1 | 255 |
-| [`DirectiveSettingsPanel`](../src/components/backtest/DirectiveSettingsPanel.jsx) | shared | 4 | `protocolSlug` | — | — | 7 | 691 |
-| [`EquityCurveChart`](../src/components/backtest/charts/EquityCurveChart.jsx) | shared | 4 | `equityData`, `symbol`, `height` | — | 1 | 14 | 245 |
-| [`LoopControls`](../src/components/LoopControls.jsx) | shared | 4 | `variant` | — | — | — | 128 |
-| [`SetupBanner`](../src/components/SetupBanner.jsx) | shared | 4 | — | — | 1 | — | 111 |
-| [`StatCard`](../src/components/backtest/StatCard.jsx) | shared | 4 | `toneClass`, `valueClass`, `value`, `label` | — | — | — | 89 |
-| [`StepAccordion`](../src/components/StepAccordion.jsx) | shared | 4 | `pageId`, `id`, `step`, `title`, `purpose`, `meta`, `defaultOpen`, `openSignal`, `actions`, `children` | — | — | — | 161 |
-| [`ThemePacksChooser`](../src/components/ThemePacksChooser.jsx) | shared | 4 | — | — | 4 | — | 71 |
-| [`TradeConfigPanel`](../src/components/backtest/TradeConfigPanel.jsx) | shared | 4 | `bot`, `request`, `onRetest`, `retestBusy`, `price`, `count` | yes | — | 1 | 586 |
-| [`BacktestChart`](../src/components/backtest/charts/BacktestChart.jsx) | shared | 3 | `data`, `type`, `height` | — | 1 | 37 | 351 |
-| [`BacktestChartPane`](../src/components/backtest/charts/BacktestChartPane.jsx) | shared | 3 | `initialSymbol`, `initialTimeframe` | — | — | — | 82 |
-| [`BacktestPeriodsPanel`](../src/components/backtest/BacktestPeriodsPanel.jsx) | shared | 3 | `symbol`, `timeframe`, `from`, `to`, `fetched`, `inserted`, `alreadyPresent`, `provider` | — | — | 3 | 571 |
-| [`CandlePatternChart`](../src/components/CandlePatternChart.jsx) | shared | 3 | `bullish`, `bearish`, `neutral`, `default`, `patterns`, `onPatternClick`, `highlightPatterns` | — | 1 | 9 | 193 |
-| [`DevOverlay`](../src/components/DevOverlay.jsx) | shared | 3 | `healthQuery`, `availableAdapters`, `analyticsSnapshot`, `performanceSnapshot`, `onDownloadRuntimeReport` | — | 5 | 1 | 307 |
-| [`DirectiveScoringNote`](../src/components/DirectiveScoringNote.jsx) | shared | 3 | `signal`, `colour`, `oneSide`, `neutral`, `unknown`, `directionBias`, `maxScore` | — | 1 | 4 | 111 |
-| [`GlossaryPopover`](../src/components/GlossaryPopover.jsx) | shared | 3 | `term`, `children` | — | 1 | — | 94 |
-| [`KeyboardShortcutsHelp`](../src/components/KeyboardShortcutsHelp.jsx) | shared | 3 | — | — | 1 | — | 157 |
-| [`LoadingSteps`](../src/components/LoadingSteps.jsx) | shared | 3 | `done`, `total`, `label`, `stepLabel`, `className` | — | — | — | 74 |
-| [`MarketMoversPanel`](../src/components/MarketMoversPanel.jsx) | shared | 3 | `title`, `rows`, `accent`, `defaultSort` | — | — | 2 | 312 |
-| [`MetaStackLayerSwitch`](../src/components/MetaStackLayerSwitch.jsx) | shared | 3 | `protocols`, `hint`, `trading` | — | — | 1 | 100 |
-| [`ParityStep`](../src/features/movers-strategy/ParityStep.jsx) | shared | 3 | `shared`, `divergent`, `population`, `model`, `gap` | — | — | — | 205 |
-| [`ProtocolCarousel`](../src/components/ProtocolCarousel.jsx) | shared | 3 | `items`, `value`, `onChange`, `label`, `emptyMessage` | — | — | 2 | 311 |
-| [`PwaInstallPrompt`](../src/components/PwaInstallPrompt.jsx) | shared | 3 | — | — | — | — | 94 |
-| [`QualifierStrip`](../src/components/QualifierStrip.jsx) | shared | 3 | `item` | — | — | — | 86 |
-| [`RegisterSymbolOverlay`](../src/components/RegisterSymbolOverlay.jsx) | shared | 3 | `ticker`, `onClose` | — | — | 1 | 229 |
-| [`StatusBadge`](../src/components/StatusBadge.jsx) | shared | 3 | `status`, `children`, `className` | — | — | — | 17 |
-| [`TradeTable`](../src/components/backtest/TradeTable.jsx) | shared | 3 | `trades`, `totals`, `timeframe`, `limit`, `compare` | — | 1 | 5 | 478 |
-| [`UnusedDataPanel`](../src/components/backtest/UnusedDataPanel.jsx) | shared | 3 | `runs`, `bare` | — | — | 2 | 213 |
-| [`BacktestSettingsInventory`](../src/components/backtest/BacktestSettingsInventory.jsx) | shared | 2 | `honoured`, `cls`, `help`, `ignored`, `label`, `reportedOnly`, `botId` | — | — | 2 | 226 |
-| [`BeginnerGuide`](../src/components/BeginnerGuide.jsx) | shared | 2 | `directive` | — | 1 | — | 387 |
-| [`CockpitPanelCard`](../src/components/CockpitPanelCard.jsx) | shared | 2 | `up`, `down`, `short`, `both`, `warn`, `muted`, `subtitle` | — | — | — | 68 |
-| [`DirectiveRecordStep`](../src/features/movers-strategy/DirectiveRecordStep.jsx) | shared | 2 | `insufficient`, `negative`, `days` | — | — | — | 227 |
-| [`ErrorBoundary`](../src/components/ErrorBoundary.jsx) | shared | 2 | — | — | — | — | 62 |
-| [`LadderPanels`](../src/components/LadderPanels.jsx) | shared | 2 | `rankBy`, `onRankBy`, `ageFilter`, `onAgeFilter`, `marketFilter`, `onMarketFilter`, `search`, `onSearch`, `searchAriaLabel`, `children` | — | — | — | 153 |
-| [`MoversDepthChart`](../src/components/backtest/MoversDepthChart.jsx) | shared | 2 | `stop`, `target`, `trades`, `pinTime`, `symbol` | — | — | 6 | 146 |
-| [`PositionsTable`](../src/components/mt5/PositionsTable.jsx) | shared | 2 | `positions`, `onClose` | — | — | — | 52 |
-| [`ProgressionPanel`](../src/components/ProgressionPanel.jsx) | shared | 2 | `row` | — | 1 | 4 | 180 |
-| [`ProtocolSymbolsPanel`](../src/components/ProtocolSymbolsPanel.jsx) | shared | 2 | `protocolSlug` | — | — | 5 | 195 |
-| [`ResultByDayStep`](../src/features/movers-strategy/ResultByDayStep.jsx) | shared | 2 | `sort` | — | 1 | 1 | 129 |
-| [`ResultBySymbolStep`](../src/features/movers-strategy/ResultBySymbolStep.jsx) | shared | 2 | `sort` | — | 1 | — | 82 |
-| [`RsiDivergenceChart`](../src/components/backtest/RsiDivergenceChart.jsx) | shared | 2 | `dashed`, `label`, `pane`, `marker`, `height` | — | 4 | 15 | 211 |
-| [`RsiDivergencePanel`](../src/components/backtest/RsiDivergencePanel.jsx) | shared | 2 | `rsiPeriod`, `leftLookback`, `rightLookback`, `minGapBars`, `maxGapBars`, `showRegularBullish`, `showHiddenBullish`, `showRegularBearish`, `showHiddenBearish`, `label`, `unit`, `min`, `max`, `pine`, `hint`, `timeframe`, `days`, `periodId`, `inSelectedProtocol` | — | — | — | 316 |
-| [`ScoringFunnelStep`](../src/features/movers-strategy/ScoringFunnelStep.jsx) | shared | 2 | `entries` | — | 2 | 1 | 201 |
-| [`ScoringMechanicsPanel`](../src/components/ScoringMechanicsPanel.jsx) | shared | 2 | `label`, `raw`, `max`, `note` | — | 1 | 1 | 253 |
-| [`ScoringThresholds`](../src/components/ScoringThresholds.jsx) | shared | 2 | — | — | 4 | 4 | 358 |
-| [`SpeedDecisionPanel`](../src/components/SpeedDecisionPanel.jsx) | shared | 2 | `direction`, `label` | — | 2 | 7 | 261 |
-| [`StarToggle`](../src/components/StarToggle.jsx) | shared | 2 | `itemType`, `itemId`, `size`, `className` | — | 2 | — | 90 |
-| [`StepAuditNote`](../src/components/StepAuditNote.jsx) | shared | 2 | `afterStep`, `ideas` | — | — | — | 37 |
-| [`StopSweepPanel`](../src/components/backtest/StopSweepPanel.jsx) | shared | 2 | `runId` | — | — | — | 134 |
-| [`StrategyBits`](../src/components/StrategyBits.jsx) | shared | 2 | `names` | — | — | 4 | 93 |
-| [`StrategyFaultBadge`](../src/components/StrategyFaultBadge.jsx) | shared | 2 | `strategy`, `className`, `style` | — | — | — | 18 |
-| [`StrategyWizard`](../src/components/StrategyBuilder/StrategyWizard.jsx) | shared | 2 | — | — | 7 | — | 567 |
-| [`SupporterPrompt`](../src/components/SupporterPrompt.jsx) | shared | 2 | `kind`, `response`, `context` | — | — | 1 | 156 |
-| [`SupportReportPanel`](../src/components/SupportReportPanel.jsx) | shared | 2 | `fontFamily`, `fontSize`, `lineHeight` | — | 11 | 2 | 139 |
-| [`SymbolAutocomplete`](../src/components/SymbolAutocomplete.jsx) | shared | 2 | `value`, `onChange`, `onSymbolsChange`, `placeholder`, `NVDA`, `className` | — | — | 2 | 170 |
-| [`SymbolChangePanel`](../src/components/SymbolChangePanel.jsx) | shared | 2 | `symbol` | — | — | 1 | 120 |
-| [`SymbolPickerField`](../src/components/SymbolPickerField.jsx) | shared | 2 | `value`, `placeholder` | — | 1 | — | 51 |
-| [`ToggleSwitch`](../src/components/ToggleSwitch.jsx) | shared | 2 | `checked`, `onChange`, `label`, `sm`, `disabled` | — | — | 1 | 29 |
-| [`VariantSwitcher`](../src/components/VariantSwitcher.jsx) | shared | 2 | — | — | — | — | 65 |
-| [`AutoRiskSizingDemo`](../src/components/FeatureLab/AutoRiskSizingDemo.jsx) | single | 1 | `label`, `value`, `color` | — | 21 | 7 | 118 |
-| [`BacktestExperimentsPanel`](../src/components/backtest/BacktestExperimentsPanel.jsx) | single | 1 | `SHELL`, `SINGLE`, `AUTO`, `COMPARISON`, `queryFn`, `staleTime` | — | — | 2 | 121 |
-| [`CanvasCandlestickChart`](../src/components/CanvasCandlestickChart.jsx) | single | 1 | `bg`, `grid`, `text`, `upBody`, `downBody`, `upWick`, `downWick`, `crosshair`, `tooltipBg`, `volUp`, `volDown`, `period`, `color`, `ticks`, `intervalMs`, `maxBars`, `indicators` | — | — | 14 | 507 |
-| [`CopyViewData`](../src/components/CopyViewData.jsx) | single | 1 | `getMarkdown` | — | — | — | 46 |
-| [`DetachableWidget`](../src/components/DetachableWidget.jsx) | single | 1 | `sm`, `h`, `md`, `lg`, `full`, `subtitle`, `size`, `colorAccent`, `actions`, `onDetach`, `onClose`, `onDragStart`, `onDrop`, `draggable`, `detachable`, `minimizable`, `closable`, `defaultMinimized`, `statusDot`, `badge`, `children`, `footer`, `className`, `contentScale` | — | 2 | — | 338 |
-| [`DirectiveConfigDemo`](../src/components/FeatureLab/DirectiveConfigDemo.jsx) | single | 1 | — | — | 27 | 7 | 121 |
-| [`ErrorDisplay`](../src/components/ErrorDisplay.jsx) | single | 1 | `message`, `severity`, `onRetry`, `error`, `className` | — | — | — | 51 |
-| [`ExitDataRecoveryNotice`](../src/components/ExitDataRecoveryNotice.jsx) | single | 1 | — | — | — | 1 | 146 |
-| [`FadeCardGroup`](../src/components/FadeCardGroup.jsx) | single | 1 | `cards`, `variant`, `maxWidth` | — | 1 | — | 73 |
-| [`LastUpdated`](../src/components/LastUpdated.jsx) | single | 1 | `at`, `inline` | — | — | — | 44 |
-| [`LogRetentionPanel`](../src/components/system/LogRetentionPanel.jsx) | single | 1 | `settingKey`, `value`, `min`, `max`, `queryKey` | — | — | 3 | 350 |
-| [`MarketContextWidget`](../src/components/MarketContextWidget.jsx) | single | 1 | `caution`, `icon`, `normal`, `watchful`, `prep`, `queryFn`, `refetchInterval` | — | 1 | 5 | 76 |
-| [`MetaStackPipeline`](../src/components/MetaStackPipeline.jsx) | single | 1 | `title`, `subtitle`, `showHeader` | — | 1 | 1 | 358 |
-| [`MoversSelectionComparison`](../src/components/backtest/MoversSelectionComparison.jsx) | single | 1 | `runCount`, `profileKey`, `profileLabel`, `semanticsVersion`, `delta`, `configChanges`, `blockedGroups`, `reason`, `count` | — | — | 1 | 382 |
-| [`NewsDissipationDemo`](../src/components/FeatureLab/NewsDissipationDemo.jsx) | single | 1 | `label`, `value`, `color` | — | 15 | 9 | 114 |
-| [`OrderForm`](../src/components/mt5/OrderForm.jsx) | single | 1 | `quote`, `onPlaceOrder` | — | — | — | 87 |
-| [`OrderModal`](../src/components/OrderModal.jsx) | single | 1 | `position`, `accountCash`, `mode`, `onClose`, `onComplete`, `adapterMode` | — | — | — | 307 |
-| [`PartialTakeProfitDemo`](../src/components/FeatureLab/PartialTakeProfitDemo.jsx) | single | 1 | `label`, `value`, `color` | — | 26 | 11 | 138 |
-| [`PatternDetailPanel`](../src/components/PatternDetailPanel.jsx) | single | 1 | `bullish`, `bearish`, `neutral`, `onClose` | — | 1 | — | 63 |
-| [`ProfitCapturePanel`](../src/components/backtest/ProfitCapturePanel.jsx) | single | 1 | `totals` | — | — | 1 | 142 |
-| [`ProtocolDirectiveSettings`](../src/components/backtest/ProtocolDirectiveSettings.jsx) | single | 1 | `protocol`, `symbol`, `timeframe`, `days`, `periodId` | — | — | — | 153 |
-| [`RoadmapBoard`](../src/components/roadmap/RoadmapBoard.jsx) | single | 1 | `columns`, `cards`, `sortMode`, `onMove`, `onRenameColumn`, `onOpenCard` | — | 2 | 8 | 330 |
-| [`SeasonalityHeatmap`](../src/components/SeasonalityHeatmap.jsx) | single | 1 | `symbol` | — | 4 | 3 | 122 |
-| [`SeesScoringPanel`](../src/components/SeesScoringPanel.jsx) | single | 1 | `strategyId`, `limit` | — | — | — | 214 |
-| [`SessionOpenEffectDemo`](../src/components/FeatureLab/SessionOpenEffectDemo.jsx) | single | 1 | `session`, `active` | — | 13 | 3 | 100 |
-| [`StickyHeader`](../src/components/StickyHeader.jsx) | single | 1 | `shrinkThreshold`, `expandedPadding`, `shrunkPadding`, `expandedFontSize`, `shrunkFontSize`, `className`, `children` | — | 1 | — | 62 |
-| [`ThresholdRangeMap`](../src/components/ThresholdRangeMap.jsx) | single | 1 | — | — | — | 1 | 170 |
-| [`TimezoneDecisionDemo`](../src/components/FeatureLab/TimezoneDecisionDemo.jsx) | single | 1 | `hour`, `color`, `label` | — | 41 | 6 | 244 |
-| [`TrailingStopDemo`](../src/components/FeatureLab/TrailingStopDemo.jsx) | single | 1 | `label`, `value`, `color` | — | 21 | 16 | 320 |
+| component | what it is | tier | consumers | declared props | test | inline styles | hex | lines |
+|---|---|---|---|---|---|---|---|---|
+| [`LoadingSkeleton`](../src/components/LoadingSkeleton.jsx) | Reusable loading skeleton component with variants. | primitive | 74 | `variant`, `count`, `rows`, `cols`, `lines`, `className` | — | 4 | — | 78 |
+| [`NoticeBlock`](../src/components/NoticeBlock.jsx) | NoticeBlock — renders ONE registry notice (#826). | primitive | 61 | `notice`, `compact` | yes | — | 2 | 74 |
+| [`ApiOfflineBanner`](../src/components/ApiOfflineBanner.jsx) | *no description* | primitive | 27 | `serviceName`, `port`, `compact` | — | — | — | 62 |
+| [`EmptyState`](../src/components/EmptyState.jsx) | Reusable "no data" placeholder with icon, title, description, and optional action button. | primitive | 23 | `icon`, `title`, `description`, `actionLabel`, `actionHref`, `actionOnClick`, `className` | — | — | — | 59 |
+| [`PageInfoPopover`](../src/components/PageInfoPopover.jsx) | PageInfoPopover — ℹ icon that shows a tooltip with page description | primitive | 17 | `children`, `label` | — | — | — | 43 |
+| [`InfoNote`](../src/components/InfoNote.jsx) | InfoNote — ONE structure for every sentence that annotates a result. | primitive | 16 | `neutral`, `info`, `success`, `warning`, `critical`, `ids`, `label`, `icon`, `children`, `meta`, `role`, `className` | — | — | 1 | 105 |
+| [`Notice`](../src/components/Notice.jsx) | Notice — Reusable theme-consistent notice/alert banner. | primitive | 11 | `level`, `icon`, `children`, `className` | — | — | — | 26 |
+| [`ScoreCard`](../src/components/ScoreCard.jsx) | ScoreCard — the ONE score-card presentation, shared by the Ladder and the META.Stack Cockpit. | primitive | 10 | `label`, `score`, `max`, `pct`, `mode`, `active` | — | — | 2 | 296 |
+| [`WhyPopover`](../src/components/WhyPopover.jsx) | WhyPopover — an explanation that is READ ON DEMAND, not dumped into the page. | primitive | 8 | `children` | — | — | 1 | 69 |
+| [`RunComparisonPanels`](../src/components/backtest/RunComparisonPanels.jsx) | RunComparisonPanels — tabs A, B and the A-vs-B difference (requirement, 2026-10-27). | primitive | 7 | `scoreSeries` | — | 1 | 4 | 1250 |
+| [`RunSettingsDiff`](../src/components/backtest/RunSettingsDiff.jsx) | *no description* | primitive | 7 | `differences`, `runs` | — | — | — | 82 |
+| [`SettingsControls`](../src/components/SettingsControls.jsx) | SettingsControls — the shared primitives every Settings page is built from. | primitive | 7 | `label`, `children`, `hint` | — | — | 1 | 104 |
+| [`WidgetBoard`](../src/components/WidgetBoard.jsx) | A widget dashboard surface: pulls widget definitions from the widget registry | primitive | 7 | `lg`, `md`, `sm`, `xs`, `lo`, `onNudge`, `onGrow`, `onClose` | — | — | 1 | 712 |
+| [`ScreenOptions`](../src/components/ScreenOptions.jsx) | ScreenOptions — Reusable overlay for per-view configuration. | primitive | 6 | `sections`, `label`, `description`, `type`, `key`, `defaultValue`, `options`, `desc` | — | 3 | 3 | 1227 |
+| [`SignalBadge`](../src/components/SignalBadge.jsx) | SignalBadge — the ONE component that renders a trading signal. | primitive | 6 | `display`, `className`, `arrowOnly` | — | — | — | 53 |
+| [`StatusCard`](../src/components/StatusCard.jsx) | StatusCard — a headline number, a short label, and detail that waits to be asked for. | primitive | 6 | `value`, `label`, `icon`, `detail`, `tone`, `className` | — | — | — | 97 |
+| [`SuggestionQueue`](../src/components/SuggestionQueue.jsx) | SuggestionQueue — the queued changes we intend to TRY, shown wherever they are needed. | primitive | 6 | `queued`, `accepted`, `applied`, `rejected`, `blocked`, `param`, `botId`, `mode`, `title` | — | — | — | 179 |
+| [`Breadcrumbs`](../src/components/Breadcrumbs.jsx) | *no description* | primitive | 5 | — | — | — | — | 55 |
+| [`ChangeStat`](../src/components/ChangeStat.jsx) | *no description* | primitive | 5 | `label`, `current`, `previous`, `series`, `format`, `hint`, `invert`, `unavailableReason` | — | — | — | 128 |
+| [`LoadingOrbit`](../src/components/LoadingOrbit.jsx) | LoadingOrbit — "something is happening, and there is no shape to draw". | primitive | 5 | `label`, `size`, `onAccent`, `className` | — | — | — | 44 |
+| [`MainTopInfo`](../src/components/MainTopInfo.jsx) | *no description* | primitive | 5 | `explanation` | — | — | — | 44 |
+| [`MarketTape`](../src/components/MarketTape.jsx) | *no description* | primitive | 5 | `sessions`, `events`, `providers`, `auto`, `next`, `news`, `trade`, `uptime`, `label`, `defaultOn`, `set`, `queryFn`, `refetchInterval`, `staleTime`, `retry` | — | 1 | 30 | 542 |
+| [`MoversDepthPanel`](../src/components/backtest/MoversDepthPanel.jsx) | MoversDepthPanel — ONE session, taken apart: the ladder, the bars, the decisions, the decomposition. | primitive | 5 | `entry`, `exit`, `quiet`, `TARGET`, `SL`, `TIME`, `SESSION`, `TRAIL`, `EOD` | yes | 1 | 4 | 707 |
+| [`ReplayPlayer`](../src/components/backtest/replay/ReplayPlayer.jsx) | ReplayPlayer — play a backtest run forward and WATCH it trade (#819). | primitive | 5 | `runId` | — | — | 5 | 414 |
+| [`SignalCard`](../src/components/SignalCard.jsx) | SignalCard — the ONE signal-card presentation, shared by Signals Overview and the META.Stack Cockpit. | primitive | 5 | `envelope`, `dismissHours`, `onDismissed`, `defaults` | — | 5 | 8 | 481 |
+| [`Sparkline`](../src/components/Sparkline.jsx) | Sparkline — a shape, not a chart. | primitive | 5 | `series`, `width`, `height`, `label`, `className` | — | — | — | 54 |
+| [`SpeedChart`](../src/components/SpeedChart.jsx) | SpeedChart — unified lightweight-charts wrapper for the Trading Command Suite. | primitive | 5 | `high`, `low`, `close`, `volume`, `timeframe`, `chartMode`, `scanScore`, `chartSettings`, `ticks`, `historicalCandles`, `intervalMs`, `maxBars` | — | 4 | 21 | 427 |
+| [`TypeTag`](../src/components/TypeTag.jsx) | TypeTag — the "(proto)" / "(bot)" / "(strategy)" suffix that states WHAT an identifier is. | primitive | 5 | `proto`, `bot`, `strategy` | — | — | 1 | 29 |
+| [`BacktestRunsPanel`](../src/components/backtest/BacktestRunsPanel.jsx) | BacktestRunsPanel — the 26 completed backtests that were invisible (#823 Stage 2). | shared | 4 | `value`, `digits`, `suffix` | — | — | 8 | 463 |
+| [`BestRecordPanel`](../src/components/backtest/BestRecordPanel.jsx) | BestRecordPanel — "has this test ever been better than it is now?" (#1341). | shared | 4 | `okRuns`, `profileKey`, `profileLabel`, `semanticsVersion`, `runCount` | — | — | 1 | 255 |
+| [`DirectiveSettingsPanel`](../src/components/backtest/DirectiveSettingsPanel.jsx) | DirectiveSettingsPanel — step 4 of **Backtesting Protocols** (requirement, 2026-10-27). | shared | 4 | `protocolSlug` | — | — | 7 | 691 |
+| [`EquityCurveChart`](../src/components/backtest/charts/EquityCurveChart.jsx) | *no description* | shared | 4 | `equityData`, `symbol`, `height` | — | 1 | 14 | 245 |
+| [`LoopControls`](../src/components/LoopControls.jsx) | LoopControls — the automation loop's controls, on the Dashboard. | shared | 4 | `variant` | — | — | — | 128 |
+| [`SetupBanner`](../src/components/SetupBanner.jsx) | SetupBanner — first-run onboarding prompt. | shared | 4 | — | — | 1 | — | 111 |
+| [`StatCard`](../src/components/backtest/StatCard.jsx) | StatCard — one tile in the backtest Result grid, with an explanation that appears on HOVER AFTER | shared | 4 | `toneClass`, `valueClass`, `value`, `label` | — | — | — | 89 |
+| [`StepAccordion`](../src/components/StepAccordion.jsx) | StepAccordion — one STEP of a working page, collapsible, with the answer in its header. | shared | 4 | `pageId`, `id`, `step`, `title`, `purpose`, `meta`, `defaultOpen`, `openSignal`, `actions`, `children` | — | — | — | 161 |
+| [`ThemePacksChooser`](../src/components/ThemePacksChooser.jsx) | ThemePacksChooser — the one place a theme pack is selected. | shared | 4 | — | — | 4 | — | 71 |
+| [`TradeConfigPanel`](../src/components/backtest/TradeConfigPanel.jsx) | TradeConfigPanel — WHERE EACH TRADE-MANAGEMENT NUMBER CAME FROM, AND HOW TO CHANGE IT. | shared | 4 | `bot`, `request`, `onRetest`, `retestBusy`, `price`, `count` | yes | — | 1 | 586 |
+| [`BacktestChart`](../src/components/backtest/charts/BacktestChart.jsx) | *no description* | shared | 3 | `data`, `type`, `height` | — | 1 | 37 | 351 |
+| [`BacktestChartPane`](../src/components/backtest/charts/BacktestChartPane.jsx) | *no description* | shared | 3 | `initialSymbol`, `initialTimeframe` | — | — | — | 82 |
+| [`BacktestPeriodsPanel`](../src/components/backtest/BacktestPeriodsPanel.jsx) | BacktestPeriodsPanel — capture a WINDOW, name it, and reuse it (#986). | shared | 3 | `symbol`, `timeframe`, `from`, `to`, `fetched`, `inserted`, `alreadyPresent`, `provider` | — | — | 3 | 571 |
+| [`CandlePatternChart`](../src/components/CandlePatternChart.jsx) | *no description* | shared | 3 | `bullish`, `bearish`, `neutral`, `default`, `patterns`, `onPatternClick`, `highlightPatterns` | — | 1 | 9 | 193 |
+| [`DevOverlay`](../src/components/DevOverlay.jsx) | *no description* | shared | 3 | `healthQuery`, `availableAdapters`, `analyticsSnapshot`, `performanceSnapshot`, `onDownloadRuntimeReport` | — | 5 | 1 | 307 |
+| [`DirectiveScoringNote`](../src/components/DirectiveScoringNote.jsx) | DirectiveScoringNote — "how does this directive affect the score?" in one sentence per case. | shared | 3 | `signal`, `colour`, `oneSide`, `neutral`, `unknown`, `directionBias`, `maxScore` | — | 1 | 4 | 111 |
+| [`GlossaryPopover`](../src/components/GlossaryPopover.jsx) | GlossaryPopover — hover tooltip for glossary terms | shared | 3 | `term`, `children` | — | 1 | — | 94 |
+| [`KeyboardShortcutsHelp`](../src/components/KeyboardShortcutsHelp.jsx) | *no description* | shared | 3 | — | — | 1 | — | 157 |
+| [`LoadingSteps`](../src/components/LoadingSteps.jsx) | LoadingSteps — progress for work whose LENGTH IS KNOWN, driven by real counts. | shared | 3 | `done`, `total`, `label`, `stepLabel`, `className` | — | — | — | 74 |
+| [`MarketMoversPanel`](../src/components/MarketMoversPanel.jsx) | MarketMoversPanel — the MARKET-WIDE winners/losers discovery feed (#1283). | shared | 3 | `title`, `rows`, `accent`, `defaultSort` | — | — | 2 | 312 |
+| [`MetaStackLayerSwitch`](../src/components/MetaStackLayerSwitch.jsx) | MetaStackLayerSwitch — the META.Stack inclusion switch for ONE layer (#615). | shared | 3 | `protocols`, `hint`, `trading` | — | — | 1 | 100 |
+| [`ParityStep`](../src/features/movers-strategy/ParityStep.jsx) | ParityStep — WHAT THIS RUN CANNOT REPRODUCE OF THE LIVE ACCOUNT. | shared | 3 | `shared`, `divergent`, `population`, `model`, `gap` | — | — | — | 205 |
+| [`ProtocolCarousel`](../src/components/ProtocolCarousel.jsx) | ProtocolCarousel — a fixed panel that shows ONE protocol at a time and lets the wheel scroll | shared | 3 | `items`, `value`, `onChange`, `label`, `emptyMessage` | — | — | 2 | 311 |
+| [`PwaInstallPrompt`](../src/components/PwaInstallPrompt.jsx) | *no description* | shared | 3 | — | — | — | — | 94 |
+| [`QualifierStrip`](../src/components/QualifierStrip.jsx) | QualifierStrip — what qualifies a set of figures, as a ROW OF CHIPS, with the sentences on demand. | shared | 3 | `item` | — | — | — | 86 |
+| [`RegisterSymbolOverlay`](../src/components/RegisterSymbolOverlay.jsx) | RegisterSymbolOverlay — ONE overlay for "register this symbol and add it to a watchlist", | shared | 3 | `ticker`, `onClose` | — | — | 1 | 229 |
+| [`StatusBadge`](../src/components/StatusBadge.jsx) | StatusBadge — Reusable themed status pill/chip. | shared | 3 | `status`, `children`, `className` | — | — | — | 17 |
+| [`TradeTable`](../src/components/backtest/TradeTable.jsx) | TradeTable — one row per CLOSED TRADE, with money on it (requirement, 2026-10-29). | shared | 3 | `trades`, `totals`, `timeframe`, `limit`, `compare` | — | 1 | 5 | 478 |
+| [`UnusedDataPanel`](../src/components/backtest/UnusedDataPanel.jsx) | UnusedDataPanel — WHAT THE RUN ALREADY KNOWS AND THIS PAGE DOES NOT SHOW (#1340). | shared | 3 | `runs`, `bare` | — | — | 2 | 213 |
+| [`BacktestSettingsInventory`](../src/components/backtest/BacktestSettingsInventory.jsx) | *no description* | shared | 2 | `honoured`, `cls`, `help`, `ignored`, `label`, `reportedOnly`, `botId` | — | — | 2 | 226 |
+| [`BeginnerGuide`](../src/components/BeginnerGuide.jsx) | BeginnerGuide — two dismissable education containers | shared | 2 | `directive` | — | 1 | — | 387 |
+| [`CockpitPanelCard`](../src/components/CockpitPanelCard.jsx) | CockpitPanelCard — the ONE compact card for cockpit columns with no existing shared card. | shared | 2 | `up`, `down`, `short`, `both`, `warn`, `muted`, `subtitle` | — | — | — | 68 |
+| [`DirectiveRecordStep`](../src/features/movers-strategy/DirectiveRecordStep.jsx) | DirectiveRecordStep — WHAT EACH DIRECTIVE HAS ACTUALLY SCORED AND PREDICTED. | shared | 2 | `insufficient`, `negative`, `days` | — | — | — | 227 |
+| [`ErrorBoundary`](../src/components/ErrorBoundary.jsx) | React class component that catches render errors in its subtree. | shared | 2 | — | — | — | — | 62 |
+| [`LadderPanels`](../src/components/LadderPanels.jsx) | LadderPanels — the Ladder family's shared page furniture. | shared | 2 | `rankBy`, `onRankBy`, `ageFilter`, `onAgeFilter`, `marketFilter`, `onMarketFilter`, `search`, `onSearch`, `searchAriaLabel`, `children` | — | — | — | 153 |
+| [`MoversDepthChart`](../src/components/backtest/MoversDepthChart.jsx) | MoversDepthChart — ONE session's price with its decisions on it (note m). | shared | 2 | `stop`, `target`, `trades`, `pinTime`, `symbol` | — | — | 6 | 146 |
+| [`PositionsTable`](../src/components/mt5/PositionsTable.jsx) | *no description* | shared | 2 | `positions`, `onClose` | — | — | — | 52 |
+| [`ProgressionPanel`](../src/components/ProgressionPanel.jsx) | ProgressionPanel — the earned level, the XP behind it, and the active-bot ceiling it decides. | shared | 2 | `row` | — | 1 | 4 | 180 |
+| [`ProtocolSymbolsPanel`](../src/components/ProtocolSymbolsPanel.jsx) | ProtocolSymbolsPanel — assign the symbols a protocol scores (#1124). | shared | 2 | `protocolSlug` | — | — | 5 | 195 |
+| [`ResultByDayStep`](../src/features/movers-strategy/ResultByDayStep.jsx) | ResultByDayStep — one row per session: what the screen offered, what the ranking picked, what it made. | shared | 2 | `sort` | — | 1 | 1 | 129 |
+| [`ResultBySymbolStep`](../src/features/movers-strategy/ResultBySymbolStep.jsx) | ResultBySymbolStep — which instruments carried the total. | shared | 2 | `sort` | — | 1 | — | 82 |
+| [`RsiDivergenceChart`](../src/components/backtest/RsiDivergenceChart.jsx) | RsiDivergenceChart — price + RSI with the pivots and the divergence pairs drawn. | shared | 2 | `dashed`, `label`, `pane`, `marker`, `height` | — | 4 | 15 | 211 |
+| [`RsiDivergencePanel`](../src/components/backtest/RsiDivergencePanel.jsx) | RsiDivergencePanel — the settings, the chart, and the honest line between them. | shared | 2 | `rsiPeriod`, `leftLookback`, `rightLookback`, `minGapBars`, `maxGapBars`, `showRegularBullish`, `showHiddenBullish`, `showRegularBearish`, `showHiddenBearish`, `label`, `unit`, `min`, `max`, `pine`, `hint`, `timeframe`, `days`, `periodId`, `inSelectedProtocol` | — | — | — | 316 |
+| [`ScoringFunnelStep`](../src/features/movers-strategy/ScoringFunnelStep.jsx) | ScoringFunnelStep — SCORES → SIGNALS → TRADES, per symbol, with the speed rating beside them. | shared | 2 | `entries` | — | 2 | 1 | 201 |
+| [`ScoringMechanicsPanel`](../src/components/ScoringMechanicsPanel.jsx) | ScoringMechanicsPanel — the scoring maths, broken down, on live numbers. | shared | 2 | `label`, `raw`, `max`, `note` | — | 1 | 1 | 253 |
+| [`ScoringThresholds`](../src/components/ScoringThresholds.jsx) | ScoringThresholds — the gated-threshold readings, in two presentations. | shared | 2 | — | — | 4 | 4 | 358 |
+| [`SpeedDecisionPanel`](../src/components/SpeedDecisionPanel.jsx) | Compact dashboard component for the Speed Trading page. | shared | 2 | `direction`, `label` | — | 2 | 7 | 261 |
+| [`StarToggle`](../src/components/StarToggle.jsx) | *no description* | shared | 2 | `itemType`, `itemId`, `size`, `className` | — | 2 | — | 90 |
+| [`StepAuditNote`](../src/components/StepAuditNote.jsx) | StepAuditNote — the "what this step does not yet show" card that sits BETWEEN steps. | shared | 2 | `afterStep`, `ideas` | — | — | — | 37 |
+| [`StopSweepPanel`](../src/components/backtest/StopSweepPanel.jsx) | *no description* | shared | 2 | `runId` | — | — | — | 134 |
+| [`StrategyBits`](../src/components/StrategyBits.jsx) | StrategyBits — the fragments the TWO strategy surfaces both render. | shared | 2 | `names` | — | — | 4 | 93 |
+| [`StrategyFaultBadge`](../src/components/StrategyFaultBadge.jsx) | *no description* | shared | 2 | `strategy`, `className`, `style` | — | — | — | 18 |
+| [`StrategyWizard`](../src/components/StrategyBuilder/StrategyWizard.jsx) | *no description* | shared | 2 | — | — | 7 | — | 567 |
+| [`SupporterPrompt`](../src/components/SupporterPrompt.jsx) | SupporterPrompt — the in-app support ask (#1147 §2.2, phase 2). | shared | 2 | `kind`, `response`, `context` | — | — | 1 | 156 |
+| [`SupportReportPanel`](../src/components/SupportReportPanel.jsx) | SupportReportPanel — the REVIEW half of the support service (#1248). | shared | 2 | `fontFamily`, `fontSize`, `lineHeight` | — | 11 | 2 | 139 |
+| [`SymbolAutocomplete`](../src/components/SymbolAutocomplete.jsx) | SymbolAutocomplete — DB-backed symbol search with autocomplete dropdown. | shared | 2 | `value`, `onChange`, `onSymbolsChange`, `placeholder`, `NVDA`, `className` | — | — | 2 | 170 |
+| [`SymbolChangePanel`](../src/components/SymbolChangePanel.jsx) | *no description* | shared | 2 | `symbol` | — | — | 1 | 120 |
+| [`SymbolPickerField`](../src/components/SymbolPickerField.jsx) | SymbolPickerField — a symbol search box whose selection is written to `?symbol=` in the URL. | shared | 2 | `value`, `placeholder` | — | 1 | — | 51 |
+| [`ToggleSwitch`](../src/components/ToggleSwitch.jsx) | ToggleSwitch — Reusable toggle component. | shared | 2 | `checked`, `onChange`, `label`, `sm`, `disabled` | — | — | 1 | 29 |
+| [`VariantSwitcher`](../src/components/VariantSwitcher.jsx) | VariantSwitcher — Inline Old | New page-design toggle. | shared | 2 | — | — | — | — | 65 |
+| [`AutoRiskSizingDemo`](../src/components/FeatureLab/AutoRiskSizingDemo.jsx) | *no description* | single | 1 | `label`, `value`, `color` | — | 21 | 7 | 118 |
+| [`BacktestExperimentsPanel`](../src/components/backtest/BacktestExperimentsPanel.jsx) | *no description* | single | 1 | `SHELL`, `SINGLE`, `AUTO`, `COMPARISON`, `queryFn`, `staleTime` | — | — | 2 | 121 |
+| [`CanvasCandlestickChart`](../src/components/CanvasCandlestickChart.jsx) | Custom Canvas 2D candlestick renderer — no external charting libs. | single | 1 | `bg`, `grid`, `text`, `upBody`, `downBody`, `upWick`, `downWick`, `crosshair`, `tooltipBg`, `volUp`, `volDown`, `period`, `color`, `ticks`, `intervalMs`, `maxBars`, `indicators` | — | — | 14 | 507 |
+| [`CopyViewData`](../src/components/CopyViewData.jsx) | CopyViewData — Floating action button that copies the current view's | single | 1 | `getMarkdown` | — | — | — | 46 |
+| [`DetachableWidget`](../src/components/DetachableWidget.jsx) | *no description* | single | 1 | `sm`, `h`, `md`, `lg`, `full`, `subtitle`, `size`, `colorAccent`, `actions`, `onDetach`, `onClose`, `onDragStart`, `onDrop`, `draggable`, `detachable`, `minimizable`, `closable`, `defaultMinimized`, `statusDot`, `badge`, `children`, `footer`, `className`, `contentScale` | — | 2 | — | 338 |
+| [`DirectiveConfigDemo`](../src/components/FeatureLab/DirectiveConfigDemo.jsx) | *no description* | single | 1 | — | — | 27 | 7 | 121 |
+| [`ErrorDisplay`](../src/components/ErrorDisplay.jsx) | Reusable error display component with severity levels, retry button, | single | 1 | `message`, `severity`, `onRetry`, `error`, `className` | — | — | — | 51 |
+| [`ExitDataRecoveryNotice`](../src/components/ExitDataRecoveryNotice.jsx) | ExitDataRecoveryNotice — the OPTIONAL prompt + button for exit-data gaps (#1093). | single | 1 | — | — | — | 1 | 146 |
+| [`FadeCardGroup`](../src/components/FadeCardGroup.jsx) | *no description* | single | 1 | `cards`, `variant`, `maxWidth` | — | 1 | — | 73 |
+| [`LastUpdated`](../src/components/LastUpdated.jsx) | *no description* | single | 1 | `at`, `inline` | — | — | — | 44 |
+| [`LogRetentionPanel`](../src/components/system/LogRetentionPanel.jsx) | LogRetentionPanel — the visible face of log retention and volume (#1023). | single | 1 | `settingKey`, `value`, `min`, `max`, `queryKey` | — | — | 3 | 350 |
+| [`MarketContextWidget`](../src/components/MarketContextWidget.jsx) | MarketContextWidget — Compact market context for Dashboard | single | 1 | `caution`, `icon`, `normal`, `watchful`, `prep`, `queryFn`, `refetchInterval` | — | 1 | 5 | 76 |
+| [`MetaStackPipeline`](../src/components/MetaStackPipeline.jsx) | MetaStackPipeline — reusable META.Stack pipeline content (Focused + Technical). | single | 1 | `title`, `subtitle`, `showHeader` | — | 1 | 1 | 358 |
+| [`MoversSelectionComparison`](../src/components/backtest/MoversSelectionComparison.jsx) | MoversSelectionComparison — "is this run better than the previous run of the SAME test?" (#1328). | single | 1 | `runCount`, `profileKey`, `profileLabel`, `semanticsVersion`, `delta`, `configChanges`, `blockedGroups`, `reason`, `count` | — | — | 1 | 382 |
+| [`NewsDissipationDemo`](../src/components/FeatureLab/NewsDissipationDemo.jsx) | *no description* | single | 1 | `label`, `value`, `color` | — | 15 | 9 | 114 |
+| [`OrderForm`](../src/components/mt5/OrderForm.jsx) | *no description* | single | 1 | `quote`, `onPlaceOrder` | — | — | — | 87 |
+| [`OrderModal`](../src/components/OrderModal.jsx) | *no description* | single | 1 | `position`, `accountCash`, `mode`, `onClose`, `onComplete`, `adapterMode` | — | — | — | 307 |
+| [`PartialTakeProfitDemo`](../src/components/FeatureLab/PartialTakeProfitDemo.jsx) | *no description* | single | 1 | `label`, `value`, `color` | — | 26 | 11 | 138 |
+| [`PatternDetailPanel`](../src/components/PatternDetailPanel.jsx) | *no description* | single | 1 | `bullish`, `bearish`, `neutral`, `onClose` | — | 1 | — | 63 |
+| [`ProfitCapturePanel`](../src/components/backtest/ProfitCapturePanel.jsx) | ProfitCapturePanel — "what was on the table, and what did we take?" (2026-11-04) | single | 1 | `totals` | — | — | 1 | 142 |
+| [`ProtocolDirectiveSettings`](../src/components/backtest/ProtocolDirectiveSettings.jsx) | ProtocolDirectiveSettings — step 6 ("Directive overrides") as a list of the protocol's DIRECTIVES. | single | 1 | `protocol`, `symbol`, `timeframe`, `days`, `periodId` | — | — | — | 153 |
+| [`RoadmapBoard`](../src/components/roadmap/RoadmapBoard.jsx) | RoadmapBoard — portable kanban × gantt board (epic #681, Phase C). | single | 1 | `columns`, `cards`, `sortMode`, `onMove`, `onRenameColumn`, `onOpenCard` | — | 2 | 8 | 330 |
+| [`SeasonalityHeatmap`](../src/components/SeasonalityHeatmap.jsx) | SeasonalityHeatmap — 7×24 grid showing historical bullish/bearish bias | single | 1 | `symbol` | — | 4 | 3 | 122 |
+| [`SeesScoringPanel`](../src/components/SeesScoringPanel.jsx) | Displays ranked symbols with data status, normalized scores, and directive counts. | single | 1 | `strategyId`, `limit` | — | — | — | 214 |
+| [`SessionOpenEffectDemo`](../src/components/FeatureLab/SessionOpenEffectDemo.jsx) | *no description* | single | 1 | `session`, `active` | — | 13 | 3 | 100 |
+| [`StickyHeader`](../src/components/StickyHeader.jsx) | *no description* | single | 1 | `shrinkThreshold`, `expandedPadding`, `shrunkPadding`, `expandedFontSize`, `shrunkFontSize`, `className`, `children` | — | 1 | — | 62 |
+| [`ThresholdRangeMap`](../src/components/ThresholdRangeMap.jsx) | ThresholdRangeMap — the NUMBERS map, not the steps map (#1275). | single | 1 | — | — | — | 1 | 170 |
+| [`TimezoneDecisionDemo`](../src/components/FeatureLab/TimezoneDecisionDemo.jsx) | *no description* | single | 1 | `hour`, `color`, `label` | — | 41 | 6 | 244 |
+| [`TrailingStopDemo`](../src/components/FeatureLab/TrailingStopDemo.jsx) | *no description* | single | 1 | `label`, `value`, `color` | — | 21 | 16 | 320 |
 
 ## ⚠️ Primitives first
 

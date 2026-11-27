@@ -101,6 +101,33 @@ function declaredProps(text) {
   return [...new Set(names)];
 }
 
+/**
+ * purposeOf(text) — the first real sentence of the file's leading docblock.
+ *
+ * ⚠️ THIS IS THE HALF THAT MAKES `--find` USEFUL, and the lesson is `tools-index.cjs`'s own: *"`--find`
+ * searches the PURPOSE text, not just filenames, and that is the whole point. An agent asking 'the thing
+ * that shows an empty list' will never guess `EmptyState` — but the purpose text contains the words they
+ * would search for."* A catalogue keyed only on names is a directory listing; one keyed on what the
+ * component IS is a search.
+ *
+ * Returns `null` when the file has no docblock, so the report can say "no description" rather than
+ * inventing one from the first line of code.
+ */
+function purposeOf(text) {
+  const block = text.match(/^\s*\/\*\*([\s\S]*?)\*\//);
+  if (!block) return null;
+  const lines = block[1]
+    .split('\n')
+    // strip the leading ` * `, and drop decorative rules made of ─ or = characters
+    .map((l) => l.replace(/^\s*\*?\s?/, '').trim())
+    .filter((l) => l && !/^[─━=\-_*]{3,}/.test(l) && !/^@file/.test(l));
+  const first = lines.find((l) => l.length > 24) ?? lines[0];
+  if (!first) return null;
+  // one sentence, capped so a long docblock cannot bloat the table
+  const sentence = first.split(/(?<=\.)\s/)[0].trim();
+  return sentence.length > 150 ? `${sentence.slice(0, 147)}…` : sentence;
+}
+
 function walkFiles(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -173,6 +200,7 @@ function analyse(components, consumers, tests) {
     return {
       name,
       file: c.file,
+      purpose: purposeOf(c.text),
       lines,
       consumers: users.length,
       consumerFiles: users,
@@ -267,13 +295,13 @@ function render(rows) {
   L.push('');
   L.push('## All components');
   L.push('');
-  L.push('| component | tier | consumers | declared props | test | inline styles | hex | lines |');
-  L.push('|---|---|---|---|---|---|---|---|');
+  L.push('| component | what it is | tier | consumers | declared props | test | inline styles | hex | lines |');
+  L.push('|---|---|---|---|---|---|---|---|---|');
   for (const r of rows) {
     const props = r.props.length ? `\`${r.props.join('`, `')}\`` : '—';
     L.push(
-      `| [\`${r.name}\`](../${r.file}) | ${r.tier} | ${r.consumers} | ${props} | ${r.hasTest ? 'yes' : '—'} | ` +
-        `${r.inlineStyles || '—'} | ${r.hexLiterals || '—'} | ${r.lines} |`,
+      `| [\`${r.name}\`](../${r.file}) | ${r.purpose ?? '*no description*'} | ${r.tier} | ${r.consumers} | ${props} | ` +
+        `${r.hasTest ? 'yes' : '—'} | ${r.inlineStyles || '—'} | ${r.hexLiterals || '—'} | ${r.lines} |`,
     );
   }
   L.push('');
@@ -333,7 +361,7 @@ function checkSummary(rows) {
 
 function matchesQuery(row, terms) {
   if (!terms.length) return true;
-  const hay = `${row.name} ${row.file} ${row.tier} ${row.props.join(' ')}`.toLowerCase();
+  const hay = `${row.name} ${row.file} ${row.tier} ${row.purpose ?? ''} ${row.props.join(' ')}`.toLowerCase();
   return terms.every((t) => hay.includes(t.toLowerCase()));
 }
 
@@ -416,6 +444,19 @@ function selfTest() {
     threw = true;
   }
   expect('an empty component list is treated as an error condition', threw, true);
+
+  // —— purpose extraction, both directions. This is what makes `--find` a search rather than a listing.
+  expect(
+    'a docblock yields its first real sentence',
+    purposeOf('/**\n * EmptyState — a "no data" placeholder with an icon.\n * More detail here.\n */\nexport default function EmptyState() {}'),
+    'EmptyState — a "no data" placeholder with an icon.',
+  );
+  expect('a file with no docblock reports nothing', purposeOf('export default function X() {}'), null);
+  expect(
+    'a decorative rule line is skipped, not reported as the description',
+    purposeOf('/**\n * ────────────────────────\n * The real sentence, which is long enough to win.\n */'),
+    'The real sentence, which is long enough to win.',
+  );
 
   console.log(failures === 0 ? '\n✅ self-test: every rule reports both directions' : `\n❌ self-test: ${failures} case(s) failed`);
   process.exit(failures === 0 ? 0 : 1);
@@ -507,7 +548,8 @@ function main() {
     const hits = rows.filter((r) => matchesQuery(r, terms));
     console.log(`${hits.length} match(es) for ${terms.length ? terms.join(' ') : '(everything)'}`);
     for (const r of hits.slice(0, 30)) {
-      console.log(`  ${r.name.padEnd(28)} ${r.tier.padEnd(9)} ${String(r.consumers).padStart(3)} consumers  ${r.file}`);
+      console.log(`  ${r.name.padEnd(26)} ${r.tier.padEnd(9)} ${String(r.consumers).padStart(3)} consumers  ${r.file}`);
+      if (r.purpose) console.log(`      ${r.purpose}`);
     }
     if (hits.length > 30) console.log(`  … ${hits.length - 30} more`);
     return;
@@ -517,4 +559,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { scan, analyse, render, counts, tierOf, declaredProps, checkSummary, matchesQuery, TIERS };
+module.exports = { scan, analyse, render, counts, tierOf, declaredProps, purposeOf, checkSummary, matchesQuery, TIERS };

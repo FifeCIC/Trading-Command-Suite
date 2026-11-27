@@ -17,6 +17,7 @@
     {
       "name": "LoadingSkeleton",
       "file": "src/components/LoadingSkeleton.jsx",
+      "purpose": "Reusable loading skeleton component with variants.",
       "lines": 78,
       "consumers": 74,
       "consumerFiles": [
@@ -111,6 +112,7 @@
     {
       "name": "NoticeBlock",
       "file": "src/components/NoticeBlock.jsx",
+      "purpose": "NoticeBlock — renders ONE registry notice (#826).",
       "lines": 74,
       "consumers": 61,
       "consumerFiles": [
@@ -188,6 +190,7 @@
     {
       "name": "ApiOfflineBanner",
       "file": "src/components/ApiOfflineBanner.jsx",
+      "purpose": null,
       "lines": 62,
       "consumers": 27,
       "consumerFiles": [
@@ -232,6 +235,7 @@
     {
       "name": "EmptyState",
       "file": "src/components/EmptyState.jsx",
+      "purpose": "Reusable \"no data\" placeholder with icon, title, description, and optional action button.",
       "lines": 59,
       "consumers": 23,
       "consumerFiles": [
@@ -276,6 +280,7 @@
     {
       "name": "PageInfoPopover",
       "file": "src/components/PageInfoPopover.jsx",
+      "purpose": "PageInfoPopover — ℹ icon that shows a tooltip with page description",
       "lines": 43,
       "consumers": 17,
       "consumerFiles": [
@@ -309,6 +314,7 @@
     {
       "name": "InfoNote",
       "file": "src/components/InfoNote.jsx",
+      "purpose": "InfoNote — ONE structure for every sentence that annotates a result.",
       "lines": 105,
       "consumers": 16,
       "consumerFiles": [
@@ -351,6 +357,7 @@
     {
       "name": "Notice",
       "file": "src/components/Notice.jsx",
+      "purpose": "Notice — Reusable theme-consistent notice/alert banner.",
       "lines": 26,
       "consumers": 11,
       "consumerFiles": [
@@ -380,6 +387,7 @@
     {
       "name": "ScoreCard",
       "file": "src/components/ScoreCard.jsx",
+      "purpose": "ScoreCard — the ONE score-card presentation, shared by the Ladder and the META.Stack Cockpit.",
       "lines": 296,
       "consumers": 10,
       "consumerFiles": [
@@ -410,6 +418,7 @@
     {
       "name": "WhyPopover",
       "file": "src/components/WhyPopover.jsx",
+      "purpose": "WhyPopover — an explanation that is READ ON DEMAND, not dumped into the page.",
       "lines": 69,
       "consumers": 8,
       "consumerFiles": [
@@ -433,6 +442,7 @@
     {
       "name": "RunComparisonPanels",
       "file": "src/components/backtest/RunComparisonPanels.jsx",
+      "purpose": "RunComparisonPanels — tabs A, B and the A-vs-B difference (requirement, 2026-10-27).",
       "lines": 1250,
       "consumers": 7,
       "consumerFiles": [
@@ -455,6 +465,7 @@
     {
       "name": "RunSettingsDiff",
       "file": "src/components/backtest/RunSettingsDiff.jsx",
+      "purpose": null,
       "lines": 82,
       "consumers": 7,
       "consumerFiles": [
@@ -478,6 +489,7 @@
     {
       "name": "SettingsControls",
       "file": "src/components/SettingsControls.jsx",
+      "purpose": "SettingsControls — the shared primitives every Settings page is built from.",
       "lines": 104,
       "consumers": 7,
       "consumerFiles": [
@@ -502,6 +514,7 @@
     {
       "name": "WidgetBoard",
       "file": "src/components/WidgetBoard.jsx",
+      "purpose": "A widget dashboard surface: pulls widget definitions from the widget registry",
       "lines": 712,
       "consumers": 7,
       "consumerFiles": [
@@ -531,6 +544,7 @@
     {
       "name": "ScreenOptions",
       "file": "src/components/ScreenOptions.jsx",
+      "purpose": "ScreenOptions — Reusable overlay for per-view configuration.",
       "lines": 1227,
       "consumers": 6,
       "consumerFiles": [
@@ -559,6 +573,7 @@
     {
       "name": "SignalBadge",
       "file": "src/components/SignalBadge.jsx",
+      "purpose": "SignalBadge — the ONE component that renders a trading signal.",
       "lines": 53,
       "consumers": 6,
       "consumerFiles": [
@@ -582,6 +597,7 @@
     {
       "name": "StatusCard",
       "file": "src/components/StatusCard.jsx",
+      "purpose": "StatusCard — a headline number, a short label, and detail that waits to be asked for.",
       "lines": 97,
       "consumers": 6,
       "consumerFiles": [
@@ -608,6 +624,7 @@
     {
       "name": "SuggestionQueue",
       "file": "src/components/SuggestionQueue.jsx",
+      "purpose": "SuggestionQueue — the queued changes we intend to TRY, shown wherever they are needed.",
       "lines": 179,
       "consumers": 6,
       "consumerFiles": [
@@ -637,6 +654,7 @@
     {
       "name": "Breadcrumbs",
       "file": "src/components/Breadcrumbs.jsx",
+      "purpose": null,
       "lines": 55,
       "consumers": 5,
       "consumerFiles": [
@@ -655,6 +673,7 @@
     {
       "name": "ChangeStat",
       "file": "src/components/ChangeStat.jsx",
+      "purpose": null,
       "lines": 128,
       "consumers": 5,
       "consumerFiles": [
@@ -682,6 +701,7 @@
     {
       "name": "LoadingOrbit",
       "file": "src/components/LoadingOrbit.jsx",
+      "purpose": "LoadingOrbit — \"something is happening, and there is no shape to draw\".",
       "lines": 44,
       "consumers": 5,
       "consumerFiles": [
@@ -705,6 +725,7 @@
     {
       "name": "MainTopInfo",
       "file": "src/components/MainTopInfo.jsx",
+      "purpose": null,
       "lines": 44,
       "consumers": 5,
       "consumerFiles": [
@@ -725,6 +746,7 @@
     {
       "name": "MarketTape",
       "file": "src/components/MarketTape.jsx",
+      "purpose": null,
       "lines": 542,
       "consumers": 5,
       "consumerFiles": [
@@ -759,6 +781,7 @@
     {
       "name": "MoversDepthPanel",
       "file": "src/components/backtest/MoversDepthPanel.jsx",
+      "purpose": "MoversDepthPanel — ONE session, taken apart: the ladder, the bars, the decisions, the decomposition.",
       "lines": 707,
       "consumers": 5,
       "consumerFiles": [
@@ -787,6 +810,7 @@
     {
       "name": "ReplayPlayer",
       "file": "src/components/backtest/replay/ReplayPlayer.jsx",
+      "purpose": "ReplayPlayer — play a backtest run forward and WATCH it trade (#819).",
       "lines": 414,
       "consumers": 5,
       "consumerFiles": [
@@ -807,6 +831,7 @@
     {
       "name": "SignalCard",
       "file": "src/components/SignalCard.jsx",
+      "purpose": "SignalCard — the ONE signal-card presentation, shared by Signals Overview and the META.Stack Cockpit.",
       "lines": 481,
       "consumers": 5,
       "consumerFiles": [
@@ -830,6 +855,7 @@
     {
       "name": "Sparkline",
       "file": "src/components/Sparkline.jsx",
+      "purpose": "Sparkline — a shape, not a chart.",
       "lines": 54,
       "consumers": 5,
       "consumerFiles": [
@@ -854,6 +880,7 @@
     {
       "name": "SpeedChart",
       "file": "src/components/SpeedChart.jsx",
+      "purpose": "SpeedChart — unified lightweight-charts wrapper for the Trading Command Suite.",
       "lines": 427,
       "consumers": 5,
       "consumerFiles": [
@@ -885,6 +912,7 @@
     {
       "name": "TypeTag",
       "file": "src/components/TypeTag.jsx",
+      "purpose": "TypeTag — the \"(proto)\" / \"(bot)\" / \"(strategy)\" suffix that states WHAT an identifier is.",
       "lines": 29,
       "consumers": 5,
       "consumerFiles": [
@@ -907,6 +935,7 @@
     {
       "name": "BacktestRunsPanel",
       "file": "src/components/backtest/BacktestRunsPanel.jsx",
+      "purpose": "BacktestRunsPanel — the 26 completed backtests that were invisible (#823 Stage 2).",
       "lines": 463,
       "consumers": 4,
       "consumerFiles": [
@@ -928,6 +957,7 @@
     {
       "name": "BestRecordPanel",
       "file": "src/components/backtest/BestRecordPanel.jsx",
+      "purpose": "BestRecordPanel — \"has this test ever been better than it is now?\" (#1341).",
       "lines": 255,
       "consumers": 4,
       "consumerFiles": [
@@ -951,6 +981,7 @@
     {
       "name": "DirectiveSettingsPanel",
       "file": "src/components/backtest/DirectiveSettingsPanel.jsx",
+      "purpose": "DirectiveSettingsPanel — step 4 of **Backtesting Protocols** (requirement, 2026-10-27).",
       "lines": 691,
       "consumers": 4,
       "consumerFiles": [
@@ -970,6 +1001,7 @@
     {
       "name": "EquityCurveChart",
       "file": "src/components/backtest/charts/EquityCurveChart.jsx",
+      "purpose": null,
       "lines": 245,
       "consumers": 4,
       "consumerFiles": [
@@ -991,6 +1023,7 @@
     {
       "name": "LoopControls",
       "file": "src/components/LoopControls.jsx",
+      "purpose": "LoopControls — the automation loop's controls, on the Dashboard.",
       "lines": 128,
       "consumers": 4,
       "consumerFiles": [
@@ -1010,6 +1043,7 @@
     {
       "name": "SetupBanner",
       "file": "src/components/SetupBanner.jsx",
+      "purpose": "SetupBanner — first-run onboarding prompt.",
       "lines": 111,
       "consumers": 4,
       "consumerFiles": [
@@ -1027,6 +1061,7 @@
     {
       "name": "StatCard",
       "file": "src/components/backtest/StatCard.jsx",
+      "purpose": "StatCard — one tile in the backtest Result grid, with an explanation that appears on HOVER AFTER",
       "lines": 89,
       "consumers": 4,
       "consumerFiles": [
@@ -1049,6 +1084,7 @@
     {
       "name": "StepAccordion",
       "file": "src/components/StepAccordion.jsx",
+      "purpose": "StepAccordion — one STEP of a working page, collapsible, with the answer in its header.",
       "lines": 161,
       "consumers": 4,
       "consumerFiles": [
@@ -1077,6 +1113,7 @@
     {
       "name": "ThemePacksChooser",
       "file": "src/components/ThemePacksChooser.jsx",
+      "purpose": "ThemePacksChooser — the one place a theme pack is selected.",
       "lines": 71,
       "consumers": 4,
       "consumerFiles": [
@@ -1094,6 +1131,7 @@
     {
       "name": "TradeConfigPanel",
       "file": "src/components/backtest/TradeConfigPanel.jsx",
+      "purpose": "TradeConfigPanel — WHERE EACH TRADE-MANAGEMENT NUMBER CAME FROM, AND HOW TO CHANGE IT.",
       "lines": 586,
       "consumers": 4,
       "consumerFiles": [
@@ -1118,6 +1156,7 @@
     {
       "name": "BacktestChart",
       "file": "src/components/backtest/charts/BacktestChart.jsx",
+      "purpose": null,
       "lines": 351,
       "consumers": 3,
       "consumerFiles": [
@@ -1138,6 +1177,7 @@
     {
       "name": "BacktestChartPane",
       "file": "src/components/backtest/charts/BacktestChartPane.jsx",
+      "purpose": null,
       "lines": 82,
       "consumers": 3,
       "consumerFiles": [
@@ -1157,6 +1197,7 @@
     {
       "name": "BacktestPeriodsPanel",
       "file": "src/components/backtest/BacktestPeriodsPanel.jsx",
+      "purpose": "BacktestPeriodsPanel — capture a WINDOW, name it, and reuse it (#986).",
       "lines": 571,
       "consumers": 3,
       "consumerFiles": [
@@ -1182,6 +1223,7 @@
     {
       "name": "CandlePatternChart",
       "file": "src/components/CandlePatternChart.jsx",
+      "purpose": null,
       "lines": 193,
       "consumers": 3,
       "consumerFiles": [
@@ -1206,6 +1248,7 @@
     {
       "name": "DevOverlay",
       "file": "src/components/DevOverlay.jsx",
+      "purpose": null,
       "lines": 307,
       "consumers": 3,
       "consumerFiles": [
@@ -1228,6 +1271,7 @@
     {
       "name": "DirectiveScoringNote",
       "file": "src/components/DirectiveScoringNote.jsx",
+      "purpose": "DirectiveScoringNote — \"how does this directive affect the score?\" in one sentence per case.",
       "lines": 111,
       "consumers": 3,
       "consumerFiles": [
@@ -1252,6 +1296,7 @@
     {
       "name": "GlossaryPopover",
       "file": "src/components/GlossaryPopover.jsx",
+      "purpose": "GlossaryPopover — hover tooltip for glossary terms",
       "lines": 94,
       "consumers": 3,
       "consumerFiles": [
@@ -1271,6 +1316,7 @@
     {
       "name": "KeyboardShortcutsHelp",
       "file": "src/components/KeyboardShortcutsHelp.jsx",
+      "purpose": null,
       "lines": 157,
       "consumers": 3,
       "consumerFiles": [
@@ -1287,6 +1333,7 @@
     {
       "name": "LoadingSteps",
       "file": "src/components/LoadingSteps.jsx",
+      "purpose": "LoadingSteps — progress for work whose LENGTH IS KNOWN, driven by real counts.",
       "lines": 74,
       "consumers": 3,
       "consumerFiles": [
@@ -1309,6 +1356,7 @@
     {
       "name": "MarketMoversPanel",
       "file": "src/components/MarketMoversPanel.jsx",
+      "purpose": "MarketMoversPanel — the MARKET-WIDE winners/losers discovery feed (#1283).",
       "lines": 312,
       "consumers": 3,
       "consumerFiles": [
@@ -1330,6 +1378,7 @@
     {
       "name": "MetaStackLayerSwitch",
       "file": "src/components/MetaStackLayerSwitch.jsx",
+      "purpose": "MetaStackLayerSwitch — the META.Stack inclusion switch for ONE layer (#615).",
       "lines": 100,
       "consumers": 3,
       "consumerFiles": [
@@ -1350,6 +1399,7 @@
     {
       "name": "ParityStep",
       "file": "src/features/movers-strategy/ParityStep.jsx",
+      "purpose": "ParityStep — WHAT THIS RUN CANNOT REPRODUCE OF THE LIVE ACCOUNT.",
       "lines": 205,
       "consumers": 3,
       "consumerFiles": [
@@ -1372,6 +1422,7 @@
     {
       "name": "ProtocolCarousel",
       "file": "src/components/ProtocolCarousel.jsx",
+      "purpose": "ProtocolCarousel — a fixed panel that shows ONE protocol at a time and lets the wheel scroll",
       "lines": 311,
       "consumers": 3,
       "consumerFiles": [
@@ -1394,6 +1445,7 @@
     {
       "name": "PwaInstallPrompt",
       "file": "src/components/PwaInstallPrompt.jsx",
+      "purpose": null,
       "lines": 94,
       "consumers": 3,
       "consumerFiles": [
@@ -1410,6 +1462,7 @@
     {
       "name": "QualifierStrip",
       "file": "src/components/QualifierStrip.jsx",
+      "purpose": "QualifierStrip — what qualifies a set of figures, as a ROW OF CHIPS, with the sentences on demand.",
       "lines": 86,
       "consumers": 3,
       "consumerFiles": [
@@ -1428,6 +1481,7 @@
     {
       "name": "RegisterSymbolOverlay",
       "file": "src/components/RegisterSymbolOverlay.jsx",
+      "purpose": "RegisterSymbolOverlay — ONE overlay for \"register this symbol and add it to a watchlist\",",
       "lines": 229,
       "consumers": 3,
       "consumerFiles": [
@@ -1447,6 +1501,7 @@
     {
       "name": "StatusBadge",
       "file": "src/components/StatusBadge.jsx",
+      "purpose": "StatusBadge — Reusable themed status pill/chip.",
       "lines": 17,
       "consumers": 3,
       "consumerFiles": [
@@ -1467,6 +1522,7 @@
     {
       "name": "TradeTable",
       "file": "src/components/backtest/TradeTable.jsx",
+      "purpose": "TradeTable — one row per CLOSED TRADE, with money on it (requirement, 2026-10-29).",
       "lines": 478,
       "consumers": 3,
       "consumerFiles": [
@@ -1489,6 +1545,7 @@
     {
       "name": "UnusedDataPanel",
       "file": "src/components/backtest/UnusedDataPanel.jsx",
+      "purpose": "UnusedDataPanel — WHAT THE RUN ALREADY KNOWS AND THIS PAGE DOES NOT SHOW (#1340).",
       "lines": 213,
       "consumers": 3,
       "consumerFiles": [
@@ -1508,6 +1565,7 @@
     {
       "name": "BacktestSettingsInventory",
       "file": "src/components/backtest/BacktestSettingsInventory.jsx",
+      "purpose": null,
       "lines": 226,
       "consumers": 2,
       "consumerFiles": [
@@ -1531,6 +1589,7 @@
     {
       "name": "BeginnerGuide",
       "file": "src/components/BeginnerGuide.jsx",
+      "purpose": "BeginnerGuide — two dismissable education containers",
       "lines": 387,
       "consumers": 2,
       "consumerFiles": [
@@ -1548,6 +1607,7 @@
     {
       "name": "CockpitPanelCard",
       "file": "src/components/CockpitPanelCard.jsx",
+      "purpose": "CockpitPanelCard — the ONE compact card for cockpit columns with no existing shared card.",
       "lines": 68,
       "consumers": 2,
       "consumerFiles": [
@@ -1571,6 +1631,7 @@
     {
       "name": "DirectiveRecordStep",
       "file": "src/features/movers-strategy/DirectiveRecordStep.jsx",
+      "purpose": "DirectiveRecordStep — WHAT EACH DIRECTIVE HAS ACTUALLY SCORED AND PREDICTED.",
       "lines": 227,
       "consumers": 2,
       "consumerFiles": [
@@ -1590,6 +1651,7 @@
     {
       "name": "ErrorBoundary",
       "file": "src/components/ErrorBoundary.jsx",
+      "purpose": "React class component that catches render errors in its subtree.",
       "lines": 62,
       "consumers": 2,
       "consumerFiles": [
@@ -1605,6 +1667,7 @@
     {
       "name": "LadderPanels",
       "file": "src/components/LadderPanels.jsx",
+      "purpose": "LadderPanels — the Ladder family's shared page furniture.",
       "lines": 153,
       "consumers": 2,
       "consumerFiles": [
@@ -1631,6 +1694,7 @@
     {
       "name": "MoversDepthChart",
       "file": "src/components/backtest/MoversDepthChart.jsx",
+      "purpose": "MoversDepthChart — ONE session's price with its decisions on it (note m).",
       "lines": 146,
       "consumers": 2,
       "consumerFiles": [
@@ -1652,6 +1716,7 @@
     {
       "name": "PositionsTable",
       "file": "src/components/mt5/PositionsTable.jsx",
+      "purpose": null,
       "lines": 52,
       "consumers": 2,
       "consumerFiles": [
@@ -1670,6 +1735,7 @@
     {
       "name": "ProgressionPanel",
       "file": "src/components/ProgressionPanel.jsx",
+      "purpose": "ProgressionPanel — the earned level, the XP behind it, and the active-bot ceiling it decides.",
       "lines": 180,
       "consumers": 2,
       "consumerFiles": [
@@ -1687,6 +1753,7 @@
     {
       "name": "ProtocolSymbolsPanel",
       "file": "src/components/ProtocolSymbolsPanel.jsx",
+      "purpose": "ProtocolSymbolsPanel — assign the symbols a protocol scores (#1124).",
       "lines": 195,
       "consumers": 2,
       "consumerFiles": [
@@ -1704,6 +1771,7 @@
     {
       "name": "ResultByDayStep",
       "file": "src/features/movers-strategy/ResultByDayStep.jsx",
+      "purpose": "ResultByDayStep — one row per session: what the screen offered, what the ranking picked, what it made.",
       "lines": 129,
       "consumers": 2,
       "consumerFiles": [
@@ -1721,6 +1789,7 @@
     {
       "name": "ResultBySymbolStep",
       "file": "src/features/movers-strategy/ResultBySymbolStep.jsx",
+      "purpose": "ResultBySymbolStep — which instruments carried the total.",
       "lines": 82,
       "consumers": 2,
       "consumerFiles": [
@@ -1738,6 +1807,7 @@
     {
       "name": "RsiDivergenceChart",
       "file": "src/components/backtest/RsiDivergenceChart.jsx",
+      "purpose": "RsiDivergenceChart — price + RSI with the pivots and the divergence pairs drawn.",
       "lines": 211,
       "consumers": 2,
       "consumerFiles": [
@@ -1759,6 +1829,7 @@
     {
       "name": "RsiDivergencePanel",
       "file": "src/components/backtest/RsiDivergencePanel.jsx",
+      "purpose": "RsiDivergencePanel — the settings, the chart, and the honest line between them.",
       "lines": 316,
       "consumers": 2,
       "consumerFiles": [
@@ -1794,6 +1865,7 @@
     {
       "name": "ScoringFunnelStep",
       "file": "src/features/movers-strategy/ScoringFunnelStep.jsx",
+      "purpose": "ScoringFunnelStep — SCORES → SIGNALS → TRADES, per symbol, with the speed rating beside them.",
       "lines": 201,
       "consumers": 2,
       "consumerFiles": [
@@ -1811,6 +1883,7 @@
     {
       "name": "ScoringMechanicsPanel",
       "file": "src/components/ScoringMechanicsPanel.jsx",
+      "purpose": "ScoringMechanicsPanel — the scoring maths, broken down, on live numbers.",
       "lines": 253,
       "consumers": 2,
       "consumerFiles": [
@@ -1831,6 +1904,7 @@
     {
       "name": "ScoringThresholds",
       "file": "src/components/ScoringThresholds.jsx",
+      "purpose": "ScoringThresholds — the gated-threshold readings, in two presentations.",
       "lines": 358,
       "consumers": 2,
       "consumerFiles": [
@@ -1846,6 +1920,7 @@
     {
       "name": "SpeedDecisionPanel",
       "file": "src/components/SpeedDecisionPanel.jsx",
+      "purpose": "Compact dashboard component for the Speed Trading page.",
       "lines": 261,
       "consumers": 2,
       "consumerFiles": [
@@ -1864,6 +1939,7 @@
     {
       "name": "StarToggle",
       "file": "src/components/StarToggle.jsx",
+      "purpose": null,
       "lines": 90,
       "consumers": 2,
       "consumerFiles": [
@@ -1884,6 +1960,7 @@
     {
       "name": "StepAuditNote",
       "file": "src/components/StepAuditNote.jsx",
+      "purpose": "StepAuditNote — the \"what this step does not yet show\" card that sits BETWEEN steps.",
       "lines": 37,
       "consumers": 2,
       "consumerFiles": [
@@ -1902,6 +1979,7 @@
     {
       "name": "StopSweepPanel",
       "file": "src/components/backtest/StopSweepPanel.jsx",
+      "purpose": null,
       "lines": 134,
       "consumers": 2,
       "consumerFiles": [
@@ -1919,6 +1997,7 @@
     {
       "name": "StrategyBits",
       "file": "src/components/StrategyBits.jsx",
+      "purpose": "StrategyBits — the fragments the TWO strategy surfaces both render.",
       "lines": 93,
       "consumers": 2,
       "consumerFiles": [
@@ -1936,6 +2015,7 @@
     {
       "name": "StrategyFaultBadge",
       "file": "src/components/StrategyFaultBadge.jsx",
+      "purpose": null,
       "lines": 18,
       "consumers": 2,
       "consumerFiles": [
@@ -1955,6 +2035,7 @@
     {
       "name": "StrategyWizard",
       "file": "src/components/StrategyBuilder/StrategyWizard.jsx",
+      "purpose": null,
       "lines": 567,
       "consumers": 2,
       "consumerFiles": [
@@ -1970,6 +2051,7 @@
     {
       "name": "SupporterPrompt",
       "file": "src/components/SupporterPrompt.jsx",
+      "purpose": "SupporterPrompt — the in-app support ask (#1147 §2.2, phase 2).",
       "lines": 156,
       "consumers": 2,
       "consumerFiles": [
@@ -1989,6 +2071,7 @@
     {
       "name": "SupportReportPanel",
       "file": "src/components/SupportReportPanel.jsx",
+      "purpose": "SupportReportPanel — the REVIEW half of the support service (#1248).",
       "lines": 139,
       "consumers": 2,
       "consumerFiles": [
@@ -2008,6 +2091,7 @@
     {
       "name": "SymbolAutocomplete",
       "file": "src/components/SymbolAutocomplete.jsx",
+      "purpose": "SymbolAutocomplete — DB-backed symbol search with autocomplete dropdown.",
       "lines": 170,
       "consumers": 2,
       "consumerFiles": [
@@ -2030,6 +2114,7 @@
     {
       "name": "SymbolChangePanel",
       "file": "src/components/SymbolChangePanel.jsx",
+      "purpose": null,
       "lines": 120,
       "consumers": 2,
       "consumerFiles": [
@@ -2047,6 +2132,7 @@
     {
       "name": "SymbolPickerField",
       "file": "src/components/SymbolPickerField.jsx",
+      "purpose": "SymbolPickerField — a symbol search box whose selection is written to `?symbol=` in the URL.",
       "lines": 51,
       "consumers": 2,
       "consumerFiles": [
@@ -2065,6 +2151,7 @@
     {
       "name": "ToggleSwitch",
       "file": "src/components/ToggleSwitch.jsx",
+      "purpose": "ToggleSwitch — Reusable toggle component.",
       "lines": 29,
       "consumers": 2,
       "consumerFiles": [
@@ -2086,6 +2173,7 @@
     {
       "name": "VariantSwitcher",
       "file": "src/components/VariantSwitcher.jsx",
+      "purpose": "VariantSwitcher — Inline Old | New page-design toggle.",
       "lines": 65,
       "consumers": 2,
       "consumerFiles": [
@@ -2101,6 +2189,7 @@
     {
       "name": "AutoRiskSizingDemo",
       "file": "src/components/FeatureLab/AutoRiskSizingDemo.jsx",
+      "purpose": null,
       "lines": 118,
       "consumers": 1,
       "consumerFiles": [
@@ -2119,6 +2208,7 @@
     {
       "name": "BacktestExperimentsPanel",
       "file": "src/components/backtest/BacktestExperimentsPanel.jsx",
+      "purpose": null,
       "lines": 121,
       "consumers": 1,
       "consumerFiles": [
@@ -2140,6 +2230,7 @@
     {
       "name": "CanvasCandlestickChart",
       "file": "src/components/CanvasCandlestickChart.jsx",
+      "purpose": "Custom Canvas 2D candlestick renderer — no external charting libs.",
       "lines": 507,
       "consumers": 1,
       "consumerFiles": [
@@ -2172,6 +2263,7 @@
     {
       "name": "CopyViewData",
       "file": "src/components/CopyViewData.jsx",
+      "purpose": "CopyViewData — Floating action button that copies the current view's",
       "lines": 46,
       "consumers": 1,
       "consumerFiles": [
@@ -2188,6 +2280,7 @@
     {
       "name": "DetachableWidget",
       "file": "src/components/DetachableWidget.jsx",
+      "purpose": null,
       "lines": 338,
       "consumers": 1,
       "consumerFiles": [
@@ -2227,6 +2320,7 @@
     {
       "name": "DirectiveConfigDemo",
       "file": "src/components/FeatureLab/DirectiveConfigDemo.jsx",
+      "purpose": null,
       "lines": 121,
       "consumers": 1,
       "consumerFiles": [
@@ -2241,6 +2335,7 @@
     {
       "name": "ErrorDisplay",
       "file": "src/components/ErrorDisplay.jsx",
+      "purpose": "Reusable error display component with severity levels, retry button,",
       "lines": 51,
       "consumers": 1,
       "consumerFiles": [
@@ -2261,6 +2356,7 @@
     {
       "name": "ExitDataRecoveryNotice",
       "file": "src/components/ExitDataRecoveryNotice.jsx",
+      "purpose": "ExitDataRecoveryNotice — the OPTIONAL prompt + button for exit-data gaps (#1093).",
       "lines": 146,
       "consumers": 1,
       "consumerFiles": [
@@ -2275,6 +2371,7 @@
     {
       "name": "FadeCardGroup",
       "file": "src/components/FadeCardGroup.jsx",
+      "purpose": null,
       "lines": 73,
       "consumers": 1,
       "consumerFiles": [
@@ -2293,6 +2390,7 @@
     {
       "name": "LastUpdated",
       "file": "src/components/LastUpdated.jsx",
+      "purpose": null,
       "lines": 44,
       "consumers": 1,
       "consumerFiles": [
@@ -2310,6 +2408,7 @@
     {
       "name": "LogRetentionPanel",
       "file": "src/components/system/LogRetentionPanel.jsx",
+      "purpose": "LogRetentionPanel — the visible face of log retention and volume (#1023).",
       "lines": 350,
       "consumers": 1,
       "consumerFiles": [
@@ -2330,6 +2429,7 @@
     {
       "name": "MarketContextWidget",
       "file": "src/components/MarketContextWidget.jsx",
+      "purpose": "MarketContextWidget — Compact market context for Dashboard",
       "lines": 76,
       "consumers": 1,
       "consumerFiles": [
@@ -2352,6 +2452,7 @@
     {
       "name": "MetaStackPipeline",
       "file": "src/components/MetaStackPipeline.jsx",
+      "purpose": "MetaStackPipeline — reusable META.Stack pipeline content (Focused + Technical).",
       "lines": 358,
       "consumers": 1,
       "consumerFiles": [
@@ -2370,6 +2471,7 @@
     {
       "name": "MoversSelectionComparison",
       "file": "src/components/backtest/MoversSelectionComparison.jsx",
+      "purpose": "MoversSelectionComparison — \"is this run better than the previous run of the SAME test?\" (#1328).",
       "lines": 382,
       "consumers": 1,
       "consumerFiles": [
@@ -2394,6 +2496,7 @@
     {
       "name": "NewsDissipationDemo",
       "file": "src/components/FeatureLab/NewsDissipationDemo.jsx",
+      "purpose": null,
       "lines": 114,
       "consumers": 1,
       "consumerFiles": [
@@ -2412,6 +2515,7 @@
     {
       "name": "OrderForm",
       "file": "src/components/mt5/OrderForm.jsx",
+      "purpose": null,
       "lines": 87,
       "consumers": 1,
       "consumerFiles": [
@@ -2429,6 +2533,7 @@
     {
       "name": "OrderModal",
       "file": "src/components/OrderModal.jsx",
+      "purpose": null,
       "lines": 307,
       "consumers": 1,
       "consumerFiles": [
@@ -2450,6 +2555,7 @@
     {
       "name": "PartialTakeProfitDemo",
       "file": "src/components/FeatureLab/PartialTakeProfitDemo.jsx",
+      "purpose": null,
       "lines": 138,
       "consumers": 1,
       "consumerFiles": [
@@ -2468,6 +2574,7 @@
     {
       "name": "PatternDetailPanel",
       "file": "src/components/PatternDetailPanel.jsx",
+      "purpose": null,
       "lines": 63,
       "consumers": 1,
       "consumerFiles": [
@@ -2487,6 +2594,7 @@
     {
       "name": "ProfitCapturePanel",
       "file": "src/components/backtest/ProfitCapturePanel.jsx",
+      "purpose": "ProfitCapturePanel — \"what was on the table, and what did we take?\" (2026-11-04)",
       "lines": 142,
       "consumers": 1,
       "consumerFiles": [
@@ -2503,6 +2611,7 @@
     {
       "name": "ProtocolDirectiveSettings",
       "file": "src/components/backtest/ProtocolDirectiveSettings.jsx",
+      "purpose": "ProtocolDirectiveSettings — step 6 (\"Directive overrides\") as a list of the protocol's DIRECTIVES.",
       "lines": 153,
       "consumers": 1,
       "consumerFiles": [
@@ -2523,6 +2632,7 @@
     {
       "name": "RoadmapBoard",
       "file": "src/components/roadmap/RoadmapBoard.jsx",
+      "purpose": "RoadmapBoard — portable kanban × gantt board (epic #681, Phase C).",
       "lines": 330,
       "consumers": 1,
       "consumerFiles": [
@@ -2544,6 +2654,7 @@
     {
       "name": "SeasonalityHeatmap",
       "file": "src/components/SeasonalityHeatmap.jsx",
+      "purpose": "SeasonalityHeatmap — 7×24 grid showing historical bullish/bearish bias",
       "lines": 122,
       "consumers": 1,
       "consumerFiles": [
@@ -2560,6 +2671,7 @@
     {
       "name": "SeesScoringPanel",
       "file": "src/components/SeesScoringPanel.jsx",
+      "purpose": "Displays ranked symbols with data status, normalized scores, and directive counts.",
       "lines": 214,
       "consumers": 1,
       "consumerFiles": [
@@ -2577,6 +2689,7 @@
     {
       "name": "SessionOpenEffectDemo",
       "file": "src/components/FeatureLab/SessionOpenEffectDemo.jsx",
+      "purpose": null,
       "lines": 100,
       "consumers": 1,
       "consumerFiles": [
@@ -2594,6 +2707,7 @@
     {
       "name": "StickyHeader",
       "file": "src/components/StickyHeader.jsx",
+      "purpose": null,
       "lines": 62,
       "consumers": 1,
       "consumerFiles": [
@@ -2616,6 +2730,7 @@
     {
       "name": "ThresholdRangeMap",
       "file": "src/components/ThresholdRangeMap.jsx",
+      "purpose": "ThresholdRangeMap — the NUMBERS map, not the steps map (#1275).",
       "lines": 170,
       "consumers": 1,
       "consumerFiles": [
@@ -2630,6 +2745,7 @@
     {
       "name": "TimezoneDecisionDemo",
       "file": "src/components/FeatureLab/TimezoneDecisionDemo.jsx",
+      "purpose": null,
       "lines": 244,
       "consumers": 1,
       "consumerFiles": [
@@ -2648,6 +2764,7 @@
     {
       "name": "TrailingStopDemo",
       "file": "src/components/FeatureLab/TrailingStopDemo.jsx",
+      "purpose": null,
       "lines": 320,
       "consumers": 1,
       "consumerFiles": [
