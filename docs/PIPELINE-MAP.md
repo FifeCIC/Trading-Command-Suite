@@ -95,9 +95,9 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 
 ### 31 sites — `((V1-V2)/V2)*100`
 
-- `nest/src/modules/backtest/backtest.controller.ts:1088` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:1150` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:1096` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:1158` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
 - `nest/src/modules/backtest/backtest.service.ts:4352` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
@@ -421,9 +421,9 @@ Identical after normalisation: variable names differ, the computation does not.
 
 ### 31 sites — `((V1-V2)/V2)*100`
 
-- `nest/src/modules/backtest/backtest.controller.ts:1088` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:1150` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:1096` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:1158` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
 - `nest/src/modules/backtest/backtest.service.ts:4352` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
@@ -646,9 +646,9 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 
 - `nest/src/modules/automation/stop-guardian.service.ts:2174` — `observeExhaustion()` → `decelPct`
   - `((prior-recent)/prior)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:1088` — `benchmark()` → `bhReturnPct`
+- `nest/src/modules/backtest/backtest.controller.ts:1150` — `benchmark()` → `bhReturnPct`
   - `((lastPrice-firstPrice)/firstPrice)*100`
-- `nest/src/modules/backtest/backtest.controller.ts:1096` — `benchmark()` → `dd`
+- `nest/src/modules/backtest/backtest.controller.ts:1158` — `benchmark()` → `dd`
   - `((bar.close-peak)/peak)*100`
 - `nest/src/modules/backtest/backtest.service.ts:4352` — `runDirectiveCoverage()` → `ret5d`
   - `((bar5d.close-currentBar.close)/currentBar.close)*100`
@@ -938,7 +938,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/automation/stop-guardian.service.ts:632 flat`
 - `nest/src/modules/backtest/affordable-size.ts:146 floorToStep`
 - `nest/src/modules/backtest/backtest-period.service.ts:910 countBars`
-- `nest/src/modules/backtest/backtest.controller.ts:983 mapResult`
+- `nest/src/modules/backtest/backtest.controller.ts:1045 mapResult`
 - `nest/src/modules/backtest/backtest.service.ts:1823 providerCounts`
 - `nest/src/modules/backtest/backtest.service.ts:4628 chartTime`
 - `nest/src/modules/backtest/backtest.service.ts:851 labelled`

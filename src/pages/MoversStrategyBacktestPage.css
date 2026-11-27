@@ -1780,3 +1780,14 @@
   line-height: 1.4;
   color: var(--text-dim);
 }
+
+/* The day-list preview's second figure — the peak reached, which differs from the move at the screen
+   time (owner, 2026-11-27). Dimmer and smaller than the move on purpose: the move decides the ranking,
+   the peak is context. It must still be legible, so it sits at the 11.5px floor rather than below it. */
+.mvp-ds-peak {
+  display: block;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}

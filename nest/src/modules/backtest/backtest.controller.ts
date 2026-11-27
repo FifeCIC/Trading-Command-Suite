@@ -26,6 +26,7 @@ import type { SelectionRunRequest } from './selection-run.service';
 import { parseMoversDatasetName } from './movers-dataset';
 // Peak % change reached on a dataset's answer day, per symbol — shown in the dataset table.
 import { peakChangeOnDay } from './peak-change';
+import { moveSoFarPct, parseCutoffUtc } from './selection-ranking';
 import { LongRunning } from '../../common/decorators/long-running.decorator';
 
 /**
@@ -88,8 +89,8 @@ export class BacktestController {
   async getMoversDatasets(@Query('cutoffUtc') cutoffUtc?: string) {
     /**
      * ── TWO DIFFERENT MOVES, AND THE PAGE WAS SHOWING ONLY THE MORE FLATTERING ONE ────────────────
-     * Owner, 2026-11-27: *"The symbol for Wed 11 Nov NXXT is showing 1903.2% and I thought it was
-     * original around 401%."* Both numbers are right, and they measure different things:
+     * Decided 2026-11-27, after the owner read a 1903.2% figure on the 11 Nov row and remembered the
+     * same name reading around 401%. Both numbers are right, and they measure different things:
      *
      *   PEAK  — the day's high against the previous session's close (`peakChangeOnDay`). 11 Nov's peak
      *           was a 3.74 high at 19:00, which is **3½ hours after the 15:30 screen time**. 1903.2%.

@@ -74,7 +74,8 @@ import DirectiveRecordStep from '../features/movers-strategy/DirectiveRecordStep
 // #1335 — what this run cannot reproduce of the live account, read from the build-gated register.
 import ParityStep from '../features/movers-strategy/ParityStep.jsx';
 import { dayLabel, progressLabel } from '../features/movers-strategy/format.js';
-import { formatPct, formatAmount } from '../core/format-utils.js';
+import { previewCells, hiddenCount, formatMove } from '../features/movers-strategy/day-list-preview.js';
+import { formatAmount } from '../core/format-utils.js';
 // The margin annotation between two steps: what the step above does not yet show, from data we already have.
 import StepAuditNote from '../components/StepAuditNote.jsx';
 import NoticeBlock from '../components/NoticeBlock.jsx';
@@ -179,8 +180,13 @@ export default function MoversStrategyBacktestPage() {
   // ⚠️ NO `.catch(() => …)`. Swallowing the error makes a failed request render as "no datasets",
   // which reads as a fact about the data rather than a fact about the connection.
   const datasetsQuery = useQuery({
-    queryKey: ['bt-movers-datasets'],
-    queryFn: () => apiGet('/api/backtest/movers-datasets'),
+    queryKey: ['bt-movers-datasets', cutoffUtc],
+    /**
+     * ⚠️ THE CUTOFF IS PASSED, because the preview must show the move the RANKER will use (2026-11-27).
+     * Without it the server could only offer the day's PEAK, which on 11 Nov was +1903.2% for a name the
+     * strategy could only have acted on at +430.3% — a 4.4× overstatement presented as a plain move.
+     */
+    queryFn: () => apiGet(`/api/backtest/movers-datasets?cutoffUtc=${encodeURIComponent(cutoffUtc)}`),
     retry: 2,
   });
   const protocolsQuery = useQuery({
@@ -219,6 +225,16 @@ export default function MoversStrategyBacktestPage() {
     [datasets, leg.side],
   );
   const datasetByName = useMemo(() => new Map(datasets.map((d) => [d.name, d])), [datasets]);
+
+  /**
+   * How many candidates a day holds beyond the five cells shown. Stated rather than silent: a cut list
+   * that does not say it was cut reads as the whole day's screen (#2026-11-27 — the owner asked whether
+   * the biggest mover was being ignored, and a hidden sixth name would have been the same confusion).
+   */
+  const hiddenCountForDays = useMemo(
+    () => Math.max(0, ...daysForLeg.slice(-5).map((d) => hiddenCount(d.symbols, 5))),
+    [daysForLeg],
+  );
 
   // Keep the selection inside the current leg: switching Long → Short must not leave winners days
   // ticked, because the backend refuses that pairing and the page would then look broken.
@@ -826,17 +842,25 @@ export default function MoversStrategyBacktestPage() {
                       <thead>
                         <tr>
                           <th scope="col">Day</th>
-                          <th scope="col" className="mvp-num">Symbol 1</th>
-                          <th scope="col" className="mvp-num">Symbol 2</th>
-                          <th scope="col" className="mvp-num">Symbol 3</th>
-                          <th scope="col" className="mvp-num">Symbol 4</th>
-                          <th scope="col" className="mvp-num">Symbol 5</th>
+                          {/**
+                            * ⚠️ "RANK 1…5", NOT "SYMBOL 1…5" (2026-11-27). The old header implied an
+                            * ordering the columns never had: `symbols` was sorted ALPHABETICALLY, so the
+                            * day's biggest mover sat under "Symbol 5" because N comes late in the
+                            * alphabet, and the owner reasonably asked whether `TRADE THE TOP = 1`
+                            * therefore ignored it. The server now orders by the move at the screen time
+                            * — the ranker's own order — so the number in the header is a rank.
+                            */}
+                          {[0, 1, 2, 3, 4].map((i) => (
+                            <th key={i} scope="col" className="mvp-num">
+                              Rank {i + 1}
+                            </th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
                         {daysForLeg.slice(-5).map((d) => {
                           const on = selected.includes(d.name);
-                          const syms = d.symbols ?? [];
+                          const cells = previewCells(d.symbols ?? [], d.symbolMovesAtCutoff, d.symbolMoves, 5);
                           return (
                             <tr key={d.name} className={on ? 'is-on' : undefined}>
                               <td>
@@ -851,13 +875,28 @@ export default function MoversStrategyBacktestPage() {
                                 </label>
                               </td>
                               {[0, 1, 2, 3, 4].map((i) => {
-                                const symbol = syms[i];
+                                const cell = cells[i];
                                 return (
                                   <td key={i} className="mvp-num mvp-ds-sym">
-                                    {symbol ? (
+                                    {cell ? (
                                       <>
-                                        <span className="mvp-ds-ticker">{symbol}</span>
-                                        <span className="mvp-ds-pct">{formatPct(d.symbolMoves?.[symbol])}</span>
+                                        <span className="mvp-ds-ticker">{cell.symbol}</span>
+                                        {/**
+                                          * TWO NUMBERS, BOTH LABELLED. The first is the move at the
+                                          * screen time — what the ranking sorts on, so rank 1 is the name
+                                          * `TRADE THE TOP = 1` takes. The second is how far the name
+                                          * eventually ran, shown only when it differs, because that gap is
+                                          * information and hiding it is what made 1903% look like a change.
+                                          */}
+                                        <span className="mvp-ds-pct">{formatMove(cell.atCutoff)}</span>
+                                        {cell.showPeak && (
+                                          <span
+                                            className="mvp-ds-peak"
+                                            title={`The day's peak reached: ${formatMove(cell.peak)} — often after the screen time, when the strategy could no longer enter.`}
+                                          >
+                                            peak {formatMove(cell.peak)}
+                                          </span>
+                                        )}
                                       </>
                                     ) : (
                                       '—'
@@ -871,6 +910,15 @@ export default function MoversStrategyBacktestPage() {
                       </tbody>
                     </table>
                   </div>
+                  <p className="mvp-note">
+                    The percentage is each name’s move <strong>at the screen time</strong> — the number the
+                    ranking sorts on, so rank 1 is what <em>Trade the top: 1</em> takes, subject to the
+                    engine’s bar floor. <em>peak</em> is how far the name ran by the close, which can be
+                    far larger and is usually later than the strategy could enter.
+                    {hiddenCountForDays > 0 && (
+                      <> Showing the top 5 of {hiddenCountForDays + 5} candidates per day.</>
+                    )}
+                  </p>
                   {daysForLeg.length > 5 && (
                     <p className="mvp-note">
                       Showing the latest 5 of {daysForLeg.length} stored {leg.side} days.
