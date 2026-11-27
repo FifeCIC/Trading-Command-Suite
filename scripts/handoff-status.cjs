@@ -77,8 +77,17 @@ function classify(files) {
   const legacyVocabulary = [];
   for (const f of files) {
     (f.processed ? processed : pending).push(f.name);
+    /**
+     * ⚠️ THE DATE IS READ FROM THE SLUG, NOT THE PATH (2026-11-27). `SLUG_DATE` is anchored at the start
+     * of the name, and a consumed file's name is `processed/<date>-<issue>-….md` — so the prefix shifted
+     * the anchor, every processed handoff parsed as dateless, a dateless file is treated as CURRENT by
+     * design, and `processed/2026-11-17-1291-…` was reported as an ambiguous heading for ever. Measured:
+     * it was the ONLY finding, and it made `handoff-status.cjs` exit 1 on a store with nothing wrong.
+     * A guard that is permanently red for a historical artefact is the shape that gets allowlisted.
+     */
+    const slug = f.name.replace(/^processed\//, '');
     if (!AMBIGUOUS_HEADING.test(f.body || '')) continue;
-    const d = (f.name.match(SLUG_DATE) || [])[1] || '';
+    const d = (slug.match(SLUG_DATE) || [])[1] || '';
     // Grandfathered only when the slug carries a date BEFORE the rule. An unparseable or missing
     // date is treated as CURRENT, so a new file cannot dodge the rule by having a bad name.
     (d && d < VOCABULARY_RULE_FROM ? legacyVocabulary : ambiguousVocabulary).push(f.name);
@@ -87,7 +96,7 @@ function classify(files) {
   // second landing days later. Merging is only right when it restates the same landing.
   const byIssue = new Map();
   for (const f of [...pending, ...processed]) {
-    const m = f.match(SLUG_ISSUE);
+    const m = f.replace(/^processed\//, '').match(SLUG_ISSUE);
     if (!m || Number(m[1]) < 100) continue;
     if (!byIssue.has(Number(m[1]))) byIssue.set(Number(m[1]), []);
     byIssue.get(Number(m[1])).push(f);
@@ -126,6 +135,19 @@ function selfTest() {
   // 3c — a handoff with NO parseable date is treated as CURRENT, so a bad filename cannot dodge it.
   check('3c an undated handoff is held to the rule, not grandfathered',
     classify([{ name: 'no-date.md', body: '## Not done' }]).ambiguousVocabulary.length, 1);
+
+  /**
+   * 3d — A CONSUMED FILE'S DATE IS READ THROUGH ITS `processed/` PREFIX (2026-11-27).
+   *
+   * ⚠️ This was a live false positive, and it was the ONLY finding on a store with nothing wrong:
+   * `processed/2026-11-17-1291-….md` parsed as dateless because `SLUG_DATE` is anchored at the start of
+   * the name, and a dateless file is treated as CURRENT by design — so a consumed historical handoff
+   * was reported for ever and the tool exited 1. A guard that is permanently red gets allowlisted.
+   */
+  check('3d a consumed pre-rule file is grandfathered through its processed/ prefix',
+    classify([{ name: 'processed/2026-09-11-old.md', body: '## Not done', processed: true }]).legacyVocabulary.length, 1);
+  check('3d …and a consumed POST-rule file is still held to the rule',
+    classify([{ name: 'processed/2026-11-17-x.md', body: '## Not done', processed: true }]).ambiguousVocabulary.length, 1);
 
   // 4 — and the NEW vocabulary is NOT flagged, or the check punishes the fix it exists to drive.
   const good = '## Deferred — work handed on\n\n- x. Owner: #1\n\n## Deliberately unchanged\n\n- y. why';
