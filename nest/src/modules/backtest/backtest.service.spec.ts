@@ -466,12 +466,31 @@ describe('mergeBotConfig — "backtest this bot" as one call (#965 item 3)', () 
    * ⚠️ #843 — the caveat must be present on EVERY bot-driven run, with the bot's own lot size in
    * it. This is what stops the result reading as a forecast of the bot's P&L.
    */
-  it('states the sizing divergence with the bot\'s own lot size (#843)', () => {
+  /**
+   * ⚠️ THIS CASE USED TO ASSERT THE OPPOSITE (#843 closed 2026-10-10, guard corrected 2026-11-27). It pinned
+   * `POSITION SIZING DOES NOT MATCH THE LIVE PATH` and `ENTRY LOGIC` — so for seven weeks the suite
+   * GUARANTEED that a false warning stayed on every bot-driven result. A test that pins a stale claim is
+   * worse than no test: it makes the lie look verified.
+   *
+   * The assertions now name what is true and what is still missing, in that order, so a future edit that
+   * loses the residual fails here.
+   */
+  it('states which half of sizing is shared and which is not (#843, corrected 2026-11-27)', () => {
     const out = mergeBotConfig({ botId: 'bot-1' }, bot());
+    const said = out.caveats.join(' ');
 
-    expect(out.caveats.join(' ')).toMatch(/POSITION SIZING DOES NOT MATCH THE LIVE PATH/);
-    expect(out.caveats.join(' ')).toMatch(/0\.01 lot/);
-    expect(out.caveats.join(' ')).toMatch(/ENTRY LOGIC/);
+    // MATHS IS SHARED — and the caveat must not claim otherwise.
+    expect(said).toMatch(/SIZING MATHS ARE SHARED/);
+    expect(said).not.toMatch(/DOES NOT MATCH THE LIVE PATH/);
+    expect(said).not.toMatch(/until #843 lands/);
+
+    // …but the VENUE's limits are not modelled, and that is the residual a reader is owed.
+    expect(said).toMatch(/applyVolumeConstraints/);
+    expect(said).toMatch(/volumeStep/);
+    expect(said).toMatch(/TCS-TRADE-023/);
+
+    // The bot's own lot size and the not-zero rule survive.
+    expect(said).toMatch(/0\.01 lot/);
     expect(out.drivenBy.baseSize).toBe(0.01);
   });
 

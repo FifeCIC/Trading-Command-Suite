@@ -93,7 +93,7 @@ export const THEORIES = [
       basis: 'code-read',
       n: null,
       result:
-        '`config.weight` does not appear in `scoreWithGating`’s assembly — the composite is the RAW sum of directional directive scores (risk-multiplied). The service’s own note (2026-09-03) says the weights shown in the registry are "aspirational until #718 lands". Every Protocols-page group weight is displayed, stored and saved, and never applied.',
+        '`config.weight` does not appear in `scoreWithGating`’s assembly — the composite is the RAW sum of directional directive scores (risk-multiplied). The service’s own note says the weights shown in the registry are aspirational, and that is a SETTLED state rather than a pending one (#718 closed 2026-09-06; register row 30 / #919 decided the denominator). Every Protocols-page group weight is displayed, stored and saved, and never applied.',
       measuredAt: '2026-09-24',
       source: 'nest/src/modules/scoring/protocol-gating.service.ts doc block + assembly',
     },

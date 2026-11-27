@@ -202,7 +202,7 @@ export interface SelectionSymbolResult {
    *
    * ⚠️ THEY WERE BEING DROPPED (measured 2026-11-26). `this.backtest.run()` returns `caveats`, and this
    * service read `.trades`, `.id` and `.persisted` from it and nothing else — so the engine's own
-   * statements, including *"POSITION SIZING DOES NOT MATCH THE LIVE PATH (#843)"*, never reached a
+   * statements, including the sizing note (#843) and the scale-in warning, never reached a
    * selection result. The wrapper was silently reporting a subset of what the run knew. Register row 300.
    */
   caveats?: string[];
@@ -1202,7 +1202,7 @@ export class SelectionRunService {
     /**
      * ── THE ENGINE'S OWN CAVEATS, SURFACED RATHER THAN RESTATED ─────────────────────────
      * A selection run is a wrapper over the single-symbol engine, and that engine qualifies its own
-     * numbers: sizing does not match the live path (#843), an entry bar or time stop makes old runs
+     * numbers: the sizing residual (#843), an entry bar or time stop makes old runs
      * non-comparable, a session window could not be applied, and — the parity register's only `gap` —
      * scale-in is not modelled. None of those reached this result until 2026-11-26: the wrapper read
      * `.trades`, `.id` and `.persisted` and dropped `.caveats`, so the page showed a SUBSET of what the

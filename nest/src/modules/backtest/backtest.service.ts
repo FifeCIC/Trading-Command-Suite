@@ -930,15 +930,23 @@ export function mergeBotConfig(
   const baseSize = bot.baseSize ?? null;
   const sizing = merged.positionModel ?? 'fixedPercent';
   const caveats: string[] = [
-    `⚠️ POSITION SIZING DOES NOT MATCH THE LIVE PATH (#843). This bot trades ` +
+    // ⚠️ REWRITTEN 2026-11-27 (#843 CLOSED 2026-10-10). This sentence used to tell the reader the sizing
+    // maths was NOT shared and to read the run as "a study of the signal until #843 lands". #843 landed
+    // seven weeks earlier: the engine calls the same `computeSizing()` the live loop calls, so the claim
+    // was FALSE on every bot-driven run — and a false warning beside a true one (scale-in not modelled)
+    // is how a reader learns to skip both. The residual is narrower, and is now named.
+    `⚠️ SIZING MATHS ARE SHARED; THE BROKER'S VOLUME LIMITS ARE NOT. This bot trades ` +
       `${
         baseSize === null
           ? 'an UNSET baseSize (the live loop would use its 0.01 default)'
           : `${baseSize} lot(s)`
-      } per trade, while this run sizes in per-unit shares via '${sizing}'. A different size means a ` +
-      `different risk per trade, so this run's P&L, drawdown and Sharpe do NOT transfer to the live ` +
-      'bot — they describe its ENTRY LOGIC at another size. Read it as a study of the signal until ' +
-      '#843 lands one shared sizing function.',
+      } per trade, and this run sizes through the SAME function the live loop uses (trading/position-sizing.ts, ` +
+      '#843). What a run does NOT model is applyVolumeConstraints(): the venue volumeStep rounding and its ' +
+      'volumeMin/volumeMax clamp. A computed size that is below the broker minimum or off its step is TAKEN ' +
+      'here and would be REFUSED live (TCS-TRADE-023), so a run can contain trades the bridge would have ' +
+      'rejected. Trade-for-trade P&L is comparable; the POPULATION is slightly optimistic.',
+
+
     // ⚠️ #1136 — the entry bar IS applied now, and that makes old runs non-comparable. Saying so on
     // the result is the only way a reader comparing a new run with a stored one can know.
     (merged.minComposite ?? 0) > 0

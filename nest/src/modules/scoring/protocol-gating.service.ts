@@ -155,12 +155,18 @@ const RARITY_HISTORY_TTL_MS = 60_000;
  *
  * The weightStrategy is stored on ScoringStrategy and defaults to 'group-weighted'.
  *
- * ⚠️ IMPLEMENTATION NOTE (2026-09-03): the composite today is the RAW sum of
- * directional directive scores (risk-multiplied), NOT the weighted formula
- * above. `config.weight` is not applied in scoreWithGating's assembly — empty
- * or low-weight groups therefore cannot drag the composite, but the weights
- * shown in the registry are aspirational until #718 lands per-protocol gates.
- * Do not tune group weights expecting the documented formula to hold.
+ * ⚠️ IMPLEMENTATION NOTE: the composite is the RAW sum of directional directive scores
+ * (risk-multiplied), NOT the weighted formula above. `config.weight` is not applied in
+ * scoreWithGating's assembly, so empty or low-weight groups cannot drag the composite — but the
+ * weights shown in the registry are ASPIRATIONAL. Do not tune group weights expecting the
+ * documented formula to hold.
+ *
+ * ⚠️ "ASPIRATIONAL" IS A SETTLED STATE, NOT A PENDING ONE (corrected 2026-11-27). This note used to
+ * end "...aspirational until #718 lands per-protocol gates". #718 was closed on 2026-09-06, so for
+ * eleven weeks the comment told a reader a fix was coming and to wait for it. The truth is the
+ * opposite: the denominator was DECIDED — register row 30 / #919 — and `weightStrategy` is inert by
+ * that decision, which the block above already documents at length. A stale "until #N lands" turns a
+ * decision into a queue, and a reader who knows the issue is closed concludes the note is simply old.
  */
 
 // ─── Result Types ────────────────────────────────────────
