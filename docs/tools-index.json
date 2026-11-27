@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 215,
+  "count": 216,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1407,6 +1407,17 @@
       "category": "validator",
       "purpose": "the \"CSS variable actually exists\" gate",
       "selfTest": false,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-debt-expiry.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "accepted debt must be LOOKED AT again, or it becomes permanent by default.",
+      "selfTest": true,
       "reaches": [
         "prebuild",
         "npm"

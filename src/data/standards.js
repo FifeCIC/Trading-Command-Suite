@@ -152,6 +152,18 @@ export const STANDARDS = [
     enforcedIn: 'prebuild',
   },
   {
+    id: 'debt-expiry',
+    name: 'Accepted debt is reviewed before it expires',
+    why: 'Nine ratchet baselines held **~1,640 findings**, and every one was guarded against GROWTH by its own '
+      + 'gate — but **none against AGE**. "The baseline may only go down" is a rule about direction, not pace: '
+      + 'a number that never moves is a decision nobody revisited. `pipeline-contracts` was worse — it printed '
+      + '"does not fail the build" and exited 0 while five directive classes still scored off the calendar.',
+    gate: 'scripts/validate-debt-expiry.cjs',
+    verify: 'npm run debt',
+    selfTest: 'npm run debt:self-test',
+    enforcedIn: 'prebuild',
+  },
+  {
     id: 'component-catalogue',
     name: 'A component nobody can find is a component that will be duplicated',
     why: 'Measured 2026-11-27: `src/components` holds **117 components, none orphaned, 86% reused** — and '
