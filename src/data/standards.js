@@ -152,6 +152,18 @@ export const STANDARDS = [
     enforcedIn: 'prebuild',
   },
   {
+    id: 'component-catalogue',
+    name: 'A component nobody can find is a component that will be duplicated',
+    why: 'Measured 2026-11-27: `src/components` holds **117 components, none orphaned, 86% reused** — and '
+      + 'nobody could see them. The same wager `tools-index.cjs` already paid for (**175 tools, 75 orphans**, '
+      + 'and three separate proposals to build things already in the list). Every duplicated widget is a '
+      + 'second copy that drifts, and only one of the two gets the next fix.',
+    gate: 'scripts/components-index.cjs',
+    verify: 'npm run components',
+    selfTest: 'npm run components:self-test',
+    enforcedIn: 'prebuild',
+  },
+  {
     id: 'page-data-access',
     name: 'A page reads data through the shared client',
     why: 'Measured 2026-11-26: 45 real `fetch(` calls across 21 files bypassed `src/core/api/client.js`, '

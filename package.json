@@ -1,6 +1,6 @@
 {
   "name": "tradingcs",
-  "version": "0.178.1",
+  "version": "0.179.0",
   "releaseStage": "alpha",
   "private": true,
   "license": "AGPL-3.0",
@@ -37,7 +37,7 @@
     "audit:unregistered-directives": "node scripts/why-unregistered.cjs",
     "audit:unregistered-directives:self-test": "node scripts/why-unregistered.cjs --self-test",
     "build": "vite build",
-    "prebuild": "node scripts/validate-phrasing.cjs && node scripts/validate-repo-hygiene.cjs && node scripts/validate-page-visibility.cjs && node scripts/validate-no-notice-bar.cjs && node scripts/validate-arch-card-shapes.cjs && node scripts/validate-route-params.cjs && node scripts/validate-fault-taxonomy.cjs && node scripts/validate-standards.cjs && node scripts/validate-formatters.cjs && node scripts/validate-colour-literals.cjs && node scripts/validate-page-data-access.cjs && node --test src/theme/semantic-contrast.test.js",
+    "prebuild": "node scripts/validate-phrasing.cjs && node scripts/validate-repo-hygiene.cjs && node scripts/validate-page-visibility.cjs && node scripts/validate-no-notice-bar.cjs && node scripts/validate-arch-card-shapes.cjs && node scripts/validate-route-params.cjs && node scripts/validate-fault-taxonomy.cjs && node scripts/validate-standards.cjs && node scripts/validate-formatters.cjs && node scripts/validate-colour-literals.cjs && node scripts/validate-page-data-access.cjs && node scripts/components-index.cjs --check && node --test src/theme/semantic-contrast.test.js",
     "postbuild": "node ./scripts/check-bundle-budget.mjs",
     "build:guard": "npm run build",
     "canary:arch-docs": "node ./scripts/canary-architecture-docs.cjs",
@@ -182,6 +182,11 @@
     "data-access": "node scripts/validate-page-data-access.cjs --report",
     "data-access:check": "node scripts/validate-page-data-access.cjs",
     "data-access:self-test": "node scripts/validate-page-data-access.cjs --self-test",
+    "components": "node scripts/components-index.cjs --report",
+    "components:check": "node scripts/components-index.cjs --check",
+    "components:write": "node scripts/components-index.cjs --write",
+    "components:find": "node scripts/components-index.cjs --find",
+    "components:self-test": "node scripts/components-index.cjs --self-test",
     "standards:self-test": "node scripts/validate-standards.cjs --self-test",
     "audit:handoffs:self-test": "node scripts/check-handoff-staleness.cjs --self-test"
   },

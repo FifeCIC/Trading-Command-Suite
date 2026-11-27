@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 214,
+  "count": 215,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -635,6 +635,17 @@
       "selfTest": true,
       "reaches": [
         "docs"
+      ]
+    },
+    {
+      "name": "components-index.cjs",
+      "where": "repo",
+      "category": "tool",
+      "purpose": "the catalogue of shared UI, generated from the files.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
       ]
     },
     {

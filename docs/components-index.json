@@ -1,0 +1,2667 @@
+{
+  "generated": "scripts/components-index.cjs",
+  "total": 117,
+  "counts": {
+    "total": 117,
+    "byTier": {
+      "primitive": 28,
+      "shared": 60,
+      "single": 29,
+      "orphan": 0
+    },
+    "tested": 3,
+    "withInlineStyles": 45,
+    "withHex": 64
+  },
+  "components": [
+    {
+      "name": "LoadingSkeleton",
+      "file": "src/components/LoadingSkeleton.jsx",
+      "lines": 78,
+      "consumers": 74,
+      "consumerFiles": [
+        "src/components/LoadingOrbit.jsx",
+        "src/components/MetaStackPipeline.jsx",
+        "src/components/SeesScoringPanel.jsx",
+        "src/core/architecture-reference.js",
+        "src/pages/AbLadderPage.jsx",
+        "src/pages/AbStrategiesPage.jsx",
+        "src/pages/AdvancedResearchPage.jsx",
+        "src/pages/ArchitectureFrameworkPage.jsx",
+        "src/pages/BacktestDataPage.jsx",
+        "src/pages/BacktestPage.jsx",
+        "src/pages/BrokersPage.jsx",
+        "src/pages/CacheMonitorPage.jsx",
+        "src/pages/CapabilityMapPage.jsx",
+        "src/pages/ChartComparisonPage.jsx",
+        "src/pages/DailyBriefingPage.jsx",
+        "src/pages/DataAreaLandingPage.jsx",
+        "src/pages/DataElementsPage.jsx",
+        "src/pages/DataStatusPage.jsx",
+        "src/pages/DatabaseTablesPage.jsx",
+        "src/pages/DerivedStrategiesPage.jsx",
+        "src/pages/DirectiveImpactAuditPage.jsx",
+        "src/pages/DirectiveViewerPage.jsx",
+        "src/pages/DirectivesManagerPage.jsx",
+        "src/pages/EventsCalendarPage.jsx",
+        "src/pages/ExitSignalsPage.jsx",
+        "src/pages/GapScannerPage.jsx",
+        "src/pages/HealthDashboardPage.jsx",
+        "src/pages/ImportJobsPage.jsx",
+        "src/pages/LadderPage.jsx",
+        "src/pages/MacroMonitorPage.jsx",
+        "src/pages/MarketContextPage.jsx",
+        "src/pages/MarketCorrelationsPage.jsx",
+        "src/pages/MetaStackStatusPage.jsx",
+        "src/pages/MoversStrategyBacktestPage.jsx",
+        "src/pages/Mt5StatusPage.jsx",
+        "src/pages/NewsIntelPage.jsx",
+        "src/pages/ObjectivesPage.jsx",
+        "src/pages/PerformanceLabPage.jsx",
+        "src/pages/PersonalFinancesPage.jsx",
+        "src/pages/PlatformComparisonsPage.jsx",
+        "src/pages/PortfolioEventsPage.jsx",
+        "src/pages/ProtocolTrailPage.jsx",
+        "src/pages/ProtocolsLadderPage.jsx",
+        "src/pages/ProtocolsPerformancePage.jsx",
+        "src/pages/ProviderHealthPage.jsx",
+        "src/pages/RecentlyAnalysedSymbolsPage.jsx",
+        "src/pages/RiskControlsPage.jsx",
+        "src/pages/ScoringActivityLogsPage.jsx",
+        "src/pages/ScoringOverviewPage.jsx",
+        "src/pages/SeasonalityHeatmapPage.jsx",
+        "src/pages/SectorRotationPage.jsx",
+        "src/pages/SeesArenaPage.jsx",
+        "src/pages/SignalsOverviewPage.jsx",
+        "src/pages/SinglesMonitorPage.jsx",
+        "src/pages/SnapshotLibraryPage.jsx",
+        "src/pages/SnapshotReplayPage.jsx",
+        "src/pages/SocialNetworksPage.jsx",
+        "src/pages/SourcesPage.jsx",
+        "src/pages/SpeedScannerPage.jsx",
+        "src/pages/StockInvestigationPage.jsx",
+        "src/pages/StrategiesListPage.jsx",
+        "src/pages/StrategyComparisonPage.jsx",
+        "src/pages/StrategyCreatePage.jsx",
+        "src/pages/StrategyMonitorPage.jsx",
+        "src/pages/SupportResistancePage.jsx",
+        "src/pages/SymbolFocusPage.jsx",
+        "src/pages/SymbolPage.jsx",
+        "src/pages/SymbolsLadderPage.jsx",
+        "src/pages/TechnicalIndicatorsPage.jsx",
+        "src/pages/TradingSettingsPage.jsx",
+        "src/pages/TradingStylesPage.jsx",
+        "src/pages/VendorsPage.jsx",
+        "src/pages/VolatilityAnalysisPage.jsx",
+        "src/pages/WalkForwardSurvivorsPage.jsx"
+      ],
+      "tier": "primitive",
+      "props": [
+        "variant",
+        "count",
+        "rows",
+        "cols",
+        "lines",
+        "className"
+      ],
+      "hasTest": false,
+      "inlineStyles": 4,
+      "hexLiterals": 0
+    },
+    {
+      "name": "NoticeBlock",
+      "file": "src/components/NoticeBlock.jsx",
+      "lines": 74,
+      "consumers": 61,
+      "consumerFiles": [
+        "src/components/ExitDataRecoveryNotice.jsx",
+        "src/components/InfoNote.jsx",
+        "src/components/MarketMoversPanel.jsx",
+        "src/components/MetaStackLayerSwitch.jsx",
+        "src/components/OrderModal.jsx",
+        "src/components/ProtocolSymbolsPanel.jsx",
+        "src/components/SeasonalityHeatmap.jsx",
+        "src/components/SignalCard.jsx",
+        "src/components/SpeedChart.jsx",
+        "src/components/SpeedDecisionPanel.jsx",
+        "src/components/StatusCard.jsx",
+        "src/components/SuggestionQueue.jsx",
+        "src/components/backtest/BacktestExperimentsPanel.jsx",
+        "src/components/backtest/BacktestPeriodsPanel.jsx",
+        "src/components/backtest/BacktestRunsPanel.jsx",
+        "src/components/backtest/BacktestSettingsInventory.jsx",
+        "src/components/backtest/DirectiveSettingsPanel.jsx",
+        "src/components/backtest/MoversSelectionComparison.jsx",
+        "src/components/backtest/RsiDivergencePanel.jsx",
+        "src/components/backtest/RunComparisonPanels.jsx",
+        "src/components/backtest/replay/ReplayPlayer.jsx",
+        "src/components/system/LogRetentionPanel.jsx",
+        "src/core/architecture-batch-57.js",
+        "src/core/architecture-reference.js",
+        "src/data/qa-checklist.js",
+        "src/features/movers-strategy/DirectiveRecordStep.jsx",
+        "src/features/movers-strategy/ParityStep.jsx",
+        "src/pages/AbStrategiesPage.jsx",
+        "src/pages/ActiveSymbolsPage.jsx",
+        "src/pages/AutomationSettingsPage.jsx",
+        "src/pages/BacktestPage.jsx",
+        "src/pages/BlockedSignalsPage.jsx",
+        "src/pages/BrokersPage.jsx",
+        "src/pages/CreateProtocolsPage.jsx",
+        "src/pages/DataElementsPage.jsx",
+        "src/pages/DerivedStrategiesPage.jsx",
+        "src/pages/EarningsCalendarPage.jsx",
+        "src/pages/EarningsWhispersPage.jsx",
+        "src/pages/ImportJobsPage.jsx",
+        "src/pages/MonitoringPage.jsx",
+        "src/pages/MoversStrategyBacktestPage.jsx",
+        "src/pages/PerformanceChangePage.jsx",
+        "src/pages/PriceForecastPage.jsx",
+        "src/pages/ProtocolsPage.jsx",
+        "src/pages/ScoringDebugLab.jsx",
+        "src/pages/SignalsOverviewPage.jsx",
+        "src/pages/SnapshotReplayPage.jsx",
+        "src/pages/StopGuardianStatsPage.jsx",
+        "src/pages/StrategiesListPage.jsx",
+        "src/pages/StrategyComparisonPage.jsx",
+        "src/pages/StrategyMonitorPage.jsx",
+        "src/pages/SymbolFocusPage.jsx",
+        "src/pages/SymbolPage.jsx",
+        "src/pages/T212PortfolioPage.jsx",
+        "src/pages/TradingSettingsPage.jsx",
+        "src/pages/TrendReadingPage.jsx",
+        "src/pages/UiReviewPage.jsx",
+        "src/pages/UserWatchlistsPage.jsx",
+        "src/pages/ViewStrategyPage.jsx",
+        "src/pages/WalkForwardSurvivorsPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "primitive",
+      "props": [
+        "notice",
+        "compact"
+      ],
+      "hasTest": true,
+      "inlineStyles": 0,
+      "hexLiterals": 2
+    },
+    {
+      "name": "ApiOfflineBanner",
+      "file": "src/components/ApiOfflineBanner.jsx",
+      "lines": 62,
+      "consumers": 27,
+      "consumerFiles": [
+        "src/pages/AdvancedResearchPage.jsx",
+        "src/pages/ArchitectureFrameworkPage.jsx",
+        "src/pages/ChartComparisonPage.jsx",
+        "src/pages/DiagramsPage.jsx",
+        "src/pages/ExitSignalsPage.jsx",
+        "src/pages/GapScannerPage.jsx",
+        "src/pages/HealthDashboardPage.jsx",
+        "src/pages/MarketContextPage.jsx",
+        "src/pages/MarketCorrelationsPage.jsx",
+        "src/pages/ObjectivesPage.jsx",
+        "src/pages/PerformanceLabPage.jsx",
+        "src/pages/PersonalFinancesPage.jsx",
+        "src/pages/PortfolioEventsPage.jsx",
+        "src/pages/ProtocolQueuePage.jsx",
+        "src/pages/ProviderHealthPage.jsx",
+        "src/pages/RecentlyAnalysedSymbolsPage.jsx",
+        "src/pages/RiskControlsPage.jsx",
+        "src/pages/ScheduledJobsPage.jsx",
+        "src/pages/ScoringActivityLogsPage.jsx",
+        "src/pages/SeasonalityHeatmapPage.jsx",
+        "src/pages/SocialNetworksPage.jsx",
+        "src/pages/SpeedScannerPage.jsx",
+        "src/pages/StockInvestigationPage.jsx",
+        "src/pages/SymbolPage.jsx",
+        "src/pages/TradingSettingsPage.jsx",
+        "src/pages/TradingStylesPage.jsx",
+        "src/pages/TrainingCandlePatternsPage.jsx"
+      ],
+      "tier": "primitive",
+      "props": [
+        "serviceName",
+        "port",
+        "compact"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "EmptyState",
+      "file": "src/components/EmptyState.jsx",
+      "lines": 59,
+      "consumers": 23,
+      "consumerFiles": [
+        "src/components/ScreenOptions.jsx",
+        "src/components/SeesScoringPanel.jsx",
+        "src/components/backtest/charts/BacktestChart.jsx",
+        "src/components/backtest/charts/EquityCurveChart.jsx",
+        "src/components/mt5/PositionsTable.jsx",
+        "src/core/architecture-reference.js",
+        "src/data/known-features.js",
+        "src/data/qa-checklist.js",
+        "src/pages/AbStrategiesPage.jsx",
+        "src/pages/AdvancedResearchPage.jsx",
+        "src/pages/ArchitectureFrameworkPage.jsx",
+        "src/pages/BrokersPage.jsx",
+        "src/pages/BtcSpeedTradingPage.jsx",
+        "src/pages/CacheMonitorPage.jsx",
+        "src/pages/DataElementsPage.jsx",
+        "src/pages/DecoderPage.jsx",
+        "src/pages/DerivedStrategiesPage.jsx",
+        "src/pages/EventsCalendarPage.jsx",
+        "src/pages/ScoringOverviewPage.jsx",
+        "src/pages/StrategiesListPage.jsx",
+        "src/pages/StrategyMonitorPage.jsx",
+        "src/pages/VendorsPage.jsx",
+        "src/pages/WalkForwardSurvivorsPage.jsx"
+      ],
+      "tier": "primitive",
+      "props": [
+        "icon",
+        "title",
+        "description",
+        "actionLabel",
+        "actionHref",
+        "actionOnClick",
+        "className"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "PageInfoPopover",
+      "file": "src/components/PageInfoPopover.jsx",
+      "lines": 43,
+      "consumers": 17,
+      "consumerFiles": [
+        "src/components/MainTopInfo.jsx",
+        "src/components/StatusCard.jsx",
+        "src/components/backtest/RunComparisonPanels.jsx",
+        "src/core/architecture-batch-57.js",
+        "src/core/architecture-reference.js",
+        "src/data/qa-checklist.js",
+        "src/data/ui-patterns.js",
+        "src/pages/AbStrategiesPage.jsx",
+        "src/pages/BacktestPage.jsx",
+        "src/pages/HealthDashboardPage.jsx",
+        "src/pages/MetaStackPipelinePage.jsx",
+        "src/pages/ProtocolsPageB.jsx",
+        "src/pages/QueuedChangesPage.jsx",
+        "src/pages/StrategiesListPage.jsx",
+        "src/pages/StrategyMonitorPage.jsx",
+        "src/pages/T212PortfolioPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "primitive",
+      "props": [
+        "children",
+        "label"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "InfoNote",
+      "file": "src/components/InfoNote.jsx",
+      "lines": 105,
+      "consumers": 16,
+      "consumerFiles": [
+        "src/components/StatusCard.jsx",
+        "src/components/backtest/ProfitCapturePanel.jsx",
+        "src/components/backtest/ProtocolDirectiveSettings.jsx",
+        "src/components/backtest/RsiDivergencePanel.jsx",
+        "src/components/backtest/RunComparisonPanels.jsx",
+        "src/components/backtest/RunSettingsDiff.jsx",
+        "src/components/backtest/StopSweepPanel.jsx",
+        "src/components/backtest/TradeTable.jsx",
+        "src/core/architecture-batch-57.js",
+        "src/core/architecture-reference.js",
+        "src/core/page-data-status.js",
+        "src/data/known-features.js",
+        "src/data/qa-checklist.js",
+        "src/pages/BacktestPage.jsx",
+        "src/pages/CurrentStrategyPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "primitive",
+      "props": [
+        "neutral",
+        "info",
+        "success",
+        "warning",
+        "critical",
+        "ids",
+        "label",
+        "icon",
+        "children",
+        "meta",
+        "role",
+        "className"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "Notice",
+      "file": "src/components/Notice.jsx",
+      "lines": 26,
+      "consumers": 11,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/core/notices/registry.js",
+        "src/data/known-features.js",
+        "src/data/qa-checklist.js",
+        "src/data/ui-patterns.js",
+        "src/pages/CapabilityMapPage.jsx",
+        "src/pages/DirectiveImpactAuditPage.jsx",
+        "src/pages/ExitSignalsPage.jsx",
+        "src/pages/MarketContextPage.jsx",
+        "src/pages/PortfolioPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "primitive",
+      "props": [
+        "level",
+        "icon",
+        "children",
+        "className"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "ScoreCard",
+      "file": "src/components/ScoreCard.jsx",
+      "lines": 296,
+      "consumers": 10,
+      "consumerFiles": [
+        "src/components/CockpitPanelCard.jsx",
+        "src/components/LadderPanels.jsx",
+        "src/components/SignalCard.jsx",
+        "src/core/architecture-reference.js",
+        "src/core/score-card-entries.js",
+        "src/data/known-features.js",
+        "src/data/qa-checklist.js",
+        "src/pages/AbLadderPage.jsx",
+        "src/pages/LadderPage.jsx",
+        "src/pages/MetaStackCockpitPage.jsx"
+      ],
+      "tier": "primitive",
+      "props": [
+        "label",
+        "score",
+        "max",
+        "pct",
+        "mode",
+        "active"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 2
+    },
+    {
+      "name": "WhyPopover",
+      "file": "src/components/WhyPopover.jsx",
+      "lines": 69,
+      "consumers": 8,
+      "consumerFiles": [
+        "src/components/backtest/MoversDepthPanel.jsx",
+        "src/components/backtest/MoversSelectionComparison.jsx",
+        "src/components/backtest/TradeConfigPanel.jsx",
+        "src/core/architecture-reference.js",
+        "src/core/use-popover.js",
+        "src/data/qa-checklist.js",
+        "src/features/movers-strategy/ResultByDayStep.jsx",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "primitive",
+      "props": [
+        "children"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "RunComparisonPanels",
+      "file": "src/components/backtest/RunComparisonPanels.jsx",
+      "lines": 1250,
+      "consumers": 7,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/core/view-meta.js",
+        "src/core/view-routes.jsx",
+        "src/data/qa-checklist.js",
+        "src/pages/BacktestPage.jsx",
+        "src/pages/CurrentStrategyPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "primitive",
+      "props": [
+        "scoreSeries"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 4
+    },
+    {
+      "name": "RunSettingsDiff",
+      "file": "src/components/backtest/RunSettingsDiff.jsx",
+      "lines": 82,
+      "consumers": 7,
+      "consumerFiles": [
+        "src/components/backtest/BacktestRunsPanel.jsx",
+        "src/components/backtest/RunComparisonPanels.jsx",
+        "src/core/architecture-reference.js",
+        "src/data/qa-checklist.js",
+        "src/pages/BacktestPage.jsx",
+        "src/pages/CurrentStrategyPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "primitive",
+      "props": [
+        "differences",
+        "runs"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "SettingsControls",
+      "file": "src/components/SettingsControls.jsx",
+      "lines": 104,
+      "consumers": 7,
+      "consumerFiles": [
+        "src/components/MetaStackLayerSwitch.jsx",
+        "src/components/ScoringThresholds.jsx",
+        "src/pages/AppearanceSettingsPage.jsx",
+        "src/pages/AutomationSettingsPage.jsx",
+        "src/pages/ScoringSettingsPage.jsx",
+        "src/pages/SettingsPage.jsx",
+        "src/pages/TradingSettingsPage.jsx"
+      ],
+      "tier": "primitive",
+      "props": [
+        "label",
+        "children",
+        "hint"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "WidgetBoard",
+      "file": "src/components/WidgetBoard.jsx",
+      "lines": 712,
+      "consumers": 7,
+      "consumerFiles": [
+        "src/components/LoopControls.jsx",
+        "src/core/architecture-reference.js",
+        "src/core/board-store.js",
+        "src/core/widget-registry.js",
+        "src/pages/DashboardPage.jsx",
+        "src/pages/ScreenBoardPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "primitive",
+      "props": [
+        "lg",
+        "md",
+        "sm",
+        "xs",
+        "lo",
+        "onNudge",
+        "onGrow",
+        "onClose"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "ScreenOptions",
+      "file": "src/components/ScreenOptions.jsx",
+      "lines": 1227,
+      "consumers": 6,
+      "consumerFiles": [
+        "src/App.jsx",
+        "src/core/view-explanations.js",
+        "src/data/qa-checklist.js",
+        "src/pages/AutomationSettingsPage.jsx",
+        "src/pages/HomeDashboard.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "primitive",
+      "props": [
+        "sections",
+        "label",
+        "description",
+        "type",
+        "key",
+        "defaultValue",
+        "options",
+        "desc"
+      ],
+      "hasTest": false,
+      "inlineStyles": 3,
+      "hexLiterals": 3
+    },
+    {
+      "name": "SignalBadge",
+      "file": "src/components/SignalBadge.jsx",
+      "lines": 53,
+      "consumers": 6,
+      "consumerFiles": [
+        "src/components/ScoreCard.jsx",
+        "src/core/architecture-reference.js",
+        "src/pages/LadderPage.jsx",
+        "src/pages/ProtocolTrailPage.jsx",
+        "src/pages/SymbolsLadderPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "primitive",
+      "props": [
+        "display",
+        "className",
+        "arrowOnly"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "StatusCard",
+      "file": "src/components/StatusCard.jsx",
+      "lines": 97,
+      "consumers": 6,
+      "consumerFiles": [
+        "src/core/architecture-batch-57.js",
+        "src/core/architecture-reference.js",
+        "src/data/qa-checklist.js",
+        "src/pages/MoversTreatmentPage.jsx",
+        "src/pages/RegisteredMoversPage.jsx",
+        "src/pages/StrategyLiveView.jsx"
+      ],
+      "tier": "primitive",
+      "props": [
+        "value",
+        "label",
+        "icon",
+        "detail",
+        "tone",
+        "className"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "SuggestionQueue",
+      "file": "src/components/SuggestionQueue.jsx",
+      "lines": 179,
+      "consumers": 6,
+      "consumerFiles": [
+        "src/core/architecture-batch-57.js",
+        "src/data/qa-checklist.js",
+        "src/pages/ProtocolsPageB.jsx",
+        "src/pages/QueuedChangesPage.jsx",
+        "src/pages/StrategiesListPage.jsx",
+        "src/pages/ViewStrategyPage.jsx"
+      ],
+      "tier": "primitive",
+      "props": [
+        "queued",
+        "accepted",
+        "applied",
+        "rejected",
+        "blocked",
+        "param",
+        "botId",
+        "mode",
+        "title"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "Breadcrumbs",
+      "file": "src/components/Breadcrumbs.jsx",
+      "lines": 55,
+      "consumers": 5,
+      "consumerFiles": [
+        "src/App.jsx",
+        "src/core/architecture-reference.js",
+        "src/core/use-refresh-pulse.js",
+        "src/pages/CapabilityMapPage.jsx",
+        "src/pages/DiagramsPage.jsx"
+      ],
+      "tier": "primitive",
+      "props": [],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "ChangeStat",
+      "file": "src/components/ChangeStat.jsx",
+      "lines": 128,
+      "consumers": 5,
+      "consumerFiles": [
+        "src/components/Sparkline.jsx",
+        "src/components/SymbolChangePanel.jsx",
+        "src/components/backtest/BestRecordPanel.jsx",
+        "src/core/performance-change.js",
+        "src/pages/PerformanceChangePage.jsx"
+      ],
+      "tier": "primitive",
+      "props": [
+        "label",
+        "current",
+        "previous",
+        "series",
+        "format",
+        "hint",
+        "invert",
+        "unavailableReason"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "LoadingOrbit",
+      "file": "src/components/LoadingOrbit.jsx",
+      "lines": 44,
+      "consumers": 5,
+      "consumerFiles": [
+        "src/components/LoadingSteps.jsx",
+        "src/core/architecture-reference.js",
+        "src/data/qa-checklist.js",
+        "src/pages/DatabaseTablesPage.jsx",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "primitive",
+      "props": [
+        "label",
+        "size",
+        "onAccent",
+        "className"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "MainTopInfo",
+      "file": "src/components/MainTopInfo.jsx",
+      "lines": 44,
+      "consumers": 5,
+      "consumerFiles": [
+        "src/App.jsx",
+        "src/components/WhyPopover.jsx",
+        "src/core/architecture-batch-57.js",
+        "src/core/architecture-reference.js",
+        "src/pages/BrokersPage.jsx"
+      ],
+      "tier": "primitive",
+      "props": [
+        "explanation"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "MarketTape",
+      "file": "src/components/MarketTape.jsx",
+      "lines": 542,
+      "consumers": 5,
+      "consumerFiles": [
+        "src/App.jsx",
+        "src/core/architecture-reference.js",
+        "src/core/hooks/usePreferences.js",
+        "src/pages/AppearanceSettingsPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "primitive",
+      "props": [
+        "sessions",
+        "events",
+        "providers",
+        "auto",
+        "next",
+        "news",
+        "trade",
+        "uptime",
+        "label",
+        "defaultOn",
+        "set",
+        "queryFn",
+        "refetchInterval",
+        "staleTime",
+        "retry"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 30
+    },
+    {
+      "name": "MoversDepthPanel",
+      "file": "src/components/backtest/MoversDepthPanel.jsx",
+      "lines": 707,
+      "consumers": 5,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/core/movers-funnel.js",
+        "src/data/qa-checklist.js",
+        "src/pages/MoversStrategyBacktestPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "primitive",
+      "props": [
+        "entry",
+        "exit",
+        "quiet",
+        "TARGET",
+        "SL",
+        "TIME",
+        "SESSION",
+        "TRAIL",
+        "EOD"
+      ],
+      "hasTest": true,
+      "inlineStyles": 1,
+      "hexLiterals": 4
+    },
+    {
+      "name": "ReplayPlayer",
+      "file": "src/components/backtest/replay/ReplayPlayer.jsx",
+      "lines": 414,
+      "consumers": 5,
+      "consumerFiles": [
+        "src/components/backtest/charts/index.js",
+        "src/core/architecture-reference.js",
+        "src/data/qa-checklist.js",
+        "src/pages/BacktestPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "primitive",
+      "props": [
+        "runId"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 5
+    },
+    {
+      "name": "SignalCard",
+      "file": "src/components/SignalCard.jsx",
+      "lines": 481,
+      "consumers": 5,
+      "consumerFiles": [
+        "src/components/CockpitPanelCard.jsx",
+        "src/core/architecture-reference.js",
+        "src/core/notices/trade-result.js",
+        "src/pages/MetaStackCockpitPage.jsx",
+        "src/pages/SignalsOverviewPage.jsx"
+      ],
+      "tier": "primitive",
+      "props": [
+        "envelope",
+        "dismissHours",
+        "onDismissed",
+        "defaults"
+      ],
+      "hasTest": false,
+      "inlineStyles": 5,
+      "hexLiterals": 8
+    },
+    {
+      "name": "Sparkline",
+      "file": "src/components/Sparkline.jsx",
+      "lines": 54,
+      "consumers": 5,
+      "consumerFiles": [
+        "src/components/ChangeStat.jsx",
+        "src/components/backtest/BestRecordPanel.jsx",
+        "src/pages/BtcSpeedTradingPage.jsx",
+        "src/pages/MacroMonitorPage.jsx",
+        "src/pages/SnapshotReplayPage.jsx"
+      ],
+      "tier": "primitive",
+      "props": [
+        "series",
+        "width",
+        "height",
+        "label",
+        "className"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "SpeedChart",
+      "file": "src/components/SpeedChart.jsx",
+      "lines": 427,
+      "consumers": 5,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/data/known-features.js",
+        "src/pages/BtcSpeedTradingPage.jsx",
+        "src/pages/ChartsLabPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "primitive",
+      "props": [
+        "high",
+        "low",
+        "close",
+        "volume",
+        "timeframe",
+        "chartMode",
+        "scanScore",
+        "chartSettings",
+        "ticks",
+        "historicalCandles",
+        "intervalMs",
+        "maxBars"
+      ],
+      "hasTest": false,
+      "inlineStyles": 4,
+      "hexLiterals": 21
+    },
+    {
+      "name": "TypeTag",
+      "file": "src/components/TypeTag.jsx",
+      "lines": 29,
+      "consumers": 5,
+      "consumerFiles": [
+        "src/components/StrategyBits.jsx",
+        "src/core/architecture-reference.js",
+        "src/pages/AbStrategiesPage.jsx",
+        "src/pages/DerivedStrategiesPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "primitive",
+      "props": [
+        "proto",
+        "bot",
+        "strategy"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "BacktestRunsPanel",
+      "file": "src/components/backtest/BacktestRunsPanel.jsx",
+      "lines": 463,
+      "consumers": 4,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/data/qa-checklist.js",
+        "src/pages/BacktestRunsPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "shared",
+      "props": [
+        "value",
+        "digits",
+        "suffix"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 8
+    },
+    {
+      "name": "BestRecordPanel",
+      "file": "src/components/backtest/BestRecordPanel.jsx",
+      "lines": 255,
+      "consumers": 4,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/data/qa-checklist.js",
+        "src/features/movers-strategy/steps.js",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "okRuns",
+        "profileKey",
+        "profileLabel",
+        "semanticsVersion",
+        "runCount"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "DirectiveSettingsPanel",
+      "file": "src/components/backtest/DirectiveSettingsPanel.jsx",
+      "lines": 691,
+      "consumers": 4,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/data/qa-checklist.js",
+        "src/pages/BacktestPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "shared",
+      "props": [
+        "protocolSlug"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 7
+    },
+    {
+      "name": "EquityCurveChart",
+      "file": "src/components/backtest/charts/EquityCurveChart.jsx",
+      "lines": 245,
+      "consumers": 4,
+      "consumerFiles": [
+        "src/components/backtest/charts/index.js",
+        "src/core/architecture-reference.js",
+        "src/data/qa-checklist.js",
+        "src/pages/BacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "equityData",
+        "symbol",
+        "height"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 14
+    },
+    {
+      "name": "LoopControls",
+      "file": "src/components/LoopControls.jsx",
+      "lines": 128,
+      "consumers": 4,
+      "consumerFiles": [
+        "src/components/widgets/builtin-widgets.jsx",
+        "src/core/architecture-reference.js",
+        "src/data/qa-checklist.js",
+        "src/pages/DashboardPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "variant"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "SetupBanner",
+      "file": "src/components/SetupBanner.jsx",
+      "lines": 111,
+      "consumers": 4,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/core/architecture-route-contracts.js",
+        "src/core/page-data-status.js",
+        "src/pages/DashboardPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 0
+    },
+    {
+      "name": "StatCard",
+      "file": "src/components/backtest/StatCard.jsx",
+      "lines": 89,
+      "consumers": 4,
+      "consumerFiles": [
+        "src/components/backtest/MoversSelectionComparison.jsx",
+        "src/features/movers-strategy/steps.js",
+        "src/pages/BacktestPage.jsx",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "toneClass",
+        "valueClass",
+        "value",
+        "label"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "StepAccordion",
+      "file": "src/components/StepAccordion.jsx",
+      "lines": 161,
+      "consumers": 4,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/data/qa-checklist.js",
+        "src/features/movers-strategy/steps.js",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "pageId",
+        "id",
+        "step",
+        "title",
+        "purpose",
+        "meta",
+        "defaultOpen",
+        "openSignal",
+        "actions",
+        "children"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "ThemePacksChooser",
+      "file": "src/components/ThemePacksChooser.jsx",
+      "lines": 71,
+      "consumers": 4,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/data/qa-checklist.js",
+        "src/pages/AppearanceSettingsPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "shared",
+      "props": [],
+      "hasTest": false,
+      "inlineStyles": 4,
+      "hexLiterals": 0
+    },
+    {
+      "name": "TradeConfigPanel",
+      "file": "src/components/backtest/TradeConfigPanel.jsx",
+      "lines": 586,
+      "consumers": 4,
+      "consumerFiles": [
+        "src/core/trade-config-edit.js",
+        "src/data/qa-checklist.js",
+        "src/features/movers-strategy/steps.js",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "bot",
+        "request",
+        "onRetest",
+        "retestBusy",
+        "price",
+        "count"
+      ],
+      "hasTest": true,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "BacktestChart",
+      "file": "src/components/backtest/charts/BacktestChart.jsx",
+      "lines": 351,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/components/backtest/charts/BacktestChartPane.jsx",
+        "src/components/backtest/charts/index.js",
+        "src/core/architecture-reference.js"
+      ],
+      "tier": "shared",
+      "props": [
+        "data",
+        "type",
+        "height"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 37
+    },
+    {
+      "name": "BacktestChartPane",
+      "file": "src/components/backtest/charts/BacktestChartPane.jsx",
+      "lines": 82,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/components/backtest/charts/index.js",
+        "src/data/qa-checklist.js",
+        "src/pages/BacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "initialSymbol",
+        "initialTimeframe"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "BacktestPeriodsPanel",
+      "file": "src/components/backtest/BacktestPeriodsPanel.jsx",
+      "lines": 571,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/components/backtest/BacktestRunsPanel.jsx",
+        "src/data/qa-checklist.js",
+        "src/pages/BacktestDataPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "symbol",
+        "timeframe",
+        "from",
+        "to",
+        "fetched",
+        "inserted",
+        "alreadyPresent",
+        "provider"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 3
+    },
+    {
+      "name": "CandlePatternChart",
+      "file": "src/components/CandlePatternChart.jsx",
+      "lines": 193,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/data/qa-checklist.js",
+        "src/pages/TrainingCandlePatternsPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "shared",
+      "props": [
+        "bullish",
+        "bearish",
+        "neutral",
+        "default",
+        "patterns",
+        "onPatternClick",
+        "highlightPatterns"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 9
+    },
+    {
+      "name": "DevOverlay",
+      "file": "src/components/DevOverlay.jsx",
+      "lines": 307,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/App.jsx",
+        "src/core/architecture-reference.js",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "shared",
+      "props": [
+        "healthQuery",
+        "availableAdapters",
+        "analyticsSnapshot",
+        "performanceSnapshot",
+        "onDownloadRuntimeReport"
+      ],
+      "hasTest": false,
+      "inlineStyles": 5,
+      "hexLiterals": 1
+    },
+    {
+      "name": "DirectiveScoringNote",
+      "file": "src/components/DirectiveScoringNote.jsx",
+      "lines": 111,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/data/qa-checklist.js",
+        "src/pages/DirectiveViewerPage.jsx",
+        "src/pages/DirectivesManagerPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "signal",
+        "colour",
+        "oneSide",
+        "neutral",
+        "unknown",
+        "directionBias",
+        "maxScore"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 4
+    },
+    {
+      "name": "GlossaryPopover",
+      "file": "src/components/GlossaryPopover.jsx",
+      "lines": 94,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/components/BeginnerGuide.jsx",
+        "src/data/glossary.js",
+        "src/pages/GlossaryPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "term",
+        "children"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 0
+    },
+    {
+      "name": "KeyboardShortcutsHelp",
+      "file": "src/components/KeyboardShortcutsHelp.jsx",
+      "lines": 157,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/App.jsx",
+        "src/core/architecture-reference.js",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "shared",
+      "props": [],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 0
+    },
+    {
+      "name": "LoadingSteps",
+      "file": "src/components/LoadingSteps.jsx",
+      "lines": 74,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/data/qa-checklist.js",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "shared",
+      "props": [
+        "done",
+        "total",
+        "label",
+        "stepLabel",
+        "className"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "MarketMoversPanel",
+      "file": "src/components/MarketMoversPanel.jsx",
+      "lines": 312,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/pages/MostActivePage.jsx",
+        "src/pages/MoversTreatmentPage.jsx",
+        "src/pages/StrategyLiveView.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "title",
+        "rows",
+        "accent",
+        "defaultSort"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 2
+    },
+    {
+      "name": "MetaStackLayerSwitch",
+      "file": "src/components/MetaStackLayerSwitch.jsx",
+      "lines": 100,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/pages/AutomationSettingsPage.jsx",
+        "src/pages/ScoringSettingsPage.jsx",
+        "src/pages/TradingSettingsPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "protocols",
+        "hint",
+        "trading"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "ParityStep",
+      "file": "src/features/movers-strategy/ParityStep.jsx",
+      "lines": 205,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/data/qa-checklist.js",
+        "src/features/movers-strategy/steps.js",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "shared",
+        "divergent",
+        "population",
+        "model",
+        "gap"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "ProtocolCarousel",
+      "file": "src/components/ProtocolCarousel.jsx",
+      "lines": 311,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/pages/BacktestPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "shared",
+      "props": [
+        "items",
+        "value",
+        "onChange",
+        "label",
+        "emptyMessage"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 2
+    },
+    {
+      "name": "PwaInstallPrompt",
+      "file": "src/components/PwaInstallPrompt.jsx",
+      "lines": 94,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/App.jsx",
+        "src/components/SupporterPrompt.jsx",
+        "src/pages/DiagramsPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "QualifierStrip",
+      "file": "src/components/QualifierStrip.jsx",
+      "lines": 86,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/core/backtest-unused-fields.js",
+        "src/pages/MoversStrategyBacktestPage.jsx",
+        "src/pages/ThemePage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "item"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "RegisterSymbolOverlay",
+      "file": "src/components/RegisterSymbolOverlay.jsx",
+      "lines": 229,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/pages/EarningsCalendarPage.jsx",
+        "src/pages/NewsIntelPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "ticker",
+        "onClose"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "StatusBadge",
+      "file": "src/components/StatusBadge.jsx",
+      "lines": 17,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/pages/CapabilityMapPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "shared",
+      "props": [
+        "status",
+        "children",
+        "className"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "TradeTable",
+      "file": "src/components/backtest/TradeTable.jsx",
+      "lines": 478,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/components/backtest/RunComparisonPanels.jsx",
+        "src/data/qa-checklist.js",
+        "src/pages/BacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "trades",
+        "totals",
+        "timeframe",
+        "limit",
+        "compare"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 5
+    },
+    {
+      "name": "UnusedDataPanel",
+      "file": "src/components/backtest/UnusedDataPanel.jsx",
+      "lines": 213,
+      "consumers": 3,
+      "consumerFiles": [
+        "src/data/qa-checklist.js",
+        "src/features/movers-strategy/steps.js",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "runs",
+        "bare"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 2
+    },
+    {
+      "name": "BacktestSettingsInventory",
+      "file": "src/components/backtest/BacktestSettingsInventory.jsx",
+      "lines": 226,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/data/qa-checklist.js",
+        "src/pages/BacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "honoured",
+        "cls",
+        "help",
+        "ignored",
+        "label",
+        "reportedOnly",
+        "botId"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 2
+    },
+    {
+      "name": "BeginnerGuide",
+      "file": "src/components/BeginnerGuide.jsx",
+      "lines": 387,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/pages/DirectiveViewerPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "shared",
+      "props": [
+        "directive"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 0
+    },
+    {
+      "name": "CockpitPanelCard",
+      "file": "src/components/CockpitPanelCard.jsx",
+      "lines": 68,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/pages/MetaStackCockpitPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "up",
+        "down",
+        "short",
+        "both",
+        "warn",
+        "muted",
+        "subtitle"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "DirectiveRecordStep",
+      "file": "src/features/movers-strategy/DirectiveRecordStep.jsx",
+      "lines": 227,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/data/qa-checklist.js",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "insufficient",
+        "negative",
+        "days"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "ErrorBoundary",
+      "file": "src/components/ErrorBoundary.jsx",
+      "lines": 62,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/App.jsx",
+        "src/pages/DiagramsPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "LadderPanels",
+      "file": "src/components/LadderPanels.jsx",
+      "lines": 153,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/pages/AbLadderPage.jsx",
+        "src/pages/LadderPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "rankBy",
+        "onRankBy",
+        "ageFilter",
+        "onAgeFilter",
+        "marketFilter",
+        "onMarketFilter",
+        "search",
+        "onSearch",
+        "searchAriaLabel",
+        "children"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "MoversDepthChart",
+      "file": "src/components/backtest/MoversDepthChart.jsx",
+      "lines": 146,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/components/backtest/MoversDepthPanel.jsx",
+        "src/features/movers-strategy/steps.js"
+      ],
+      "tier": "shared",
+      "props": [
+        "stop",
+        "target",
+        "trades",
+        "pinTime",
+        "symbol"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 6
+    },
+    {
+      "name": "PositionsTable",
+      "file": "src/components/mt5/PositionsTable.jsx",
+      "lines": 52,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/pages/Mt5TradingPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "positions",
+        "onClose"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "ProgressionPanel",
+      "file": "src/components/ProgressionPanel.jsx",
+      "lines": 180,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/pages/StrategiesListPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "row"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 4
+    },
+    {
+      "name": "ProtocolSymbolsPanel",
+      "file": "src/components/ProtocolSymbolsPanel.jsx",
+      "lines": 195,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/pages/CreateProtocolsPage.jsx",
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "shared",
+      "props": [
+        "protocolSlug"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 5
+    },
+    {
+      "name": "ResultByDayStep",
+      "file": "src/features/movers-strategy/ResultByDayStep.jsx",
+      "lines": 129,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/features/movers-strategy/steps.js",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "sort"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 1
+    },
+    {
+      "name": "ResultBySymbolStep",
+      "file": "src/features/movers-strategy/ResultBySymbolStep.jsx",
+      "lines": 82,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/features/movers-strategy/steps.js",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "sort"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 0
+    },
+    {
+      "name": "RsiDivergenceChart",
+      "file": "src/components/backtest/RsiDivergenceChart.jsx",
+      "lines": 211,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/components/backtest/RsiDivergencePanel.jsx",
+        "src/data/qa-checklist.js"
+      ],
+      "tier": "shared",
+      "props": [
+        "dashed",
+        "label",
+        "pane",
+        "marker",
+        "height"
+      ],
+      "hasTest": false,
+      "inlineStyles": 4,
+      "hexLiterals": 15
+    },
+    {
+      "name": "RsiDivergencePanel",
+      "file": "src/components/backtest/RsiDivergencePanel.jsx",
+      "lines": 316,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/components/backtest/ProtocolDirectiveSettings.jsx",
+        "src/data/qa-checklist.js"
+      ],
+      "tier": "shared",
+      "props": [
+        "rsiPeriod",
+        "leftLookback",
+        "rightLookback",
+        "minGapBars",
+        "maxGapBars",
+        "showRegularBullish",
+        "showHiddenBullish",
+        "showRegularBearish",
+        "showHiddenBearish",
+        "label",
+        "unit",
+        "min",
+        "max",
+        "pine",
+        "hint",
+        "timeframe",
+        "days",
+        "periodId",
+        "inSelectedProtocol"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "ScoringFunnelStep",
+      "file": "src/features/movers-strategy/ScoringFunnelStep.jsx",
+      "lines": 201,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/data/qa-checklist.js",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "entries"
+      ],
+      "hasTest": false,
+      "inlineStyles": 2,
+      "hexLiterals": 1
+    },
+    {
+      "name": "ScoringMechanicsPanel",
+      "file": "src/components/ScoringMechanicsPanel.jsx",
+      "lines": 253,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/pages/MetaStackExplorerPage.jsx",
+        "src/pages/StrategiesListPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "label",
+        "raw",
+        "max",
+        "note"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 1
+    },
+    {
+      "name": "ScoringThresholds",
+      "file": "src/components/ScoringThresholds.jsx",
+      "lines": 358,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/pages/ScoringSettingsPage.jsx",
+        "src/pages/TradingSettingsPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [],
+      "hasTest": false,
+      "inlineStyles": 4,
+      "hexLiterals": 4
+    },
+    {
+      "name": "SpeedDecisionPanel",
+      "file": "src/components/SpeedDecisionPanel.jsx",
+      "lines": 261,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/pages/BtcSpeedTradingPage.jsx",
+        "src/pages/DiagramsPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "direction",
+        "label"
+      ],
+      "hasTest": false,
+      "inlineStyles": 2,
+      "hexLiterals": 7
+    },
+    {
+      "name": "StarToggle",
+      "file": "src/components/StarToggle.jsx",
+      "lines": 90,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/pages/SymbolPage.jsx",
+        "src/pages/SymbolsBrowserPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "itemType",
+        "itemId",
+        "size",
+        "className"
+      ],
+      "hasTest": false,
+      "inlineStyles": 2,
+      "hexLiterals": 0
+    },
+    {
+      "name": "StepAuditNote",
+      "file": "src/components/StepAuditNote.jsx",
+      "lines": 37,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "afterStep",
+        "ideas"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "StopSweepPanel",
+      "file": "src/components/backtest/StopSweepPanel.jsx",
+      "lines": 134,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/data/qa-checklist.js",
+        "src/pages/BacktestPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "runId"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "StrategyBits",
+      "file": "src/components/StrategyBits.jsx",
+      "lines": 93,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/pages/AbStrategiesPage.jsx",
+        "src/pages/DerivedStrategiesPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "names"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 4
+    },
+    {
+      "name": "StrategyFaultBadge",
+      "file": "src/components/StrategyFaultBadge.jsx",
+      "lines": 18,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/pages/StrategiesListPage.jsx",
+        "src/pages/StrategyMonitorPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "strategy",
+        "className",
+        "style"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "StrategyWizard",
+      "file": "src/components/StrategyBuilder/StrategyWizard.jsx",
+      "lines": 567,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/pages/StrategyCreatePage.jsx",
+        "src/pages/StrategyWizardPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [],
+      "hasTest": false,
+      "inlineStyles": 7,
+      "hexLiterals": 0
+    },
+    {
+      "name": "SupporterPrompt",
+      "file": "src/components/SupporterPrompt.jsx",
+      "lines": 156,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/App.jsx",
+        "src/data/qa-checklist.js"
+      ],
+      "tier": "shared",
+      "props": [
+        "kind",
+        "response",
+        "context"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "SupportReportPanel",
+      "file": "src/components/SupportReportPanel.jsx",
+      "lines": 139,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/App.jsx",
+        "src/data/qa-checklist.js"
+      ],
+      "tier": "shared",
+      "props": [
+        "fontFamily",
+        "fontSize",
+        "lineHeight"
+      ],
+      "hasTest": false,
+      "inlineStyles": 11,
+      "hexLiterals": 2
+    },
+    {
+      "name": "SymbolAutocomplete",
+      "file": "src/components/SymbolAutocomplete.jsx",
+      "lines": 170,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/components/SymbolPickerField.jsx",
+        "src/pages/SinglesMonitorPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "value",
+        "onChange",
+        "onSymbolsChange",
+        "placeholder",
+        "NVDA",
+        "className"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 2
+    },
+    {
+      "name": "SymbolChangePanel",
+      "file": "src/components/SymbolChangePanel.jsx",
+      "lines": 120,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/pages/PerformanceChangePage.jsx",
+        "src/pages/SymbolPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "symbol"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "SymbolPickerField",
+      "file": "src/components/SymbolPickerField.jsx",
+      "lines": 51,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/pages/ProtocolTrailPage.jsx",
+        "src/pages/SinglesMonitorPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "value",
+        "placeholder"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 0
+    },
+    {
+      "name": "ToggleSwitch",
+      "file": "src/components/ToggleSwitch.jsx",
+      "lines": 29,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/core/architecture-reference.js",
+        "src/pages/StrategiesListPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [
+        "checked",
+        "onChange",
+        "label",
+        "sm",
+        "disabled"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "VariantSwitcher",
+      "file": "src/components/VariantSwitcher.jsx",
+      "lines": 65,
+      "consumers": 2,
+      "consumerFiles": [
+        "src/components/Breadcrumbs.jsx",
+        "src/pages/SymbolsLadderPage.jsx"
+      ],
+      "tier": "shared",
+      "props": [],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "AutoRiskSizingDemo",
+      "file": "src/components/FeatureLab/AutoRiskSizingDemo.jsx",
+      "lines": 118,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/FeatureLabPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "label",
+        "value",
+        "color"
+      ],
+      "hasTest": false,
+      "inlineStyles": 21,
+      "hexLiterals": 7
+    },
+    {
+      "name": "BacktestExperimentsPanel",
+      "file": "src/components/backtest/BacktestExperimentsPanel.jsx",
+      "lines": 121,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/BacktestExperimentsPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "SHELL",
+        "SINGLE",
+        "AUTO",
+        "COMPARISON",
+        "queryFn",
+        "staleTime"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 2
+    },
+    {
+      "name": "CanvasCandlestickChart",
+      "file": "src/components/CanvasCandlestickChart.jsx",
+      "lines": 507,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/ChartsLabPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "bg",
+        "grid",
+        "text",
+        "upBody",
+        "downBody",
+        "upWick",
+        "downWick",
+        "crosshair",
+        "tooltipBg",
+        "volUp",
+        "volDown",
+        "period",
+        "color",
+        "ticks",
+        "intervalMs",
+        "maxBars",
+        "indicators"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 14
+    },
+    {
+      "name": "CopyViewData",
+      "file": "src/components/CopyViewData.jsx",
+      "lines": 46,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/ActiveSymbolsPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "getMarkdown"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "DetachableWidget",
+      "file": "src/components/DetachableWidget.jsx",
+      "lines": 338,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/core/architecture-reference.js"
+      ],
+      "tier": "single",
+      "props": [
+        "sm",
+        "h",
+        "md",
+        "lg",
+        "full",
+        "subtitle",
+        "size",
+        "colorAccent",
+        "actions",
+        "onDetach",
+        "onClose",
+        "onDragStart",
+        "onDrop",
+        "draggable",
+        "detachable",
+        "minimizable",
+        "closable",
+        "defaultMinimized",
+        "statusDot",
+        "badge",
+        "children",
+        "footer",
+        "className",
+        "contentScale"
+      ],
+      "hasTest": false,
+      "inlineStyles": 2,
+      "hexLiterals": 0
+    },
+    {
+      "name": "DirectiveConfigDemo",
+      "file": "src/components/FeatureLab/DirectiveConfigDemo.jsx",
+      "lines": 121,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/FeatureLabPage.jsx"
+      ],
+      "tier": "single",
+      "props": [],
+      "hasTest": false,
+      "inlineStyles": 27,
+      "hexLiterals": 7
+    },
+    {
+      "name": "ErrorDisplay",
+      "file": "src/components/ErrorDisplay.jsx",
+      "lines": 51,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/components/ErrorBoundary.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "message",
+        "severity",
+        "onRetry",
+        "error",
+        "className"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "ExitDataRecoveryNotice",
+      "file": "src/components/ExitDataRecoveryNotice.jsx",
+      "lines": 146,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/TradeJournalPage.jsx"
+      ],
+      "tier": "single",
+      "props": [],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "FadeCardGroup",
+      "file": "src/components/FadeCardGroup.jsx",
+      "lines": 73,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/MetaStackExplorerPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "cards",
+        "variant",
+        "maxWidth"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 0
+    },
+    {
+      "name": "LastUpdated",
+      "file": "src/components/LastUpdated.jsx",
+      "lines": 44,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/T212PortfolioPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "at",
+        "inline"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "LogRetentionPanel",
+      "file": "src/components/system/LogRetentionPanel.jsx",
+      "lines": 350,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/DataManagementPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "settingKey",
+        "value",
+        "min",
+        "max",
+        "queryKey"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 3
+    },
+    {
+      "name": "MarketContextWidget",
+      "file": "src/components/MarketContextWidget.jsx",
+      "lines": 76,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/components/widgets/builtin-widgets.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "caution",
+        "icon",
+        "normal",
+        "watchful",
+        "prep",
+        "queryFn",
+        "refetchInterval"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 5
+    },
+    {
+      "name": "MetaStackPipeline",
+      "file": "src/components/MetaStackPipeline.jsx",
+      "lines": 358,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/MetaStackCockpitPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "title",
+        "subtitle",
+        "showHeader"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 1
+    },
+    {
+      "name": "MoversSelectionComparison",
+      "file": "src/components/backtest/MoversSelectionComparison.jsx",
+      "lines": 382,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "runCount",
+        "profileKey",
+        "profileLabel",
+        "semanticsVersion",
+        "delta",
+        "configChanges",
+        "blockedGroups",
+        "reason",
+        "count"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "NewsDissipationDemo",
+      "file": "src/components/FeatureLab/NewsDissipationDemo.jsx",
+      "lines": 114,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/FeatureLabPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "label",
+        "value",
+        "color"
+      ],
+      "hasTest": false,
+      "inlineStyles": 15,
+      "hexLiterals": 9
+    },
+    {
+      "name": "OrderForm",
+      "file": "src/components/mt5/OrderForm.jsx",
+      "lines": 87,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/Mt5TradingPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "quote",
+        "onPlaceOrder"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "OrderModal",
+      "file": "src/components/OrderModal.jsx",
+      "lines": 307,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/PortfolioPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "position",
+        "accountCash",
+        "mode",
+        "onClose",
+        "onComplete",
+        "adapterMode"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "PartialTakeProfitDemo",
+      "file": "src/components/FeatureLab/PartialTakeProfitDemo.jsx",
+      "lines": 138,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/FeatureLabPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "label",
+        "value",
+        "color"
+      ],
+      "hasTest": false,
+      "inlineStyles": 26,
+      "hexLiterals": 11
+    },
+    {
+      "name": "PatternDetailPanel",
+      "file": "src/components/PatternDetailPanel.jsx",
+      "lines": 63,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/TrainingCandlePatternsPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "bullish",
+        "bearish",
+        "neutral",
+        "onClose"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 0
+    },
+    {
+      "name": "ProfitCapturePanel",
+      "file": "src/components/backtest/ProfitCapturePanel.jsx",
+      "lines": 142,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/BacktestPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "totals"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "ProtocolDirectiveSettings",
+      "file": "src/components/backtest/ProtocolDirectiveSettings.jsx",
+      "lines": 153,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/BacktestPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "protocol",
+        "symbol",
+        "timeframe",
+        "days",
+        "periodId"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "RoadmapBoard",
+      "file": "src/components/roadmap/RoadmapBoard.jsx",
+      "lines": 330,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/RoadmapPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "columns",
+        "cards",
+        "sortMode",
+        "onMove",
+        "onRenameColumn",
+        "onOpenCard"
+      ],
+      "hasTest": false,
+      "inlineStyles": 2,
+      "hexLiterals": 8
+    },
+    {
+      "name": "SeasonalityHeatmap",
+      "file": "src/components/SeasonalityHeatmap.jsx",
+      "lines": 122,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/architecture-framework.data.js"
+      ],
+      "tier": "single",
+      "props": [
+        "symbol"
+      ],
+      "hasTest": false,
+      "inlineStyles": 4,
+      "hexLiterals": 3
+    },
+    {
+      "name": "SeesScoringPanel",
+      "file": "src/components/SeesScoringPanel.jsx",
+      "lines": 214,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/components/ErrorBoundary.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "strategyId",
+        "limit"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "SessionOpenEffectDemo",
+      "file": "src/components/FeatureLab/SessionOpenEffectDemo.jsx",
+      "lines": 100,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/FeatureLabPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "session",
+        "active"
+      ],
+      "hasTest": false,
+      "inlineStyles": 13,
+      "hexLiterals": 3
+    },
+    {
+      "name": "StickyHeader",
+      "file": "src/components/StickyHeader.jsx",
+      "lines": 62,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/core/architecture-reference.js"
+      ],
+      "tier": "single",
+      "props": [
+        "shrinkThreshold",
+        "expandedPadding",
+        "shrunkPadding",
+        "expandedFontSize",
+        "shrunkFontSize",
+        "className",
+        "children"
+      ],
+      "hasTest": false,
+      "inlineStyles": 1,
+      "hexLiterals": 0
+    },
+    {
+      "name": "ThresholdRangeMap",
+      "file": "src/components/ThresholdRangeMap.jsx",
+      "lines": 170,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/DiagramsPage.jsx"
+      ],
+      "tier": "single",
+      "props": [],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
+    },
+    {
+      "name": "TimezoneDecisionDemo",
+      "file": "src/components/FeatureLab/TimezoneDecisionDemo.jsx",
+      "lines": 244,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/FeatureLabPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "hour",
+        "color",
+        "label"
+      ],
+      "hasTest": false,
+      "inlineStyles": 41,
+      "hexLiterals": 6
+    },
+    {
+      "name": "TrailingStopDemo",
+      "file": "src/components/FeatureLab/TrailingStopDemo.jsx",
+      "lines": 320,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/FeatureLabPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "label",
+        "value",
+        "color"
+      ],
+      "hasTest": false,
+      "inlineStyles": 21,
+      "hexLiterals": 16
+    }
+  ]
+}
