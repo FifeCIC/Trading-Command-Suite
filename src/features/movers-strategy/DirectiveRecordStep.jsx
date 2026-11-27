@@ -26,6 +26,7 @@
  * protocol's would be a fabricated row.
  */
 import { useQuery } from '@tanstack/react-query';
+import Explanation from '../../components/Explanation.jsx';
 import { apiGet } from '../../core/api/client';
 import NoticeBlock from '../../components/NoticeBlock.jsx';
 import { noticeFromError } from '../../core/notices/from-error.js';
@@ -103,12 +104,12 @@ export default function DirectiveRecordStep({ entries, days: windowDays = 30 }) 
 
   return (
     <>
-      <p className="mvp-caption">
+      <Explanation summary="What this sample is, and is not">
         Measured over the last <strong>{data.window?.days ?? windowDays} days</strong> across every strategy and
         symbol — <strong>not</strong> this run’s evidence. Sample: {data.sample?.maturedRows ?? 0} matured
         predictions over {data.sample?.distinctSymbols ?? 0} symbols, {data.sample?.distinctDays ?? 0} days.
         A hit rate is directional accuracy, not profit.
-      </p>
+      </Explanation>
 
       {/**
         * ⚠️ THE COVERAGE LINE IS THE POINT OF THE `This run` COLUMN. Without it, a table of hit rates

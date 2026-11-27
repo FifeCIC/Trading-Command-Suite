@@ -1,10 +1,10 @@
 {
   "generated": "scripts/components-index.cjs",
-  "total": 117,
+  "total": 118,
   "counts": {
-    "total": 117,
+    "total": 118,
     "byTier": {
-      "primitive": 28,
+      "primitive": 29,
       "shared": 60,
       "single": 29,
       "orphan": 0
@@ -421,8 +421,9 @@
       "file": "src/components/WhyPopover.jsx",
       "purpose": "WhyPopover — an explanation that is READ ON DEMAND, not dumped into the page.",
       "lines": 69,
-      "consumers": 9,
+      "consumers": 10,
       "consumerFiles": [
+        "src/components/Explanation.jsx",
         "src/components/backtest/MoversDepthPanel.jsx",
         "src/components/backtest/MoversSelectionComparison.jsx",
         "src/components/backtest/TradeConfigPanel.jsx",
@@ -440,6 +441,33 @@
       "hasTest": false,
       "inlineStyles": 0,
       "hexLiterals": 1
+    },
+    {
+      "name": "Explanation",
+      "file": "src/components/Explanation.jsx",
+      "purpose": "Explanation — the \"how to read this table\" sentence, inline or one click away.",
+      "lines": 41,
+      "consumers": 9,
+      "consumerFiles": [
+        "src/components/backtest/MoversDepthPanel.jsx",
+        "src/components/backtest/UnusedDataPanel.jsx",
+        "src/core/use-explanations.js",
+        "src/features/movers-strategy/DirectiveRecordStep.jsx",
+        "src/features/movers-strategy/ParityStep.jsx",
+        "src/features/movers-strategy/ResultByDayStep.jsx",
+        "src/features/movers-strategy/ResultBySymbolStep.jsx",
+        "src/features/movers-strategy/ScoringFunnelStep.jsx",
+        "src/pages/MoversStrategyBacktestPage.jsx"
+      ],
+      "tier": "primitive",
+      "props": [
+        "summary",
+        "children",
+        "className"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
     },
     {
       "name": "RunComparisonPanels",
@@ -784,7 +812,7 @@
       "name": "MoversDepthPanel",
       "file": "src/components/backtest/MoversDepthPanel.jsx",
       "purpose": "MoversDepthPanel — ONE session, taken apart: the ladder, the bars, the decisions, the decomposition.",
-      "lines": 707,
+      "lines": 708,
       "consumers": 5,
       "consumerFiles": [
         "src/core/architecture-reference.js",
@@ -1402,7 +1430,7 @@
       "name": "ParityStep",
       "file": "src/features/movers-strategy/ParityStep.jsx",
       "purpose": "ParityStep — WHAT THIS RUN CANNOT REPRODUCE OF THE LIVE ACCOUNT.",
-      "lines": 205,
+      "lines": 206,
       "consumers": 3,
       "consumerFiles": [
         "src/data/qa-checklist.js",
@@ -1504,7 +1532,7 @@
       "name": "ResultByDayStep",
       "file": "src/features/movers-strategy/ResultByDayStep.jsx",
       "purpose": "ResultByDayStep — one row per session: what the screen offered, what the ranking picked, what it made.",
-      "lines": 194,
+      "lines": 195,
       "consumers": 3,
       "consumerFiles": [
         "src/features/movers-strategy/selection-exclusions.js",
@@ -1567,7 +1595,7 @@
       "name": "UnusedDataPanel",
       "file": "src/components/backtest/UnusedDataPanel.jsx",
       "purpose": "UnusedDataPanel — WHAT THE RUN ALREADY KNOWS AND THIS PAGE DOES NOT SHOW (#1340).",
-      "lines": 213,
+      "lines": 214,
       "consumers": 3,
       "consumerFiles": [
         "src/data/qa-checklist.js",
@@ -1653,7 +1681,7 @@
       "name": "DirectiveRecordStep",
       "file": "src/features/movers-strategy/DirectiveRecordStep.jsx",
       "purpose": "DirectiveRecordStep — WHAT EACH DIRECTIVE HAS ACTUALLY SCORED AND PREDICTED.",
-      "lines": 227,
+      "lines": 228,
       "consumers": 2,
       "consumerFiles": [
         "src/data/qa-checklist.js",
@@ -1793,7 +1821,7 @@
       "name": "ResultBySymbolStep",
       "file": "src/features/movers-strategy/ResultBySymbolStep.jsx",
       "purpose": "ResultBySymbolStep — which instruments carried the total.",
-      "lines": 82,
+      "lines": 83,
       "consumers": 2,
       "consumerFiles": [
         "src/features/movers-strategy/steps.js",
@@ -1869,7 +1897,7 @@
       "name": "ScoringFunnelStep",
       "file": "src/features/movers-strategy/ScoringFunnelStep.jsx",
       "purpose": "ScoringFunnelStep — SCORES → SIGNALS → TRADES, per symbol, with the speed rating beside them.",
-      "lines": 201,
+      "lines": 202,
       "consumers": 2,
       "consumerFiles": [
         "src/data/qa-checklist.js",

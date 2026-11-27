@@ -13,6 +13,7 @@
  * repo has already paid for.
  */
 import { SortableTh } from '../../core/use-sort';
+import Explanation from '../../components/Explanation.jsx';
 import WhyPopover from '../../components/WhyPopover.jsx';
 import { dayLabel } from './format.js';
 import { formatAmount, formatPct } from '../../core/format-utils.js';
@@ -42,10 +43,10 @@ export default function ResultByDayStep({ sort }) {
         ⚠️ A `<p>` ABOVE the frame, not a `<caption>` inside it (theme, 2026-11-26) — as a caption it
         sat inside the bordered scroll, jammed against the header row.
       */}
-      <p className="mvp-caption">
+      <Explanation summary="How the day bars are scaled">
         The bar length is this day&rsquo;s P/L against the largest day in the table ({formatAmount(bars.maxAbs)}),
         so a single day carrying the total is visible at a glance. The figure beside it is the value.
-      </p>
+      </Explanation>
       <div className="mvp-scroll">
       <table className="mvp-table">
         <thead>

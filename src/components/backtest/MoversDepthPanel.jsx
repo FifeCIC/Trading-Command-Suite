@@ -32,6 +32,7 @@
  * a way to keep the marked set at exactly one row in each table.
  */
 import { useMemo, useState } from 'react';
+import Explanation from '../Explanation.jsx';
 import WhyPopover from '../WhyPopover.jsx';
 import MoversDepthChart from './MoversDepthChart.jsx';
 import { formatPct, formatPrice, formatAmount } from '../../core/format-utils';
@@ -210,10 +211,10 @@ export function SelectionSummaryTable({ trades }) {
 
   return (
     <>
-      <p className="mvp-caption">
+      <Explanation summary="What the ladder counted">
         What the day list counted. A row the engine opened but the selection did not admit has real
         P/L and is in no total on this page.
-      </p>
+      </Explanation>
       <div className="mvp-scroll">
       <table className="mvp-table">
         <thead>

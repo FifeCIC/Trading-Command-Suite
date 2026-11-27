@@ -18,6 +18,7 @@
  * change (register row 23) and would need a copied configuration and a comparison.
  */
 import { useQuery } from '@tanstack/react-query';
+import Explanation from '../../components/Explanation.jsx';
 import { apiGet } from '../../core/api/client';
 import NoticeBlock from '../../components/NoticeBlock.jsx';
 import { noticeFromError } from '../../core/notices/from-error.js';
@@ -108,9 +109,9 @@ export default function ParityStep({ runs }) {
               {' unrealised and live has no equivalent event. Treat this total as a position mark, not a result.'}
             </p>
           )}
-          <p className="mvp-caption">
+          <Explanation summary="What this run’s exposure is">
             <strong>This run’s exposure.</strong> {exposure.note}
-          </p>
+          </Explanation>
           <div className="mvp-scroll">
             <table className="mvp-table">
               <thead>
@@ -154,14 +155,14 @@ export default function ParityStep({ runs }) {
         </>
       )}
 
-      <p className="mvp-caption">
+      <Explanation summary="Which mechanisms live does not reproduce">
         <strong>
           {summary.outcomeGaps} of {summary.total} mechanisms that change a trade outcome are not shared
           verbatim with live.
         </strong>{' '}
         The rest of a run’s figures are computed by the engine’s own rules, so a P/L is a statement about
         the engine — not a forecast of the account.
-      </p>
+      </Explanation>
 
       <div className="mvp-scroll">
         <table className="mvp-table">

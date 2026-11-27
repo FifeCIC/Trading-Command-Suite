@@ -1791,3 +1791,69 @@
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Explanations: collapsed by default, one click to read (decided 2026-11-27) ────────────────────
+   The owner's verdict was that the page presents too much text instantly, and the eleven captions that
+   explain how to read each table were the bulk of it. Collapsed, the caption keeps a MARKER and a
+   one-line label: the sentence is still discoverable, and it costs one row instead of three.
+
+   ⚠️ The label is not decoration. A bare "?" glyph beside a table does not tell a reader that the text
+   behind it is about THAT table; the label does, and it is also the button's accessible name. */
+.mvp-caption--collapsed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  color: var(--text-dim);
+}
+
+.mvp-caption__label {
+  font-size: 12.5px;
+  line-height: 1.4;
+  /* The label is a label, not a link — it opens nothing on its own; the marker beside it does. */
+  user-select: none;
+}
+
+/* The panel of a collapsed explanation is prose, so it gets prose leading rather than the tight
+   single-line rhythm the short "why" popovers use. */
+.mvp-caption--collapsed .why-pop-panel {
+  max-width: 52ch;
+  line-height: 1.55;
+}
+
+/* The summary controls sit together at the right of the run row: the explanation switch and the link
+   into settings. Grouped so the row reads as two controls rather than a button adrift from a link. */
+.mvp-summary-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* A small pressed/unpressed switch. ⚠️ It states its own state in words ("on"/"off") because a colour
+   change alone is not a state a colour-blind reader can read. */
+.mvp-toggle {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.mvp-toggle:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.mvp-toggle--on {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.mvp-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

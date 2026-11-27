@@ -65,7 +65,10 @@ import { summariseFillGaps, fillGapChips } from '../features/movers-strategy/fil
 // 2026-11-27 — WHY THE RUN COUNTED FEWER TRADES THAN THE ENGINE PRODUCED. The two drop codes mean
 // opposite things and neither was named on the page.
 import { summariseExclusions } from '../features/movers-strategy/selection-exclusions.js';
+import { cutoffLabel } from '../features/movers-strategy/cutoff-label.js';
 import { buildPriceReference } from '../features/movers-strategy/price-reference.js';
+import { useExplanations } from '../core/use-explanations.js';
+import Explanation from '../components/Explanation.jsx';
 import QualifierStrip from '../components/QualifierStrip.jsx';
 import ResultByDayStep from '../features/movers-strategy/ResultByDayStep.jsx';
 import ResultBySymbolStep from '../features/movers-strategy/ResultBySymbolStep.jsx';
@@ -96,11 +99,18 @@ const LEGS = [
 const TOP_N_OPTIONS = [1, 2, 3, 5];
 
 /** US session opens 09:30 ET; the cutoff is expressed in UTC and labelled with its ET equivalent. */
-const CUTOFF_OPTIONS = [
-  { utc: '15:00', et: '10:00', label: '30 min in' },
-  { utc: '15:30', et: '10:30', label: '1 hour in' },
-  { utc: '16:30', et: '11:30', label: '2 hours in' },
-];
+/**
+ * The ranking cutoff, in UTC — the value the API receives and compares against
+ * (`applySelection()` → `minuteOfDayUtc`).
+ *
+ * ⚠️ **THERE IS NO `et` FIELD HERE ANY MORE, ON PURPOSE (2026-11-27).** It used to carry a hardcoded
+ * `10:00` / `10:30` / `11:30`, which are only true in EST. From 11 March to 4 November the same UTC
+ * moment is 11:00 / 11:30 / 12:30 ET, so for half the year the control named a screen time an hour
+ * earlier than the one it used, and described "1 hour in" as "30 min in". The ET clock is now DERIVED
+ * per dataset day by `features/movers-strategy/cutoff-label.js` — deleting the typed value is the fix,
+ * because a correct-looking literal is what the next reader would trust.
+ */
+const CUTOFF_OPTIONS = [{ utc: '15:00' }, { utc: '15:30' }, { utc: '16:30' }];
 
 /**
  * How long to wait between day runs. This is a THROTTLE, not a simulation speed: each day is a real
@@ -154,6 +164,9 @@ export default function MoversStrategyBacktestPage() {
   // #1342 — a monotonic counter that OPENS the settings step from the summary's 'Change settings'
   // button. A boolean could not: it is already true, so pressing the button would do nothing.
   const [settingsSignal, setSettingsSignal] = useState(0);
+
+  /** The page-level 'read the notes inline?' preference (2026-11-27). One switch, eleven captions. */
+  const [explanationsOn, setExplanationsOn] = useExplanations();
 
   const [results, setResults] = useState([]);
   /**
@@ -271,6 +284,17 @@ export default function MoversStrategyBacktestPage() {
     () => [...selected].sort((a, b) => (datasetByName.get(a)?.answerDate ?? a).localeCompare(datasetByName.get(b)?.answerDate ?? b)),
     [selected, datasetByName],
   );
+
+  /**
+   * The dates the cutoff will actually be applied to, so the control can DERIVE the ET clock instead of
+   * printing a typed one (2026-11-27). Empty when nothing is ticked — the control then describes today
+   * and says so, rather than silently borrowing a day the reader has not chosen.
+   */
+  const cutoffDates = useMemo(
+    () => runQueue.map((n) => datasetByName.get(n)?.answerDate).filter(Boolean),
+    [runQueue, datasetByName],
+  );
+  const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const canRun = !running && runQueue.length > 0 && currentLegState?.available !== false;
 
@@ -727,20 +751,32 @@ export default function MoversStrategyBacktestPage() {
                   </WhyPopover>
                 </span>
                 <div className="ff-seg" role="group" aria-label="Ranking cutoff">
-                  {CUTOFF_OPTIONS.map((c) => (
-                    <button
-                      key={c.utc}
-                      type="button"
-                      className="ff-seg-btn"
-                      aria-pressed={c.utc === cutoffUtc}
-                      disabled={running}
-                      title={`${c.label} — ${c.et} ET`}
-                      onClick={() => setCutoffUtc(c.utc)}
-                    >
-                      {c.utc}
-                      <span className="mvp-et">{c.et}</span>
-                    </button>
-                  ))}
+                  {CUTOFF_OPTIONS.map((c) => {
+                    /**
+                     * ⚠️ THE ET CLOCK IS DERIVED, NEVER TYPED (2026-11-27). It follows the US clock for
+                     * the day(s) actually selected — a November dataset is measured under EST even if you
+                     * run it in July. With no day picked the label describes TODAY, and says so, because a
+                     * reader choosing a cutoff before ticking a day still needs to know what it means.
+                     */
+                    const lab = cutoffLabel(c.utc, cutoffDates.length ? cutoffDates : [todayIso]);
+                    const etTitle = lab.et
+                      ? `${lab.offset ?? ''} — ${lab.et} ET${cutoffDates.length ? '' : " (today's clock)"}`
+                      : 'the ET clock for this cutoff could not be derived';
+                    return (
+                      <button
+                        key={c.utc}
+                        type="button"
+                        className="ff-seg-btn"
+                        aria-pressed={c.utc === cutoffUtc}
+                        disabled={running}
+                        title={`${c.utc} UTC · ${etTitle}${lab.varies ? ' · the selected days disagree, because the US clock changed between them' : ''}`}
+                        onClick={() => setCutoffUtc(c.utc)}
+                      >
+                        {c.utc}
+                        {lab.et && <span className="mvp-et">{lab.et}</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div className="ff-field">
@@ -910,7 +946,7 @@ export default function MoversStrategyBacktestPage() {
                       </tbody>
                     </table>
                   </div>
-                  <p className="mvp-note">
+                  <Explanation summary="What the two percentages mean">
                     The percentage is each name’s move <strong>at the screen time</strong> — the number the
                     ranking sorts on, so rank 1 is what <em>Trade the top: 1</em> takes, subject to the
                     engine’s bar floor. <em>peak</em> is how far the name ran by the close, which can be
@@ -918,7 +954,7 @@ export default function MoversStrategyBacktestPage() {
                     {hiddenCountForDays > 0 && (
                       <> Showing the top 5 of {hiddenCountForDays + 5} candidates per day.</>
                     )}
-                  </p>
+                  </Explanation>
                   {daysForLeg.length > 5 && (
                     <p className="mvp-note">
                       Showing the latest 5 of {daysForLeg.length} stored {leg.side} days.
@@ -1193,17 +1229,43 @@ export default function MoversStrategyBacktestPage() {
                   {progress ? ` · ${elapsedLabel(now - progress.startedAt)}` : ''}
                 </span>
               </div>
-              <button
-                type="button"
-                className="mvp-link-btn"
-                onClick={() => {
-                  setFormOpen(true);
-                  // The settings step may be folded; a button that reveals nothing reads as broken.
-                  setSettingsSignal((n) => n + 1);
-                }}
-              >
-                Change settings
-              </button>
+              <div className="mvp-summary-controls">
+                {/**
+                  * ── THE EXPLANATION TOGGLE (decided 2026-11-27) ──────────────────────────────────
+                  * The eleven captions that explain how to read each table are the bulk of the page's
+                  * text, and they are the reason a reader scrolling for a number passes a paragraph
+                  * before every table. Off by default (see `use-explanations.js`); each caption keeps a
+                  * labelled marker so the sentence is one click away and never simply gone.
+                  *
+                  * ⚠️ IT DOES NOT HIDE WARNINGS. Notices and `mvp-note--warn` blocks are statements
+                  * about the run — a total that is a mark, a fill the engine assumed — and they ignore
+                  * this switch entirely.
+                  */}
+                <button
+                  type="button"
+                  className={`mvp-toggle${explanationsOn ? ' mvp-toggle--on' : ''}`}
+                  aria-pressed={explanationsOn}
+                  title={
+                    explanationsOn
+                      ? 'Explanations are shown inline. Turn off to collapse each one to a “?” marker.'
+                      : 'Explanations are collapsed to a “?” marker. Turn on to read them under each table.'
+                  }
+                  onClick={() => setExplanationsOn(!explanationsOn)}
+                >
+                  Read notes: {explanationsOn ? 'on' : 'off'}
+                </button>
+                <button
+                  type="button"
+                  className="mvp-link-btn"
+                  onClick={() => {
+                    setFormOpen(true);
+                    // The settings step may be folded; a button that reveals nothing reads as broken.
+                    setSettingsSignal((n) => n + 1);
+                  }}
+                >
+                  Change settings
+                </button>
+              </div>
             </div>
 
             {results.length > 0 && (

@@ -25,6 +25,7 @@
  *   entry / entry+exit → traded
  */
 import { useMemo } from 'react';
+import Explanation from '../../components/Explanation.jsx';
 import { funnelFor, funnelTotals, sharePct, funnelShape, SPEED_DIRECTIVE } from '../../core/movers-funnel.js';
 
 const BUCKETS = [
@@ -75,10 +76,10 @@ export default function ScoringFunnelStep({ entries }) {
         read than the numbers, and the numbers are what a reader compares. The chart worth building is the
         price-with-markers one (#1342 step 8), not a redrawing of six integers.
       */}
-      <p className="mvp-caption">
+      <Explanation summary="What each funnel bar counts">
         Every bar the engine scored, and what became of it. <strong>Under the bar</strong> is the
         population a lower entry bar would admit — the one number that answers “why so few trades”.
-      </p>
+      </Explanation>
       <div className="mvp-scroll">
         <table className="mvp-table">
           <thead>
@@ -160,10 +161,10 @@ export default function ScoringFunnelStep({ entries }) {
       </h3>
       {anySpeed ? (
         <>
-          <p className="mvp-caption">
+          <Explanation summary="How to read the speed column">
             The protocol’s own speed directive, read per bar. A symbol whose peak is near the ceiling
             moved fast for at least one bar; a low mean says the move was not sustained.
-          </p>
+          </Explanation>
           <div className="mvp-scroll">
           <table className="mvp-table">
             <thead>

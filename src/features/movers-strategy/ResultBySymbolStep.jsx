@@ -10,6 +10,7 @@
  * losing" are different findings.
  */
 import { SortableTh } from '../../core/use-sort';
+import Explanation from '../../components/Explanation.jsx';
 import { formatAmount } from '../../core/format-utils.js';
 import { buildPnlBars } from './pnl-bars.js';
 
@@ -34,11 +35,11 @@ export default function ResultBySymbolStep({ sort }) {
 
   return (
     <>
-      <p className="mvp-caption">
+      <Explanation summary="How the symbol bars are scaled">
         The bar length is this symbol&rsquo;s P/L against the biggest one in the table
         ({formatAmount(bars.maxAbs)}), so a handful of instruments carrying the total is visible rather
         than inferred. The figure beside it is the value.
-      </p>
+      </Explanation>
       <div className="mvp-scroll">
       <table className="mvp-table">
         <thead>

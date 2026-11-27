@@ -15,6 +15,7 @@
  * run"** — so the table drifts visibly instead of quietly going stale.
  */
 import { useMemo, useState } from 'react';
+import Explanation from '../Explanation.jsx';
 import {
   inventoryRows,
   formatValue,
@@ -111,16 +112,16 @@ export default function UnusedDataPanel({ runs, bare = false }) {
         * the same defect as a blank cell reading as zero.
         */}
       {picked.concern ? (
-        <p className="mvp-caption">
+        <Explanation summary="What this question selected">
           <strong>{picked.rows.length} of {rows.length}</strong> field(s) answer “{picked.concern.question}”
           {' '}— {picked.hidden} left out. {picked.concern.why}
-        </p>
+        </Explanation>
       ) : (
-        <p className="mvp-caption">
+        <Explanation summary="What this list is">
           Fields this run returns that the tables above do not use, chosen by reading the page&apos;s own
           source. Every value below comes from the run in front of you, and a field the run did not
           return says so rather than showing a blank.
-        </p>
+        </Explanation>
       )}
       <div className="mvp-scroll">
       <table className="mvp-table">
