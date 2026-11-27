@@ -12,10 +12,10 @@
  */
 
 /**
- * @param {Array<{ caveatRows?: Array<{code:string,label:string,qualifies:string,text:string}> }>} runs
+ * @param {Array<{ caveatRows?: Array<{code:string,label:string,qualifies:string,gist?:string,text:string}> }>} runs
  * @param {Iterable<string>} [gateSentences] statements the page already renders elsewhere, so one fact
  *   never appears twice.
- * @returns {Array<{code:string,label:string,qualifies:string,texts:string[],days:number}>}
+ * @returns {Array<{code:string,label:string,qualifies:string,gist:string|null,texts:string[],days:number}>}
  */
 export function groupCaveats(runs, gateSentences = []) {
   const skip = new Set([...gateSentences].filter(Boolean));
@@ -28,9 +28,18 @@ export function groupCaveats(runs, gateSentences = []) {
         code: row.code,
         label: row.label,
         qualifies: row.qualifies,
+        /**
+         * ⚠️ THE SHORT FORM IS TAKEN FROM THE FIRST ROW THAT CARRIES ONE, and a row without one keeps
+         * `null` — never a truncated `text`. A truncation reads as a cut-off sentence ("The candidate
+         * list (10 symbols) was built from"), which is worse than no gist: the cell then shows the full
+         * sentence instead, so an older payload degrades to the previous behaviour rather than to a
+         * fragment.
+         */
+        gist: typeof row.gist === 'string' && row.gist.trim() ? row.gist.trim() : null,
         texts: [],
         days: 0,
       };
+      if (!entry.gist && typeof row.gist === 'string' && row.gist.trim()) entry.gist = row.gist.trim();
       if (!entry.texts.includes(row.text)) entry.texts.push(row.text);
       entry.days += 1;
       byCode.set(row.code, entry);

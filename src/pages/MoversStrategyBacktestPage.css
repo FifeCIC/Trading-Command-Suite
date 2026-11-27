@@ -1886,3 +1886,31 @@
   font-size: 12px;
   color: var(--text-dim);
 }
+
+/* ── The caveat cell: gist first, sentence on demand (2026-11-27) ─────────────────────────────────
+   The Detail column was the wordiest thing on the page — a full sentence per row, up to 40 words. The
+   gist is the FACT (≤5 words, from the server's declared `gist`); the sentence is the reasoning and is
+   one click away. Both are read together when a reader turns explanations on.
+
+   ⚠️ The gist is not smaller than the old text was. It is the same size and the same colour — it is the
+   cell's content now, not a label above it — and the full statement is one click or one toggle away. */
+.mvp-caveat-gist {
+  display: block;
+  color: var(--ink);
+}
+
+.mvp-caveat-long {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+/* The marker sits beside the gist rather than under it, so a row without a gist and a row with one are
+   the same height and the column still scans. */
+.mvp-caveat-text .why-pop {
+  display: inline-flex;
+  margin-left: 6px;
+  vertical-align: -2px;
+}

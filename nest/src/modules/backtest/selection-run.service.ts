@@ -397,6 +397,18 @@ export interface SelectionCaveat {
   label: string;
   /** WHICH FIGURE this qualifies — the table's second column. */
   qualifies: string;
+  /**
+   * ── THE FIVE-WORD FORM (2026-11-27) ──────────────────────────────────────────────────────────────
+   * The same fact without the reasoning behind it, so a table cell can state it and a reader can scan a
+   * column of them. The owner's rule: more than about five words is "verging on a sentence and not a
+   * quickly grasped impression".
+   *
+   * ⚠️ IT IS NOT A TRUNCATION OF `text`. Truncating prose produces "The candidate list (10 symbols) was
+   * built from" — a fragment that reads as a cut-off sentence. A gist is written as the ANSWER, with the
+   * numbers that matter, and it is declared beside the sentence so the two cannot say different things.
+   * ⚠️ `text` IS NOT REMOVED. It is what the reader opens when the gist raises a question.
+   */
+  gist: string;
   /** The full statement. Never shortened here; the table is a presentation, not a summary. */
   text: string;
 }
@@ -1120,6 +1132,7 @@ export class SelectionRunService {
         code: 'single-session',
         label: 'One session',
         qualifies: 'Totals, day count',
+        gist: `one session, ${priorSessions} warm-up`,
         text:
           `Measured on ${decl.value.answerDate} only — the session this dataset is a screen of. Its ` +
           `${priorSessions} earlier session(s) are directive warm-up, not results.`,
@@ -1128,6 +1141,7 @@ export class SelectionRunService {
         code: 'trade-config',
         label: tradeConfig.bot ? 'Trade management' : 'No bot — engine literals',
         qualifies: 'P/L, stop, target, hold',
+        gist: tradeConfig.bot ? `'${tradeConfig.bot.name}' bracket` : 'engine literals, no bot',
         text: tradeConfig.bot
           ? `Trade management came from ${tradeConfig.bot.name}${tradeConfig.bot.active ? '' : ` (INACTIVE, ${tradeConfig.bot.mode ?? 'unknown'} mode)`}`
             + ' — stop, target, entry bar and max hold are that record\'s own values.'
@@ -1138,6 +1152,7 @@ export class SelectionRunService {
         code: 'membership',
         label: 'Candidate list',
         qualifies: 'Top N selection',
+        gist: `${tickers.length} names, membership optimistic`,
         text:
           `The candidate list (${tickers.length} symbols) was built from ${decl.value.answerDate}'s ` +
           'close-to-close move, so the LIST already knows how the day ended. The ranking inside it uses ' +
@@ -1150,6 +1165,7 @@ export class SelectionRunService {
         code: 'side-source',
         label: 'Direction source',
         qualifies: 'Long/Short leg',
+        gist: `side from ${resolution.source}`,
         text:
           `Side came from the '${resolution.source}' source rather than the protocol's declared ` +
           'direction — confirm the protocol id is the leg you meant.',
@@ -1160,6 +1176,7 @@ export class SelectionRunService {
         code: 'admission',
         label: 'Admitted population',
         qualifies: 'Every total',
+        gist: `${admission.counts.refused} of ${admission.counts.considered} refused`,
         text:
           `ADMISSION: portfolio — ${admission.counts.refused} of ${admission.counts.considered} trade(s) the engine ` +
           `decided were refused because the bot could not have taken them (${admission.counts.byCode.cooldown} inside the ` +
@@ -1174,6 +1191,7 @@ export class SelectionRunService {
         code: 'excluded-trades',
         label: 'Excluded trades',
         qualifies: 'Trades, win rate',
+        gist: `${engineTradesOutsideSelection} trades not counted`,
         text:
           `${engineTradesOutsideSelection} trade(s) the engine produced were excluded by the selection ` +
           `(${perSymbol.reduce((a, s) => a + s.excludedBeforeCutoff, 0)} entered before the ${cutoffUtc} ` +
@@ -1186,6 +1204,7 @@ export class SelectionRunService {
         code: 'symbol-failed',
         label: 'Symbol failed',
         qualifies: 'Per-symbol result',
+        gist: `${failed.length} symbol(s) failed`,
         text:
           `${failed.length} symbol(s) could not be run and are listed with their error rather than as zero trades: ` +
           failed.map((f) => f.symbol).join(', '),
@@ -1196,6 +1215,7 @@ export class SelectionRunService {
         code: 'none-ranked',
         label: 'Nothing ranked',
         qualifies: 'The whole run',
+        gist: 'nothing ranked this day',
         text: `No candidate could be ranked on ${decl.value.answerDate}.`,
       });
     }
@@ -1218,6 +1238,7 @@ export class SelectionRunService {
         code: 'engine-caveats',
         label: 'Engine qualifications',
         qualifies: 'P/L, sizing, hold, trade count',
+        gist: `${engineCaveats.length} engine qualification(s)`,
         text:
           `The engine qualified this run itself, on every symbol: ${engineCaveats.join(' ')}`,
       });

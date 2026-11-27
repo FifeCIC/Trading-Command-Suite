@@ -327,6 +327,8 @@ export interface ProtocolScoreStatus {
   reason?: string;
   symbolsResolved?: number;
   symbolsScored?: number;
+  /** Symbols skipped because they are not tradeable in the current market state (#1359 follow-up). */
+  symbolsPaused?: number;
 }
 
 /**
@@ -1405,7 +1407,12 @@ export class SignalEnvelopeService {
       );
       blockerCodes.push('BELOW_GATE');
     }
-    if (gated.marketStatus && !gated.marketStatus.open) {
+    // ⚠️ `tradeable`, not `open` (#1359 follow-up) — extended hours ARE tradeable. An envelope
+    // stored before this field existed falls back to `open` rather than reading undefined as false.
+    const canTrade = gated.marketStatus
+      ? (gated.marketStatus.tradeable ?? gated.marketStatus.open)
+      : true;
+    if (gated.marketStatus && canTrade === false) {
       blockers.push(`Market unavailable: ${gated.marketStatus.reason ?? 'closed or stale'}`);
       blockerCodes.push('MARKET_UNAVAILABLE');
     }
@@ -1963,19 +1970,36 @@ export class SignalEnvelopeService {
       // venueForSymbol + same MarketCalendarService as the per-envelope marketStatus, so the
       // scoring gate and the serving gate cannot disagree). Standby skips scoring entirely
       // and records why in protocol_score_status, where the Protocols page renders it.
-      const venueGate = this.protocolGating.getVenueStandby(tickers);
-      if (venueGate.standby) {
+      // ── Per-symbol tradeability (#1359 follow-up, 2026-11-27) ────────────────────────────────
+      // A symbol that cannot be traded in the CURRENT market state is paused BEFORE any scoring:
+      // no directive runs, no score row, no envelope, no queue entry. Extended hours are TRADEABLE
+      // (owner decision, register row 316) — only a venue that is not trading at all (weekend or
+      // holiday) pauses a symbol. That is the "a closed venue produces NO fresh score" rule from
+      // 2026-09-19, narrowed from a protocol to a symbol.
+      //
+      // ⚠️ This replaces a protocol-level `getVenueStandby()` call that paused the WHOLE protocol
+      // when every venue it touched was closed. The same verdict is now derived per symbol, so a
+      // protocol holding one open and one closed symbol scores the open one instead of standing by.
+      const tradeability = tickers.map((ticker) => ({ ticker, verdict: this.protocolGating.assessTradeability(ticker) }));
+      const paused = tradeability.filter((t) => !t.verdict.tradeable);
+      const tradeableCount = tickers.length - paused.length;
+
+      if (paused.length === tickers.length) {
         protocolStatus[slug] = {
           state: 'standby',
           symbolsResolved: tickers.length,
           symbolsScored: 0,
-          reason: venueGate.reason,
+          symbolsPaused: paused.length,
+          reason: `No tradeable symbol (${paused.map((p) => `${p.ticker}: ${p.verdict.reason}`).join('; ')})`,
         };
         continue;
       }
 
       let protoScored = 0;
-      for (const ticker of tickers) {
+      for (const { ticker, verdict } of tradeability) {
+        // Paused for the current market state — never scored. The verdict was taken above so every
+        // symbol in this protocol was judged against the same instant.
+        if (!verdict.tradeable) continue;
         try {
           const env = await this.buildEnvelope(ticker, slug);
           const sym = ticker.toUpperCase();
@@ -2016,15 +2040,22 @@ export class SignalEnvelopeService {
             state: 'scoring',
             symbolsResolved: tickers.length,
             symbolsScored: protoScored,
-            reason: protoScored < tickers.length
-              ? `${protoScored}/${tickers.length} symbols produced a directional reading (the rest were no-data or failed) — see #758`
-              : undefined,
+            symbolsPaused: paused.length,
+            reason: [
+              protoScored < tradeableCount
+                ? `${protoScored}/${tradeableCount} tradeable symbols produced a directional reading (the rest were no-data or failed) — see #758`
+                : null,
+              paused.length
+                ? `${paused.length} paused — not tradeable in the current market state`
+                : null,
+            ].filter(Boolean).join(' · ') || undefined,
           }
         : {
             state: 'no-data',
             symbolsResolved: tickers.length,
             symbolsScored: 0,
-            reason: `No symbol produced a directional reading — every direction-eligible directive read neutral or data was missing (${tickers.length} symbol(s) resolved). An all-neutral tick is data absence, not a HOLD score (#758).`,
+            symbolsPaused: paused.length,
+            reason: `No symbol produced a directional reading — every direction-eligible directive read neutral or data was missing (${tradeableCount} tradeable symbol(s) scored, ${paused.length} paused). An all-neutral tick is data absence, not a HOLD score (#758).`,
           };
     }
 

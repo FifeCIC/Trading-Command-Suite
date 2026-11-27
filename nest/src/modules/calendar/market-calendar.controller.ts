@@ -4,6 +4,7 @@ import { MarketCalendarService, type MarketStatus, HolidayEntry } from './market
 import type { SessionInfo } from './market-calendar.service';
 import { MarketSessionsService, type MarketSession, type SessionState } from './market-sessions.service';
 import { assessTickerExtendedHours, type ExtendedHoursAssessment } from './extended-hours';
+import { assessSymbolsTradeability, type SymbolTradeability } from './symbol-tradeability';
 
 @ApiTags('calendar')
 @Controller('calendar')
@@ -49,6 +50,28 @@ export class MarketCalendarController {
       throw new BadRequestException("ticker: required, e.g. 'AAPL'");
     }
     return assessTickerExtendedHours(ticker.trim(), (exchange) => this.calendar.getMarketStatus(exchange));
+  }
+
+  /**
+   * Per-symbol tradeability for the CURRENT market state (#1359 follow-up).
+   *
+   * The answer the scoring gate uses: a paused symbol is not scored at all. Exposed so a page or an
+   * operator can see WHICH symbols are paused and why, instead of inferring it from an absence.
+   */
+  @Get('symbol-tradeability')
+  @ApiOperation({
+    summary: 'Can each symbol be traded right now? regular / extended / paused / continuous',
+  })
+  @ApiOkResponse({ description: 'One verdict per symbol, with the reason and the venue' })
+  getSymbolTradeability(@Query('symbols') symbols?: string): SymbolTradeability[] {
+    const list = String(symbols ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (list.length === 0) {
+      throw new BadRequestException("symbols: required, comma-separated, e.g. 'AAPL,XAUUSD'");
+    }
+    return assessSymbolsTradeability(list, (exchange) => this.calendar.getMarketStatus(exchange));
   }
 
   @Get('holidays')

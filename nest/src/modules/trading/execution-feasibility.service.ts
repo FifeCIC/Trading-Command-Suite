@@ -136,7 +136,7 @@ export class ExecutionFeasibilityService {
     brokerId: string;
     protocolId?: string | null;
     positions?: any[];
-    marketStatus?: { open: boolean; reason?: string | null } | null;
+    marketStatus?: { open: boolean; tradeable?: boolean; reason?: string | null } | null;
     /**
      * Order size in lots. Both phases now supply it: EXECUTION passes the size actually being
      * placed, and GENERATION passes the persisted manual-trade default so the volume-floor check
@@ -276,7 +276,13 @@ export class ExecutionFeasibilityService {
     }
 
     // ── 2. Market status (the score's own tradability state) ──
-    if (params.marketStatus && params.marketStatus.open === false) {
+    // ⚠️ `tradeable`, not `open` (#1359 follow-up): extended hours ARE tradeable, so the regular
+    // session being shut must not block a signal in the pre-market or after-hours window. Older
+    // stored scores predate `tradeable`, so an absent flag falls back to `open`.
+    const canTrade = params.marketStatus
+      ? (params.marketStatus.tradeable ?? params.marketStatus.open)
+      : true;
+    if (params.marketStatus && canTrade === false) {
       blockers.push({
         key: 'market-closed',
         message: `Market closed for ${ticker} — manual trade blocked (${params.marketStatus.reason || 'closed'})`,

@@ -46,6 +46,7 @@ import { ProtocolDbService } from './protocol-db.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { MarketCalendarService } from '../calendar/market-calendar.service';
 import { venueForSymbol } from '../calendar/market-patterns';
+import { assessSymbolTradeability } from '../calendar/symbol-tradeability';
 import { DirectiveConfigService } from './directive-config.service';
 import {
   RiskGatingEngine,
@@ -339,6 +340,13 @@ export interface GatedScore {
    *  AND data fresh); `stale` = market open but data stale (#732). */
   marketStatus?: {
     open: boolean;
+    /**
+     * #1359 follow-up — `open` is the REGULAR session; `tradeable` is "a score may be produced and
+     * acted on". They differ in extended hours, which are tradeable. Optional because envelopes
+     * stored before this field existed carry only `open`; readers fall back to `open`.
+     */
+    tradeable?: boolean;
+    session?: 'continuous' | 'regular' | 'extended' | 'closed' | 'unknown';
     /** True when the market is open per the calendar but the data feed is stale. */
     stale?: boolean;
     asOf: string | null;
@@ -1435,7 +1443,21 @@ export class ProtocolGatingService {
     // flag reports "market open but data stale" so the UI can label it "Stale"
     // instead of "Market closed" while execution still blocks on `open=false`.
     const freshness = computeMarketStatus(bars, new Date(), timeframe);
-    let marketStatus: { open: boolean; stale?: boolean; asOf: string | null; reason?: string };
+    let marketStatus: {
+      open: boolean;
+      /**
+       * ── #1359 follow-up (2026-11-27) ────────────────────────────────────────────────────────
+       * `open` is the REGULAR session; `tradeable` is "a score may be produced and acted on".
+       * They differ during extended hours, which the owner ruled ARE tradeable.
+       * `open` is kept as-is because an early-close/holiday label and several readers mean the
+       * regular session by it; the decision lives in `assessSymbolTradeability()`, not here.
+       */
+      tradeable: boolean;
+      session: 'continuous' | 'regular' | 'extended' | 'closed' | 'unknown';
+      stale?: boolean;
+      asOf: string | null;
+      reason?: string;
+    };
     // ── WHICH window governs this instrument (#850, #851) ─────────────────────────────────
     // Was: `this.marketCalendar.getMarketStatus('US')` for EVERY symbol, while
     // MarketCalendarService.SESSIONS contains only `US`. Every non-24h instrument was therefore
@@ -1452,12 +1474,17 @@ export class ProtocolGatingService {
     const venue = venueForSymbol(symbol);
     if (venue.kind === 'crypto') {
       // Crypto trades every hour of every day — data freshness is the only meaningful gate.
-      marketStatus = { ...freshness, stale: !freshness.open };
+      marketStatus = { ...freshness, stale: !freshness.open, tradeable: freshness.open, session: 'continuous' };
     } else if (venue.kind === 'venue' && venue.exchange) {
       const cal = this.marketCalendar.getMarketStatus(venue.exchange);
       const stale = cal.isOpen && !freshness.open;
+      // `pre-market` / `after-hours` are a TRADING DAY outside the regular window — extended hours,
+      // which the owner ruled tradeable. Only `closed` (weekend/holiday) is not a trading day.
+      const extended = cal.status === 'pre-market' || cal.status === 'after-hours';
       marketStatus = {
         open: cal.isOpen && freshness.open,
+        tradeable: cal.status !== 'closed' && freshness.open,
+        session: cal.isOpen ? 'regular' : extended ? 'extended' : 'closed',
         stale,
         asOf: freshness.asOf,
         // Name the VENUE, not just "US market" — the old string asserted a US session on
@@ -1480,7 +1507,7 @@ export class ProtocolGatingService {
             `than an omission (#850).`,
         );
       }
-      marketStatus = { ...freshness, stale: !freshness.open };
+      marketStatus = { ...freshness, stale: !freshness.open, tradeable: freshness.open, session: 'unknown' };
     }
 
     // Readiness gate (#627): a protocol is only eligible when every included
@@ -1741,31 +1768,37 @@ export class ProtocolGatingService {
    *   • any crypto symbol        → NOT standby (crypto trades 24/7; the protocol can act)
    *   • any unknown-venue symbol → NOT standby (no calendar; the gate's own fail-loud warning covers it)
    *   • zero calendar venues     → NOT standby
-   *   • every venue closed       → STANDBY, with each venue's next open in the reason
+   *   • at least one tradeable   → NOT standby (the protocol can still act on that symbol)
+   *   • every symbol paused      → STANDBY, with each symbol's own reason
    *
-   * Uses the same `venueForSymbol()` and the same `MarketCalendarService` that the per-envelope
-   * marketStatus uses — the two can never disagree about whether the market is open.
+   * ⚠️ 2026-11-27 — THIS NOW DELEGATES TO `assessSymbolTradeability()` (#1359 follow-up). It used to
+   * ask `cal.isOpen` per venue, which treated extended hours as closed. The per-symbol assessor is
+   * the ONE place the trading-window question is answered, so the protocol-level standby and the
+   * per-symbol pause cannot drift apart.
    */
   getVenueStandby(tickers: string[]): { standby: boolean; reason?: string } {
-    const venues = new Map<string, string>(); // exchange → human label
+    if (tickers.length === 0) return { standby: false };
+    const paused: string[] = [];
     for (const ticker of tickers) {
-      const venue = venueForSymbol(ticker);
-      if (venue.kind === 'crypto') return { standby: false };
-      if (venue.kind !== 'venue' || !venue.exchange) return { standby: false };
-      venues.set(venue.exchange, venue.label);
-    }
-    if (venues.size === 0) return { standby: false };
-
-    const closed: string[] = [];
-    for (const [exchange, label] of venues) {
-      const cal = this.marketCalendar.getMarketStatus(exchange);
-      if (cal.isOpen) return { standby: false }; // a live venue — the protocol can still act
-      closed.push(`${label} closed${cal.nextOpen ? ` — opens ${cal.nextOpen}` : ''}`);
+      const t = this.assessTradeability(ticker);
+      if (t.tradeable) return { standby: false }; // a tradeable symbol — the protocol can still act
+      paused.push(`${ticker}: ${t.reason}`);
     }
     return {
       standby: true,
-      reason: `Market closed (${closed.join('; ')}). A closed venue produces no fresh score and no signal (#893/#850 venue axis).`,
+      reason: `No tradeable symbol (${paused.join('; ')}). A paused symbol produces no fresh score and no signal (#893/#850 venue axis).`,
     };
+  }
+
+  /**
+   * assessTradeability() — ONE symbol, ONE answer, for both gates (#1359 follow-up).
+   *
+   * The scoring gate (`buildBestLadder`) uses it to decide whether to score a symbol at all; the
+   * serving gate reads the same verdict from the envelope. Extended hours are tradeable (owner
+   * decision, register row 316); only a venue that is not trading at all pauses a symbol.
+   */
+  assessTradeability(ticker: string) {
+    return assessSymbolTradeability(ticker, (exchange) => this.marketCalendar.getMarketStatus(exchange));
   }
 
   /**
@@ -2053,7 +2086,7 @@ export class ProtocolGatingService {
       riskMultiplier: number;
       directionMode: string;
       readinessGate: { ready: boolean; blockers: { directiveId: string; name: string; readiness: string }[]; reason?: string };
-      marketStatus: { open: boolean; asOf: string | null; reason?: string };
+      marketStatus: { open: boolean; tradeable?: boolean; session?: string; stale?: boolean; asOf: string | null; reason?: string };
       opportunityScore: number;
       opportunityMax: number;
       opportunityPct: number;

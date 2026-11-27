@@ -1540,7 +1540,35 @@ export default function MoversStrategyBacktestPage() {
                           <td className="mvp-nowrap">{c.label}</td>
                           <td className="mvp-nowrap">{c.qualifies}</td>
                           <td className="mvp-num">{c.days} of {okRuns.length}</td>
-                          <td className="mvp-caveat-text">{caveatDetail(c)}</td>
+                          <td className="mvp-caveat-text">
+                            {/**
+                              * ── THE GIST IS THE CELL; THE SENTENCE IS BEHIND IT (2026-11-27) ─────────
+                              * This column held the run's own full sentence — up to 40 words per row —
+                              * which made it the wordiest table on a page whose owner reads it for
+                              * hours. The server now declares a five-word `gist` beside each sentence,
+                              * so the cell can state the FACT and the reasoning opens on demand.
+                              *
+                              * ⚠️ NO GIST MEANS THE FULL SENTENCE, NOT A TRUNCATION. An older payload
+                              * without `gist` renders exactly as it did before — degraded, not broken,
+                              * and never a cut-off fragment.
+                              * ⚠️ WHEN EXPLANATIONS ARE ON, BOTH ARE SHOWN: the gist as the line and the
+                              * sentence under it. That is the reader asking for the long form.
+                              */}
+                            {c.gist ? (
+                              <>
+                                <span className="mvp-caveat-gist">{c.gist}</span>
+                                {explanationsOn ? (
+                                  <span className="mvp-caveat-long">{caveatDetail(c)}</span>
+                                ) : (
+                                  <WhyPopover title={`${c.label} — the full statement`}>
+                                    {caveatDetail(c)}
+                                  </WhyPopover>
+                                )}
+                              </>
+                            ) : (
+                              caveatDetail(c)
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
