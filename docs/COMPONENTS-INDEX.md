@@ -226,15 +226,21 @@ this repository keeps re-finding. The column is *declared* props, which is what 
 **Visual appearance.** 45 components carry inline `style={{…`. The named specimens live
 at `/development/theme`; this file is the inventory, not the gallery.
 
-## ⚠️ Testing — the third of the trio is missing entirely
+## Testing — the third of the trio
 
-**5 of 117** components are even *named* in a test file. ⚠️ And the reason is not
-laziness: **there is no component test runner in this project at all.** Measured 2026-11-27 —
-no `vitest`, no `jest` in the frontend, no `testing-library`, no `jsdom`/`happy-dom`, no
-`playwright`. The frontend suite is `node --test src/core/*.test.js` (**38 files, every one of
-them pure logic**), and **not one test file imports anything from `src/components/`**.
+**5 of 117** components are even *named* in a test file.
 
-So a "widget + theme + test" framework has two thirds built and **zero** of the third. That is
-the finding to act on, and it is cheaper than it looks: the logic is already extracted and
-tested (`core/*.test.js`); what is untestable today is the RENDER.
+⚠️ **CORRECTED 2026-11-19.** This section used to read *"there is no component test runner in
+this project at all"* — no vitest, no testing-library, no jsdom — and that was TRUE when it was
+measured. It is now false: `vitest.config.js` plus `@testing-library/react` and `jsdom` landed, and
+`npm run test:components` runs in `prebuild`. The specs assert CONTRACT (how many shapes a prop
+produces, which accessible name a variant announces) and never styling.
+
+⚠️ **A `*.test.jsx` file is a TEST, not a consumer.** Before 2026-11-19 this scanner recognised a
+test only as `.test.(js|ts)`, so the first `.jsx` spec counted as a CONSUMER of the component it
+tests — inflating its popularity while `hasTest` stayed false. Both halves now share one pattern.
+
+The remaining gap is size, not tooling: the three most-reused components (162 call sites) are
+covered and the rest are not. A spec is only worth having if it FAILS when the component breaks —
+`node scripts/canary-component-tests.cjs` mutates each covered component and requires exactly that.
 
