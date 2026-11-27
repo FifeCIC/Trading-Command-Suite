@@ -6,7 +6,7 @@
 > ⚠️ **GENERATED — do not edit.** Regenerate with `node scripts/generate-pipeline-map.cjs`.
 > Phases 1–2 of #1071. Reads the source, so it cannot drift from it.
 
-Scanned **625** backend source files (specs excluded). Two access paths, because one
+Scanned **626** backend source files (specs excluded). Two access paths, because one
 of them is invisible to the other: **Prisma model calls** and **raw SQL**. The writer that
 fabricated 1,172 bars (#1068) is only findable through the second.
 
@@ -81,7 +81,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 > pattern-matching, so a formula in a comment or a string is not a site and a call site is a
 > resolved symbol rather than a name that matches.
 
-**625** source files · **3452** declarations · **407** ratio sites · **1813** nodes · **195** unreferenced
+**626** source files · **3456** declarations · **407** ratio sites · **1814** nodes · **195** unreferenced
 
 | tier | what it means | groups |
 |---|---|---|
@@ -183,7 +183,7 @@ fabricated 1,172 bars (#1068) is only findable through the second.
 - `nest/src/modules/planner/planner.service.ts:149` — `createObjective()`
   - `data.targetAmount&&data.currentAmount?Math.round((data.currentAmount/data.targetAmount)*100):0`
   - guarded by: `data.targetAmount&&data.currentAmount`
-- `nest/src/modules/portfolio/trading212-import.service.ts:545` — `buildSummary()`
+- `nest/src/modules/portfolio/trading212-import.service.ts:548` — `buildSummary()`
   - `trades.length>0?Math.round((winning.length/trades.length)*100):0`
   - guarded by: `trades.length>0`
 - … and 9 more
@@ -509,7 +509,7 @@ Identical after normalisation: variable names differ, the computation does not.
 - `nest/src/modules/planner/planner.service.ts:149` — `createObjective()`
   - `data.targetAmount&&data.currentAmount?Math.round((data.currentAmount/data.targetAmount)*100):0`
   - guarded by: `data.targetAmount&&data.currentAmount`
-- `nest/src/modules/portfolio/trading212-import.service.ts:545` — `buildSummary()`
+- `nest/src/modules/portfolio/trading212-import.service.ts:548` — `buildSummary()`
   - `trades.length>0?Math.round((winning.length/trades.length)*100):0`
   - guarded by: `trades.length>0`
 - … and 9 more
@@ -731,7 +731,7 @@ Numeric literals blanked. **This is where divergent maths hides** — same struc
 - `nest/src/modules/planner/planner.service.ts:149` — `createObjective()`
   - `data.targetAmount&&data.currentAmount?Math.round((data.currentAmount/data.targetAmount)*100):0`
   - guarded by: `data.targetAmount&&data.currentAmount`
-- `nest/src/modules/portfolio/trading212-import.service.ts:545` — `buildSummary()`
+- `nest/src/modules/portfolio/trading212-import.service.ts:548` — `buildSummary()`
   - `trades.length>0?Math.round((winning.length/trades.length)*100):0`
   - guarded by: `trades.length>0`
 - … and 9 more
@@ -1004,7 +1004,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/providers/adapters/finnhub.adapter.ts:436 getInsiderTransactions`
 - `nest/src/modules/providers/adapters/finnhub.adapter.ts:464 getCompanyMetrics`
 - `nest/src/modules/providers/adapters/finnhub.adapter.ts:508 getCapabilities`
-- `nest/src/modules/providers/adapters/trading212.adapter.ts:759 getCapabilities`
+- `nest/src/modules/providers/adapters/trading212.adapter.ts:779 getCapabilities`
 - `nest/src/modules/providers/mt5/mt5-symbol-router.service.ts:383 getBrokerSymbol`
 - `nest/src/modules/providers/position-sync.service.ts:720 note`
 - `nest/src/modules/providers/provider-cache.service.ts:62 getStatus`
@@ -1090,7 +1090,7 @@ What is EXCLUDED, and why each exclusion exists — every one of them was a fals
 - `nest/src/modules/trading/trade-history.controller.ts:88 pnlOf`
 - `nest/src/modules/trading/trade-history.controller.ts:933 median`
 - `nest/src/modules/trading/trade-history.controller.ts:939 r2`
-- `nest/src/modules/trading/trade-recorder.service.ts:195 reject`
+- `nest/src/modules/trading/trade-recorder.service.ts:200 reject`
 - `nest/src/modules/trading/trading-strategy.service.ts:1528 shape`
 - `nest/src/modules/trading/trading-strategy.service.ts:3164 evaluateAllActive`
 - `nest/src/modules/trading/trading-strategy.service.ts:470 num`
