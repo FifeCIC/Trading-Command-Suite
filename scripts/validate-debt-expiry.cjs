@@ -36,6 +36,21 @@
  *
  * Exit: 0 = every hold is inside its window · 1 = at least one is stale or phantom ·
  *       2 = could not judge (never 0 — a check that reads nothing has checked nothing).
+ *
+ * ── DECISION (2026-11-19, primary) ──
+ * WHAT:      Every held baseline carries a `reviewedOn` date and a `budgetDays` window, and the BUILD
+ *            fails when the window lapses. Expiry, not a reminder.
+ * WHY:       Nine baselines held ~1,640 findings and each was guarded against GROWTH only. "May not go
+ *            up" is a rule about direction, not pace — a baseline that never moves is a decision nobody
+ *            revisited. `pipeline-contracts` printed "does not fail the build" and exited 0 while five
+ *            directive classes still scored off the calendar.
+ * INSTEAD OF: A tick-box reminder in an instruction file (what the owner was offered first). A rule that
+ *            depends on someone remembering is a rule that does not run — REQ-QUEUE exists for that
+ *            reason. A gate that fails cannot be forgotten.
+ * REVERSE BY: Delete the `node scripts/validate-debt-expiry.cjs` step from root `prebuild`, drop
+ *            `docs/debt-register.json`, and remove the `debt-expiry` entry from `src/data/standards.js`.
+ * REGISTER:  docs/SETTLED-DECISIONS.md row 305
+ * GUARD:     node scripts/validate-debt-expiry.cjs --self-test
  */
 'use strict';
 

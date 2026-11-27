@@ -30,7 +30,7 @@ can use. Lift it into `src/components` when a SECOND page needs it, and not befo
 
 | component | what it is | tier | consumers | declared props | test | inline styles | hex | lines |
 |---|---|---|---|---|---|---|---|---|
-| [`LoadingSkeleton`](../src/components/LoadingSkeleton.jsx) | Reusable loading skeleton component with variants. | primitive | 74 | `variant`, `count`, `rows`, `cols`, `lines`, `className` | — | 4 | — | 78 |
+| [`LoadingSkeleton`](../src/components/LoadingSkeleton.jsx) | Reusable loading skeleton component with variants. | primitive | 75 | `variant`, `count`, `rows`, `cols`, `lines`, `className` | — | 4 | — | 78 |
 | [`NoticeBlock`](../src/components/NoticeBlock.jsx) | NoticeBlock — renders ONE registry notice (#826). | primitive | 61 | `notice`, `compact` | yes | — | 2 | 74 |
 | [`ApiOfflineBanner`](../src/components/ApiOfflineBanner.jsx) | *no description* | primitive | 27 | `serviceName`, `port`, `compact` | — | — | — | 62 |
 | [`EmptyState`](../src/components/EmptyState.jsx) | Reusable "no data" placeholder with icon, title, description, and optional action button. | primitive | 23 | `icon`, `title`, `description`, `actionLabel`, `actionHref`, `actionOnClick`, `className` | — | — | — | 59 |
@@ -153,7 +153,7 @@ can use. Lift it into `src/components` when a SECOND page needs it, and not befo
 These have the widest reach, so a change to one has the widest blast radius — and they are the
 ones worth a contract and a test before anything else.
 
-- **LoadingSkeleton** — 74 consumers · ⚠️ **no test**
+- **LoadingSkeleton** — 75 consumers · ⚠️ **no test**
 - **NoticeBlock** — 61 consumers
 - **ApiOfflineBanner** — 27 consumers · ⚠️ **no test**
 - **EmptyState** — 23 consumers · ⚠️ **no test**

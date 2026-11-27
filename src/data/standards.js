@@ -200,6 +200,21 @@ export const STANDARDS = [
     selfTest: 'npm run colours:self-test',
     enforcedIn: 'prebuild',
   },
+  {
+    id: 'lint-gate',
+    name: 'No page ships a name that is never used, or a name that does not exist',
+    why: 'There was **no lint gate at all** — `eslint .` was a manual command nobody ran, and it **ran out of '
+      + 'memory** on this tree, so it had never been a check. Measured 2026-11-19 with a narrow isolated '
+      + 'config: **88 real defects in 49 files** (87 unused, 1 undefined) — an unused `setState`, a component '
+      + 'defined and never rendered, an identifier referenced but never declared. The first run without '
+      + '`react/jsx-uses-vars` reported **836**, dominated by `LoadingSkeleton` \u00d772 and `motion` \u00d770: '
+      + 'components used only inside JSX. Baselining that would have been "a guard that fires for the wrong '
+      + 'reason, allowlisted".',
+    gate: 'scripts/validate-lint.cjs',
+    verify: 'npm run lint:gate',
+    selfTest: 'npm run lint:gate:self-test',
+    enforcedIn: 'prebuild',
+  },
 ];
 
 /** Grouped for display: met (a gate exists) versus declared gap (no gate). */

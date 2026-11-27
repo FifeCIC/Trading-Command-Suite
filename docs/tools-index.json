@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 216,
+  "count": 217,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1581,6 +1581,17 @@
       "where": "repo",
       "category": "validator",
       "purpose": "a WMI-launched console app must be launched HIDDEN (#1138).",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-lint.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a lint gate that is ALLOWED TO BE GREEN, frozen at today's count.",
       "selfTest": true,
       "reaches": [
         "prebuild",
