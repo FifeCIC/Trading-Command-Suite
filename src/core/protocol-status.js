@@ -48,10 +48,11 @@ export const PROTOCOL_STATUS_META = {
  *
  * @param {object} protocol  Registry protocol entry ({ active, note }).
  * @param {object|null} statusRow  Loop-owned status row
- *   ({ state, reason, symbolsResolved, symbolsScored, lastTickAt }).
+ *   ({ state, reason, symbolsResolved, symbolsScored, symbolsPaused, pausedSymbols, lastTickAt }).
  * @returns {{ state: string, label: string, kind: string, help: string,
  *   reason: string|null, note: string|null,
  *   symbolsResolved: number|null, symbolsScored: number|null,
+ *   symbolsPaused: number, pausedSymbols: Array<{symbol:string,state:string,reason:string}>,
  *   lastTickAt: string|null }}
  */
 export function buildProtocolStatus(protocol, statusRow) {
@@ -71,6 +72,13 @@ export function buildProtocolStatus(protocol, statusRow) {
     note: protocol?.note || null,
     symbolsResolved: statusRow?.symbolsResolved ?? null,
     symbolsScored: statusRow?.symbolsScored ?? null,
+    /**
+     * #1359 follow-up — symbols skipped because they are not tradeable in the current market
+     * state, and WHICH ones. The pause used to exist only inside the reason sentence, so a reader
+     * could not count it and a page could not list it.
+     */
+    symbolsPaused: statusRow?.symbolsPaused ?? 0,
+    pausedSymbols: Array.isArray(statusRow?.pausedSymbols) ? statusRow.pausedSymbols : [],
     lastTickAt: statusRow?.lastTickAt || null,
   };
 }

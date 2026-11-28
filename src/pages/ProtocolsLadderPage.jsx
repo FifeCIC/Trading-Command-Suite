@@ -212,6 +212,20 @@ export default function ProtocolsLadderPage() {
                     >
                       {p.vs?.label || '—'}
                     </span>
+                    {p.vs?.symbolsPaused > 0 && (
+                      // #1359 follow-up — the pause is a COUNT and a LIST, not prose buried in the
+                      // status reason. A protocol can be "Active" and still be skipping symbols.
+                      <span
+                        className="pl-status-paused"
+                        title={
+                          p.vs.pausedSymbols.length
+                            ? p.vs.pausedSymbols.map((s) => `${s.symbol}: ${s.reason}`).join('\n')
+                            : `${p.vs.symbolsPaused} symbol(s) not tradeable in the current market state`
+                        }
+                      >
+                        {p.vs.symbolsPaused} paused
+                      </span>
+                    )}
                   </td>
                   <td className={p.hasData ? '' : 'pl-muted'}>
                     {p.hasData ? (

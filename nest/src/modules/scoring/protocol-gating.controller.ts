@@ -17,6 +17,7 @@ import { resolveAdaptiveTarget, ADAPTIVE_TARGET_MIN_SAMPLES } from './adaptive-t
 import { resolveRetentionDays } from '../system/retention.config';
 import { selectBaseTimeframe } from '../../common/utils/timeframe';
 import { finaliseCoverage, newCoverage, round1 } from './capacity-coverage';
+import { parsePausedSymbols, type PausedSymbol } from '../../common/utils/paused-symbols';
 
 /** `round1` now lives in `capacity-coverage.ts` — one implementation, imported here. */
 
@@ -993,7 +994,7 @@ export class ProtocolGatingController {
     const statusMap: Record<string, any> = {};
     try {
       const rows: any[] = await this.prisma.$queryRawUnsafe(
-        `SELECT protocolId, state, reason, symbolsResolved, symbolsScored, lastTickAt, updatedAt FROM protocol_score_status`,
+        `SELECT protocolId, state, reason, symbolsResolved, symbolsScored, symbolsPaused, pausedSymbols, lastTickAt, updatedAt FROM protocol_score_status`,
       );
       for (const r of rows) statusMap[r.protocolId] = r;
     } catch { /* table not yet created */ }
@@ -1036,6 +1037,9 @@ export class ProtocolGatingController {
         reason: string | null;
         symbolsResolved: number;
         symbolsScored: number;
+        /** #1359 follow-up — symbols skipped because they are not tradeable right now, and which ones. */
+        symbolsPaused?: number;
+        pausedSymbols?: PausedSymbol[] | null;
         lastTickAt: string | null;
         lastReadingAt?: string | null;
         stalledForMinutes?: number | null;
@@ -1073,6 +1077,8 @@ export class ProtocolGatingController {
               reason,
               symbolsResolved: Number(row.symbolsResolved ?? 0),
               symbolsScored: Number(row.symbolsScored ?? 0),
+              symbolsPaused: Number(row.symbolsPaused ?? 0),
+              pausedSymbols: parsePausedSymbols(row.pausedSymbols),
               lastTickAt: row.lastTickAt ? new Date(row.lastTickAt).toISOString() : null,
               lastReadingAt: lastReading ? lastReading.toISOString() : null,
               stalledForMinutes: stalledForMs === null ? null : Math.round(stalledForMs / 60_000),

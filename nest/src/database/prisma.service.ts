@@ -154,6 +154,11 @@ export class PrismaService
         reason TEXT NULL,
         symbolsResolved INT NOT NULL DEFAULT 0,
         symbolsScored INT NOT NULL DEFAULT 0,
+        -- #1359 follow-up — how many symbols were skipped because they are not tradeable in the
+        -- current market state, and WHICH ones (JSON [{symbol,state,reason}]). Without these the
+        -- pause existed only inside the reason string and could not be counted or listed.
+        symbolsPaused INT NOT NULL DEFAULT 0,
+        pausedSymbols TEXT NULL,
         lastTickAt DATETIME(3) NULL,
         updatedAt DATETIME(3) NOT NULL DEFAULT (UTC_TIMESTAMP(3)) ON UPDATE CURRENT_TIMESTAMP(3),
         INDEX idx_protocol_score_status_state (state)

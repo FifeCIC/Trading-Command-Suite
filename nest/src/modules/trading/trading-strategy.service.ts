@@ -144,6 +144,20 @@ export interface StrategySummary {
   timeframe: string;
   mode: string;
   active: boolean;
+  /**
+   * #1359 follow-up — the bot's OWN symbol verdict for the current market state.
+   *
+   * Computed from `protocolGating.assessTradeability()` — the same assessor the scoring gate uses —
+   * so a bot can say *why* it is doing nothing ("FX week closed — next open …") instead of looking
+   * idle for no stated reason. A paused bot is not a broken bot.
+   */
+  tradeability?: {
+    state: string;
+    tradeable: boolean;
+    reason: string;
+    nextOpen: string | null;
+    venue: string;
+  };
   brokerId?: string;
   /**
    * #1018 — the bot's MT5 MAGIC: the position's identity for LIFE.
@@ -719,6 +733,24 @@ export class TradingStrategyService {
    */
   async findAllWithRatios(): Promise<StrategySummary[]> {
     const strategies = await this.findAll();
+
+    // #1359 follow-up — attach each bot's symbol verdict BEFORE the early return, so a database-less
+    // or empty run still carries the field rather than silently dropping it.
+    for (const s of strategies) {
+      try {
+        const t = this.protocolGating.assessTradeability(s.symbol);
+        s.tradeability = {
+          state: t.state,
+          tradeable: t.tradeable,
+          reason: t.reason,
+          nextOpen: t.nextOpen,
+          venue: t.venue.label,
+        };
+      } catch (err) {
+        // ⚠️ No `tradeable: true` fallback — an assessment that threw is UNKNOWN, not tradeable.
+        this.logger.warn(`Tradeability assessment failed for ${s.symbol}: ${(err as Error).message}`);
+      }
+    }
 
     if (!this.prisma.isAvailable || strategies.length === 0) return strategies;
 

@@ -298,6 +298,7 @@ export default function StrategyMonitorPage() {
                 <tr>
                   <th scope="col">Bot</th>
                   <th scope="col">Symbol</th>
+                  <th scope="col">Market</th>
                   <th scope="col">Type</th>
                   <th scope="col">Watchlist</th>
                   <th scope="col">Protocol</th>
@@ -351,6 +352,26 @@ export default function StrategyMonitorPage() {
                       >
                         {s.symbol}
                       </Link>
+                    )}
+                  </td>
+                  <td>
+                    {/* #1359 follow-up — a paused bot is not a broken bot. The state and its reason
+                        come from the SAME assessor the scoring gate uses, so the monitor cannot
+                        disagree with what the loop decided. */}
+                    {s.tradeability ? (
+                      <span
+                        className={styles.cardType}
+                        style={{
+                          background: `color-mix(in srgb, ${s.tradeability.tradeable ? 'var(--risk-normal)' : 'var(--color-warning)'} 12%, transparent)`,
+                          color: s.tradeability.tradeable ? 'var(--risk-normal)' : 'var(--color-warning)',
+                          borderColor: s.tradeability.tradeable ? 'var(--risk-normal)' : 'var(--color-warning)',
+                        }}
+                        title={s.tradeability.reason + (s.tradeability.nextOpen ? ` · next open ${s.tradeability.nextOpen}` : '')}
+                      >
+                        {s.tradeability.state}
+                      </span>
+                    ) : (
+                      <span className={styles.tdMuted} title="Tradeability could not be assessed for this bot's symbol">unknown</span>
                     )}
                   </td>
                   <td>

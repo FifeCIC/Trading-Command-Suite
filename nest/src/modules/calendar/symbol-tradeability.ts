@@ -7,10 +7,10 @@
  * ── DECISION (2026-11-27, owner) ──
  * WHAT:      EXTENDED HOURS COUNT AS TRADEABLE. A symbol is paused only when its venue is not
  *            trading at all — weekend, holiday, or a closed FX week.
- * WHY:       Owner: *"I just want to maximise TCS ability and opportunity to trade. Extended hours
- *            means more trading … pause symbols when they cannot be traded in the current market
- *            state."* A regular-session-only gate throws away the pre-market and after-hours
- *            windows the broker now offers.
+ * WHY:       Decided 2026-11-27 at the owner's direction — maximise the bot's opportunity to trade,
+ *            and treat extended hours as additional trading rather than a closed market. A
+ *            regular-session-only gate throws away the pre-market and after-hours windows the
+ *            broker now offers.
  * INSTEAD OF: Treating 'pre-market'/'after-hours' as closed (the previous behaviour, and the
  *            reading in `extended-hours.ts`'s warning copy).
  * REVERSE BY: Delete the 'extended' branch below, so anything outside the regular session is

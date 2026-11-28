@@ -1832,6 +1832,9 @@ export class AutomationLoopService implements OnModuleInit {
         reason?: string;
         symbolsResolved?: number;
         symbolsScored?: number;
+        /** #1359 follow-up — symbols skipped as not tradeable, and which ones. */
+        symbolsPaused?: number;
+        pausedSymbols?: Array<{ symbol: string; state: string; reason: string }>;
       }>();
       const readyProtocols: string[] = [];
       for (const slug of activeProtocols) {
@@ -1855,7 +1858,7 @@ export class AutomationLoopService implements OnModuleInit {
         `  ${readyProtocols.length} of ${activeProtocols.length} active protocols ready for scoring`,
       );
 
-      let bestLadder: { envelopes: any[]; protocolStatus: Record<string, { state: string; reason?: string; symbolsResolved?: number; symbolsScored?: number }> } | null = null;
+      let bestLadder: { envelopes: any[]; protocolStatus: Record<string, { state: string; reason?: string; symbolsResolved?: number; symbolsScored?: number; symbolsPaused?: number; pausedSymbols?: Array<{ symbol: string; state: string; reason: string }> }> } | null = null;
       try {
         bestLadder = await this.signalEnvelope.buildBestLadder({ allowedProtocols: new Set(readyProtocols) });
         for (const [slug, st] of Object.entries(bestLadder?.protocolStatus || {})) {
@@ -1912,16 +1915,19 @@ export class AutomationLoopService implements OnModuleInit {
           if (!st) continue;
           await this.prisma.$queryRawUnsafe(
             `INSERT INTO protocol_score_status
-               (protocolId, state, reason, symbolsResolved, symbolsScored, lastTickAt, updatedAt)
-             VALUES (?, ?, ?, ?, ?, ?, ?)
+               (protocolId, state, reason, symbolsResolved, symbolsScored, symbolsPaused, pausedSymbols, lastTickAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE state=VALUES(state), reason=VALUES(reason),
                symbolsResolved=VALUES(symbolsResolved), symbolsScored=VALUES(symbolsScored),
+               symbolsPaused=VALUES(symbolsPaused), pausedSymbols=VALUES(pausedSymbols),
                lastTickAt=VALUES(lastTickAt), updatedAt=VALUES(updatedAt)`,
             slug,
             st.state,
             st.reason ?? null,
             st.symbolsResolved ?? 0,
             st.symbolsScored ?? 0,
+            st.symbolsPaused ?? 0,
+            st.pausedSymbols?.length ? JSON.stringify(st.pausedSymbols) : null,
             statusNow,
             statusNow,
           );

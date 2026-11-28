@@ -329,6 +329,8 @@ export interface ProtocolScoreStatus {
   symbolsScored?: number;
   /** Symbols skipped because they are not tradeable in the current market state (#1359 follow-up). */
   symbolsPaused?: number;
+  /** Which symbols were paused, and the reason each one was — so the pause is listable, not just countable. */
+  pausedSymbols?: Array<{ symbol: string; state: string; reason: string }>;
 }
 
 /**
@@ -1982,6 +1984,7 @@ export class SignalEnvelopeService {
       // protocol holding one open and one closed symbol scores the open one instead of standing by.
       const tradeability = tickers.map((ticker) => ({ ticker, verdict: this.protocolGating.assessTradeability(ticker) }));
       const paused = tradeability.filter((t) => !t.verdict.tradeable);
+      const pausedRows = paused.map((p) => ({ symbol: p.ticker, state: p.verdict.state, reason: p.verdict.reason }));
       const tradeableCount = tickers.length - paused.length;
 
       if (paused.length === tickers.length) {
@@ -1990,6 +1993,7 @@ export class SignalEnvelopeService {
           symbolsResolved: tickers.length,
           symbolsScored: 0,
           symbolsPaused: paused.length,
+          pausedSymbols: pausedRows,
           reason: `No tradeable symbol (${paused.map((p) => `${p.ticker}: ${p.verdict.reason}`).join('; ')})`,
         };
         continue;
@@ -2041,6 +2045,7 @@ export class SignalEnvelopeService {
             symbolsResolved: tickers.length,
             symbolsScored: protoScored,
             symbolsPaused: paused.length,
+            pausedSymbols: pausedRows.length ? pausedRows : undefined,
             reason: [
               protoScored < tradeableCount
                 ? `${protoScored}/${tradeableCount} tradeable symbols produced a directional reading (the rest were no-data or failed) — see #758`
@@ -2055,6 +2060,7 @@ export class SignalEnvelopeService {
             symbolsResolved: tickers.length,
             symbolsScored: 0,
             symbolsPaused: paused.length,
+            pausedSymbols: pausedRows.length ? pausedRows : undefined,
             reason: `No symbol produced a directional reading — every direction-eligible directive read neutral or data was missing (${tradeableCount} tradeable symbol(s) scored, ${paused.length} paused). An all-neutral tick is data absence, not a HOLD score (#758).`,
           };
     }
