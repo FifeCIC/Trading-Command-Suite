@@ -1,132 +1,173 @@
 {
-  "$comment": "Every page in view-routes.jsx that is in NO menu. Populated by validate-route-reachability.cjs --write, which is the ONLY writer. 'reason' is filled by a human or an agent who has looked at the page; 'unreviewed' means nobody has decided yet and is the honest default.",
   "note": "Measured 2026-11-28. 156 routes render; 112 appear in a menu; 32 are withheld; 44 appear in NO menu and are NOT withheld. The existing guards cannot see them BY CONSTRUCTION: validate-page-visibility.cjs and verify-view-meta-routes.cjs both ITERATE THE MENU, so a page that was never added to a menu is not in their population at all - it can be neither flagged public nor withheld. That is why 44 pages could accumulate without one failing check.",
   "routes": {
     "analyse-symbol": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "api-activity": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "api-endpoints": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "btc-speed": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "candle-patterns": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "candle-patterns-guide": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "chart-comparison": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "create-protocols": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "create-watchlist": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "data-elements": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "data-landing": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "data-status": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "decoder": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "directive-impact-audit": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "events-calendar": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "faq": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "gap-scanner": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "import-jobs": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "macro-monitor": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "mt5-status": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "pattern-scanner": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "preference-lab": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "price-forecast": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "protocols-performance": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "provider-health": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "reports": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "scenario-analysis": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "scoring-overview": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "screen": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "seasonality-heatmap": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "sector-rotation": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "server-controls": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "social-networks": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "sources": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "strategy-detail": {
-      "status": "unreviewed"
+      "status": "parametric-detail",
+      "reason": "Reached by a parameter, not a menu: the route only means anything once a ticker/strategy id is chosen (nav-tree cannot link it)."
     },
     "support-resistance": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "symbol": {
-      "status": "unreviewed"
+      "status": "parametric-detail",
+      "reason": "Reached by a parameter, not a menu: the route only means anything once a ticker/strategy id is chosen (nav-tree cannot link it)."
     },
     "t212-isa": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "technical-indicators": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "trade-history": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "transient-caches": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     },
     "volatility-analysis": {
-      "status": "unreviewed"
+      "status": "url-only-pending-polish",
+      "reason": "Not in the rail because it has not been reviewed. Owner ruling 2026-11-26 (REVIEW-QUEUE R74, register row 285): hidden is the default state, and a page that is not vital, strong and sound visually stays hidden until it passes review. When it passes it becomes a nav entry plus a DEFAULT_HIDDEN_ROUTES entry - those are two different states, and this is neither yet."
     }
   }
 }

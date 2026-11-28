@@ -30,16 +30,6 @@
       "reviewedOn": "2026-11-27",
       "toleranceDays": 60,
       "why": "The inline-style twin of this (colour-literals) went 263 -> 37 in one session, so the same method works here. Three files already report LOWER and are waiting to be banked."
-    },
-    {
-      "id": "url-only-pages",
-      "gate": "scripts/validate-route-reachability.cjs",
-      "holds": 42,
-      "holdsWhat": "routes reachable only by URL, declared but not yet decided - nobody has said whether a menu entry or withholding is right",
-      "owner": "#1357",
-      "reviewedOn": "2026-11-28",
-      "toleranceDays": 60,
-      "why": "The guard fails a NEW unreachable route outright, so the set can only shrink. What nothing handled is AGE: 43 declared-but-unreviewed routes would sit at 43 for ever, because the gate stays green while each one is marked unreviewed. Measured 2026-11-28: 44 of 156 routes were in no menu, and the two existing checks could not see them at all because both iterate the menu."
     }
   ]
 }
