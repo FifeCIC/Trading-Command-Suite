@@ -71,7 +71,6 @@ const BASELINE = {
   'src/pages/MetaStackExplorerPage.jsx': 9,
   'src/pages/MonitoringPage.jsx': 1,
   'src/pages/PerformanceLabPage.jsx': 1,
-  'src/pages/PortfolioPage.jsx': 1,
   'src/pages/ProtocolsPageB.jsx': 1,
   'src/pages/ProtocolsPerformancePage.jsx': 3,
   'src/pages/SeesArenaPage.jsx': 1,

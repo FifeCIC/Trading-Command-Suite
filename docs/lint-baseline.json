@@ -1,6 +1,6 @@
 {
   "note": "The ONE lint gate: no-unused-vars + no-undef over src/. Frozen so the count cannot grow; regenerate with `node scripts/validate-lint.cjs --write-baseline` when a file shrinks. The repo's FULL eslint ruleset is not gated - it cannot be green yet.",
-  "total": 88,
+  "total": 86,
   "files": {
     "src/App.jsx": 4,
     "src/components/CandlePatternChart.jsx": 4,
@@ -34,7 +34,6 @@
     "src/pages/MetaStackStatusPage.jsx": 1,
     "src/pages/Mt5StatusPage.jsx": 4,
     "src/pages/PatternScannerPage.jsx": 1,
-    "src/pages/PortfolioPage.jsx": 2,
     "src/pages/PositionsMonitorPage.jsx": 1,
     "src/pages/PreferenceLab.jsx": 1,
     "src/pages/ScoringActivityLogsPage.jsx": 1,

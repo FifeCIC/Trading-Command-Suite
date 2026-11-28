@@ -306,10 +306,33 @@ function main() {
   // Found by dogfooding: the first version of this script could not commit itself.
   // Adding to the shared index is safe here precisely BECAUSE the commit below is pathspec-limited —
   // anything already staged by another agent is left staged and untouched (proven in --self-test).
+  //
+  // ⚠️ `-A`, NOT A BARE `add` (fixed 2026-11-28). A DELETED file fails a bare `git add -- <path>` with
+  // "pathspec … did not match any files": the path is gone from the worktree, so git has nothing to
+  // add. The consequence was that this script — the one mechanism that keeps one agent's commit from
+  // absorbing another's staged work — could not commit a deletion at all, which pushed the agent who
+  // deleted a file back to a bare `git commit`: precisely the failure the wrapper exists to prevent.
+  // `-A` stages the removal, and the pathspec keeps it scoped to the named files.
+  const stage = () => git(['add', '-A', '--', ...named]);
   try {
-    git(['add', '--', ...named]);
+    stage();
   } catch (err) {
-    die('git add failed', String(err.stderr || err.message).trim().split('\n').slice(-3).join(' | '));
+    /*
+      ⚠️ RETRY AFTER UNSTAGING, because "delete a file" is a two-step state git will not let us
+      re-stage directly. Measured 2026-11-28: `git add -A -- src/pages/PortfolioPage.jsx` fails with
+      "pathspec … did not match any files" once the deletion is ALREADY in the index — the path is
+      absent from the worktree and presents no change to stage, so git reads the pathspec as a typo.
+      That is the state an agent is in whenever they staged the deletion earlier (to run a validator,
+      or to stop a gate reporting a tracked-but-missing file), which is not exotic: it happened on the
+      first real use. `git reset -q -- <same paths>` puts the index entry back, and the retry then has
+      a deletion to stage. Scoped to the named paths, so no other agent's staged work is disturbed.
+    */
+    try {
+      git(['reset', '-q', '--', ...named]);
+      stage();
+    } catch (retryErr) {
+      die('git add failed', String(retryErr.stderr || retryErr.message).trim().split('\n').slice(-3).join(' | '));
+    }
   }
 
   // ⚠️ THE POINT OF THE SCRIPT: the explicit `--` pathspec means git commits ONLY these paths and

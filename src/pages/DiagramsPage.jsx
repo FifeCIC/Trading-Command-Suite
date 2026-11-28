@@ -1108,7 +1108,7 @@ const DIAGRAMS = [
         T[PortfolioService.getPortfolioScores]
         U[ScoringService integration]
     end
-    subgraph UI["Frontend (PortfolioPage)"]
+    subgraph UI["Frontend (T212PortfolioPage)"]
         V[GET /api/portfolio/trading212/mode]
         W[GET /api/portfolio/holdings]
         X[GET /api/portfolio/scores]

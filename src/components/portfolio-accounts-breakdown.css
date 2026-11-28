@@ -1,0 +1,122 @@
+/* Account breakdown — the broker grid ported from the merged portfolio page. */
+
+.pab {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.pab-caveat {
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  /* ⚠️ NOT a thick coloured left bar — `validate-no-notice-bar.cjs` rejects that everywhere, because
+     it is the notice-chrome style the owner retired. A uniform 1px border plus the tint says the same
+     thing without dressing a caveat in a rejected shape. */
+  border: 1px solid var(--notice-warning-border);
+  background: var(--notice-warning-bg);
+  color: var(--notice-warning-text);
+  font-size: 0.8rem;
+  border-radius: 4px;
+}
+
+.pab-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.pab-table th,
+.pab-table td {
+  padding: 0.34rem 0.5rem;
+  border-top: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.pab-table thead th {
+  border-top: none;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pab-table tbody th {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pab-table tfoot th,
+.pab-table tfoot td {
+  border-top: 2px solid var(--border);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pab-num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.pab-total {
+  color: var(--accent);
+}
+
+.pab-ccy {
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+}
+
+.pab-cat {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-dim);
+  font-size: 0.66rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pab-row--off th,
+.pab-row--off td {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+
+/* An off row keeps its un-struck chips readable — the state is the one fact that must survive. */
+.pab-row--off .pab-chip {
+  text-decoration: none;
+}
+
+.pab-chip {
+  display: inline-block;
+  margin-right: 0.3rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.pab-chip--on {
+  background: var(--notice-info-bg);
+  color: var(--notice-info-text);
+}
+
+.pab-chip--off {
+  background: var(--bg-elev);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+
+.pab-chip--warn {
+  background: var(--notice-warning-bg);
+  color: var(--notice-warning-text);
+}

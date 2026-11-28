@@ -244,6 +244,21 @@ export const STANDARDS = [
     selfTest: 'npm run test:wiring:canary',
     enforcedIn: 'prebuild',
   },
+  {
+    id: 'route-reachability',
+    name: 'A page nobody can reach is not a feature',
+    why: 'Measured 2026-11-28: the owner found `/trading/portfolio-overview` was in **no menu** and asked '
+      + 'what else had been disconnected. **44 of 156 routes** were unreachable — and no check could have '
+      + 'noticed, because `validate-page-visibility.cjs` and `verify-view-meta-routes.cjs` both walk the '
+      + 'MENU: a page never added to a menu is not in their population at all, so it can be neither public '
+      + 'nor withheld. This guard starts from the FULL ROUTE TABLE instead and requires every route to be '
+      + 'reachable by a menu entry, a withholding, or a written URL-only decision — so URL-only stays '
+      + 'legitimate (`symbol`, `strategy-detail`) while accidental URL-only fails.',
+    gate: 'scripts/validate-route-reachability.cjs',
+    verify: 'npm run routes:reachability',
+    selfTest: 'npm run routes:reachability:self-test',
+    enforcedIn: 'prebuild',
+  },
 ];
 
 /** Grouped for display: met (a gate exists) versus declared gap (no gate). */

@@ -600,6 +600,16 @@ function AppShell({ directContent = null, directArea = null, directView = null }
     // from the PWA precache cap that FAILS the build when exceeded (`check-bundle-budget.mjs` C1).
     // The Suspense boundary is required, not decorative: without it React throws on the first lazy
     // render. The fallback is deliberately plain — it is visible for one chunk load on a cold cache.
+    // ── Merged pages (2026-11-28) ──
+    // `/trading/portfolio-overview` was in NO menu (one of 44 measured), while the nav item labelled
+    // **Portfolio** opens `/trading212/t212-portfolio`. Its unique blocks — allocation, per-account
+    // breakdown, the T212 sell control — were merged into `T212PortfolioPage`; the page itself is
+    // gone. The redirect keeps an existing bookmark working instead of 404-ing it, and `replace`
+    // keeps the dead URL out of the history so Back does not bounce.
+    if (secondaryView === 'portfolio-overview') {
+      return <Navigate to="/trading212/t212-portfolio" replace />;
+    }
+
     const Component = VIEW_COMPONENTS[secondaryView];
     if (Component) {
       return (

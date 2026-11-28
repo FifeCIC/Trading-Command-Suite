@@ -48,7 +48,6 @@ const TradeJournalPage = lazy(() => import('../pages/TradeJournalPage.jsx'));
 const TradingPlansPage = lazy(() => import('../pages/TradingPlansPage.jsx'));
 const CalculatorsPage = lazy(() => import('../pages/CalculatorsPage.jsx'));
 const OrderTestingPage = lazy(() => import('../pages/OrderTestingPage.jsx'));
-const PortfolioPage = lazy(() => import('../pages/PortfolioPage.jsx'));
 const PortfolioEventsPage = lazy(() => import('../pages/PortfolioEventsPage.jsx'));
 const TradeHistoryPage = lazy(() => import('../pages/TradeHistoryPage.jsx'));
 const PositionsMonitorPage = lazy(() => import('../pages/PositionsMonitorPage.jsx'));
@@ -277,9 +276,7 @@ export const VIEW_COMPONENTS = {
   't212-isa': T212ISAPage,
   // Accounts area — 2026-11-06. `brokers` = venues + their accounts; `vendors` = sources of data.
   'brokers': BrokersPage,
-  'vendors': VendorsPage,
-  'portfolio-overview': PortfolioPage,
-  'portfolio-events': PortfolioEventsPage,
+  'vendors': VendorsPage,  'portfolio-events': PortfolioEventsPage,
   'trade-history': TradeHistoryPage,
   'positions-monitor': PositionsMonitorPage,
   'strategy-library': StrategyLibraryPage,

@@ -21,6 +21,9 @@ import { notice } from '../core/notices/registry.js';
 import './t212-portfolio.css';
 import { formatDecimals } from '../core/format-utils';
 import PortfolioContributionPanel from '../components/PortfolioContributionPanel.jsx';
+import PortfolioCompositionPanel from '../components/PortfolioCompositionPanel.jsx';
+import PortfolioAccountsBreakdown from '../components/PortfolioAccountsBreakdown.jsx';
+import OrderModal from '../components/OrderModal';
 
 const fmtGbp = (n) => (n == null ? '—' : `£${Number(n).toFixed(2)}`);
 // Prices and notionals: no currency symbol, because the currency is the instrument's own.
@@ -82,7 +85,7 @@ const movePct = (side, entry, current) => {
  * Trading212 holding is an imported copy — this app cannot trade it — so a disabled Close button on
  * that row would imply a capability that does not exist.
  */
-function PositionDetail({ p, busy, error, armed, onArm, onClose, onBreakeven, onSetStops }) {
+function PositionDetail({ p, busy, error, armed, onArm, onClose, onBreakeven, onSetStops, onSell }) {
   const [slDraft, setSlDraft] = useState(p.sl != null ? String(p.sl) : '');
   const [tpDraft, setTpDraft] = useState(p.tp != null ? String(p.tp) : '');
 
@@ -274,10 +277,36 @@ function PositionDetail({ p, busy, error, armed, onArm, onClose, onBreakeven, on
           </span>
         </div>
       ) : (
-        <p className="t212p-detail-note">
-          Imported holding — this app has no route to trade it, so it carries no controls. Close or
-          amend it at the broker.
-        </p>
+        /*
+          ── DECISION (2026-11-28, primary) ──
+          WHAT:  An imported Trading212 holding carries a REAL sell control; it is no longer "read-only".
+          WHY:   This block used to say "this app has no route to trade it, so it carries no controls".
+                 That was false. `OrderModal` posts to `POST /api/portfolio/trading212/orders/sell`,
+                 the route exists on `trading212-portfolio.controller.ts`, and it is live (an empty
+                 body returns 500 from validation, not 404). The ONLY caller of `OrderModal` was
+                 `PortfolioPage` — a page reachable at no menu item — so a working order path was
+                 unreachable, and the copy on this page asserted the opposite. Merging that page into
+                 this one is what surfaced the contradiction; deleting the page instead would have
+                 silently retired the capability and orphaned the component.
+          INSTEAD OF: Deleting `PortfolioPage` and dropping the Sell control with it (the cheap option).
+          REVERSE BY: Removing the button and the `OrderModal` mount below, and deleting
+                 `src/components/OrderModal.jsx` if nothing else claims it.
+          REGISTER:  docs/SETTLED-DECISIONS.md row 318
+        */
+        <div className="t212p-controls" role="group" aria-label={`Holding controls for ${p.ticker}`}>
+          <button
+            type="button"
+            className="t212p-action t212p-action--danger"
+            onClick={() => onSell?.(p)}
+            title="Open the two-step sell confirmation. Nothing is sent to the broker until the ticker is typed and the cooldown has elapsed."
+          >
+            Sell…
+          </button>
+          <span className="t212p-detail-note">
+            Imported from {p.source === 'isa' ? 'the Stocks ISA' : 'Trading212'} — the quantity is the
+            broker&apos;s last report, so check it against the broker before confirming a sale.
+          </span>
+        </div>
       )}
     </div>
   );
@@ -295,6 +324,14 @@ export default function T212PortfolioPage() {
   const [armedKey, setArmedKey] = useState(null);
   const [actionError, setActionError] = useState(null);
   const [closeAll, setCloseAll] = useState({ armed: false, busy: false, notice: null });
+  /**
+   * The imported holding awaiting a sell confirmation.
+   *
+   * ⚠️ The modal is MOUNTED ONLY WHEN THIS IS SET, not rendered-and-hidden — `OrderModal` requests the
+   * venue-hours assessment on mount (`getOrderHours`), so a permanently-mounted copy would call the
+   * calendar route on every page view for a ticker nobody asked about.
+   */
+  const [sellPosition, setSellPosition] = useState(null);
 
   /**
    * Hover/focus detail state.
@@ -686,6 +723,23 @@ export default function T212PortfolioPage() {
 
   const mt5Rows = useMemo(() => combinedPositions.filter((p) => p.tradeable), [combinedPositions]);
 
+  /**
+   * compositionRows — the holdings whose `value` is in ONE currency, which is the only set a share of
+   * value can honestly be computed over.
+   *
+   * ⚠️ MT5 ROWS ARE EXCLUDED, AND THAT IS NOT A TIDY-UP. A Trading212/ISA row's `value` is an
+   * account-currency amount; an MT5 row's `value` is `volume × contractSize × price` — a NOTIONAL in
+   * the instrument's own currency (see the `contractSize` note where the row is built, and the
+   * measured 0.01-lot gold example). Drawing one bar from both would be the "raw sum across
+   * currencies" defect the accounts panel warns about, in chart form.
+   */
+  const compositionRows = useMemo(
+    () => combinedPositions
+      .filter((p) => p.source !== 'mt5')
+      .map((p) => ({ key: p.key, ticker: p.ticker, value: p.value })),
+    [combinedPositions],
+  );
+
   /** Re-read the broker after an action. A write that is not followed by a read leaves the row stale. */
   const refreshPositions = () => {
     qc.invalidateQueries({ queryKey: ['mt5-positions'] });
@@ -779,9 +833,10 @@ export default function T212PortfolioPage() {
           </p>
           <p>
             <strong>Why only some rows have trade controls.</strong> An MT5 position can be closed or
-            re-stopped from here. An imported Trading212 holding is a READ-ONLY copy of what the broker
-            reported — this app has no route to trade it, so a control on that row would be a promise it
-            cannot keep.
+            re-stopped here. An imported Trading212 or ISA holding can be <strong>sold</strong> from the
+            same row, through the two-step confirmation — but its quantity and price are the
+            broker&apos;s last import, so check them against the broker before confirming. It cannot be
+            re-stopped or amended here, because an imported holding carries no stop of its own.
           </p>
         </PageInfoSlotContent>
 
@@ -852,6 +907,35 @@ export default function T212PortfolioPage() {
           </div>
         </div>
       </section>
+
+      {/*
+        ── What the holdings are made of, and what each account contributes (2026-11-28) ──────────
+        ⚠️ BOTH BLOCKS CAME FROM `PortfolioPage.jsx` (`/trading/portfolio-overview`), WHICH IS IN NO
+        MENU. The owner found that page by typing its URL and asked what else had been disconnected —
+        44 routes, measured. Merging rather than deleting is what preserves the two capabilities this
+        page did not already have: a share-of-value view, and a per-account breakdown that says which
+        accounts are switched OFF rather than silently omitting them.
+        The other three blocks on that page were superseded, not dropped: its 5-card summary strip is
+        the reconciled tile grid above, its source selector is Screen Options → Accounts & Totals, and
+        its positions table is the one below (which also carries the MT5 rows and their controls).
+      */}
+      {compositionRows.length > 0 && (
+        <section className="t212p-section">
+          <h2>Composition</h2>
+          <PortfolioCompositionPanel
+            rows={compositionRows}
+            unit="GBP (imported holdings only)"
+            emptyDescription="No imported holding reports a value, so a share of value cannot be computed. Import from Trading212 to populate this."
+          />
+        </section>
+      )}
+
+      {categories.length > 0 && (
+        <section className="t212p-section">
+          <h2>Accounts</h2>
+          <PortfolioAccountsBreakdown categories={categories} grandTotal={grandTotal} />
+        </section>
+      )}
 
       {/* ── Combined positions (all enabled accounts + MT5) ─────────────────────────────────────
           ⚠️ THE HOVER IS THE FEATURE, NOT THE ROW (requirement, 2026-11-06): The tables hover over row
@@ -1033,6 +1117,7 @@ export default function T212PortfolioPage() {
                               () => apiPost(`/api/trading/mt5/modify/${p.ticket}`, { sl, tp }),
                               'set the stop-loss and take-profit',
                             )}
+                            onSell={setSellPosition}
                           />
                         </td>
                       </tr>
@@ -1095,11 +1180,39 @@ export default function T212PortfolioPage() {
       {/*
         ── What made the money ──────────────────────────
         ⚠️ THIS IS THE PAGE THE NAV ITEM LABELLED **Portfolio** OPENS (`t212-portfolio` →
-        `T212PortfolioPage`), which is where the owner reads account outcomes — so the split lives
-        here as well as on `/trading/portfolio-overview`. One COMPONENT on two pages, not two
-        implementations: the numbers come from one endpoint and one derivation.
+        `T212PortfolioPage`), which is where the owner reads account outcomes. It used to be mounted
+        on `/trading/portfolio-overview` as well; that page was in no menu and has been merged into
+        this one (2026-11-28), so this is now its only surface. One COMPONENT, one endpoint, one
+        derivation — the second mount went with the page.
       */}
       <PortfolioContributionPanel />
+
+      {sellPosition && (
+        <OrderModal
+          position={{
+            symbol: sellPosition.ticker,
+            shares: sellPosition.quantity,
+            avgCost: sellPosition.entry ?? 0,
+            currentPrice: sellPosition.currentPrice ?? 0,
+            pnl: sellPosition.pnl ?? 0,
+            pnlPct: sellPosition.movePct ?? 0,
+            value: sellPosition.value ?? 0,
+          }}
+          /*
+            `adapterMode` decides whether the modal prints the DEMO or LIVE banner. `isDemo` is derived
+            from the row's own `accountId`/account label, so `null` (source did not say) deliberately
+            falls to 'demo' — the modal then shows the less alarming of the two banners while the row
+            above it still renders no chip, rather than claiming LIVE on an unknown account.
+          */
+          adapterMode={sellPosition.isDemo === false ? 'live' : 'demo'}
+          mode="sell"
+          onClose={() => setSellPosition(null)}
+          onComplete={() => {
+            setSellPosition(null);
+            refreshPositions();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,16 +1,16 @@
 {
   "generated": "scripts/components-index.cjs",
-  "total": 119,
+  "total": 121,
   "counts": {
-    "total": 119,
+    "total": 121,
     "byTier": {
       "primitive": 29,
-      "shared": 61,
-      "single": 29,
+      "shared": 60,
+      "single": 32,
       "orphan": 0
     },
-    "tested": 8,
-    "withInlineStyles": 45,
+    "tested": 9,
+    "withInlineStyles": 46,
     "withHex": 67
   },
   "components": [
@@ -241,8 +241,9 @@
       "file": "src/components/EmptyState.jsx",
       "purpose": "Reusable \"no data\" placeholder with icon, title, description, and optional action button.",
       "lines": 59,
-      "consumers": 24,
+      "consumers": 25,
       "consumerFiles": [
+        "src/components/PortfolioCompositionPanel.jsx",
         "src/components/PortfolioContributionPanel.jsx",
         "src/components/ScreenOptions.jsx",
         "src/components/SeesScoringPanel.jsx",
@@ -393,7 +394,7 @@
       "file": "src/components/Notice.jsx",
       "purpose": "Notice — Reusable theme-consistent notice/alert banner.",
       "lines": 51,
-      "consumers": 11,
+      "consumers": 10,
       "consumerFiles": [
         "src/core/architecture-reference.js",
         "src/core/notices/registry.js",
@@ -404,7 +405,6 @@
         "src/pages/DirectiveImpactAuditPage.jsx",
         "src/pages/ExitSignalsPage.jsx",
         "src/pages/MarketContextPage.jsx",
-        "src/pages/PortfolioPage.jsx",
         "src/pages/architecture-framework.data.js"
       ],
       "tier": "primitive",
@@ -1769,25 +1769,6 @@
       "hexLiterals": 6
     },
     {
-      "name": "PortfolioContributionPanel",
-      "file": "src/components/PortfolioContributionPanel.jsx",
-      "purpose": "PortfolioContributionPanel — what made (or lost) the money, by instrument, with metals isolated.",
-      "lines": 183,
-      "consumers": 2,
-      "consumerFiles": [
-        "src/pages/PortfolioPage.jsx",
-        "src/pages/T212PortfolioPage.jsx"
-      ],
-      "tier": "shared",
-      "props": [
-        "days",
-        "onDaysChange"
-      ],
-      "hasTest": false,
-      "inlineStyles": 0,
-      "hexLiterals": 1
-    },
-    {
       "name": "PositionsTable",
       "file": "src/components/mt5/PositionsTable.jsx",
       "purpose": null,
@@ -2593,7 +2574,7 @@
       "lines": 377,
       "consumers": 1,
       "consumerFiles": [
-        "src/pages/PortfolioPage.jsx"
+        "src/pages/T212PortfolioPage.jsx"
       ],
       "tier": "single",
       "props": [
@@ -2642,6 +2623,61 @@
       "hasTest": false,
       "inlineStyles": 1,
       "hexLiterals": 0
+    },
+    {
+      "name": "PortfolioAccountsBreakdown",
+      "file": "src/components/PortfolioAccountsBreakdown.jsx",
+      "purpose": "PortfolioAccountsBreakdown — every account the app knows about, and what it contributes.",
+      "lines": 98,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/T212PortfolioPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "categories",
+        "grandTotal"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 0
+    },
+    {
+      "name": "PortfolioCompositionPanel",
+      "file": "src/components/PortfolioCompositionPanel.jsx",
+      "purpose": "PortfolioCompositionPanel — what the holdings are made of, as a share of value.",
+      "lines": 139,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/T212PortfolioPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "rows",
+        "unit",
+        "emptyDescription"
+      ],
+      "hasTest": true,
+      "inlineStyles": 2,
+      "hexLiterals": 0
+    },
+    {
+      "name": "PortfolioContributionPanel",
+      "file": "src/components/PortfolioContributionPanel.jsx",
+      "purpose": "PortfolioContributionPanel — what made (or lost) the money, by instrument, with metals isolated.",
+      "lines": 183,
+      "consumers": 1,
+      "consumerFiles": [
+        "src/pages/T212PortfolioPage.jsx"
+      ],
+      "tier": "single",
+      "props": [
+        "days",
+        "onDaysChange"
+      ],
+      "hasTest": false,
+      "inlineStyles": 0,
+      "hexLiterals": 1
     },
     {
       "name": "ProfitCapturePanel",

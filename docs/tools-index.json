@@ -1,6 +1,6 @@
 {
   "generatedFrom": "scripts/tools-index.cjs",
-  "count": 221,
+  "count": 222,
   "tools": [
     {
       "name": "analyse-query-patterns.cjs",
@@ -1955,6 +1955,17 @@
       "where": "repo",
       "category": "validator",
       "purpose": "a page may not read a `useParams()` key that no route declares.",
+      "selfTest": true,
+      "reaches": [
+        "prebuild",
+        "npm"
+      ]
+    },
+    {
+      "name": "validate-route-reachability.cjs",
+      "where": "repo",
+      "category": "validator",
+      "purpose": "a page nobody can reach is not a feature.",
       "selfTest": true,
       "reaches": [
         "prebuild",

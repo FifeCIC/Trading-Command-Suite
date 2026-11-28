@@ -23,7 +23,6 @@ export const PAGE_DATA_STATUS = {
   'ab-strategies': { status: 'live', source: 'GET /api/scoring/strategies/derived + /api/scoring/strategy-registry (read-only A/B framing of two strategies; pair via ?pair=keyA,keyB)' },
   'calculators': { status: 'mock', note: 'Client-side only' },
   'stock-investigation': { status: 'live', source: '/api/research/investigations' },
-  'portfolio-overview': { status: 'live', source: 'Alpaca + DB' },
   'portfolio-events': { status: 'live', source: '/api/portfolio/events' },
   'trade-history': { status: 'live', source: 'DB' },
   'positions-monitor': { status: 'live', source: 'Alpaca + MT5 (promoted from Legacy #565)' },

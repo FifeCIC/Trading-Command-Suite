@@ -24,11 +24,6 @@ export const PLUGIN_TAB_SKELETONS = {
     subtitle: 'Operator execution surface for discretionary orders and controlled overrides.',
     domain: 'Trading / Operations',
   },
-  'portfolio-overview': {
-    title: 'Portfolio Overview',
-    subtitle: 'Snapshot of account exposure, allocation drift, and performance posture.',
-    domain: 'Trading / Portfolio',
-  },
   'positions-monitor': {
     title: 'Positions Monitor',
     subtitle: 'Open position diagnostics, live risk posture, and per-symbol exposure watch.',

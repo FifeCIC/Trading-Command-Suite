@@ -1,0 +1,81 @@
+/* Portfolio composition — the allocation block ported from the merged portfolio page. */
+
+.pcomp {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pcomp-bar {
+  display: flex;
+  width: 100%;
+  height: 14px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+}
+
+.pcomp-seg {
+  /* flex-grow carries the share, so the bar rescales with the container and needs no JS width. */
+  flex-basis: 0;
+  min-width: 2px;
+  background: var(--pcomp-fill, var(--accent));
+  box-shadow: inset -1px 0 0 var(--panel);
+}
+
+.pcomp-seg:last-child {
+  box-shadow: none;
+}
+
+.pcomp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.pcomp-caption {
+  caption-side: top;
+  text-align: left;
+  padding: 0 0 0.4rem;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+
+.pcomp-table th,
+.pcomp-table td {
+  padding: 0.3rem 0.5rem;
+  border-top: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.pcomp-table thead th {
+  border-top: none;
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pcomp-table tbody th {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pcomp-num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.pcomp-swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 0.45rem;
+  border-radius: 2px;
+  background: var(--pcomp-fill, var(--accent));
+  vertical-align: baseline;
+}

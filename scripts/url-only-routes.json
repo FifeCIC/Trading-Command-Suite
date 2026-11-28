@@ -1,0 +1,132 @@
+{
+  "$comment": "Every page in view-routes.jsx that is in NO menu. Populated by validate-route-reachability.cjs --write, which is the ONLY writer. 'reason' is filled by a human or an agent who has looked at the page; 'unreviewed' means nobody has decided yet and is the honest default.",
+  "note": "Measured 2026-11-28. 156 routes render; 112 appear in a menu; 32 are withheld; 44 appear in NO menu and are NOT withheld. The existing guards cannot see them BY CONSTRUCTION: validate-page-visibility.cjs and verify-view-meta-routes.cjs both ITERATE THE MENU, so a page that was never added to a menu is not in their population at all - it can be neither flagged public nor withheld. That is why 44 pages could accumulate without one failing check.",
+  "routes": {
+    "analyse-symbol": {
+      "status": "unreviewed"
+    },
+    "api-activity": {
+      "status": "unreviewed"
+    },
+    "api-endpoints": {
+      "status": "unreviewed"
+    },
+    "btc-speed": {
+      "status": "unreviewed"
+    },
+    "candle-patterns": {
+      "status": "unreviewed"
+    },
+    "candle-patterns-guide": {
+      "status": "unreviewed"
+    },
+    "chart-comparison": {
+      "status": "unreviewed"
+    },
+    "create-protocols": {
+      "status": "unreviewed"
+    },
+    "create-watchlist": {
+      "status": "unreviewed"
+    },
+    "data-elements": {
+      "status": "unreviewed"
+    },
+    "data-landing": {
+      "status": "unreviewed"
+    },
+    "data-status": {
+      "status": "unreviewed"
+    },
+    "decoder": {
+      "status": "unreviewed"
+    },
+    "directive-impact-audit": {
+      "status": "unreviewed"
+    },
+    "events-calendar": {
+      "status": "unreviewed"
+    },
+    "faq": {
+      "status": "unreviewed"
+    },
+    "gap-scanner": {
+      "status": "unreviewed"
+    },
+    "import-jobs": {
+      "status": "unreviewed"
+    },
+    "macro-monitor": {
+      "status": "unreviewed"
+    },
+    "mt5-status": {
+      "status": "unreviewed"
+    },
+    "pattern-scanner": {
+      "status": "unreviewed"
+    },
+    "preference-lab": {
+      "status": "unreviewed"
+    },
+    "price-forecast": {
+      "status": "unreviewed"
+    },
+    "protocols-performance": {
+      "status": "unreviewed"
+    },
+    "provider-health": {
+      "status": "unreviewed"
+    },
+    "reports": {
+      "status": "unreviewed"
+    },
+    "scenario-analysis": {
+      "status": "unreviewed"
+    },
+    "scoring-overview": {
+      "status": "unreviewed"
+    },
+    "screen": {
+      "status": "unreviewed"
+    },
+    "seasonality-heatmap": {
+      "status": "unreviewed"
+    },
+    "sector-rotation": {
+      "status": "unreviewed"
+    },
+    "server-controls": {
+      "status": "unreviewed"
+    },
+    "social-networks": {
+      "status": "unreviewed"
+    },
+    "sources": {
+      "status": "unreviewed"
+    },
+    "strategy-detail": {
+      "status": "unreviewed"
+    },
+    "support-resistance": {
+      "status": "unreviewed"
+    },
+    "symbol": {
+      "status": "unreviewed"
+    },
+    "t212-isa": {
+      "status": "unreviewed"
+    },
+    "technical-indicators": {
+      "status": "unreviewed"
+    },
+    "trade-history": {
+      "status": "unreviewed"
+    },
+    "transient-caches": {
+      "status": "unreviewed"
+    },
+    "volatility-analysis": {
+      "status": "unreviewed"
+    }
+  }
+}

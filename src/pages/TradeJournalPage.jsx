@@ -158,7 +158,7 @@ const ALERT_FALLBACKS = {
   // daily alert goes rather than to a path that build did not ship. One edition now, so every
   // route named here is real.
   signal: '/scoring/live-ordering-stack',
-  drawdown: '/trading/portfolio-overview',
+  drawdown: '/trading212/t212-portfolio',
   system: '/status/setup',
   daily: '/dashboard',
 };
